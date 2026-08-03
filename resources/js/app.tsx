@@ -12,7 +12,9 @@ createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
     layout: (name) => {
         switch (true) {
-            case name === 'welcome':
+            // Das Onboarding läuft wie die Startseite ohne Sidebar — ein
+            // einziger Ablauf, keine Navigation, die davon ablenkt.
+            case name === 'welcome' || name === 'onboarding':
                 return null;
             case name.startsWith('auth/'):
                 return AuthLayout;

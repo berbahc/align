@@ -35,6 +35,7 @@ class DashboardController extends Controller
         return Inertia::render('dashboard', [
             'greeting' => $this->greeting($today),
             'today' => $localisedToday->isoFormat('dddd, D. MMMM'),
+            'todayProgress' => $this->todayProgress($habits),
             'consistency' => $this->consistencyRate($habits),
             'habits' => $habits->map(fn (Habit $habit): array => [
                 'id' => $habit->id,
@@ -54,6 +55,30 @@ class DashboardController extends Controller
             $now->hour < 18 => 'Schönen Tag',
             default => 'Guten Abend',
         };
+    }
+
+    /**
+     * Fortschritt des heutigen Tages.
+     *
+     * Das Tagesziel ist schlicht die Anzahl der aktiven Gewohnheiten — es gibt
+     * keine separate Zielgröße, die man verfehlen könnte. Formuliert wird
+     * immer, was erledigt ist, nie was fehlt (Designsprache §1.5).
+     *
+     * @param  Collection<int, Habit>  $habits
+     * @return array{completed: int, total: int, percentage: int}
+     */
+    private function todayProgress(Collection $habits): array
+    {
+        $total = $habits->count();
+        $completed = $habits->filter(
+            fn (Habit $habit): bool => $habit->completions->isNotEmpty(),
+        )->count();
+
+        return [
+            'completed' => $completed,
+            'total' => $total,
+            'percentage' => $total === 0 ? 0 : (int) round($completed / $total * 100),
+        ];
     }
 
     /**

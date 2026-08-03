@@ -1,12 +1,14 @@
-import { BookOpen, Check, Dumbbell, GlassWater, Leaf } from 'lucide-react';
+import { BookOpen, Check, Dumbbell, GlassWater, Moon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { Habit } from '@/types/habit';
+import type { Habit } from '@/types';
 
+// Muss zu DIRECTION_ICONS im Wizard passen — dieselbe Kategorie darf nicht
+// je nach Bildschirm ein anderes Zeichen tragen.
 const BEHAVIOR_ICONS = {
     nutrition: GlassWater,
     movement: Dumbbell,
     learning: BookOpen,
-    other: Leaf,
+    other: Moon,
 } as const;
 
 /**
@@ -17,7 +19,13 @@ const BEHAVIOR_ICONS = {
  * unterscheidbar bleibt. Der offene Kreis ist gestrichelt („wartet"), nie
  * leer-durchgezogen („fehlt"). Kein Durchstreichen, kein Ausgrauen.
  */
-export function HabitRow({ habit }: { habit: Habit }) {
+export function HabitRow({
+    habit,
+    onToggle,
+}: {
+    habit: Habit;
+    onToggle: (habit: Habit) => void;
+}) {
     const Icon = BEHAVIOR_ICONS[habit.behaviorType];
     const isDone = habit.completedAt !== null;
 
@@ -59,24 +67,36 @@ export function HabitRow({ habit }: { habit: Habit }) {
                 </span>
             </span>
 
-            <span
-                role="img"
-                aria-label={isDone ? 'Erledigt' : 'Noch offen'}
-                className={cn(
-                    'flex size-7 shrink-0 items-center justify-center rounded-full',
+            {/* Die Fläche ist 44px groß, damit sie als Tippziel taugt; der
+                sichtbare Kreis bleibt bei 28px wie im Mockup. */}
+            <button
+                type="button"
+                onClick={() => onToggle(habit)}
+                aria-pressed={isDone}
+                aria-label={
                     isDone
-                        ? 'bg-primary'
-                        : 'border-2 border-dashed border-sand',
-                )}
+                        ? `${habit.title} als noch offen markieren`
+                        : `${habit.title} als erledigt markieren`
+                }
+                className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors duration-200 hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
-                {isDone && (
-                    <Check
-                        className="size-4 text-primary-foreground"
-                        strokeWidth={2.5}
-                        aria-hidden="true"
-                    />
-                )}
-            </span>
+                <span
+                    className={cn(
+                        'flex size-7 items-center justify-center rounded-full transition-colors duration-200',
+                        isDone
+                            ? 'bg-primary'
+                            : 'border-2 border-dashed border-sand',
+                    )}
+                >
+                    {isDone && (
+                        <Check
+                            className="size-4 text-primary-foreground"
+                            strokeWidth={2.5}
+                            aria-hidden="true"
+                        />
+                    )}
+                </span>
+            </button>
         </li>
     );
 }

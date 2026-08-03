@@ -18,6 +18,7 @@ use Illuminate\Support\Carbon;
  * @property int $user_id
  * @property string $title
  * @property string $trigger_situation
+ * @property string|null $motivation
  * @property BehaviorType $behavior_type
  * @property int|null $focus_minutes
  * @property int $position
@@ -26,7 +27,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['title', 'trigger_situation', 'behavior_type', 'focus_minutes', 'position', 'committed_at'])]
+#[Fillable(['title', 'trigger_situation', 'motivation', 'behavior_type', 'focus_minutes', 'position', 'committed_at'])]
 class Habit extends Model
 {
     /** @use HasFactory<HabitFactory> */
@@ -37,6 +38,24 @@ class Habit extends Model
      * damit die Liste schmal und der Fokus erhalten bleibt.
      */
     public const int MaxActivePerUser = 5;
+
+    /**
+     * Vorschläge für den Situations-Picker.
+     *
+     * time-blocking.md: situative Cues statt Uhrzeiten. Eine Situation löst
+     * Verhalten automatisch aus, eine Uhrzeit muss aktiv erinnert werden.
+     * Die Liste ist nur ein Angebot — eigene Eingaben sind erlaubt.
+     *
+     * @var list<string>
+     */
+    public const array TriggerSuggestions = [
+        'nach dem Aufstehen',
+        'nach dem Frühstück',
+        'nach der Morgenvorlesung',
+        'nach dem Mittagessen',
+        'wenn ich nach Hause komme',
+        'vor dem Schlafengehen',
+    ];
 
     /**
      * @return BelongsTo<User, $this>

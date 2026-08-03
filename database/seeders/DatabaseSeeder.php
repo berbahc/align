@@ -56,6 +56,7 @@ class DatabaseSeeder extends Seeder
         $user = User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@example.com',
+            'onboarded_at' => now(),
         ]);
 
         $this->seedHabitsFor($user);

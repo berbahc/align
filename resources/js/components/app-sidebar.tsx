@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { LayoutGrid } from 'lucide-react';
+import { LayoutGrid, Repeat, TrendingUp, Users } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -13,20 +13,36 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { dashboard } from '@/routes';
+import { community, dashboard, journey } from '@/routes';
+import { index as habitsIndex } from '@/routes/habits';
 import type { NavItem } from '@/types';
 
+// Reihenfolge wie im Desktop-Mockup: Übersicht, Gewohnheiten, Verlauf,
+// Community. Der Mockup-Punkt „Analytics" heißt hier „Verlauf", weil
+// habit-journey.md die Kurve pro Gewohnheit und rein individuell vorsieht.
 const mainNavItems: NavItem[] = [
     {
         title: 'Übersicht',
         href: dashboard(),
         icon: LayoutGrid,
     },
+    {
+        title: 'Gewohnheiten',
+        href: habitsIndex(),
+        icon: Repeat,
+    },
+    {
+        title: 'Verlauf',
+        href: journey(),
+        icon: TrendingUp,
+    },
+    {
+        title: 'Community',
+        href: community(),
+        icon: Users,
+    },
 ];
 
-// Das Mockup zeigt außerdem Gewohnheiten, Analyse und Community. Die Einträge
-// kommen dazu, sobald die zugehörigen Routen existieren — tote Navigation ist
-// schlechter als kurze Navigation.
 const footerNavItems: NavItem[] = [];
 
 export function AppSidebar() {
