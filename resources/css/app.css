@@ -8,11 +8,12 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
+    /* Designsprache §3.1 — eine geometrische Grotesk, keine zweite Familie. */
     --font-sans:
-        'Instrument Sans', ui-sans-serif, system-ui, sans-serif,
-        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
-        'Noto Color Emoji';
+        'Sora', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
+        'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 
+    /* Designsprache §4.1 — Karte 16, Auswahlkachel 14, Kachel/Button 12. */
     --radius-lg: var(--radius);
     --radius-md: calc(var(--radius) - 2px);
     --radius-sm: calc(var(--radius) - 4px);
@@ -59,77 +60,134 @@
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-ring: var(--sidebar-ring);
+
+    /* Align-Designsprache §2.1 — Tokens, die über das shadcn-Set hinausgehen. */
+    --color-canvas: var(--canvas);
+    --color-surface: var(--surface);
+    --color-olive: var(--olive);
+    --color-olive-mid: var(--olive-mid);
+    --color-gold: var(--gold);
+    --color-sand: var(--sand);
+    --color-track: var(--track);
+    --color-faint: var(--faint);
+    --color-faintest: var(--faintest);
+    --color-ai-fill: var(--ai-fill);
+    --color-ai-line: var(--ai-line);
 }
 
+/*
+ * Align-Designsprache (Stand 18.07.2026) — verbindliche visuelle Referenz.
+ * Werte pixelgenau aus den Mockups gemessen, siehe designsprache.md §2.1/§9.
+ * Genau ein gesättigter Buntton: Olivbronze --olive. Kein Rot, kein Alarm (§1.4).
+ */
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --destructive-foreground: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.87 0 0);
-    --chart-1: oklch(0.646 0.222 41.116);
-    --chart-2: oklch(0.6 0.118 184.704);
-    --chart-3: oklch(0.398 0.07 227.392);
-    --chart-4: oklch(0.828 0.189 84.429);
-    --chart-5: oklch(0.769 0.188 70.08);
-    --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.87 0 0);
+    --canvas: #fdf9f8;
+    --surface: #ffffff;
+    --olive: #775a19;
+    --olive-mid: #988353;
+    --gold: #c5a058;
+    --sand: #e8e2d6;
+    --track: #f7f3ef;
+    --faint: #7c7b78;
+    --faintest: #adaba9;
+    --ai-fill: #fdfbf6;
+    --ai-line: #c5a058;
+
+    --background: var(--canvas);
+    --foreground: #1d1b1b;
+    --card: var(--surface);
+    --card-foreground: #1d1b1b;
+    --popover: var(--surface);
+    --popover-foreground: #1d1b1b;
+    --primary: var(--olive);
+    --primary-foreground: #ffffff;
+    --secondary: #e4e2de;
+    --secondary-foreground: #1d1b1b;
+    --muted: var(--track);
+    --muted-foreground: #5f5e5b;
+    --accent: var(--sand);
+    --accent-foreground: #1d1b1b;
+    /* §11.5 — semantische Farben fehlen in den Mockups absichtlich.
+       Falls nötig: gedämpft und warm, kein Signalrot. Offener Punkt. */
+    --destructive: #9c5a42;
+    --destructive-foreground: #ffffff;
+    --border: #f0ece5;
+    /* Kartenkante ist bewusst fast unsichtbar (§2.1) — für Formularfelder
+       reicht das nicht: `border` erreicht 1.1:1, `neutral` 1.29:1, WCAG 1.4.11
+       verlangt 3:1 für Bedienelement-Grenzen. Dieser Wert (3.44:1) ist eine
+       Ergänzung von mir und in der Designsprache nicht belegt — Team prüfen. */
+    --input: #8e8a82;
+    --ring: var(--olive);
+    /* §10 — Balken: aktiver Tag olive, Vergleichswert gold, leer track. */
+    --chart-1: var(--olive);
+    --chart-2: var(--gold);
+    --chart-3: var(--olive-mid);
+    --chart-4: var(--sand);
+    --chart-5: var(--track);
+    --radius: 1rem;
+    --sidebar: var(--surface);
+    --sidebar-foreground: #1d1b1b;
+    --sidebar-primary: var(--olive);
+    --sidebar-primary-foreground: #ffffff;
+    /* §10 — aktive Sidebar-Pille ist `neutral`, ausdrücklich NICHT Oliv. */
+    --sidebar-accent: #e4e2de;
+    --sidebar-accent-foreground: #1d1b1b;
+    --sidebar-border: #f0ece5;
+    --sidebar-ring: var(--olive);
 }
 
+/*
+ * ABLEITUNG — NICHT BELEGT. designsprache.md §11.4: Dark Mode existiert in den
+ * Mockups nicht und braucht "eine eigene Runde". Die frühere dunkle Figma-
+ * Iteration (Navy + Cyan/Magenta) ist ausdrücklich nicht kompatibel.
+ * Diese Werte halten den Dark Mode nur funktionsfähig und warm; sie sind ein
+ * Platzhalter bis zur Designentscheidung, keine Vorlage.
+ */
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.145 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.145 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.985 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.396 0.141 25.723);
-    --destructive-foreground: oklch(0.637 0.237 25.331);
-    --border: oklch(0.269 0 0);
-    --input: oklch(0.269 0 0);
-    --ring: oklch(0.439 0 0);
-    --chart-1: oklch(0.488 0.243 264.376);
-    --chart-2: oklch(0.696 0.17 162.48);
-    --chart-3: oklch(0.769 0.188 70.08);
-    --chart-4: oklch(0.627 0.265 303.9);
-    --chart-5: oklch(0.645 0.246 16.439);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.985 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(0.269 0 0);
-    --sidebar-ring: oklch(0.439 0 0);
+    --canvas: #17130f;
+    --surface: #201b16;
+    --olive: #c9a45e;
+    --olive-mid: #a08a55;
+    --gold: #8c7647;
+    --sand: #332c24;
+    --track: #262019;
+    --faint: #8b837b;
+    --faintest: #5e574f;
+    --ai-fill: #221d16;
+    --ai-line: #8c7647;
+
+    --background: var(--canvas);
+    --foreground: #f4f0ea;
+    --card: var(--surface);
+    --card-foreground: #f4f0ea;
+    --popover: var(--surface);
+    --popover-foreground: #f4f0ea;
+    --primary: var(--olive);
+    --primary-foreground: #1d1b1b;
+    --secondary: #2c251e;
+    --secondary-foreground: #f4f0ea;
+    --muted: var(--track);
+    --muted-foreground: #a9a29a;
+    --accent: var(--sand);
+    --accent-foreground: #f4f0ea;
+    --destructive: #c07a5e;
+    --destructive-foreground: #1d1b1b;
+    --border: #2c251e;
+    --input: #3a3128;
+    --ring: var(--olive);
+    --chart-1: var(--olive);
+    --chart-2: var(--gold);
+    --chart-3: var(--olive-mid);
+    --chart-4: var(--sand);
+    --chart-5: var(--track);
+    --sidebar: var(--surface);
+    --sidebar-foreground: #f4f0ea;
+    --sidebar-primary: var(--olive);
+    --sidebar-primary-foreground: #1d1b1b;
+    --sidebar-accent: #2c251e;
+    --sidebar-accent-foreground: #f4f0ea;
+    --sidebar-border: #2c251e;
+    --sidebar-ring: var(--olive);
 }
 
 @layer base {

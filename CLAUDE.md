@@ -205,3 +205,11 @@ Use Wayfinder to generate TypeScript functions for Laravel routes. Import from `
 - IMPORTANT: Activate `inertia-react-development` when working with Inertia React client-side patterns.
 
 </laravel-boost-guidelines>
+
+# Project Conventions
+
+<!-- Keep project-specific rules below this line; the laravel-boost-guidelines block above is auto-generated and will be overwritten. -->
+
+## AI Integrations
+
+- For any future AI integration, use the official **Laravel AI SDK** (`laravel/ai`). Do not call provider SDKs (OpenAI, Anthropic, etc.) directly or add ad-hoc HTTP clients for LLM calls.
