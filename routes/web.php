@@ -7,7 +7,7 @@ use App\Http\Controllers\OnboardingController;
 use App\Http\Middleware\EnsureOnboarded;
 use Illuminate\Support\Facades\Route;
 
-Route::inertia('/', 'welcome')->name('home');
+Route::redirect('/', '/login')->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     // Bewusst außerhalb von EnsureOnboarded — sonst leitet die Weiche auf sich selbst.
