@@ -1,4 +1,5 @@
 import type { Auth } from '@/types/auth';
+import type { HabitReminder } from '@/types/habit';
 
 declare module 'react' {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -12,6 +13,8 @@ declare module '@inertiajs/core' {
         sharedPageProps: {
             name: string;
             auth: Auth;
+            /** Gewohnheiten mit fester Uhrzeit, für die heute eine Erinnerung ansteht. */
+            habitReminders: HabitReminder[];
             sidebarOpen: boolean;
             [key: string]: unknown;
         };

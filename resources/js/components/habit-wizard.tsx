@@ -2,11 +2,13 @@ import { useForm } from '@inertiajs/react';
 import { ArrowRight, BookOpen, Dumbbell, GlassWater, Moon } from 'lucide-react';
 import { useState } from 'react';
 import InputError from '@/components/input-error';
+import { formatWeekdays, SchedulePicker } from '@/components/schedule-picker';
+import type { ScheduleTypeOption } from '@/components/schedule-picker';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
-import type { BehaviorType } from '@/types';
+import type { BehaviorType, ScheduleType, Weekday } from '@/types';
 
 export interface Direction {
     value: BehaviorType;
@@ -36,13 +38,18 @@ const PRIMARY_BUTTON =
 const CHOICE_TILE =
     'cursor-pointer rounded-[14px] border-2 bg-card text-left transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
 
+/** Ein neutraler Nachmittagstermin, von dem aus sich in beide Richtungen steppen lässt. */
+const DEFAULT_TIME = '17:00';
+
 export function HabitWizard({
     directions,
     triggerSuggestions,
+    scheduleTypes,
     action,
 }: {
     directions: Direction[];
     triggerSuggestions: string[];
+    scheduleTypes: ScheduleTypeOption[];
     action: string;
 }) {
     const [step, setStep] = useState(1);
@@ -52,7 +59,10 @@ export function HabitWizard({
     const { data, setData, post, processing, errors } = useForm({
         behavior_type: '' as BehaviorType | '',
         title: '',
+        schedule_type: 'dynamic' as ScheduleType,
         trigger_situation: '',
+        scheduled_time: DEFAULT_TIME,
+        scheduled_days: [1, 2, 3, 4, 5] as Weekday[],
         motivation: '',
     });
 
@@ -60,10 +70,14 @@ export function HabitWizard({
         (candidate) => candidate.value === data.behavior_type,
     );
 
+    const isFixed = data.schedule_type === 'fixed';
+
     const canContinue = [
         data.behavior_type !== '',
         data.title.trim().length > 0,
-        data.trigger_situation.trim().length > 0,
+        isFixed
+            ? data.scheduled_days.length > 0
+            : data.trigger_situation.trim().length > 0,
     ][step - 1];
 
     function chooseDirection(value: BehaviorType) {
@@ -245,83 +259,103 @@ export function HabitWizard({
                         Wann machst du das?
                     </h2>
                     <p className="text-sm leading-relaxed text-muted-foreground">
-                        Wähle eine Situation, keine Uhrzeit. Eine Situation löst
-                        das Verhalten von selbst aus — an eine Uhrzeit musst du
-                        dich erinnern.
+                        Ein Moment im Tag trägt besser als eine Uhrzeit — eine
+                        Situation löst das Verhalten von selbst aus. Für alles,
+                        was ohnehin fest im Kalender steht, gibt es die Uhrzeit.
                     </p>
 
-                    <div className="flex flex-col gap-2">
-                        {triggerSuggestions.map((situation) => {
-                            const isSelected =
-                                !ownSituation &&
-                                data.trigger_situation === situation;
+                    <SchedulePicker
+                        scheduleTypes={scheduleTypes}
+                        scheduleType={data.schedule_type}
+                        onScheduleTypeChange={(value) =>
+                            setData('schedule_type', value)
+                        }
+                        time={data.scheduled_time}
+                        onTimeChange={(value) =>
+                            setData('scheduled_time', value)
+                        }
+                        days={data.scheduled_days}
+                        onDaysChange={(days) => setData('scheduled_days', days)}
+                    >
+                        <div className="flex flex-col gap-2">
+                            {triggerSuggestions.map((situation) => {
+                                const isSelected =
+                                    !ownSituation &&
+                                    data.trigger_situation === situation;
 
-                            return (
-                                <button
-                                    key={situation}
-                                    type="button"
-                                    aria-pressed={isSelected}
-                                    onClick={() => {
-                                        setOwnSituation(false);
-                                        setData('trigger_situation', situation);
-                                    }}
-                                    className={cn(
-                                        CHOICE_TILE,
-                                        'px-4 py-3 text-[15px]',
-                                        isSelected
-                                            ? 'border-primary'
-                                            : 'border-border hover:border-secondary',
-                                    )}
-                                >
-                                    {situation}
-                                </button>
-                            );
-                        })}
+                                return (
+                                    <button
+                                        key={situation}
+                                        type="button"
+                                        aria-pressed={isSelected}
+                                        onClick={() => {
+                                            setOwnSituation(false);
+                                            setData(
+                                                'trigger_situation',
+                                                situation,
+                                            );
+                                        }}
+                                        className={cn(
+                                            CHOICE_TILE,
+                                            'px-4 py-3 text-[15px]',
+                                            isSelected
+                                                ? 'border-primary'
+                                                : 'border-border hover:border-secondary',
+                                        )}
+                                    >
+                                        {situation}
+                                    </button>
+                                );
+                            })}
 
-                        <button
-                            type="button"
-                            aria-pressed={ownSituation}
-                            onClick={() => {
-                                setOwnSituation(true);
-                                setData('trigger_situation', '');
-                            }}
-                            className={cn(
-                                CHOICE_TILE,
-                                'border-dashed px-4 py-3 text-[15px] text-muted-foreground',
-                                ownSituation
-                                    ? 'border-primary'
-                                    : 'border-border hover:border-secondary',
+                            <button
+                                type="button"
+                                aria-pressed={ownSituation}
+                                onClick={() => {
+                                    setOwnSituation(true);
+                                    setData('trigger_situation', '');
+                                }}
+                                className={cn(
+                                    CHOICE_TILE,
+                                    'border-dashed px-4 py-3 text-[15px] text-muted-foreground',
+                                    ownSituation
+                                        ? 'border-primary'
+                                        : 'border-border hover:border-secondary',
+                                )}
+                            >
+                                Eigene Situation
+                            </button>
+
+                            {ownSituation && (
+                                <div className="grid gap-2 pt-1">
+                                    <Label
+                                        htmlFor="trigger_situation"
+                                        className="sr-only"
+                                    >
+                                        Eigene Situation
+                                    </Label>
+                                    <Input
+                                        id="trigger_situation"
+                                        name="trigger_situation"
+                                        autoFocus
+                                        maxLength={120}
+                                        placeholder="z. B. wenn ich aus der Bib komme"
+                                        value={data.trigger_situation}
+                                        onChange={(event) =>
+                                            setData(
+                                                'trigger_situation',
+                                                event.target.value,
+                                            )
+                                        }
+                                    />
+                                </div>
                             )}
-                        >
-                            Eigene Situation
-                        </button>
+                        </div>
+                    </SchedulePicker>
 
-                        {ownSituation && (
-                            <div className="grid gap-2 pt-1">
-                                <Label
-                                    htmlFor="trigger_situation"
-                                    className="sr-only"
-                                >
-                                    Eigene Situation
-                                </Label>
-                                <Input
-                                    id="trigger_situation"
-                                    name="trigger_situation"
-                                    autoFocus
-                                    maxLength={120}
-                                    placeholder="z. B. wenn ich aus der Bib komme"
-                                    value={data.trigger_situation}
-                                    onChange={(event) =>
-                                        setData(
-                                            'trigger_situation',
-                                            event.target.value,
-                                        )
-                                    }
-                                />
-                            </div>
-                        )}
-                    </div>
                     <InputError message={errors.trigger_situation} />
+                    <InputError message={errors.scheduled_time} />
+                    <InputError message={errors.scheduled_days} />
                 </fieldset>
             )}
 
@@ -340,10 +374,12 @@ export function HabitWizard({
                     <div className="flex flex-col gap-3 rounded-2xl bg-card p-5">
                         <div>
                             <p className={`${EYEBROW} text-muted-foreground`}>
-                                Auslöser
+                                {isFixed ? 'Zeitpunkt' : 'Auslöser'}
                             </p>
                             <p className="mt-1 text-lg leading-snug font-semibold">
-                                {data.trigger_situation}
+                                {isFixed
+                                    ? `${data.scheduled_time} Uhr · ${formatWeekdays(data.scheduled_days)}`
+                                    : data.trigger_situation}
                             </p>
                         </div>
                         <div className="h-4 w-px self-center bg-sand" />
