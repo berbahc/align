@@ -27,3 +27,6 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+
+# Aus der Git-Historie erzeugt — siehe app/Console/Commands/GenerateDokumentation.php
+/Dokumentation.md
