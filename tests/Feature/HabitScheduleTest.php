@@ -196,3 +196,14 @@ test('a situational habit is due every day', function () {
 
     expect(Habit::factory()->create()->nextOccurrence()->isToday())->toBeTrue();
 });
+
+test('the overview carries the limit so the interface never hardcodes it', function () {
+    $this->actingAs(User::factory()->create())
+        ->get(route('habits.index'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('maxActive', Habit::MaxActivePerUser));
+
+    $this->get(route('dashboard'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('maxActive', Habit::MaxActivePerUser));
+});
