@@ -25,4 +25,24 @@ class HabitPolicy
     {
         return $user->id === $habit->user_id;
     }
+
+    /**
+     * Beenden und Wiederaufnehmen.
+     *
+     * Beides bewegt nur `graduated_at` und lässt die Erfüllungen unberührt —
+     * der Weg zurück ist deshalb immer offen.
+     */
+    public function graduate(User $user, Habit $habit): bool
+    {
+        return $user->id === $habit->user_id;
+    }
+
+    /**
+     * Endgültiges Löschen — nimmt über `cascadeOnDelete` alle abgehakten Tage
+     * mit. Die Oberfläche bietet es nur im Archiv an, hinter einer Rückfrage.
+     */
+    public function delete(User $user, Habit $habit): bool
+    {
+        return $user->id === $habit->user_id;
+    }
 }

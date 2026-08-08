@@ -35,6 +35,23 @@ export interface ManagedHabit {
 }
 
 /**
+ * Eine beendete Gewohnheit im Archiv.
+ *
+ * Sie zählt nicht gegen das Limit von fünf und löst nichts mehr aus, behält
+ * aber jeden abgehakten Tag — `completionCount` beziffert, was ein endgültiges
+ * Löschen kosten würde.
+ */
+export interface GraduatedHabit {
+    id: number;
+    title: string;
+    scheduleLabel: string;
+    behaviorType: BehaviorType;
+    /** Tag des Beendens, formatiert als „08.08.2026". */
+    graduatedOn: string;
+    completionCount: number;
+}
+
+/**
  * Das Nötigste, damit der Erinnerungs-Hook auf jeder Seite arbeiten kann.
  * Kommt als geteilte Eigenschaft aus dem Backend.
  */

@@ -3,6 +3,7 @@
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HabitCompletionController;
 use App\Http\Controllers\HabitController;
+use App\Http\Controllers\HabitGraduationController;
 use App\Http\Controllers\HabitReminderController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Middleware\EnsureOnboarded;
@@ -40,6 +41,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('habits.completions.store');
         Route::delete('habits/{habit}/completions', [HabitCompletionController::class, 'destroy'])
             ->name('habits.completions.destroy');
+
+        // Beenden und Wiederaufnehmen als ein Zustand, der gesetzt und
+        // zurückgenommen wird — nicht als zwei Aktionen mit eigenen Verben.
+        Route::post('habits/{habit}/graduation', [HabitGraduationController::class, 'store'])
+            ->name('habits.graduation.store');
+        Route::delete('habits/{habit}/graduation', [HabitGraduationController::class, 'destroy'])
+            ->name('habits.graduation.destroy');
+
+        Route::delete('habits/{habit}', [HabitController::class, 'destroy'])->name('habits.destroy');
     });
 });
 
