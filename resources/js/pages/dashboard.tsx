@@ -24,6 +24,8 @@ interface DashboardProps {
     habits: Habit[];
     /** Alle aktiven — auch die, die heute nicht anstehen. */
     activeCount: number;
+    /** Obergrenze gleichzeitig aktiver Gewohnheiten, aus Habit::MaxActivePerUser. */
+    maxActive: number;
 }
 
 const EYEBROW = 'text-[11px] font-semibold tracking-[0.11em] uppercase';
@@ -35,6 +37,7 @@ export default function Dashboard({
     consistency,
     habits,
     activeCount,
+    maxActive,
 }: DashboardProps) {
     const { auth } = usePage().props;
     const firstName = auth.user?.name.split(' ')[0] ?? '';
@@ -161,7 +164,7 @@ export default function Dashboard({
                             lassen den Nutzer wählen, wo es nichts zu wählen
                             gibt. Ab fünf Gewohnheiten entfällt er ebenfalls,
                             weil das Anlegen dann ohnehin abgewiesen würde. */}
-                        {activeCount > 0 && activeCount < 5 && (
+                        {activeCount > 0 && activeCount < maxActive && (
                             <Link
                                 href={create()}
                                 className="inline-flex h-11 cursor-pointer items-center gap-1.5 rounded-full border border-primary px-4 text-sm font-semibold text-primary transition-colors duration-200 hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"

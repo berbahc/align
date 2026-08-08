@@ -50,6 +50,7 @@ class DashboardController extends Controller
             // Fälle nicht auseinanderhalten und würde am Wochenende zum
             // Anlegen auffordern, obwohl längst fünf Gewohnheiten laufen.
             'activeCount' => $habits->count(),
+            'maxActive' => Habit::MaxActivePerUser,
             'habits' => $todaysHabits->map(fn (Habit $habit): array => [
                 'id' => $habit->id,
                 'title' => $habit->title,

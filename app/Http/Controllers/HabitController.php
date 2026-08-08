@@ -40,6 +40,7 @@ class HabitController extends Controller
             ->get();
 
         return Inertia::render('habits/index', [
+            'maxActive' => Habit::MaxActivePerUser,
             'habits' => $habits->map(fn (Habit $habit): array => [
                 'id' => $habit->id,
                 'title' => $habit->title,

@@ -9,6 +9,7 @@ import {
     Plus,
 } from 'lucide-react';
 import { GraduatedHabitRow } from '@/components/graduated-habit-row';
+import { HabitLimitNote } from '@/components/habit-limit-note';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -40,14 +41,25 @@ const EYEBROW = 'text-[11px] font-semibold tracking-[0.11em] uppercase';
 interface HabitsIndexProps {
     habits: ManagedHabit[];
     graduatedHabits: GraduatedHabit[];
+    /** Obergrenze gleichzeitig aktiver Gewohnheiten, aus Habit::MaxActivePerUser. */
+    maxActive: number;
 }
 
 export default function HabitsIndex({
     habits,
     graduatedHabits,
+    maxActive,
 }: HabitsIndexProps) {
     const { errors } = usePage().props;
     const remindable = habits.filter((habit) => habit.canRemind);
+    const isAtLimit = habits.length >= maxActive;
+
+    const countLabel =
+        habits.length > 0
+            ? `${habits.length} von ${maxActive} aktiv`
+            : graduatedHabits.length > 0
+              ? 'Keine aktive Gewohnheit.'
+              : 'Noch nichts angelegt.';
     const allRemindersOn =
         remindable.length > 0 &&
         remindable.every((habit) => habit.reminderEnabled);
@@ -101,16 +113,22 @@ export default function HabitsIndex({
                             Gewohnheiten
                         </h1>
 
-                        <p className="mt-1 text-sm text-muted-foreground">
-                            {habits.length > 0
-                                ? `${habits.length} von 5 aktiv`
-                                : graduatedHabits.length > 0
-                                  ? 'Keine aktive Gewohnheit.'
-                                  : 'Noch nichts angelegt.'}
-                        </p>
+                        {/* Erst an der Grenze trägt die Zählung den Hinweis:
+                            vorher erklärt er eine Einschränkung, die noch
+                            niemanden trifft. */}
+                        {isAtLimit ? (
+                            <HabitLimitNote
+                                max={maxActive}
+                                label={countLabel}
+                            />
+                        ) : (
+                            <p className="mt-1 text-sm text-muted-foreground">
+                                {countLabel}
+                            </p>
+                        )}
                     </div>
 
-                    {habits.length < 5 && (
+                    {!isAtLimit && (
                         <Link
                             href={create()}
                             className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-full border border-primary px-4 text-sm font-semibold text-primary transition-colors duration-200 hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
@@ -261,7 +279,7 @@ export default function HabitsIndex({
                                 <GraduatedHabitRow
                                     key={habit.id}
                                     habit={habit}
-                                    canReactivate={habits.length < 5}
+                                    canReactivate={!isAtLimit}
                                 />
                             ))}
                         </ul>
