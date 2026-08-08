@@ -44,11 +44,10 @@ export function HabitLimitNote({
                         Warum nur {max}?
                     </p>
                     <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                        Neue Gewohnheiten kosten bewusste Aufmerksamkeit, und
-                        die teilt sich auf alles auf, was gerade neu ist. Eine
-                        kurze Liste ist deshalb keine kleinere Ambition, sondern
-                        die höhere Trefferquote. Sitzt eine Gewohnheit von
-                        selbst, beende sie — der Platz wird wieder frei.
+                        Jede Gewohnheit, die noch nicht sitzt, kostet dich
+                        täglich einen Vorsatz. Fünf davon sind genug. Läuft eine
+                        schon von allein, beende sie und der Platz ist dann frei
+                        für eine neue Gewohnheit.
                     </p>
                 </div>
             </CollapsibleContent>
