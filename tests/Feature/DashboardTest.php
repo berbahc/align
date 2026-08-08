@@ -98,6 +98,33 @@ test('a user without habits gets no consistency rate instead of zero percent', f
         );
 });
 
+test('an empty day is told apart from an empty list', function () {
+    // Ein Samstag: die Mo–Fr-Gewohnheit steht heute nicht an, es gibt sie aber.
+    Carbon::setTestNow(Carbon::parse('2026-08-08'));
+
+    $user = User::factory()->create();
+    Habit::factory()->for($user)->fixedSchedule(days: [1, 2, 3, 4, 5])->create();
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('habits', 0)
+            ->where('activeCount', 1)
+        );
+});
+
+test('a user without habits is reported as empty on both counts', function () {
+    $user = User::factory()->create();
+    Habit::factory()->for($user)->graduated()->create();
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('habits', 0)
+            ->where('activeCount', 0)
+        );
+});
+
 test('a habit is hidden on a day it is not scheduled for', function () {
     // Ein Samstag — die Mo–Fr-Gewohnheit steht heute nicht an.
     Carbon::setTestNow(Carbon::parse('2026-08-08'));

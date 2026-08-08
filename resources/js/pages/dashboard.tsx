@@ -3,7 +3,7 @@ import { Plus } from 'lucide-react';
 import { HabitRow } from '@/components/habit-row';
 import { Card, CardContent } from '@/components/ui/card';
 import { dashboard } from '@/routes';
-import { create } from '@/routes/habits';
+import { create, index as habitsIndex } from '@/routes/habits';
 import { destroy, store } from '@/routes/habits/completions';
 import type { Habit } from '@/types';
 
@@ -20,7 +20,10 @@ interface DashboardProps {
     todayProgress: TodayProgress;
     /** Anteil erfüllter Tage der letzten 30 Tage; null, solange es keine Gewohnheiten gibt. */
     consistency: number | null;
+    /** Nur die heute vorgesehenen Gewohnheiten. */
     habits: Habit[];
+    /** Alle aktiven — auch die, die heute nicht anstehen. */
+    activeCount: number;
 }
 
 const EYEBROW = 'text-[11px] font-semibold tracking-[0.11em] uppercase';
@@ -31,6 +34,7 @@ export default function Dashboard({
     todayProgress,
     consistency,
     habits,
+    activeCount,
 }: DashboardProps) {
     const { auth } = usePage().props;
     const firstName = auth.user?.name.split(' ')[0] ?? '';
@@ -151,14 +155,21 @@ export default function Dashboard({
                             Heutige Gewohnheiten
                         </h2>
 
-                        {/* §5.6 Outline-Variante: transparent, 1px primary. */}
-                        <Link
-                            href={create()}
-                            className="inline-flex h-11 cursor-pointer items-center gap-1.5 rounded-full border border-primary px-4 text-sm font-semibold text-primary transition-colors duration-200 hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                        >
-                            <Plus className="size-4" aria-hidden="true" />
-                            Neu hinzufügen
-                        </Link>
+                        {/* §5.6 Outline-Variante: transparent, 1px primary.
+                            Entfällt im leeren Zustand — dort steht schon der
+                            gefüllte Knopf, und zwei Wege zum selben Ziel
+                            lassen den Nutzer wählen, wo es nichts zu wählen
+                            gibt. Ab fünf Gewohnheiten entfällt er ebenfalls,
+                            weil das Anlegen dann ohnehin abgewiesen würde. */}
+                        {activeCount > 0 && activeCount < 5 && (
+                            <Link
+                                href={create()}
+                                className="inline-flex h-11 cursor-pointer items-center gap-1.5 rounded-full border border-primary px-4 text-sm font-semibold text-primary transition-colors duration-200 hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                            >
+                                <Plus className="size-4" aria-hidden="true" />
+                                Neu hinzufügen
+                            </Link>
+                        )}
                     </div>
 
                     <Card className="mt-3 gap-0 py-5">
@@ -174,7 +185,7 @@ export default function Dashboard({
                                         />
                                     ))}
                                 </ul>
-                            ) : (
+                            ) : activeCount === 0 ? (
                                 <div className="flex flex-col items-start gap-4">
                                     <p className="text-sm leading-relaxed text-muted-foreground">
                                         Du verfolgst noch keine Gewohnheiten.
@@ -192,6 +203,24 @@ export default function Dashboard({
                                         Erste Gewohnheit anlegen
                                     </Link>
                                 </div>
+                            ) : (
+                                /* Kein leerer Zustand, sondern ein freier Tag.
+                                   §1.5: benannt wird, was gilt — nicht, was
+                                   fehlt. Deshalb auch kein Knopf zum Anlegen. */
+                                <p className="text-sm leading-relaxed text-muted-foreground">
+                                    Für heute ist nichts vorgesehen.{' '}
+                                    {activeCount === 1
+                                        ? 'Deine Gewohnheit ist für andere Wochentage eingeplant'
+                                        : `Deine ${activeCount} Gewohnheiten sind für andere Wochentage eingeplant`}{' '}
+                                    — unter{' '}
+                                    <Link
+                                        href={habitsIndex()}
+                                        className="cursor-pointer font-semibold text-primary underline underline-offset-4 transition-colors duration-200 hover:text-primary/80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                                    >
+                                        Gewohnheiten
+                                    </Link>{' '}
+                                    siehst du, für welche.
+                                </p>
                             )}
                         </CardContent>
                     </Card>

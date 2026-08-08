@@ -44,6 +44,12 @@ class DashboardController extends Controller
             'today' => $localisedToday->isoFormat('dddd, D. MMMM'),
             'todayProgress' => $this->todayProgress($todaysHabits),
             'consistency' => $this->consistencyRate($habits, $today),
+            // Eine leere Tagesliste heißt nicht, dass es keine Gewohnheiten
+            // gibt — eine Mo–Fr-Gewohnheit ist am Samstag schlicht nicht
+            // vorgesehen. Ohne diese Zahl könnte die Oberfläche die beiden
+            // Fälle nicht auseinanderhalten und würde am Wochenende zum
+            // Anlegen auffordern, obwohl längst fünf Gewohnheiten laufen.
+            'activeCount' => $habits->count(),
             'habits' => $todaysHabits->map(fn (Habit $habit): array => [
                 'id' => $habit->id,
                 'title' => $habit->title,

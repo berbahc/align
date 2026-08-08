@@ -18,5 +18,18 @@ declare module '@inertiajs/core' {
             sidebarOpen: boolean;
             [key: string]: unknown;
         };
+        flashDataType: {
+            /**
+             * Bestätigung nach dem Anlegen. Trägt den nächsten Termin, weil
+             * eine Gewohnheit mit fester Uhrzeit heute nicht anstehen muss und
+             * auf der Übersicht sonst spurlos verschwände.
+             */
+            habitCreated?: {
+                title: string;
+                /** Satzteil wie „ab heute" oder „am Montag um 17:00". */
+                when: string;
+                scheduledToday: boolean;
+            };
+        };
     }
 }

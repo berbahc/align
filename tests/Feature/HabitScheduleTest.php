@@ -121,3 +121,78 @@ test('the wizard receives both ways of anchoring a habit', function () {
             ->where('scheduleTypes.0.value', ScheduleType::Dynamic->value)
         );
 });
+
+test('creating a habit that is not due today says when it will be', function () {
+    // Ein Samstag: die Mo–Fr-Gewohnheit steht heute nicht in der Tagesliste.
+    Carbon::setTestNow(Carbon::parse('2026-08-08'));
+
+    $this->actingAs(User::factory()->create())
+        ->post(route('habits.store'), [
+            'title' => 'Vorlesung nachbereiten',
+            'behavior_type' => BehaviorType::Learning->value,
+            'schedule_type' => ScheduleType::Fixed->value,
+            'scheduled_time' => '17:00',
+            'scheduled_days' => [1, 2, 3, 4, 5],
+        ])
+        ->assertRedirect(route('dashboard'))
+        ->assertInertiaFlash('habitCreated.title', 'Vorlesung nachbereiten')
+        ->assertInertiaFlash('habitCreated.when', 'am Montag um 17:00')
+        ->assertInertiaFlash('habitCreated.scheduledToday', false);
+});
+
+test('a habit due today is confirmed as due today', function () {
+    // Ein Montag.
+    Carbon::setTestNow(Carbon::parse('2026-08-03'));
+
+    $this->actingAs(User::factory()->create())
+        ->post(route('habits.store'), [
+            'title' => 'Vorlesung nachbereiten',
+            'behavior_type' => BehaviorType::Learning->value,
+            'schedule_type' => ScheduleType::Fixed->value,
+            'scheduled_time' => '17:00',
+            'scheduled_days' => [1, 2, 3, 4, 5],
+        ])
+        ->assertInertiaFlash('habitCreated.when', 'heute um 17:00')
+        ->assertInertiaFlash('habitCreated.scheduledToday', true);
+});
+
+test('the day after today is named as tomorrow', function () {
+    // Ein Sonntag — der nächste Mo–Fr-Termin ist der Folgetag.
+    Carbon::setTestNow(Carbon::parse('2026-08-09'));
+
+    $this->actingAs(User::factory()->create())
+        ->post(route('habits.store'), [
+            'title' => 'Vorlesung nachbereiten',
+            'behavior_type' => BehaviorType::Learning->value,
+            'schedule_type' => ScheduleType::Fixed->value,
+            'scheduled_time' => '17:00',
+            'scheduled_days' => [1, 2, 3, 4, 5],
+        ])
+        ->assertInertiaFlash('habitCreated.when', 'morgen um 17:00');
+});
+
+test('a situational habit counts from today', function () {
+    $this->actingAs(User::factory()->create())
+        ->post(route('habits.store'), [
+            'title' => '10 Minuten meditieren',
+            'behavior_type' => BehaviorType::Other->value,
+            'schedule_type' => ScheduleType::Dynamic->value,
+            'trigger_situation' => 'nach dem Aufstehen',
+        ])
+        ->assertInertiaFlash('habitCreated.when', 'ab heute')
+        ->assertInertiaFlash('habitCreated.scheduledToday', true);
+});
+
+test('the next occurrence of a fixed habit skips the days it is not planned for', function () {
+    Carbon::setTestNow(Carbon::parse('2026-08-08'));
+
+    $habit = Habit::factory()->fixedSchedule(days: [1, 2, 3, 4, 5])->create();
+
+    expect($habit->nextOccurrence()->toDateString())->toBe('2026-08-10');
+});
+
+test('a situational habit is due every day', function () {
+    Carbon::setTestNow(Carbon::parse('2026-08-08'));
+
+    expect(Habit::factory()->create()->nextOccurrence()->isToday())->toBeTrue();
+});
