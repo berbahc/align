@@ -185,6 +185,17 @@ class Habit extends Model
     }
 
     /**
+     * Beendete Gewohnheiten — aus der Tagesliste heraus, aber nicht fort.
+     *
+     * @param  Builder<$this>  $query
+     */
+    #[Scope]
+    protected function graduated(Builder $query): void
+    {
+        $query->whereNotNull('graduated_at');
+    }
+
+    /**
      * Anteil der Tage mit Erfüllung im Rückblickfenster, in Prozent.
      *
      * progress-tracking.md: bewusst eine Konsistenzrate statt eines Streaks.

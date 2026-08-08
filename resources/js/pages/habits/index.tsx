@@ -1,13 +1,30 @@
-import { Head, Link, router } from '@inertiajs/react';
-import { BookOpen, Dumbbell, GlassWater, Moon, Plus } from 'lucide-react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import {
+    BookOpen,
+    CircleCheck,
+    Dumbbell,
+    GlassWater,
+    Moon,
+    MoreHorizontal,
+    Plus,
+} from 'lucide-react';
+import { GraduatedHabitRow } from '@/components/graduated-habit-row';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { requestReminderPermission } from '@/hooks/use-habit-reminders';
 import { dashboard } from '@/routes';
 import { create } from '@/routes/habits';
+import { store as graduate } from '@/routes/habits/graduation';
 import { update } from '@/routes/habits/reminder';
 import { updateAll } from '@/routes/habits/reminders';
-import type { ManagedHabit } from '@/types';
+import type { GraduatedHabit, ManagedHabit } from '@/types';
 
 // Muss zu DIRECTION_ICONS im Wizard passen — dieselbe Kategorie darf nicht
 // je nach Bildschirm ein anderes Zeichen tragen.
@@ -22,9 +39,14 @@ const EYEBROW = 'text-[11px] font-semibold tracking-[0.11em] uppercase';
 
 interface HabitsIndexProps {
     habits: ManagedHabit[];
+    graduatedHabits: GraduatedHabit[];
 }
 
-export default function HabitsIndex({ habits }: HabitsIndexProps) {
+export default function HabitsIndex({
+    habits,
+    graduatedHabits,
+}: HabitsIndexProps) {
+    const { errors } = usePage().props;
     const remindable = habits.filter((habit) => habit.canRemind);
     const allRemindersOn =
         remindable.length > 0 &&
@@ -59,6 +81,15 @@ export default function HabitsIndex({ habits }: HabitsIndexProps) {
         );
     }
 
+    /**
+     * Ohne Rückfrage: die Gewohnheit rutscht sichtbar ins Archiv direkt
+     * darunter, wo „Wiederaufnehmen" einen Klick entfernt ist. Ein Dialog
+     * würde eine Endgültigkeit behaupten, die hier nicht besteht.
+     */
+    function endHabit(habit: ManagedHabit) {
+        router.post(graduate.url(habit.id), {}, { preserveScroll: true });
+    }
+
     return (
         <>
             <Head title="Gewohnheiten" />
@@ -69,10 +100,13 @@ export default function HabitsIndex({ habits }: HabitsIndexProps) {
                         <h1 className="text-[clamp(1.75rem,4vw,2rem)] leading-tight font-bold text-primary">
                             Gewohnheiten
                         </h1>
+
                         <p className="mt-1 text-sm text-muted-foreground">
-                            {habits.length === 0
-                                ? 'Noch nichts angelegt.'
-                                : `${habits.length} von 5 aktiv`}
+                            {habits.length > 0
+                                ? `${habits.length} von 5 aktiv`
+                                : graduatedHabits.length > 0
+                                  ? 'Keine aktive Gewohnheit.'
+                                  : 'Noch nichts angelegt.'}
                         </p>
                     </div>
 
@@ -165,12 +199,73 @@ export default function HabitsIndex({ habits }: HabitsIndexProps) {
                                                         : 'ohne Uhrzeit'}
                                                 </span>
                                             </span>
+
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="size-11 shrink-0 cursor-pointer text-muted-foreground hover:bg-accent"
+                                                    >
+                                                        <MoreHorizontal
+                                                            className="size-5"
+                                                            aria-hidden="true"
+                                                        />
+                                                        <span className="sr-only">
+                                                            Aktionen für{' '}
+                                                            {habit.title}
+                                                        </span>
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem
+                                                        className="cursor-pointer"
+                                                        onSelect={() =>
+                                                            endHabit(habit)
+                                                        }
+                                                    >
+                                                        <CircleCheck aria-hidden="true" />
+                                                        Beenden
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </CardContent>
                                     </Card>
                                 </li>
                             );
                         })}
                     </ul>
+                )}
+
+                {graduatedHabits.length > 0 && (
+                    <section className="flex flex-col gap-3">
+                        <div>
+                            <h2 className={`${EYEBROW} text-muted-foreground`}>
+                                Beendet
+                            </h2>
+                            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                                Zählt nicht mehr gegen die fünf Plätze und
+                                erinnert nicht mehr. Der Verlauf bleibt — bis du
+                                die Gewohnheit endgültig löschst.
+                            </p>
+                        </div>
+
+                        {errors.habit && (
+                            <p className="text-xs text-destructive">
+                                {errors.habit}
+                            </p>
+                        )}
+
+                        <ul className="flex flex-col gap-2">
+                            {graduatedHabits.map((habit) => (
+                                <GraduatedHabitRow
+                                    key={habit.id}
+                                    habit={habit}
+                                    canReactivate={habits.length < 5}
+                                />
+                            ))}
+                        </ul>
+                    </section>
                 )}
 
                 {/* Beobachtend statt belehrend (§8): der Satz erklärt, warum
