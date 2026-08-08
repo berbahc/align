@@ -9,6 +9,7 @@ use App\Http\Requests\StoreHabitRequest;
 use App\Models\Habit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -67,11 +68,54 @@ class HabitController extends Controller
         ]);
     }
 
+    /**
+     * Nach dem Anlegen führt der Weg zurück auf die Übersicht — auf der eine
+     * Gewohnheit mit fester Uhrzeit heute aber gar nicht stehen muss.
+     *
+     * Eine Mo–Fr-Gewohnheit, samstags angelegt, wäre dort unsichtbar und der
+     * Eindruck wäre, sie sei nicht gespeichert worden. Die Bestätigung nennt
+     * deshalb den nächsten Termin und sagt ausdrücklich dazu, wenn er nicht
+     * heute liegt.
+     */
     public function store(StoreHabitRequest $request, CreateHabit $createHabit): RedirectResponse
     {
-        $createHabit->handle($request->user(), $request->habitAttributes());
+        $habit = $createHabit->handle($request->user(), $request->habitAttributes());
+
+        $next = $habit->nextOccurrence();
+
+        Inertia::flash('habitCreated', [
+            'title' => $habit->title,
+            'when' => $this->nextOccurrenceLabel($habit, $next),
+            'scheduledToday' => $next?->isToday() ?? false,
+        ]);
 
         return to_route('dashboard');
+    }
+
+    /**
+     * Der nächste Termin als Satzteil: „ab heute", „heute um 17:00",
+     * „am Montag um 17:00".
+     */
+    private function nextOccurrenceLabel(Habit $habit, ?Carbon $next): string
+    {
+        if ($habit->schedule_type !== ScheduleType::Fixed) {
+            return 'ab heute';
+        }
+
+        if ($next === null) {
+            return 'an keinem gewählten Tag';
+        }
+
+        $time = $habit->scheduled_time?->format('H:i') ?? '';
+
+        $day = match (true) {
+            $next->isToday() => 'heute',
+            $next->isTomorrow() => 'morgen',
+            // Die App-Locale ist nicht deutsch, die Oberfläche schon.
+            default => 'am '.$next->copy()->locale('de')->isoFormat('dddd'),
+        };
+
+        return trim($day.' um '.$time);
     }
 
     /**

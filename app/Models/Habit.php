@@ -104,6 +104,28 @@ class Habit extends Model
     }
 
     /**
+     * Der nächste Tag, an dem die Gewohnheit ansteht — heute eingeschlossen.
+     *
+     * Situative Gewohnheiten gelten an jedem Tag, für sie ist es immer heute.
+     * Bei festen Gewohnheiten liegt der nächste Termin spätestens in sieben
+     * Tagen; ohne gewählten Wochentag gibt es keinen.
+     */
+    public function nextOccurrence(?Carbon $from = null): ?Carbon
+    {
+        $from ??= Carbon::today();
+
+        foreach (range(0, 6) as $offset) {
+            $candidate = $from->copy()->addDays($offset);
+
+            if ($this->isScheduledOn($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Nur feste Uhrzeiten lassen sich erinnern — ohne Zeitpunkt kein „vorher".
      */
     public function canRemind(): bool
