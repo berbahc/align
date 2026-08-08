@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\CreateHabit;
 use App\Enums\BehaviorType;
+use App\Enums\ScheduleType;
 use App\Http\Requests\StoreHabitRequest;
 use App\Models\Habit;
 use Illuminate\Http\RedirectResponse;
@@ -18,6 +19,7 @@ class OnboardingController extends Controller
         return Inertia::render('onboarding', [
             'directions' => BehaviorType::options(),
             'triggerSuggestions' => Habit::TriggerSuggestions,
+            'scheduleTypes' => ScheduleType::options(),
         ]);
     }
 

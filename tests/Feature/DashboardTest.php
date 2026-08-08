@@ -97,3 +97,64 @@ test('a user without habits gets no consistency rate instead of zero percent', f
             ->where('consistency', null)
         );
 });
+
+test('a habit is hidden on a day it is not scheduled for', function () {
+    // Ein Samstag — die Mo–Fr-Gewohnheit steht heute nicht an.
+    Carbon::setTestNow(Carbon::parse('2026-08-08'));
+
+    $user = User::factory()->create();
+    Habit::factory()->for($user)->fixedSchedule(days: [1, 2, 3, 4, 5])->create(['title' => 'Lesen']);
+    Habit::factory()->for($user)->create(['title' => 'Trinken']);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('habits', 1)
+            ->where('habits.0.title', 'Trinken')
+            // Das Tagesziel zählt nur, was heute vorgesehen ist — sonst wäre
+            // der Tag von vornherein unerfüllbar.
+            ->where('todayProgress.total', 1)
+        );
+});
+
+test('a weekday habit reaches 100 percent without being punished for the weekend', function () {
+    Carbon::setTestNow(Carbon::parse('2026-08-08'));
+
+    $user = User::factory()->create();
+    $habit = Habit::factory()->for($user)->fixedSchedule(days: [1, 2, 3, 4, 5])->create();
+    $habit->forceFill(['created_at' => Carbon::today()->subDays(60)])->save();
+
+    // Jeden vorgesehenen Tag der letzten 30 erfüllt — und keinen weiteren.
+    foreach (range(0, 29) as $daysAgo) {
+        $date = Carbon::today()->subDays($daysAgo);
+
+        if (! $habit->isScheduledOn($date)) {
+            continue;
+        }
+
+        $habit->completions()->create([
+            'completed_on' => $date,
+            'completed_at' => $date->copy()->setTime(17, 0),
+        ]);
+    }
+
+    expect($habit->consistencyRate())->toBe(100);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (AssertableInertia $page) => $page->where('consistency', 100));
+});
+
+test('the schedule label carries the time and days of a fixed habit', function () {
+    // Ein Montag, damit die Gewohnheit in der Tagesliste auftaucht.
+    Carbon::setTestNow(Carbon::parse('2026-08-03'));
+
+    $user = User::factory()->create();
+    Habit::factory()->for($user)->fixedSchedule('07:30', [1, 2, 3, 4, 5])->create();
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('habits.0.scheduleLabel', '07:30 · Mo–Fr')
+        );
+});

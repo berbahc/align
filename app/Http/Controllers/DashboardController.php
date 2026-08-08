@@ -32,15 +32,22 @@ class DashboardController extends Controller
             ->orderBy('position')
             ->get();
 
+        // Die Tagesliste zeigt nur, was heute ansteht. Eine Mo–Fr-Gewohnheit
+        // ist am Samstag nicht offen, sondern nicht vorgesehen — sie dennoch
+        // als unerledigt zu zeigen wäre eine Forderung, die niemand erhoben hat.
+        $todaysHabits = $habits->filter(
+            fn (Habit $habit): bool => $habit->isScheduledOn($today),
+        )->values();
+
         return Inertia::render('dashboard', [
             'greeting' => $this->greeting($today),
             'today' => $localisedToday->isoFormat('dddd, D. MMMM'),
-            'todayProgress' => $this->todayProgress($habits),
-            'consistency' => $this->consistencyRate($habits),
-            'habits' => $habits->map(fn (Habit $habit): array => [
+            'todayProgress' => $this->todayProgress($todaysHabits),
+            'consistency' => $this->consistencyRate($habits, $today),
+            'habits' => $todaysHabits->map(fn (Habit $habit): array => [
                 'id' => $habit->id,
                 'title' => $habit->title,
-                'triggerSituation' => $habit->trigger_situation,
+                'scheduleLabel' => $habit->scheduleLabel(),
                 'behaviorType' => $habit->behavior_type->value,
                 'focusMinutes' => $habit->focus_minutes,
                 'completedAt' => $habit->completions->first()?->completed_at->format('H:i'),
@@ -90,15 +97,29 @@ class DashboardController extends Controller
      * Langzeitkosten haben. Ohne aktive Gewohnheiten gibt es keine Rate —
      * dann zeigt die Oberfläche den leeren Zustand statt „0 %".
      *
+     * Die Zahl der möglichen Tage wird pro Gewohnheit ermittelt, nicht pauschal
+     * mit 30 multipliziert: eine Mo–Fr-Gewohnheit hat in dreißig Tagen rund
+     * zweiundzwanzig vorgesehene Tage. Über alle Tage zu rechnen würde sie
+     * dauerhaft unter 72 % halten, obwohl sie lückenlos erfüllt wurde.
+     *
      * @param  Collection<int, Habit>  $habits
      */
-    private function consistencyRate(Collection $habits): ?int
+    private function consistencyRate(Collection $habits, Carbon $today): ?int
     {
         if ($habits->isEmpty()) {
             return null;
         }
 
-        $possible = $habits->count() * 30;
+        $start = $today->copy()->subDays(29);
+
+        $possible = $habits->sum(
+            fn (Habit $habit): int => $habit->scheduledDaysBetween($start, $today),
+        );
+
+        if ($possible < 1) {
+            return null;
+        }
+
         $completed = $habits->sum('completions_last_30_days');
 
         return (int) round($completed / $possible * 100);

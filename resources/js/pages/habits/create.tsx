@@ -1,17 +1,20 @@
 import { Head } from '@inertiajs/react';
 import { HabitWizard } from '@/components/habit-wizard';
 import type { Direction } from '@/components/habit-wizard';
+import type { ScheduleTypeOption } from '@/components/schedule-picker';
 import { dashboard } from '@/routes';
 import { store } from '@/routes/habits';
 
 interface CreateHabitProps {
     directions: Direction[];
     triggerSuggestions: string[];
+    scheduleTypes: ScheduleTypeOption[];
 }
 
 export default function CreateHabit({
     directions,
     triggerSuggestions,
+    scheduleTypes,
 }: CreateHabitProps) {
     return (
         <>
@@ -25,6 +28,7 @@ export default function CreateHabit({
                 <HabitWizard
                     directions={directions}
                     triggerSuggestions={triggerSuggestions}
+                    scheduleTypes={scheduleTypes}
                     action={store.url()}
                 />
             </div>

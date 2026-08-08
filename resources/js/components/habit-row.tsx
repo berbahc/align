@@ -32,7 +32,7 @@ export function HabitRow({
     const subtitle = isDone
         ? `Abgeschlossen · ${habit.completedAt} Uhr`
         : [
-              habit.triggerSituation,
+              habit.scheduleLabel,
               habit.focusMinutes && `${habit.focusMinutes} Min`,
           ]
               .filter(Boolean)

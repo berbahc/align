@@ -2,16 +2,19 @@ import { Form, Head } from '@inertiajs/react';
 import AppLogoIcon from '@/components/app-logo-icon';
 import { HabitWizard } from '@/components/habit-wizard';
 import type { Direction } from '@/components/habit-wizard';
+import type { ScheduleTypeOption } from '@/components/schedule-picker';
 import { skip, store } from '@/routes/onboarding';
 
 interface OnboardingProps {
     directions: Direction[];
     triggerSuggestions: string[];
+    scheduleTypes: ScheduleTypeOption[];
 }
 
 export default function Onboarding({
     directions,
     triggerSuggestions,
+    scheduleTypes,
 }: OnboardingProps) {
     return (
         <>
@@ -52,6 +55,7 @@ export default function Onboarding({
                     <HabitWizard
                         directions={directions}
                         triggerSuggestions={triggerSuggestions}
+                        scheduleTypes={scheduleTypes}
                         action={store.url()}
                     />
                 </main>

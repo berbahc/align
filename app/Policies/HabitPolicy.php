@@ -17,4 +17,12 @@ class HabitPolicy
     {
         return $user->id === $habit->user_id;
     }
+
+    /**
+     * Einstellungen einer Gewohnheit ändern — derzeit die Erinnerung.
+     */
+    public function update(User $user, Habit $habit): bool
+    {
+        return $user->id === $habit->user_id;
+    }
 }
