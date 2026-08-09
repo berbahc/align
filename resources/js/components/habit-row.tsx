@@ -1,15 +1,7 @@
-import { BookOpen, Check, Dumbbell, GlassWater, Moon } from 'lucide-react';
+import { Check } from 'lucide-react';
+import { BEHAVIOR_ICONS } from '@/lib/behavior-icons';
 import { cn } from '@/lib/utils';
 import type { Habit } from '@/types';
-
-// Muss zu DIRECTION_ICONS im Wizard passen — dieselbe Kategorie darf nicht
-// je nach Bildschirm ein anderes Zeichen tragen.
-const BEHAVIOR_ICONS = {
-    nutrition: GlassWater,
-    movement: Dumbbell,
-    learning: BookOpen,
-    other: Moon,
-} as const;
 
 /**
  * Habit-Zeile nach Designsprache §5.2.

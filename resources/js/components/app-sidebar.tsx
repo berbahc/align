@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { LayoutGrid, Repeat, TrendingUp, Users } from 'lucide-react';
+import { CalendarDays, LayoutGrid, Repeat, Users } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -13,13 +13,15 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { community, dashboard, journey } from '@/routes';
+import { calendar, community, dashboard } from '@/routes';
 import { index as habitsIndex } from '@/routes/habits';
 import type { NavItem } from '@/types';
 
-// Reihenfolge wie im Desktop-Mockup: Übersicht, Gewohnheiten, Verlauf,
-// Community. Der Mockup-Punkt „Analytics" heißt hier „Verlauf", weil
-// habit-journey.md die Kurve pro Gewohnheit und rein individuell vorsieht.
+// Vier Einträge, wie das Figma-Design sie vorgibt. Der dritte hieß „Verlauf"
+// und stand für habit-journey.md — das einzige Feature ganz ohne Umfragedaten
+// (Auswertung §9: die Skala wurde nie erhoben). Der Kalender löst dasselbe
+// Versprechen ein, mit Belegen: 20 von 25 Befragten planen ohnehin mit einem
+// Kalender oder Planer.
 const mainNavItems: NavItem[] = [
     {
         title: 'Übersicht',
@@ -32,9 +34,9 @@ const mainNavItems: NavItem[] = [
         icon: Repeat,
     },
     {
-        title: 'Verlauf',
-        href: journey(),
-        icon: TrendingUp,
+        title: 'Kalender',
+        href: calendar(),
+        icon: CalendarDays,
     },
     {
         title: 'Community',

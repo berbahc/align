@@ -42,6 +42,44 @@ export interface ManagedHabit {
 }
 
 /**
+ * Ein von der KI vorgeschlagener anderer Zeitpunkt.
+ *
+ * Vorgeschlagen wird immer in der Form, die der Nutzer selbst gewählt hat:
+ * eine situative Gewohnheit bekommt `situation`, eine feste `time` und `days`.
+ * Die Planungsart zu wechseln ist keine Anpassung, sondern eine andere
+ * Entscheidung.
+ */
+export interface AnchorAlternative {
+    situation?: string;
+    time?: string;
+    days?: Weekday[];
+    /** Ein Satz, warum dieser Zeitpunkt tragen könnte. */
+    reason: string;
+    /** Wo der Block läge, würde man ihn übernehmen — vom Server bestimmt. */
+    anchorHour: number;
+}
+
+/**
+ * Eine Gewohnheit an ihrer Stelle im Tag — die Kalenderansicht.
+ *
+ * Anders als bei der Tagesliste gehört der Zustand hier zu einem bestimmten
+ * Datum, nicht zu „heute": `completed` meint den angezeigten Tag.
+ */
+export interface CalendarBlock {
+    id: number;
+    title: string;
+    /** Der Anker als Kopfzeile: „nach dem Aufstehen" oder „17:00 · Mo–Fr". */
+    anchor: string;
+    /** Die Stelle im Tag als Stunde — sortiert die Achse. */
+    anchorHour: number;
+    behaviorType: BehaviorType;
+    smallestStep: string | null;
+    completed: boolean;
+    /** Beendete Gewohnheiten bleiben in ihrer Vergangenheit sichtbar. */
+    graduated: boolean;
+}
+
+/**
  * Eine beendete Gewohnheit im Archiv.
  *
  * Sie zählt nicht gegen das Limit von fünf und löst nichts mehr aus, behält

@@ -54,22 +54,35 @@ class Habit extends Model
     public const int WeekOverviewDays = 7;
 
     /**
-     * Vorschläge für den Situations-Picker.
+     * Vorschläge für den Situations-Picker, mit ihrer ungefähren Tagesstunde.
      *
      * time-blocking.md: situative Cues statt Uhrzeiten. Eine Situation löst
      * Verhalten automatisch aus, eine Uhrzeit muss aktiv erinnert werden.
      * Die Liste ist nur ein Angebot — eigene Eingaben sind erlaubt.
      *
-     * @var list<string>
+     * Die Stunde ist kein Termin, sondern eine Sortierhilfe: der Kalender muss
+     * Situationen und feste Uhrzeiten auf derselben Achse einordnen können, und
+     * dafür braucht auch „nach dem Frühstück" eine Stelle im Tag. Angezeigt
+     * wird sie nie — die Achse trägt Anker, keine Uhr.
+     *
+     * @var array<string, int>
      */
     public const array TriggerSuggestions = [
-        'nach dem Aufstehen',
-        'nach dem Frühstück',
-        'nach der Morgenvorlesung',
-        'nach dem Mittagessen',
-        'wenn ich nach Hause komme',
-        'vor dem Schlafengehen',
+        'nach dem Aufstehen' => 7,
+        'nach dem Frühstück' => 8,
+        'nach der Morgenvorlesung' => 11,
+        'nach dem Mittagessen' => 13,
+        'wenn ich nach Hause komme' => 17,
+        'vor dem Schlafengehen' => 22,
     ];
+
+    /**
+     * Die Stunde, an der eine selbst getippte Situation einsortiert wird.
+     *
+     * Die Mitte des Tages ist die ehrlichste Annahme, solange die App nicht
+     * weiß, wann „wenn ich aus der Bib komme" stattfindet.
+     */
+    public const int UnknownAnchorHour = 12;
 
     /**
      * Kurzformen der Wochentage, indiziert nach ISO-Nummer (1 = Montag).
@@ -121,17 +134,23 @@ class Habit extends Model
      *
      * Erwartet geladene `completions`, sonst fragt jeder Aufruf die Datenbank.
      *
+     * Die Fensterlänge ist einstellbar, weil derselbe Rückblick zwei Aufgaben
+     * hat: sieben Tage für den Streifen, ein längeres Fenster als Beleg für
+     * einen Anpassungs-Vorschlag.
+     *
      * @return list<array{date: string, label: string, scheduled: bool, completed: bool}>
      */
-    public function weekOverview(?Carbon $until = null): array
+    public function weekOverview(?Carbon $until = null, ?int $days = null): array
     {
         $until ??= Carbon::today();
+        $days ??= self::WeekOverviewDays;
 
         $completed = $this->completions
             ->map(fn (HabitCompletion $completion): string => $completion->completed_on->toDateString())
             ->all();
 
-        return collect(range(self::WeekOverviewDays - 1, 0))
+        /** @var list<array{date: string, label: string, scheduled: bool, completed: bool}> $overview */
+        $overview = collect(range($days - 1, 0))
             ->map(function (int $offset) use ($until, $completed): array {
                 $date = $until->copy()->subDays($offset);
 
@@ -142,7 +161,41 @@ class Habit extends Model
                     'completed' => in_array($date->toDateString(), $completed, strict: true),
                 ];
             })
+            ->values()
             ->all();
+
+        return $overview;
+    }
+
+    /**
+     * Die Tage im Rückblick, an denen die Gewohnheit anstand und nichts geschah.
+     *
+     * Das ist der Beleg, mit dem die KI ihren Vorschlag begründet — nicht das
+     * Urteil über einen Nutzer. Tage vor dem Anlegen zählen nicht mit: was es
+     * noch nicht gab, kann niemand versäumt haben.
+     *
+     * Erwartet geladene `completions` über mindestens dieses Fenster.
+     *
+     * @return list<array{date: string, label: string}>
+     */
+    public function recentMisses(int $days = 14, ?Carbon $until = null): array
+    {
+        $until ??= Carbon::today();
+        $start = $this->created_at?->copy()->startOfDay();
+
+        /** @var list<array{date: string, label: string}> $misses */
+        $misses = collect($this->weekOverview($until, $days))
+            ->filter(fn (array $day): bool => $day['scheduled'] && ! $day['completed'])
+            ->filter(fn (array $day): bool => $start === null
+                || Carbon::parse($day['date'])->greaterThanOrEqualTo($start))
+            ->map(fn (array $day): array => [
+                'date' => $day['date'],
+                'label' => $day['label'],
+            ])
+            ->values()
+            ->all();
+
+        return $misses;
     }
 
     /**
@@ -165,6 +218,38 @@ class Habit extends Model
         }
 
         return null;
+    }
+
+    /**
+     * Wo im Tag die Gewohnheit sitzt, als Stunde — die Sortierung des Kalenders.
+     *
+     * Feste Uhrzeiten bringen ihre Stelle mit, bekannte Situationen bekommen
+     * sie aus der Vorschlagsliste, und alles Selbstgetippte landet mittags.
+     * Eine Näherung, die nur eine Aufgabe hat: den Tag von oben nach unten
+     * lesbar zu machen.
+     */
+    public function dayAnchorHour(): int
+    {
+        return $this->schedule_type === ScheduleType::Fixed
+            ? self::anchorHourFor(time: $this->scheduled_time?->format('H:i'))
+            : self::anchorHourFor(situation: $this->trigger_situation);
+    }
+
+    /**
+     * Dieselbe Rechnung für einen Anker, den es noch gar nicht gibt.
+     *
+     * Ein Vorschlag der KI muss sich einsortieren lassen, bevor er übernommen
+     * wurde — sonst könnte die Oberfläche nicht zeigen, wohin der Block wandern
+     * würde. Die Stunde wird deshalb hier bestimmt und nicht im Browser
+     * nachgebaut.
+     */
+    public static function anchorHourFor(?string $situation = null, ?string $time = null): int
+    {
+        if ($time !== null && preg_match('/^(\d{1,2}):/', $time, $matches) === 1) {
+            return (int) $matches[1];
+        }
+
+        return self::TriggerSuggestions[$situation] ?? self::UnknownAnchorHour;
     }
 
     /**

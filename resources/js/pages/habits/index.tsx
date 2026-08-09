@@ -1,13 +1,5 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import {
-    BookOpen,
-    CircleCheck,
-    Dumbbell,
-    GlassWater,
-    Moon,
-    MoreHorizontal,
-    Plus,
-} from 'lucide-react';
+import { CircleCheck, MoreHorizontal, Plus } from 'lucide-react';
 import { GraduatedHabitRow } from '@/components/graduated-habit-row';
 import { HabitLimitNote } from '@/components/habit-limit-note';
 import { Button } from '@/components/ui/button';
@@ -20,21 +12,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { requestReminderPermission } from '@/hooks/use-habit-reminders';
+import { BEHAVIOR_ICONS } from '@/lib/behavior-icons';
 import { dashboard } from '@/routes';
 import { create } from '@/routes/habits';
 import { store as graduate } from '@/routes/habits/graduation';
 import { update } from '@/routes/habits/reminder';
 import { updateAll } from '@/routes/habits/reminders';
 import type { GraduatedHabit, ManagedHabit } from '@/types';
-
-// Muss zu DIRECTION_ICONS im Wizard passen — dieselbe Kategorie darf nicht
-// je nach Bildschirm ein anderes Zeichen tragen.
-const BEHAVIOR_ICONS = {
-    nutrition: GlassWater,
-    movement: Dumbbell,
-    learning: BookOpen,
-    other: Moon,
-} as const;
 
 const EYEBROW = 'text-[11px] font-semibold tracking-[0.11em] uppercase';
 

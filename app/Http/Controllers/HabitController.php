@@ -64,7 +64,7 @@ class HabitController extends Controller
     {
         return Inertia::render('habits/create', [
             'directions' => BehaviorType::options(),
-            'triggerSuggestions' => Habit::TriggerSuggestions,
+            'triggerSuggestions' => array_keys(Habit::TriggerSuggestions),
             'scheduleTypes' => ScheduleType::options(),
         ]);
     }

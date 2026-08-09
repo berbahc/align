@@ -1,12 +1,5 @@
 import { router } from '@inertiajs/react';
-import {
-    BookOpen,
-    Dumbbell,
-    GlassWater,
-    Moon,
-    RotateCcw,
-    Trash2,
-} from 'lucide-react';
+import { RotateCcw, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,18 +10,10 @@ import {
     DialogFooter,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { BEHAVIOR_ICONS } from '@/lib/behavior-icons';
 import { destroy as deleteHabit } from '@/routes/habits';
 import { destroy as reactivate } from '@/routes/habits/graduation';
 import type { GraduatedHabit } from '@/types';
-
-// Muss zu BEHAVIOR_ICONS in habit-row.tsx passen — dieselbe Kategorie darf
-// nicht je nach Bildschirm ein anderes Zeichen tragen.
-const BEHAVIOR_ICONS = {
-    nutrition: GlassWater,
-    movement: Dumbbell,
-    learning: BookOpen,
-    other: Moon,
-} as const;
 
 /**
  * Eine beendete Gewohnheit im Archiv.
