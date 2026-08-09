@@ -28,6 +28,15 @@ export interface Habit {
     motivation: string | null;
     /** Uhrzeit der heutigen Erfüllung („07:30"), sonst null. */
     completedAt: string | null;
+    /**
+     * Wer heute mitmacht — null, wenn die Gewohnheit allein ansteht.
+     *
+     * Bewusst ohne Fortschritt der anderen Person: Das wäre durch die
+     * Hintertür doch ein Dauerstatus (community_feature3.md §6).
+     */
+    companion: { name: string; initial: string } | null;
+    /** Die zugesagte Verabredung von heute, zum Auflösen. */
+    appointmentId: number | null;
 }
 
 /** Eine Gewohnheit in der Verwaltungsansicht — dort zählt die Planung, nicht der heutige Tag. */

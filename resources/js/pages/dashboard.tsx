@@ -1,14 +1,23 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
+import { AppointmentRequestNotice } from '@/components/appointment-request-notice';
+import { AppointmentSheet } from '@/components/appointment-sheet';
 import { FriendRequestNotice } from '@/components/friend-request-notice';
 import { HabitRow } from '@/components/habit-row';
 import { StartingHelpSheet } from '@/components/starting-help-sheet';
 import { Card, CardContent } from '@/components/ui/card';
+import { UpcomingAppointments } from '@/components/upcoming-appointments';
 import { dashboard } from '@/routes';
 import { create, index as habitsIndex } from '@/routes/habits';
 import { destroy, store } from '@/routes/habits/completions';
-import type { FriendshipPerson, Habit } from '@/types';
+import type {
+    AppointmentDay,
+    AppointmentRequest,
+    UpcomingAppointment,
+    FriendshipPerson,
+    Habit,
+} from '@/types';
 
 interface TodayProgress {
     completed: number;
@@ -22,6 +31,16 @@ interface DashboardProps {
     today: string;
     /** Offene Freundschaftsanfragen — Mockup A2 zeigt sie auf dem Home-Screen. */
     friendRequests: FriendshipPerson[];
+    /** Offene Verabredungs-Anfragen — Screen A2. */
+    appointmentRequests: AppointmentRequest[];
+    /** Was mit jemandem ansteht — zugesagt oder von einem selbst gefragt. */
+    upcomingAppointments: UpcomingAppointment[];
+    /** Der eigene Kreis, für die Auswahl in Screen A1. */
+    friends: FriendshipPerson[];
+    /** Die drei Tage aus Screen A1. */
+    appointmentDays: AppointmentDay[];
+    /** Screen A5: aus heißt, der Weg zur Verabredung wird nicht angeboten. */
+    appointmentsEnabled: boolean;
     todayProgress: TodayProgress;
     /** Anteil erfüllter Tage der letzten 30 Tage; null, solange es keine Gewohnheiten gibt. */
     consistency: number | null;
@@ -39,6 +58,11 @@ export default function Dashboard({
     greeting,
     today,
     friendRequests,
+    appointmentRequests,
+    upcomingAppointments,
+    friends,
+    appointmentDays,
+    appointmentsEnabled,
     todayProgress,
     consistency,
     habits,
@@ -47,9 +71,13 @@ export default function Dashboard({
 }: DashboardProps) {
     const { auth } = usePage().props;
     const firstName = auth.user?.name.split(' ')[0] ?? '';
+    const selfInitial = (auth.user?.name.charAt(0) ?? '').toUpperCase();
 
     // Welche Gewohnheit gerade im Starthilfe-Sheet steht; null heißt zu.
     const [stuckOn, setStuckOn] = useState<Habit | null>(null);
+
+    // Welche Gewohnheit gerade im Verabredungs-Sheet steht; null heißt zu.
+    const [askingFor, setAskingFor] = useState<Habit | null>(null);
 
     function toggle(habit: Habit) {
         const markingDone = habit.completedAt === null;
@@ -113,6 +141,7 @@ export default function Dashboard({
                     darunter — sie ist das Einzige auf dieser Seite, das eine
                     andere Person betrifft und auf eine Antwort wartet. */}
                 <FriendRequestNotice requests={friendRequests} />
+                <AppointmentRequestNotice requests={appointmentRequests} />
 
                 {todayProgress.total > 0 && (
                     <Card className="gap-0 py-5">
@@ -198,8 +227,14 @@ export default function Dashboard({
                                         <HabitRow
                                             key={habit.id}
                                             habit={habit}
+                                            selfInitial={selfInitial}
                                             onToggle={toggle}
                                             onStuck={setStuckOn}
+                                            onAskCompany={
+                                                appointmentsEnabled
+                                                    ? setAskingFor
+                                                    : null
+                                            }
                                         />
                                     ))}
                                 </ul>
@@ -243,11 +278,26 @@ export default function Dashboard({
                         </CardContent>
                     </Card>
                 </section>
+
+                {/* Unter der Tagesliste, nicht darüber: Die Verabredung ist
+                    eine Ergänzung des Tages, keine Meldung, die ihn anführt.
+                    Anfragen, die eine Antwort brauchen, stehen weiterhin oben. */}
+                <UpcomingAppointments
+                    appointments={upcomingAppointments}
+                    selfInitial={selfInitial}
+                />
             </div>
 
             <StartingHelpSheet
                 habit={stuckOn}
                 onOpenChange={(open) => !open && setStuckOn(null)}
+            />
+
+            <AppointmentSheet
+                habit={askingFor}
+                friends={friends}
+                days={appointmentDays}
+                onOpenChange={(open) => !open && setAskingFor(null)}
             />
         </>
     );

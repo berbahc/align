@@ -1,4 +1,5 @@
 import { Check } from 'lucide-react';
+import { PersonCircle } from '@/components/person-circle';
 import { BEHAVIOR_ICONS } from '@/lib/behavior-icons';
 import { cn } from '@/lib/utils';
 import type { Habit } from '@/types';
@@ -13,19 +14,27 @@ import type { Habit } from '@/types';
  */
 export function HabitRow({
     habit,
+    selfInitial,
     onToggle,
     onStuck,
+    onAskCompany,
 }: {
     habit: Habit;
+    /** Die eigene Initiale — die linke Hälfte des Doppel-Zeichens aus §3.2. */
+    selfInitial: string;
     onToggle: (habit: Habit) => void;
     onStuck: (habit: Habit) => void;
+    /** Null blendet den Weg zur Verabredung aus — Screen A5. */
+    onAskCompany: ((habit: Habit) => void) | null;
 }) {
     const Icon = BEHAVIOR_ICONS[habit.behaviorType];
     const isDone = habit.completedAt !== null;
+    const companion = habit.companion;
 
     const subtitle = isDone
         ? `Abgeschlossen · ${habit.completedAt} Uhr`
         : [
+              companion && `mit ${companion.name}`,
               habit.scheduleLabel,
               habit.focusMinutes && `${habit.focusMinutes} Min`,
           ]
@@ -35,20 +44,37 @@ export function HabitRow({
     return (
         <li className="flex flex-col gap-2">
             <div className="flex items-center gap-3">
-                <span
-                    className={cn(
-                        'flex size-11 shrink-0 items-center justify-center transition-colors duration-200',
-                        isDone
-                            ? 'rounded-full bg-primary text-primary-foreground'
-                            : 'rounded-xl bg-sand text-primary',
-                    )}
-                >
-                    <Icon
-                        className="size-5"
-                        strokeWidth={1.5}
-                        aria-hidden="true"
-                    />
-                </span>
+                {/* §3.2 — die dritte Ausprägung der Icon-Kachel: zwei Kreise
+                    statt einem. Kein neues Element, keine neue Farbe, kein
+                    neues Symbol. Form *und* Anzahl unterscheiden sich, die
+                    Information hängt also nicht an der Farbe. */}
+                {companion !== null && !isDone ? (
+                    <span
+                        className="flex shrink-0 -space-x-2"
+                        aria-label={`Zusammen mit ${companion.name}`}
+                    >
+                        <PersonCircle initial={selfInitial} />
+                        <PersonCircle
+                            initial={companion.initial}
+                            className="ring-2 ring-background"
+                        />
+                    </span>
+                ) : (
+                    <span
+                        className={cn(
+                            'flex size-11 shrink-0 items-center justify-center transition-colors duration-200',
+                            isDone
+                                ? 'rounded-full bg-primary text-primary-foreground'
+                                : 'rounded-xl bg-sand text-primary',
+                        )}
+                    >
+                        <Icon
+                            className="size-5"
+                            strokeWidth={1.5}
+                            aria-hidden="true"
+                        />
+                    </span>
+                )}
 
                 <span className="min-w-0 flex-1">
                     <span
@@ -111,6 +137,20 @@ export function HabitRow({
                         <span className="text-xs leading-relaxed text-muted-foreground">
                             → {habit.smallestStep}
                         </span>
+                    )}
+                    {/* Der Weg zur Verabredung steht neben der Starthilfe:
+                        beides sind Angebote für denselben Moment, in dem eine
+                        Gewohnheit noch offen ist. Er verschwindet, sobald
+                        jemand mitmacht — eine zweite Person pro Verabredung
+                        ist die Obergrenze (§4). */}
+                    {onAskCompany !== null && companion === null && (
+                        <button
+                            type="button"
+                            onClick={() => onAskCompany(habit)}
+                            className="cursor-pointer text-xs font-semibold text-primary underline underline-offset-4 transition-colors duration-200 hover:text-primary/80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                        >
+                            Mit jemandem zusammen?
+                        </button>
                     )}
                     <button
                         type="button"

@@ -40,6 +40,16 @@ class Habit extends Model
     use HasFactory;
 
     /**
+     * Gemeinsame Termine zu dieser Gewohnheit.
+     *
+     * @return HasMany<Appointment, $this>
+     */
+    public function appointments(): HasMany
+    {
+        return $this->hasMany(Appointment::class);
+    }
+
+    /**
      * progress-tracking.md: höchstens 5 gleichzeitig aktive Gewohnheiten,
      * damit die Liste schmal und der Fokus erhalten bleibt.
      */

@@ -6,7 +6,9 @@ use App\Actions\CreateHabit;
 use App\Enums\BehaviorType;
 use App\Enums\ScheduleType;
 use App\Http\Requests\StoreHabitRequest;
+use App\Models\Appointment;
 use App\Models\Habit;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -60,12 +62,20 @@ class HabitController extends Controller
         ]);
     }
 
-    public function create(): Response
+    public function create(Request $request): Response
     {
         return Inertia::render('habits/create', [
             'directions' => BehaviorType::options(),
             'triggerSuggestions' => array_keys(Habit::TriggerSuggestions),
             'scheduleTypes' => ScheduleType::options(),
+            // Für den letzten, freiwilligen Schritt: mit wem und wann.
+            'friends' => $request->user()->friends()->map(fn (User $friend): array => [
+                'id' => $friend->id,
+                'name' => $friend->name,
+                'initial' => mb_strtoupper(mb_substr($friend->name, 0, 1)),
+            ])->all(),
+            'appointmentDays' => Appointment::dayChoices(),
+            'appointmentsEnabled' => $request->user()->appointments_enabled,
         ]);
     }
 
@@ -85,10 +95,24 @@ class HabitController extends Controller
         $next = $habit->nextOccurrence();
 
         Inertia::flash('habitCreated', [
+            'id' => $habit->id,
             'title' => $habit->title,
+            'anchor' => $habit->scheduleLabel(),
             'when' => $this->nextOccurrenceLabel($habit, $next),
             'scheduledToday' => $next?->isToday() ?? false,
         ]);
+
+        // Die Gewohnheit ist gespeichert. Wer jemanden im Kreis hat, bekommt
+        // danach noch die Frage, ob er sie zu zweit angehen will — als
+        // freiwilliger letzter Schritt, nicht als Bedingung.
+        //
+        // Ohne Kreis oder mit abgestellten Verabredungen wäre der Schritt eine
+        // leere Seite: Dann führt der Weg wie bisher direkt zur Übersicht.
+        $user = $request->user();
+
+        if ($user->appointments_enabled && $user->friends()->isNotEmpty()) {
+            return to_route('habits.create');
+        }
 
         return to_route('dashboard');
     }
