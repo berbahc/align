@@ -5,13 +5,10 @@ namespace App\Ai\Agents;
 use App\Enums\BehaviorType;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
-use Laravel\Ai\Attributes\Model;
-use Laravel\Ai\Attributes\Provider;
 use Laravel\Ai\Attributes\Temperature;
 use Laravel\Ai\Attributes\Timeout;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\HasStructuredOutput;
-use Laravel\Ai\Enums\Lab;
 use Laravel\Ai\Promptable;
 use Laravel\Ai\Responses\StructuredAgentResponse;
 use RuntimeException;
@@ -31,9 +28,11 @@ use RuntimeException;
  *
  * Der Zeitrahmen ist knapp gehalten: der Vorschlag erscheint mitten im
  * Anlege-Ablauf, und ein Wizard, der zwanzig Sekunden steht, ist kaputt.
+ *
+ * Anbieter und Modell stehen bewusst nicht hier, sondern in `config/ai.php`:
+ * ob der Weg zu Claude über OpenRouter oder direkt über Anthropic führt, ist
+ * eine Frage des Schlüssels, nicht des Verhaltens.
  */
-#[Provider(Lab::Anthropic)]
-#[Model('claude-sonnet-5')]
 #[Temperature(1.0)]
 #[Timeout(20)]
 class SuggestSmallestStep implements Agent, HasStructuredOutput
