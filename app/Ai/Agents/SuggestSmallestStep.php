@@ -89,6 +89,11 @@ class SuggestSmallestStep implements Agent, HasStructuredOutput
     }
 
     /**
+     * Claudes natives Structured-Output-Format lehnt `minItems`/`maxItems`
+     * auf Array-Typen ab („property 'maxItems' is not supported") — die
+     * Anzahl steuert deshalb allein die Anweisung im Prompt, geprüft wird sie
+     * anschließend in {@see suggest()}.
+     *
      * @return array<string, Type>
      */
     public function schema(JsonSchema $schema): array
@@ -96,8 +101,6 @@ class SuggestSmallestStep implements Agent, HasStructuredOutput
         return [
             'steps' => $schema->array()
                 ->items($schema->string()->max(self::MaxStepLength))
-                ->min(1)
-                ->max(self::SuggestionCount)
                 ->description('Die vorgeschlagenen ersten Handgriffe.')
                 ->required(),
         ];
