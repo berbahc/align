@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\AddFriendRequest;
+use App\Models\Appointment;
+use App\Models\AppointmentNotice;
 use App\Models\Friendship;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -13,10 +16,15 @@ use Inertia\Response;
 class FriendshipController extends Controller
 {
     /**
-     * Der Freundeskreis — die Voraussetzung für jede Verabredung.
+     * Der Freundeskreis — und was mit ihm gerade ausgemacht ist.
      *
      * Bewusst keine Statusanzeige: community_feature3.md §2 hält fest, dass
-     * man nie sieht, was andere tun. Diese Seite zeigt Namen, sonst nichts.
+     * man nie sieht, was andere tun. Was hier steht, ist entweder ein Name
+     * oder eine Verabredung, die beide Seiten selbst getroffen haben.
+     *
+     * Die Verabredungen standen bislang nur auf der Übersicht. Dieser Bereich
+     * verspricht, „mit wem du dich verabreden kannst" — zeigte aber als
+     * einziger nicht, mit wem gerade etwas ausgemacht ist.
      */
     public function index(Request $request): Response
     {
@@ -24,6 +32,18 @@ class FriendshipController extends Controller
 
         return Inertia::render('community', [
             'appointmentsEnabled' => $user->appointments_enabled,
+            'appointmentRequests' => Appointment::pendingFor($user),
+            // Was jemand abgesagt hat — einmal, bis es weggeklickt ist (§5).
+            'appointmentNotices' => AppointmentNotice::forUser($user),
+            // Anders als die Übersicht bleibt hier stehen, was heute an der
+            // eigenen Gewohnheit hängt: Diese Seite hat keine Habit-Zeile, die
+            // es sonst trüge. Offene Anfragen an mich fehlen auch hier — sie
+            // stehen als Karte mit beiden Knöpfen darüber.
+            'upcomingAppointments' => Appointment::upcomingFor($user, Carbon::today())
+                ->reject(fn (Appointment $appointment): bool => $appointment->awaitsAnswerFrom($user))
+                ->map(fn (Appointment $appointment): array => $appointment->present($user))
+                ->values()
+                ->all(),
             // Der eigene Handle steht auf der Seite, weil man ihn weitergeben
             // muss, um gefunden zu werden — und ihn sonst nirgends sieht.
             'username' => $user->username,

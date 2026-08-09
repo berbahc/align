@@ -7,6 +7,7 @@ use Database\Factories\AppointmentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -147,6 +148,88 @@ class Appointment extends Model
             $query->where('requester_id', $user->id)
                 ->orWhere('invitee_id', $user->id);
         });
+    }
+
+    /**
+     * Offene Anfragen an `$user`, fertig für die Oberfläche.
+     *
+     * Steht hier und nicht im Controller, weil zwei Seiten sie brauchen: die
+     * Übersicht (Screen A2) und der Community-Bereich.
+     *
+     * Vergangenes verfällt still: Eine Anfrage für gestern ist keine Frage
+     * mehr, und ein Hinweis darauf wäre ein Vorwurf.
+     *
+     * @return list<array{id: int, name: string, initial: string, title: string, anchor: string, day: string}>
+     */
+    public static function pendingFor(User $user): array
+    {
+        return self::query()
+            ->pending()
+            ->where('invitee_id', $user->id)
+            ->whereDate('scheduled_for', '>=', Carbon::today())
+            ->with(['requester', 'habit'])
+            ->get()
+            ->map(fn (self $appointment): array => [
+                'id' => $appointment->id,
+                ...$appointment->companion($user),
+                'title' => $appointment->habit->title,
+                'anchor' => $appointment->habit->scheduleLabel(),
+                'day' => self::dayLabel($appointment->scheduled_for),
+            ])
+            ->all();
+    }
+
+    /**
+     * Alles, woran `$user` beteiligt ist und was noch bevorsteht.
+     *
+     * Das Fenster ist dasselbe, das die Wahl anbietet: drei Tage, heute
+     * eingeschlossen. Weiter zu blicken wäre ein gemeinsamer Kalender
+     * (Top-2 46 %, §9).
+     *
+     * Gibt die Einträge unaufbereitet zurück, weil die beiden Seiten
+     * unterschiedlich aussortieren: Die Übersicht lässt weg, was schon in der
+     * Habit-Zeile steht, der Community-Bereich hat keine solche Zeile.
+     *
+     * @return Collection<int, Appointment>
+     */
+    public static function upcomingFor(User $user, Carbon $today): Collection
+    {
+        return self::query()
+            ->involving($user)
+            ->whereDate('scheduled_for', '>=', $today)
+            ->whereDate('scheduled_for', '<=', $today->copy()->addDays(self::DayChoices - 1))
+            ->with(['requester', 'invitee', 'habit'])
+            ->orderBy('scheduled_for')
+            ->get();
+    }
+
+    /**
+     * Wartet diese Verabredung noch auf die Antwort von `$user`?
+     *
+     * Solche Einträge gehören auf beiden Seiten in die Karte mit „Passt mir"
+     * und „Lieber nicht" — und nirgends ein zweites Mal daneben.
+     */
+    public function awaitsAnswerFrom(User $user): bool
+    {
+        return $this->accepted_at === null && $this->invitee_id === $user->id;
+    }
+
+    /**
+     * Ein Eintrag der Liste „Zusammen".
+     *
+     * @return array{id: int, name: string, initial: string, title: string, anchor: string, day: string, accepted: bool, iAsked: bool}
+     */
+    public function present(User $user): array
+    {
+        return [
+            'id' => $this->id,
+            ...$this->companion($user),
+            'title' => $this->habit->title,
+            'anchor' => $this->habit->scheduleLabel(),
+            'day' => self::dayLabel($this->scheduled_for),
+            'accepted' => $this->accepted_at !== null,
+            'iAsked' => $this->requester_id === $user->id,
+        ];
     }
 
     /**

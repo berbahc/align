@@ -1,4 +1,6 @@
-import { Form, Head, router } from '@inertiajs/react';
+import { Form, Head, router, usePage } from '@inertiajs/react';
+import { AppointmentNotice } from '@/components/appointment-notice';
+import { AppointmentRequestNotice } from '@/components/appointment-request-notice';
 import { FriendRequestNotice } from '@/components/friend-request-notice';
 import InputError from '@/components/input-error';
 import { PersonCircle } from '@/components/person-circle';
@@ -7,10 +9,16 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
+import { UpcomingAppointments } from '@/components/upcoming-appointments';
 import { dashboard } from '@/routes';
 import { availability } from '@/routes/appointments';
 import { destroy, store } from '@/routes/friendships';
-import type { FriendshipPerson } from '@/types';
+import type {
+    AppointmentNotice as Notice,
+    AppointmentRequest,
+    FriendshipPerson,
+    UpcomingAppointment,
+} from '@/types';
 
 const EYEBROW = 'text-[11px] font-semibold tracking-[0.11em] uppercase';
 
@@ -24,6 +32,12 @@ interface CommunityProps {
     incoming: FriendshipPerson[];
     /** Anfragen, die du gestellt hast und die noch offen sind. */
     outgoing: FriendshipPerson[];
+    /** Offene Verabredungs-Anfragen an dich, mit beiden Knöpfen. */
+    appointmentRequests: AppointmentRequest[];
+    /** Absagen, die einmal erscheinen und beim Wegklicken verschwinden. */
+    appointmentNotices: Notice[];
+    /** Was in den nächsten drei Tagen mit jemandem ansteht. */
+    upcomingAppointments: UpcomingAppointment[];
 }
 
 export default function Community({
@@ -32,7 +46,13 @@ export default function Community({
     friends,
     incoming,
     outgoing,
+    appointmentRequests,
+    appointmentNotices,
+    upcomingAppointments,
 }: CommunityProps) {
+    const { auth } = usePage().props;
+    const selfInitial = (auth.user?.name.charAt(0) ?? '').toUpperCase();
+
     function setAvailability(enabled: boolean) {
         router.put(availability.url(), { enabled }, { preserveScroll: true });
     }
@@ -57,8 +77,9 @@ export default function Community({
                         Community
                     </h1>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        Hier steht, mit wem du dich verabreden kannst. Was ihr
-                        tut, sieht niemand — nur, dass ihr euch kennt.
+                        Hier steht, mit wem du dich verabreden kannst und was
+                        gerade ausgemacht ist. Was ihr tut, sieht niemand — nur,
+                        dass ihr euch kennt.
                     </p>
 
                     {/* Den eigenen Handle sieht man sonst nirgends, muss ihn
@@ -72,6 +93,22 @@ export default function Community({
                 </header>
 
                 <FriendRequestNotice requests={incoming} />
+                <AppointmentRequestNotice requests={appointmentRequests} />
+
+                {/* Über allem, was noch steht: Eine Absage erklärt die Lücke,
+                    die man sonst weiter unten vergeblich sucht. */}
+                <AppointmentNotice notices={appointmentNotices} />
+
+                {/* Über dem Kreis, nicht darunter: Was ausgemacht ist, ist der
+                    lebendige Teil dieser Seite — die Namensliste steht
+                    darunter, weil sie sich selten ändert. Anders als auf der
+                    Übersicht bleibt hier auch stehen, was heute an der eigenen
+                    Gewohnheit hängt; diese Seite hat keine Habit-Zeile, die es
+                    sonst trüge. */}
+                <UpcomingAppointments
+                    appointments={upcomingAppointments}
+                    selfInitial={selfInitial}
+                />
 
                 <section className="flex flex-col gap-3">
                     <h2 className={`${EYEBROW} text-muted-foreground`}>

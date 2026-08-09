@@ -321,6 +321,97 @@ test('an open request to me is not listed twice', function () {
             ->etc());
 });
 
+test('the community page shows what is arranged with whom', function () {
+    [$me, $friend, $habit] = pair();
+
+    $appointment = Appointment::factory()->create([
+        'habit_id' => $habit->id,
+        'requester_id' => $me->id,
+        'invitee_id' => $friend->id,
+        'scheduled_for' => Carbon::tomorrow(),
+    ]);
+
+    $this->actingAs($friend)->patch(route('appointments.update', $appointment));
+
+    // Der Bereich verspricht, mit wem man sich verabreden kann — zeigte aber
+    // als einziger nicht, mit wem gerade etwas ausgemacht ist.
+    foreach ([$me, $friend] as $person) {
+        $this->actingAs($person)
+            ->get(route('community'))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('upcomingAppointments', 1, fn (AssertableInertia $row) => $row
+                    ->where('title', 'Laufen gehen')
+                    ->where('day', 'morgen')
+                    ->where('anchor', 'nach der Vorlesung')
+                    ->where('accepted', true)
+                    ->etc())
+                ->etc());
+    }
+});
+
+test('the community page keeps what the overview leaves to the habit row', function () {
+    [$me, $friend, $habit] = pair();
+
+    $appointment = Appointment::factory()->create([
+        'habit_id' => $habit->id,
+        'requester_id' => $me->id,
+        'invitee_id' => $friend->id,
+        'scheduled_for' => Carbon::today(),
+    ]);
+
+    $this->actingAs($friend)->patch(route('appointments.update', $appointment));
+
+    // Auf der Übersicht trägt die Habit-Zeile diesen Fall, hier gibt es keine.
+    $this->actingAs($me)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('upcomingAppointments', 0)
+            ->etc());
+
+    $this->actingAs($me)
+        ->get(route('community'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('upcomingAppointments', 1, fn (AssertableInertia $row) => $row
+                ->where('name', 'Silas')
+                ->where('day', 'heute')
+                ->where('iAsked', true)
+                ->etc())
+            ->etc());
+});
+
+test('an open request is not listed twice on the community page either', function () {
+    [$me, $friend, $habit] = pair();
+
+    Appointment::factory()->create([
+        'habit_id' => $habit->id,
+        'requester_id' => $me->id,
+        'invitee_id' => $friend->id,
+        'scheduled_for' => Carbon::today(),
+    ]);
+
+    // Sie steht als Karte mit „Passt mir" und „Lieber nicht" darüber.
+    $this->actingAs($friend)
+        ->get(route('community'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('appointmentRequests', 1, fn (AssertableInertia $row) => $row
+                ->where('name', 'Berkay')
+                ->where('title', 'Laufen gehen')
+                ->etc())
+            ->has('upcomingAppointments', 0)
+            ->etc());
+
+    // Die fragende Seite sieht dieselbe Verabredung als offenen Eintrag.
+    $this->actingAs($me)
+        ->get(route('community'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('appointmentRequests', 0)
+            ->has('upcomingAppointments', 1, fn (AssertableInertia $row) => $row
+                ->where('accepted', false)
+                ->where('iAsked', true)
+                ->etc())
+            ->etc());
+});
+
 test('only the person who was asked can accept', function () {
     [$me, $friend, $habit] = pair();
 

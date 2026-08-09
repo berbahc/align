@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Appointment;
+use App\Models\AppointmentNotice;
 use App\Models\Friendship;
 use App\Models\Habit;
 use App\Models\User;
@@ -56,7 +57,9 @@ class DashboardController extends Controller
             // Mail und kein Nachfassen (community_feature3.md §5).
             'friendRequests' => Friendship::pendingFor($request->user()),
             // Screen A2 für die Verabredung: dieselbe Stelle, anderer Inhalt.
-            'appointmentRequests' => $this->appointmentRequests($request->user()),
+            'appointmentRequests' => Appointment::pendingFor($request->user()),
+            // Was jemand abgesagt hat — einmal, bis es weggeklickt ist (§5).
+            'appointmentNotices' => AppointmentNotice::forUser($request->user()),
             // Alles Verabredete, was noch bevorsteht — für beide Seiten.
             'upcomingAppointments' => $this->upcomingAppointments($request->user(), $today),
             'friends' => $request->user()->friends()->map(fn (User $friend): array => [
@@ -99,31 +102,6 @@ class DashboardController extends Controller
     }
 
     /**
-     * Offene Verabredungs-Anfragen an diese Person.
-     *
-     * @return list<array{id: int, name: string, initial: string, title: string, anchor: string, day: string}>
-     */
-    private function appointmentRequests(User $user): array
-    {
-        return Appointment::query()
-            ->pending()
-            ->where('invitee_id', $user->id)
-            // Vergangenes verfällt still: Eine Anfrage für gestern ist keine
-            // Frage mehr, und ein Hinweis darauf wäre ein Vorwurf.
-            ->whereDate('scheduled_for', '>=', Carbon::today())
-            ->with(['requester', 'habit'])
-            ->get()
-            ->map(fn (Appointment $appointment): array => [
-                'id' => $appointment->id,
-                ...$appointment->companion($user),
-                'title' => $appointment->habit->title,
-                'anchor' => $appointment->habit->scheduleLabel(),
-                'day' => Appointment::dayLabel($appointment->scheduled_for),
-            ])
-            ->all();
-    }
-
-    /**
      * Was mit jemandem ansteht — zugesagt oder von mir gefragt.
      *
      * Eine Verabredung, die erst morgen gilt, war bis eben unsichtbar: Sie
@@ -137,34 +115,20 @@ class DashboardController extends Controller
      * Zwei Fälle fehlen bewusst, weil sie anderswo schon stehen: offene
      * Anfragen an mich (die Karte mit den Knöpfen darüber) und was heute an
      * meiner eigenen Gewohnheit hängt (das Doppel-Zeichen in der Habit-Zeile).
+     * Der Community-Bereich lässt nur den ersten Fall weg — dort gibt es keine
+     * Habit-Zeile, die den zweiten tragen könnte.
      *
      * @return list<array{id: int, name: string, initial: string, title: string, anchor: string, day: string, accepted: bool, iAsked: bool}>
      */
     private function upcomingAppointments(User $user, Carbon $today): array
     {
-        return Appointment::query()
-            ->involving($user)
-            ->whereDate('scheduled_for', '>=', $today)
-            ->whereDate('scheduled_for', '<=', $today->copy()->addDays(Appointment::DayChoices - 1))
-            ->with(['requester', 'invitee', 'habit'])
-            ->orderBy('scheduled_for')
-            ->get()
-            ->reject(fn (Appointment $appointment): bool => (
-                $appointment->accepted_at === null && $appointment->invitee_id === $user->id
-            ) || (
+        return Appointment::upcomingFor($user, $today)
+            ->reject(fn (Appointment $appointment): bool => $appointment->awaitsAnswerFrom($user) || (
                 $appointment->accepted_at !== null
                 && $appointment->requester_id === $user->id
                 && $appointment->scheduled_for->isToday()
             ))
-            ->map(fn (Appointment $appointment): array => [
-                'id' => $appointment->id,
-                ...$appointment->companion($user),
-                'title' => $appointment->habit->title,
-                'anchor' => $appointment->habit->scheduleLabel(),
-                'day' => Appointment::dayLabel($appointment->scheduled_for),
-                'accepted' => $appointment->accepted_at !== null,
-                'iAsked' => $appointment->requester_id === $user->id,
-            ])
+            ->map(fn (Appointment $appointment): array => $appointment->present($user))
             ->values()
             ->all();
     }
