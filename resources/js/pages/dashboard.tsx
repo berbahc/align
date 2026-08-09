@@ -1,6 +1,8 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Plus } from 'lucide-react';
+import { useState } from 'react';
 import { HabitRow } from '@/components/habit-row';
+import { StartingHelpSheet } from '@/components/starting-help-sheet';
 import { Card, CardContent } from '@/components/ui/card';
 import { dashboard } from '@/routes';
 import { create, index as habitsIndex } from '@/routes/habits';
@@ -41,6 +43,9 @@ export default function Dashboard({
 }: DashboardProps) {
     const { auth } = usePage().props;
     const firstName = auth.user?.name.split(' ')[0] ?? '';
+
+    // Welche Gewohnheit gerade im Starthilfe-Sheet steht; null heißt zu.
+    const [stuckOn, setStuckOn] = useState<Habit | null>(null);
 
     function toggle(habit: Habit) {
         const markingDone = habit.completedAt === null;
@@ -185,6 +190,7 @@ export default function Dashboard({
                                             key={habit.id}
                                             habit={habit}
                                             onToggle={toggle}
+                                            onStuck={setStuckOn}
                                         />
                                     ))}
                                 </ul>
@@ -229,6 +235,11 @@ export default function Dashboard({
                     </Card>
                 </section>
             </div>
+
+            <StartingHelpSheet
+                habit={stuckOn}
+                onOpenChange={(open) => !open && setStuckOn(null)}
+            />
         </>
     );
 }
