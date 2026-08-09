@@ -26,6 +26,9 @@ class UserFactory extends Factory
     {
         return [
             'name' => fake()->name(),
+            // Kein Wort aus dem Namen: Der Handle muss eindeutig sein, und ein
+            // Zufallswort aus fünf Silben kollidiert in längeren Testläufen.
+            'username' => 'nutzer'.fake()->unique()->numberBetween(1000, 9999999),
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
             // Der Normalfall in Tests ist ein Nutzer, der das Onboarding hinter

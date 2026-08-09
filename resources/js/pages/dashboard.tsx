@@ -1,13 +1,14 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
+import { FriendRequestNotice } from '@/components/friend-request-notice';
 import { HabitRow } from '@/components/habit-row';
 import { StartingHelpSheet } from '@/components/starting-help-sheet';
 import { Card, CardContent } from '@/components/ui/card';
 import { dashboard } from '@/routes';
 import { create, index as habitsIndex } from '@/routes/habits';
 import { destroy, store } from '@/routes/habits/completions';
-import type { Habit } from '@/types';
+import type { FriendshipPerson, Habit } from '@/types';
 
 interface TodayProgress {
     completed: number;
@@ -19,6 +20,8 @@ interface TodayProgress {
 interface DashboardProps {
     greeting: string;
     today: string;
+    /** Offene Freundschaftsanfragen — Mockup A2 zeigt sie auf dem Home-Screen. */
+    friendRequests: FriendshipPerson[];
     todayProgress: TodayProgress;
     /** Anteil erfüllter Tage der letzten 30 Tage; null, solange es keine Gewohnheiten gibt. */
     consistency: number | null;
@@ -35,6 +38,7 @@ const EYEBROW = 'text-[11px] font-semibold tracking-[0.11em] uppercase';
 export default function Dashboard({
     greeting,
     today,
+    friendRequests,
     todayProgress,
     consistency,
     habits,
@@ -104,6 +108,11 @@ export default function Dashboard({
                         </p>
                     </div>
                 </header>
+
+                {/* Mockup A2: die Anfrage steht über den Gewohnheiten, nicht
+                    darunter — sie ist das Einzige auf dieser Seite, das eine
+                    andere Person betrifft und auf eine Antwort wartet. */}
+                <FriendRequestNotice requests={friendRequests} />
 
                 {todayProgress.total > 0 && (
                     <Card className="gap-0 py-5">

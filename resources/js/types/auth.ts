@@ -1,6 +1,8 @@
 export type User = {
     id: number;
     name: string;
+    /** Handle, unter dem Freunde einen hinzufügen. Immer klein. */
+    username: string;
     email: string;
     avatar?: string;
     email_verified_at: string | null;

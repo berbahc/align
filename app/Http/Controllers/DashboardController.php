@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Friendship;
 use App\Models\Habit;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -42,6 +43,10 @@ class DashboardController extends Controller
         return Inertia::render('dashboard', [
             'greeting' => $this->greeting($today),
             'today' => $localisedToday->isoFormat('dddd, D. MMMM'),
+            // Mockup A2 setzt die offene Anfrage über die Gewohnheiten. Es ist
+            // der einzige Weg, auf dem jemand von ihr erfährt — es gibt keine
+            // Mail und kein Nachfassen (community_feature3.md §5).
+            'friendRequests' => Friendship::pendingFor($request->user()),
             'todayProgress' => $this->todayProgress($todaysHabits),
             'consistency' => $this->consistencyRate($habits, $today),
             // Eine leere Tagesliste heißt nicht, dass es keine Gewohnheiten
