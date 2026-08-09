@@ -178,6 +178,14 @@ export default function HabitsIndex({
                                                 <span className="mt-0.5 block truncate text-xs text-muted-foreground">
                                                     {habit.scheduleLabel}
                                                 </span>
+                                                {/* Leise Zeile, kein Abzeichen:
+                                                    die Serie steht neben der
+                                                    Planung, nicht über ihr. */}
+                                                {habit.streak !== null && (
+                                                    <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                                                        {habit.streak}
+                                                    </span>
+                                                )}
                                             </span>
 
                                             <span className="flex shrink-0 flex-col items-end gap-1">

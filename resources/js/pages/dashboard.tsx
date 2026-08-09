@@ -6,6 +6,8 @@ import { AppointmentSheet } from '@/components/appointment-sheet';
 import { FriendRequestNotice } from '@/components/friend-request-notice';
 import { HabitRow } from '@/components/habit-row';
 import { StartingHelpSheet } from '@/components/starting-help-sheet';
+import { StreakCard } from '@/components/streak-card';
+import type { Streak } from '@/components/streak-card';
 import { Card, CardContent } from '@/components/ui/card';
 import { UpcomingAppointments } from '@/components/upcoming-appointments';
 import { dashboard } from '@/routes';
@@ -44,6 +46,8 @@ interface DashboardProps {
     todayProgress: TodayProgress;
     /** Anteil erfüllter Tage der letzten 30 Tage; null, solange es keine Gewohnheiten gibt. */
     consistency: number | null;
+    /** Die stärkste laufende Serie; null unterhalb von Habit::StreakMinimum. */
+    streak: Streak | null;
     /** Nur die heute vorgesehenen Gewohnheiten. */
     habits: Habit[];
     /** Alle aktiven — auch die, die heute nicht anstehen. */
@@ -65,6 +69,7 @@ export default function Dashboard({
     appointmentsEnabled,
     todayProgress,
     consistency,
+    streak,
     habits,
     activeCount,
     maxActive,
@@ -191,6 +196,11 @@ export default function Dashboard({
                         </CardContent>
                     </Card>
                 )}
+
+                {/* Unter dem Tagesfortschritt: erst was heute gilt, dann was
+                    über den Tag hinausreicht. §5.4 lässt genau eine farbige
+                    Fläche zu — deshalb steht hier nur die stärkste Serie. */}
+                {streak !== null && <StreakCard streak={streak} />}
 
                 <section aria-labelledby="heutige-gewohnheiten">
                     <div className="flex flex-wrap items-center justify-between gap-3">

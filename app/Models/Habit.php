@@ -64,6 +64,31 @@ class Habit extends Model
     public const int WeekOverviewDays = 7;
 
     /**
+     * Ein ausgelassener vorgesehener Tag pro Serie bleibt folgenlos.
+     *
+     * Der Kulanztag ist die Auflösung des Streak-Konflikts aus
+     * umfrage-auswertung.md §6: Die Umfrage widerlegt die Interview-Hypothese,
+     * Streaks würden demotivieren (9 dafür · 5 dagegen · 11 offen), aber der
+     * Schuldwert von ø 3,92 ist der höchste gemessene Problemwert überhaupt.
+     * Die Empfehlung dort lautet wörtlich: Serie sichtbar machen, den Abbruch
+     * vergebend gestalten.
+     *
+     * Lally et al. (2010) trägt das: Einzelne Aussetzer haben keine messbaren
+     * Langzeitkosten. Genau deshalb darf ein einzelner Tag die Serie nicht
+     * zunichtemachen — der zweite darf es, sonst misst die Zahl nichts mehr.
+     */
+    public const int StreakGraceDays = 1;
+
+    /**
+     * Ab wann eine Reihe erfüllter Termine eine Serie genannt wird.
+     *
+     * Unter drei Gliedern ist es keine Serie, sondern ein guter Tag. Sie
+     * dennoch zu beziffern würde sie aufblasen — und die Karte erschiene schon
+     * am Tag nach der ersten Erfüllung.
+     */
+    public const int StreakMinimum = 3;
+
+    /**
      * Vorschläge für den Situations-Picker, mit ihrer ungefähren Tagesstunde.
      *
      * time-blocking.md: situative Cues statt Uhrzeiten. Eine Situation löst
@@ -335,6 +360,23 @@ class Habit extends Model
     }
 
     /**
+     * Dieselben Erfüllungen, aber nur die Datumsspalte — für die Serie.
+     *
+     * Eine eigene Relation, weil `completions` im DashboardController auf heute
+     * eingegrenzt geladen wird und Eloquent dieselbe Relation nicht zweimal
+     * verschieden laden kann. Die Serie braucht die volle Historie, aber von
+     * jeder Zeile nur das Datum.
+     *
+     * @return HasMany<HabitCompletion, $this>
+     */
+    public function completionDates(): HasMany
+    {
+        return $this->hasMany(HabitCompletion::class)
+            ->select(['habit_id', 'completed_on'])
+            ->orderByDesc('completed_on');
+    }
+
+    /**
      * @param  Builder<$this>  $query
      */
     #[Scope]
@@ -357,10 +399,13 @@ class Habit extends Model
     /**
      * Anteil der Tage mit Erfüllung im Rückblickfenster, in Prozent.
      *
-     * progress-tracking.md: bewusst eine Konsistenzrate statt eines Streaks.
-     * Ein Streak bricht bei einem einzigen Fehltag komplett zusammen, obwohl
-     * einzelne Aussetzer laut Lally et al. keine messbaren Langzeitkosten haben.
-     * Vor dem ersten Tag existiert kein Fenster — dann gibt es keine Rate.
+     * Die ruhige Zweitansicht neben der Serie, nicht ihr Ersatz.
+     * progress-tracking.md verwirft den Streak noch ganz, aber diese Position
+     * stammt aus den Interviews und wurde von der Umfrage widerlegt
+     * (umfrage-auswertung.md §6). Beides steht jetzt nebeneinander: die Serie
+     * als Antrieb, die Rate als der ehrlichere Blick über dreißig Tage, der
+     * bei einem Fehltag nicht springt. Vor dem ersten Tag existiert kein
+     * Fenster — dann gibt es keine Rate.
      *
      * Gezählt werden nur Tage, an denen die Gewohnheit vorgesehen ist. Sonst
      * wäre eine Mo–Fr-Gewohnheit dauerhaft bei 71 % gedeckelt, obwohl sie
@@ -386,6 +431,98 @@ class Habit extends Model
             ->count();
 
         return (int) round($completed / $window * 100);
+    }
+
+    /**
+     * Die laufende Serie: erfüllte Termine am Stück, rückwärts von heute.
+     *
+     * Gezählt werden **vorgesehene Termine**, keine Kalendertage. Ein Samstag
+     * ohne Mo–Fr-Gewohnheit ist kein Glied und kein Bruch, er kommt in der
+     * Kette schlicht nicht vor — sonst könnte eine Gewohnheit, die nie
+     * ausgelassen wurde, jedes Wochenende auf null fallen.
+     *
+     * Vier Regeln, in dieser Reihenfolge:
+     *
+     * 1. Nicht vorgesehen → übersprungen.
+     * 2. Vor dem Anlegen → Ende. Was es noch nicht gab, kann niemand versäumt
+     *    haben (dieselbe Grenze wie in `recentMisses()`).
+     * 3. Heute noch offen → bricht nichts und kostet keinen Kulanztag. Der Tag
+     *    ist noch nicht vorbei; ihn als Aussetzer zu werten hieße, morgens um
+     *    acht ein Urteil über den Abend zu fällen.
+     * 4. Ausgelassen → Kulanztag verbrauchen, sonst Ende. Der ausgelassene Tag
+     *    zählt nie als Glied, er unterbricht die Kette nur nicht.
+     *
+     * Bewusst kein gespeicherter Zähler: Nachtragen ist sieben Tage rückwirkend
+     * erlaubt (HabitCompletionController), eine gespeicherte Zahl wäre danach
+     * sofort falsch.
+     *
+     * Erwartet geladene `completionDates`, sonst fragt jeder Aufruf die
+     * Datenbank.
+     */
+    public function currentStreak(?Carbon $until = null): int
+    {
+        $until ??= Carbon::today();
+
+        $completed = $this->completionDates
+            ->map(fn (HabitCompletion $completion): string => $completion->completed_on->toDateString())
+            ->flip();
+
+        $start = ($this->created_at ?? $until)->copy()->startOfDay();
+        $cursor = $until->copy()->startOfDay();
+
+        $streak = 0;
+        $grace = self::StreakGraceDays;
+
+        while ($cursor->greaterThanOrEqualTo($start)) {
+            if ($this->isScheduledOn($cursor)) {
+                if ($completed->has($cursor->toDateString())) {
+                    $streak++;
+                } elseif (! $cursor->isSameDay($until)) {
+                    if ($grace < 1) {
+                        break;
+                    }
+
+                    $grace--;
+                }
+            }
+
+            $cursor->subDay();
+        }
+
+        return $streak;
+    }
+
+    /**
+     * Die Einheit der Serie: Tage oder Male.
+     *
+     * „12 Tage in Folge" wäre bei einer Mo–Fr-Gewohnheit schlicht gelogen —
+     * zwischen dem ersten und dem zwölften Termin liegen gut zwei Wochen.
+     */
+    public function streakUnit(): string
+    {
+        return $this->runsEveryDay() ? 'Tage' : 'Mal';
+    }
+
+    /**
+     * Die Serie als fertige Zeile: „12 Tage in Folge" oder „12× in Folge".
+     */
+    public function streakLabel(int $streak): string
+    {
+        return $this->runsEveryDay()
+            ? $streak.' Tage in Folge'
+            : $streak.'× in Folge';
+    }
+
+    /**
+     * Steht die Gewohnheit an jedem Wochentag an?
+     *
+     * Situative Gewohnheiten gelten immer; eine feste Gewohnheit tut es nur,
+     * wenn alle sieben Tage gewählt sind.
+     */
+    private function runsEveryDay(): bool
+    {
+        return $this->schedule_type !== ScheduleType::Fixed
+            || count($this->scheduled_days ?? []) === 7;
     }
 
     /**
