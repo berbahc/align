@@ -23,7 +23,7 @@ export default function Onboarding({
             <div className="flex min-h-screen flex-col bg-background">
                 <header className="flex items-center justify-between gap-4 p-6">
                     <span className="flex items-center gap-2">
-                        <AppLogoIcon className="size-5 fill-current text-primary" />
+                        <AppLogoIcon className="size-7" />
                         <span className="text-lg leading-none font-bold">
                             Align
                         </span>

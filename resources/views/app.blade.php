@@ -30,8 +30,12 @@
             }
         </style>
 
+        {{-- Hier ist `prefers-color-scheme` richtig und die `.dark`-Klasse falsch:
+             die Tab-Leiste gehört dem Betriebssystem, nicht der App-Einstellung.
+             `favicon.ico` bleibt der Fallback für Browser, die `media` ignorieren. --}}
         <link rel="icon" href="/favicon.ico" sizes="any">
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+        <link rel="icon" type="image/png" href="/icon-light.png" media="(prefers-color-scheme: light)">
+        <link rel="icon" type="image/png" href="/icon-dark.png" media="(prefers-color-scheme: dark)">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
         @fonts
