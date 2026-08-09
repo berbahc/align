@@ -13,13 +13,13 @@ class HabitGraduationController extends Controller
     /**
      * Beendet eine Gewohnheit: sie verlässt die Tagesliste und gibt ihren Platz frei.
      *
-     * Bewusst kein Löschen. progress-tracking.md verwirft den Streak, weil ein
-     * einzelner Fehltag nicht alles zunichtemachen darf — eine Gewohnheit
-     * aufzugeben und dabei jeden abgehakten Tag zu verlieren, wäre dieselbe
-     * Bestrafung in größer. Die Erfüllungen bleiben, `reminder_enabled` auch:
-     * beim Wiederaufnehmen steht die Gewohnheit exakt so da wie vorher. Dass
-     * beendete Gewohnheiten nicht mehr erinnern, erledigt der `active()`-Filter
-     * in HandleInertiaRequests von selbst.
+     * Bewusst kein Löschen. Dieselbe Haltung, aus der die Serie ihren
+     * Kulanztag bekommt: Ein einzelner Fehltag darf nicht alles zunichtemachen
+     * — eine Gewohnheit aufzugeben und dabei jeden abgehakten Tag zu verlieren,
+     * wäre dieselbe Bestrafung in größer. Die Erfüllungen bleiben,
+     * `reminder_enabled` auch: beim Wiederaufnehmen steht die Gewohnheit exakt
+     * so da wie vorher. Dass beendete Gewohnheiten nicht mehr erinnern,
+     * erledigt der `active()`-Filter in HandleInertiaRequests von selbst.
      */
     public function store(Habit $habit): RedirectResponse
     {

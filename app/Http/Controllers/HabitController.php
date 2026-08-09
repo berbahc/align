@@ -29,6 +29,7 @@ class HabitController extends Controller
         $habits = $request->user()
             ->habits()
             ->active()
+            ->with('completionDates')
             ->orderBy('position')
             ->get();
 
@@ -50,6 +51,10 @@ class HabitController extends Controller
                 'scheduleLabel' => $habit->scheduleLabel(),
                 'canRemind' => $habit->canRemind(),
                 'reminderEnabled' => $habit->reminder_enabled,
+                // Die Serie steht hier für jede Gewohnheit einzeln — anders als
+                // auf der Übersicht, die nur die stärkste zeigt. Unterhalb der
+                // Mindestlänge bleibt die Zeile weg statt eine „1" zu behaupten.
+                'streak' => $this->streakLabel($habit),
             ])->all(),
             'graduatedHabits' => $graduated->map(fn (Habit $habit): array => [
                 'id' => $habit->id,
@@ -60,6 +65,18 @@ class HabitController extends Controller
                 'completionCount' => (int) $habit->completions_count,
             ])->all(),
         ]);
+    }
+
+    /**
+     * Die laufende Serie als fertige Zeile — oder nichts.
+     */
+    private function streakLabel(Habit $habit): ?string
+    {
+        $streak = $habit->currentStreak();
+
+        return $streak >= Habit::StreakMinimum
+            ? $habit->streakLabel($streak)
+            : null;
     }
 
     public function create(Request $request): Response

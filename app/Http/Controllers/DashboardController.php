@@ -32,6 +32,9 @@ class DashboardController extends Controller
             // Screen A3: die zugesagte Verabredung sitzt in der Habit-Zeile,
             // als Doppel-Zeichen an der Stelle der Icon-Kachel.
             ->with(['appointments' => fn (Relation $query) => $query->accepted()->onDate($today)->with('invitee')])
+            // Die Serie braucht die ganze Historie, `completions` ist oben aber
+            // auf heute eingegrenzt — deshalb die zweite, schmale Relation.
+            ->with('completionDates')
             ->withCount(['completions as completions_last_30_days' => fn (Builder $query) => $query
                 ->where('completed_on', '>=', $today->copy()->subDays(29)->startOfDay()),
             ])
@@ -65,6 +68,7 @@ class DashboardController extends Controller
             'appointmentsEnabled' => $request->user()->appointments_enabled,
             'todayProgress' => $this->todayProgress($todaysHabits),
             'consistency' => $this->consistencyRate($habits, $today),
+            'streak' => $this->streak($habits, $today),
             // Eine leere Tagesliste heißt nicht, dass es keine Gewohnheiten
             // gibt — eine Mo–Fr-Gewohnheit ist am Samstag schlicht nicht
             // vorgesehen. Ohne diese Zahl könnte die Oberfläche die beiden
@@ -199,12 +203,45 @@ class DashboardController extends Controller
     }
 
     /**
+     * Die stärkste laufende Serie — der Inhalt der Streak-Karte.
+     *
+     * Gerechnet wird über **alle** aktiven Gewohnheiten, nicht nur die heute
+     * vorgesehenen: Die Serie einer Mo–Fr-Gewohnheit würde sonst jeden Samstag
+     * von der Übersicht verschwinden, obwohl sie ungebrochen weiterläuft.
+     *
+     * Genau eine Serie, nicht fünf. Designsprache §5.4: die Streak-Karte ist
+     * die einzige vollflächig farbige Fläche im mobilen Layout, „ihre Wirkung
+     * hängt davon ab, dass sie allein bleibt".
+     *
+     * @param  Collection<int, Habit>  $habits
+     * @return array{count: int, unit: string, title: string}|null
+     */
+    private function streak(Collection $habits, Carbon $today): ?array
+    {
+        $strongest = $habits
+            ->map(fn (Habit $habit): array => [
+                'count' => $habit->currentStreak($today),
+                'unit' => $habit->streakUnit(),
+                'title' => $habit->title,
+            ])
+            ->sortByDesc('count')
+            ->first();
+
+        if ($strongest === null || $strongest['count'] < Habit::StreakMinimum) {
+            return null;
+        }
+
+        return $strongest;
+    }
+
+    /**
      * Gemeinsame Konsistenzrate über alle aktiven Gewohnheiten der letzten 30 Tage.
      *
-     * progress-tracking.md schreibt bewusst eine Konsistenzrate statt eines
-     * Streaks vor: ein Streak bricht bei einem einzigen Fehltag zusammen,
-     * obwohl einzelne Aussetzer laut Lally et al. (2010) keine messbaren
-     * Langzeitkosten haben. Ohne aktive Gewohnheiten gibt es keine Rate —
+     * Die ruhige Zweitansicht neben der Serie: Sie springt nicht bei einem
+     * einzelnen Fehltag und bleibt damit der ehrlichere Blick über dreißig
+     * Tage. Dass sie den Streak ersetzt, stand nur in progress-tracking.md und
+     * stammt aus den Interviews — die Umfrage hat das widerlegt
+     * (umfrage-auswertung.md §6). Ohne aktive Gewohnheiten gibt es keine Rate —
      * dann zeigt die Oberfläche den leeren Zustand statt „0 %".
      *
      * Die Zahl der möglichen Tage wird pro Gewohnheit ermittelt, nicht pauschal

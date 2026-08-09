@@ -48,6 +48,13 @@ export interface ManagedHabit {
     /** Nur bei fester Uhrzeit lässt sich eine Erinnerung setzen. */
     canRemind: boolean;
     reminderEnabled: boolean;
+    /**
+     * Die laufende Serie als fertige Zeile („12× in Folge"), sonst null.
+     *
+     * Gezählt werden vorgesehene Termine, nicht Kalendertage — eine
+     * Mo–Fr-Gewohnheit bricht am Wochenende nicht.
+     */
+    streak: string | null;
 }
 
 /**
