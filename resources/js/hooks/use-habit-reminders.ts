@@ -1,8 +1,16 @@
-import { useEffect } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import type { HabitReminder, Weekday } from '@/types';
 
 /** Vorlaufzeit der Erinnerung in Minuten. */
 const LEAD_MINUTES = 10;
+
+/**
+ * Wie lange eine überfällige Gewohnheit noch angezeigt wird.
+ *
+ * Nach einer Stunde ist es keine Erinnerung mehr, sondern eine Mahnung. Die
+ * Gewohnheit bleibt auf der Übersicht offen, der Hinweis verschwindet.
+ */
+const OVERDUE_MINUTES = 60;
 
 /**
  * Prüfintervall. Bewusst ein kurzer Takt statt eines langen `setTimeout`:
@@ -95,12 +103,97 @@ function toMinutes(time: string): number {
     return hours * 60 + minutes;
 }
 
+/** Eine Gewohnheit, die gerade ansteht, mit ihrem Abstand zur Uhrzeit. */
+export interface DueReminder {
+    reminder: HabitReminder;
+    /** Minuten bis zur Uhrzeit. Negativ, wenn sie vorbei ist. */
+    minutesUntil: number;
+}
+
+/**
+ * Welche Gewohnheiten gerade anstehen.
+ *
+ * Ein Zustand, kein Ereignis: Die Auskunft gilt von zehn Minuten vorher bis
+ * eine Stunde danach und lässt sich deshalb nicht verpassen. Der Vorgänger
+ * feuerte in einem Fenster von drei Minuten — wer da nicht hinsah, bekam für
+ * diesen Tag nichts mehr.
+ *
+ * Reine Funktion mit übergebener Zeit, damit sie prüfbar bleibt.
+ */
+export function dueReminders(
+    reminders: HabitReminder[],
+    now: Date,
+): DueReminder[] {
+    const weekday = (now.getDay() === 0 ? 7 : now.getDay()) as Weekday;
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+    return reminders
+        .filter(
+            (reminder) =>
+                !reminder.completedToday &&
+                reminder.scheduledDays.includes(weekday),
+        )
+        .map((reminder) => ({
+            reminder,
+            minutesUntil: toMinutes(reminder.scheduledTime) - nowMinutes,
+        }))
+        .filter(
+            (due) =>
+                due.minutesUntil <= LEAD_MINUTES &&
+                due.minutesUntil >= -OVERDUE_MINUTES,
+        )
+        .sort((a, b) => a.minutesUntil - b.minutesUntil);
+}
+
+function subscribeToTicks(onTick: () => void): () => void {
+    const timer = window.setInterval(onTick, TICK_MS);
+
+    return () => window.clearInterval(timer);
+}
+
+/**
+ * Die laufende Nummer des aktuellen Takts.
+ *
+ * `useSyncExternalStore` ruft das bei jedem Render auf und vergleicht das
+ * Ergebnis — deshalb eine Zahl, die sich nur alle TICK_MS ändert, und nicht
+ * `new Date()`, das jedes Mal ungleich wäre und endlos neu rendern würde.
+ */
+function currentTick(): number {
+    return Math.floor(Date.now() / TICK_MS);
+}
+
+/**
+ * Wie `dueReminders`, aber mit eigenem Takt statt fester Zeit.
+ *
+ * Auf dem Server gibt es keinen Takt: SSR rendert mit der Serverzeit, der
+ * Browser hydriert mit seiner eigenen, und beide lägen auseinander. Der
+ * Server-Schnappschuss ist deshalb `null` und liefert eine leere Liste —
+ * `useSyncExternalStore` ist genau für diesen Unterschied gebaut und rendert
+ * nach dem Hydrieren ohne Warnung nach.
+ */
+export function useDueReminders(reminders: HabitReminder[]): DueReminder[] {
+    const tick = useSyncExternalStore(
+        subscribeToTicks,
+        currentTick,
+        (): null => null,
+    );
+
+    if (tick === null) {
+        return [];
+    }
+
+    return dueReminders(reminders, new Date());
+}
+
 /**
  * Meldet sich zehn Minuten vor einer Gewohnheit mit fester Uhrzeit.
  *
- * Läuft nur, solange die App in einem Tab offen ist — ohne Service Worker
- * gibt es keine Zustellung im Hintergrund. Das ist die bewusste Grenze
- * dieser Umsetzung.
+ * Nur wenn der Tab gerade nicht sichtbar ist. Ist die App im Blick, trägt der
+ * Hinweis in der Oberfläche dieselbe Auskunft und kann sogar das Abhaken
+ * anbieten — eine Systemmeldung obendrauf wäre dieselbe Nachricht zweimal.
+ *
+ * Auch so bleibt die Grenze bestehen: ohne Service Worker läuft nichts, wenn
+ * kein Tab offen ist.
  */
 export function useHabitReminders(reminders: HabitReminder[]): void {
     useEffect(() => {
@@ -109,7 +202,7 @@ export function useHabitReminders(reminders: HabitReminder[]): void {
         }
 
         function check() {
-            if (Notification.permission !== 'granted') {
+            if (Notification.permission !== 'granted' || !document.hidden) {
                 return;
             }
 

@@ -1,4 +1,4 @@
-import { createInertiaApp } from '@inertiajs/react';
+import { createInertiaApp, router } from '@inertiajs/react';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { initializeTheme } from '@/hooks/use-appearance';
@@ -7,6 +7,20 @@ import AuthLayout from '@/layouts/auth-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+
+/**
+ * Vorgeladene Seiten nach jedem Seitenwechsel verwerfen.
+ *
+ * Die Sidebar lädt ihre Ziele mit `prefetch` vor und hält die Antwort bis zu
+ * 30 Sekunden. Darin stecken auch die geteilten Eigenschaften — unter anderem
+ * `habitReminders`. Wer eine Gewohnheit abhakt und dann die Seite wechselt,
+ * bekäme sonst eine Antwort ausgeliefert, die vor dem Abhaken geholt wurde,
+ * und der Hinweis stünde dort weiterhin.
+ *
+ * Der Vorteil des Vorladens bleibt: Es geschieht beim Überfahren des Links,
+ * also nach diesem Leeren und vor dem Klick.
+ */
+router.on('navigate', () => router.flushAll());
 
 createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
