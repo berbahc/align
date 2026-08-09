@@ -6,6 +6,7 @@ use App\Http\Controllers\HabitController;
 use App\Http\Controllers\HabitGraduationController;
 use App\Http\Controllers\HabitReminderController;
 use App\Http\Controllers\OnboardingController;
+use App\Http\Controllers\SmallestStepController;
 use App\Http\Middleware\EnsureOnboarded;
 use Illuminate\Support\Facades\Route;
 
@@ -29,6 +30,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('habits', [HabitController::class, 'index'])->name('habits.index');
         Route::get('habits/create', [HabitController::class, 'create'])->name('habits.create');
         Route::post('habits', [HabitController::class, 'store'])->name('habits.store');
+
+        // Wie bei den Erinnerungen steht die feste Strecke vor `{habit}`,
+        // sonst wird „smallest-step" als Modellschlüssel gelesen.
+        //
+        // Beide Wege sprechen mit der Claude API und werden deshalb gedrosselt:
+        // ein ungebremster Endpunkt zu einem bezahlten Dienst ist eine
+        // Rechnung, die jemand anderes schreiben kann.
+        Route::post('habits/smallest-step/suggestions', [SmallestStepController::class, 'suggestions'])
+            ->middleware('throttle:20,1')
+            ->name('habits.smallest-step.suggestions');
+        Route::post('habits/{habit}/smallest-step', [SmallestStepController::class, 'smaller'])
+            ->middleware('throttle:20,1')
+            ->name('habits.smallest-step.smaller');
 
         // Der Sammelschalter steht vor der Einzelroute, sonst liest
         // `{habit}` das Wort „reminders" als Modellschlüssel.

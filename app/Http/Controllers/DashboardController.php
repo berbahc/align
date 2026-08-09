@@ -57,6 +57,12 @@ class DashboardController extends Controller
                 'scheduleLabel' => $habit->scheduleLabel(),
                 'behaviorType' => $habit->behavior_type->value,
                 'focusMinutes' => $habit->focus_minutes,
+                'smallestStep' => $habit->smallest_step,
+                // Der Warum-Satz wird seit dem Anlegen gespeichert und stand
+                // bislang nirgends. Er erscheint jetzt im Starthilfe-Sheet —
+                // dort, wo er trägt, und nicht dauerhaft in der Liste, wo er
+                // abstumpfen würde.
+                'motivation' => $habit->motivation,
                 'completedAt' => $habit->completions->first()?->completed_at->format('H:i'),
             ])->all(),
         ]);

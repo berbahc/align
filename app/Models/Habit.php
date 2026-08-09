@@ -24,6 +24,7 @@ use Illuminate\Support\Carbon;
  * @property list<int>|null $scheduled_days
  * @property bool $reminder_enabled
  * @property string|null $motivation
+ * @property string|null $smallest_step
  * @property BehaviorType $behavior_type
  * @property int|null $focus_minutes
  * @property int $position
@@ -32,7 +33,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['title', 'schedule_type', 'trigger_situation', 'scheduled_time', 'scheduled_days', 'reminder_enabled', 'motivation', 'behavior_type', 'focus_minutes', 'position', 'committed_at'])]
+#[Fillable(['title', 'schedule_type', 'trigger_situation', 'scheduled_time', 'scheduled_days', 'reminder_enabled', 'motivation', 'smallest_step', 'behavior_type', 'focus_minutes', 'position', 'committed_at'])]
 class Habit extends Model
 {
     /** @use HasFactory<HabitFactory> */

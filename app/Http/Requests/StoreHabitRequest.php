@@ -57,6 +57,7 @@ class StoreHabitRequest extends FormRequest
             ],
             'scheduled_days.*' => ['integer', 'between:1,7', 'distinct'],
             'motivation' => ['nullable', 'string', 'max:200'],
+            'smallest_step' => ['nullable', 'string', 'max:160'],
             'focus_minutes' => ['nullable', 'integer', 'min:1', 'max:240'],
         ];
     }
@@ -68,7 +69,7 @@ class StoreHabitRequest extends FormRequest
      * weggelassen — sonst bliebe beim Wechsel der Form ein Wert stehen, der
      * zur gewählten Art nicht mehr passt.
      *
-     * @return array{title: string, behavior_type: string, schedule_type: string, trigger_situation: string|null, scheduled_time: string|null, scheduled_days: list<int>|null, motivation: string|null, focus_minutes: int|null}
+     * @return array{title: string, behavior_type: string, schedule_type: string, trigger_situation: string|null, scheduled_time: string|null, scheduled_days: list<int>|null, motivation: string|null, smallest_step: string|null, focus_minutes: int|null}
      */
     public function habitAttributes(): array
     {
@@ -94,6 +95,9 @@ class StoreHabitRequest extends FormRequest
             'scheduled_days' => $isFixed ? $days : null,
             'motivation' => $this->filled('motivation')
                 ? $this->string('motivation')->trim()->toString()
+                : null,
+            'smallest_step' => $this->filled('smallest_step')
+                ? $this->string('smallest_step')->trim()->toString()
                 : null,
             'focus_minutes' => $this->filled('focus_minutes')
                 ? $this->integer('focus_minutes')
@@ -137,6 +141,7 @@ class StoreHabitRequest extends FormRequest
             'scheduled_time' => 'Uhrzeit',
             'scheduled_days' => 'Wochentage',
             'motivation' => 'Grund',
+            'smallest_step' => 'Erster Schritt',
         ];
     }
 }

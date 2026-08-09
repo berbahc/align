@@ -19,6 +19,13 @@ export interface Habit {
     scheduleLabel: string;
     behaviorType: BehaviorType;
     focusMinutes: number | null;
+    /**
+     * Der vorbereitete erste Handgriff („Stell das Glas ans Bett").
+     * Null, solange keiner formuliert wurde — der Schritt ist optional.
+     */
+    smallestStep: string | null;
+    /** Der eigene Warum-Satz; erscheint nur im Starthilfe-Sheet. */
+    motivation: string | null;
     /** Uhrzeit der heutigen Erfüllung („07:30"), sonst null. */
     completedAt: string | null;
 }
