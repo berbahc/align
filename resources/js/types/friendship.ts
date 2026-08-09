@@ -35,6 +35,21 @@ export type AppointmentRequest = {
 };
 
 /**
+ * Eine Absage, die einmal erscheint und beim Wegklicken gelöscht wird.
+ *
+ * Beide Sätze kommen fertig formuliert vom Server — die Oberfläche kennt den
+ * Unterschied zwischen abgelehnt und aufgelöst nicht, weil sie ihn nicht
+ * braucht: Beide sehen gleich aus und verschwinden gleich.
+ */
+export type AppointmentNotice = {
+    id: number;
+    /** „Passt Berbahc diesmal nicht." */
+    message: string;
+    /** Woran es hing — Titel der Gewohnheit, bei einer Absage plus Tag. */
+    detail: string;
+};
+
+/**
  * Was mit jemandem ansteht — zugesagt oder von einem selbst gefragt.
  *
  * Höchstens drei Tage weit und nach dem Tag spurlos weg: Das ist der

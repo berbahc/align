@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ProposeAppointmentRequest;
 use App\Models\Appointment;
+use App\Models\AppointmentNotice;
 use App\Models\Habit;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 
 class AppointmentController extends Controller
@@ -49,12 +51,20 @@ class AppointmentController extends Controller
     /**
      * Absagen, zurückziehen oder auflösen.
      *
-     * Die absagende Person bleibt unsichtbar: Beim Fragenden verschwindet die
-     * Verabredung, ohne Zähler und ohne Historie (§5).
+     * Alle drei enden gleich — der Eintrag verschwindet, ohne Zähler und ohne
+     * Historie (§5). Zwei von ihnen lassen aber eine Einmal-Notiz zurück, damit
+     * die andere Seite nicht vor einer Lücke steht; welche, entscheidet
+     * `AppointmentNotice::afterRemoval()`.
+     *
+     * Die absagende Person bleibt dabei unsichtbar im Sinne von §5: Es steht
+     * dort, dass etwas nicht stattfindet, nirgends warum.
      */
-    public function destroy(Appointment $appointment): RedirectResponse
+    public function destroy(Request $request, Appointment $appointment): RedirectResponse
     {
         Gate::authorize('delete', $appointment);
+
+        // Vor dem Löschen: Danach sind Name, Titel und Tag nicht mehr zu haben.
+        AppointmentNotice::afterRemoval($appointment, $request->user());
 
         $appointment->delete();
 

@@ -1,6 +1,7 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
+import { AppointmentNotice } from '@/components/appointment-notice';
 import { AppointmentRequestNotice } from '@/components/appointment-request-notice';
 import { AppointmentSheet } from '@/components/appointment-sheet';
 import { FriendRequestNotice } from '@/components/friend-request-notice';
@@ -15,6 +16,7 @@ import { create, index as habitsIndex } from '@/routes/habits';
 import { destroy, store } from '@/routes/habits/completions';
 import type {
     AppointmentDay,
+    AppointmentNotice as Notice,
     AppointmentRequest,
     UpcomingAppointment,
     FriendshipPerson,
@@ -35,6 +37,8 @@ interface DashboardProps {
     friendRequests: FriendshipPerson[];
     /** Offene Verabredungs-Anfragen — Screen A2. */
     appointmentRequests: AppointmentRequest[];
+    /** Absagen, die einmal erscheinen und beim Wegklicken verschwinden. */
+    appointmentNotices: Notice[];
     /** Was mit jemandem ansteht — zugesagt oder von einem selbst gefragt. */
     upcomingAppointments: UpcomingAppointment[];
     /** Der eigene Kreis, für die Auswahl in Screen A1. */
@@ -63,6 +67,7 @@ export default function Dashboard({
     today,
     friendRequests,
     appointmentRequests,
+    appointmentNotices,
     upcomingAppointments,
     friends,
     appointmentDays,
@@ -147,6 +152,11 @@ export default function Dashboard({
                     andere Person betrifft und auf eine Antwort wartet. */}
                 <FriendRequestNotice requests={friendRequests} />
                 <AppointmentRequestNotice requests={appointmentRequests} />
+
+                {/* Die Absage steht bei den Dingen, die andere Menschen
+                    betreffen — und nicht bei den Gewohnheiten, wo sie wie ein
+                    eigenes Versäumnis aussähe. */}
+                <AppointmentNotice notices={appointmentNotices} />
 
                 {todayProgress.total > 0 && (
                     <Card className="gap-0 py-5">
