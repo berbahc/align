@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AppointmentAvailabilityController;
 use App\Http\Controllers\AppointmentController;
+use App\Http\Controllers\AppointmentNoticeController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FriendshipController;
@@ -54,6 +55,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('appointments.update');
         Route::delete('appointments/{appointment}', [AppointmentController::class, 'destroy'])
             ->name('appointments.destroy');
+
+        // Die Notiz über eine Absage kennt nur einen Weg: weg. Gelesen heißt
+        // gelöscht — ein „gesehen"-Feld wäre der Anfang einer Historie (§9).
+        Route::delete('appointment-notices/{appointmentNotice}', [AppointmentNoticeController::class, 'destroy'])
+            ->name('appointment-notices.destroy');
 
         Route::get('habits', [HabitController::class, 'index'])->name('habits.index');
         Route::get('habits/create', [HabitController::class, 'create'])->name('habits.create');
