@@ -147,7 +147,8 @@ export default function HabitsIndex({
                                     Erinnerung 10 Min vorher
                                 </p>
                                 <p className="mt-0.5 text-xs text-muted-foreground">
-                                    Für alle Gewohnheiten mit fester Uhrzeit
+                                    Erscheint in der App. Als Systemhinweis nur,
+                                    wenn du gerade in einem anderen Tab bist.
                                 </p>
                             </div>
                             <ToggleSwitch

@@ -45,6 +45,14 @@ class Habit extends Model
     public const int MaxActivePerUser = 5;
 
     /**
+     * Länge des Wochenstreifens in Tagen, heute eingeschlossen.
+     *
+     * Zugleich die Grenze fürs Nachtragen: Was der Streifen zeigt, lässt sich
+     * abhaken, alles davor nicht.
+     */
+    public const int WeekOverviewDays = 7;
+
+    /**
      * Vorschläge für den Situations-Picker.
      *
      * time-blocking.md: situative Cues statt Uhrzeiten. Eine Situation löst
@@ -101,6 +109,39 @@ class Habit extends Model
         }
 
         return in_array($date->dayOfWeekIso, $this->scheduled_days ?? [], strict: true);
+    }
+
+    /**
+     * Die letzten Tage im Rückblick, heute als letzter Eintrag.
+     *
+     * Drei Zustände statt zwei: erfüllt, offen, oder gar nicht vorgesehen. Ein
+     * Samstag ohne Mo–Fr-Gewohnheit ist keine Lücke, und der Streifen darf ihn
+     * nicht wie eine aussehen lassen.
+     *
+     * Erwartet geladene `completions`, sonst fragt jeder Aufruf die Datenbank.
+     *
+     * @return list<array{date: string, label: string, scheduled: bool, completed: bool}>
+     */
+    public function weekOverview(?Carbon $until = null): array
+    {
+        $until ??= Carbon::today();
+
+        $completed = $this->completions
+            ->map(fn (HabitCompletion $completion): string => $completion->completed_on->toDateString())
+            ->all();
+
+        return collect(range(self::WeekOverviewDays - 1, 0))
+            ->map(function (int $offset) use ($until, $completed): array {
+                $date = $until->copy()->subDays($offset);
+
+                return [
+                    'date' => $date->toDateString(),
+                    'label' => self::WeekdayAbbreviations[$date->dayOfWeekIso],
+                    'scheduled' => $this->isScheduledOn($date),
+                    'completed' => in_array($date->toDateString(), $completed, strict: true),
+                ];
+            })
+            ->all();
     }
 
     /**

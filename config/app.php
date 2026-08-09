@@ -60,12 +60,16 @@ return [
     |--------------------------------------------------------------------------
     |
     | Here you may specify the default timezone for your application, which
-    | will be used by the PHP date and date-time functions. The timezone
-    | is set to "UTC" by default as it is suitable for most use cases.
+    | will be used by the PHP date and date-time functions.
+    |
+    | Bewusst nicht UTC: In dieser App entscheidet "heute" über alles. Unter
+    | UTC läge der Tageswechsel für deutsche Nutzer um 02:00 Uhr Ortszeit
+    | (01:00 in der Winterzeit) — wer um Mitternacht abhakt, hätte die
+    | Erfüllung auf dem Vortag gebucht und die heutige Zeile bliebe offen.
     |
     */
 
-    'timezone' => 'UTC',
+    'timezone' => env('APP_TIMEZONE', 'Europe/Berlin'),
 
     /*
     |--------------------------------------------------------------------------
