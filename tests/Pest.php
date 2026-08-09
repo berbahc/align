@@ -1,5 +1,6 @@
 <?php
 
+use App\Ai\Agents\SuggestBetterAnchor;
 use App\Ai\Agents\SuggestSmallestStep;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -22,6 +23,7 @@ pest()->extend(TestCase::class)
         // vergessener Fake eine echte, bezahlte Anfrage aus — und der Test
         // hinge am Netz statt an der eigenen Logik.
         SuggestSmallestStep::fake()->preventStrayPrompts();
+        SuggestBetterAnchor::fake()->preventStrayPrompts();
     })
     ->in('Feature');
 

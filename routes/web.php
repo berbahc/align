@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\HabitAdjustmentController;
 use App\Http\Controllers\HabitCompletionController;
 use App\Http\Controllers\HabitController;
 use App\Http\Controllers\HabitGraduationController;
@@ -21,10 +23,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware(EnsureOnboarded::class)->group(function () {
         Route::get('dashboard', DashboardController::class)->name('dashboard');
 
-        // Noch ohne Daten — sie bekommen einen Controller, sobald sie welche
-        // liefern; Route::inertia hält die Platzhalter ehrlich, statt einen
-        // leeren Controller vorzutäuschen.
-        Route::inertia('journey', 'journey')->name('journey');
+        Route::get('calendar', CalendarController::class)->name('calendar');
+
+        // Noch ohne Daten — bekommt einen Controller, sobald es welche liefert;
+        // Route::inertia hält den Platzhalter ehrlich, statt einen leeren
+        // Controller vorzutäuschen.
         Route::inertia('community', 'community')->name('community');
 
         Route::get('habits', [HabitController::class, 'index'])->name('habits.index');
@@ -43,6 +46,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('habits/{habit}/smallest-step', [SmallestStepController::class, 'smaller'])
             ->middleware('throttle:20,1')
             ->name('habits.smallest-step.smaller');
+
+        // Erst fragen, dann übernehmen — dazwischen liegt die Entscheidung.
+        // Nur der Vorschlag kostet einen KI-Aufruf und wird gedrosselt.
+        Route::post('habits/{habit}/adjustment/suggestions', [HabitAdjustmentController::class, 'suggestions'])
+            ->middleware('throttle:20,1')
+            ->name('habits.adjustment.suggestions');
+        Route::post('habits/{habit}/adjustment', [HabitAdjustmentController::class, 'store'])
+            ->name('habits.adjustment.store');
 
         // Der Sammelschalter steht vor der Einzelroute, sonst liest
         // `{habit}` das Wort „reminders" als Modellschlüssel.

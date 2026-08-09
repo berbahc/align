@@ -1,9 +1,10 @@
-import { usePage } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import { Check, X } from 'lucide-react';
 import { useState } from 'react';
+import { store as adjust } from '@/routes/habits/adjustment';
 
 /**
- * Bestätigung nach dem Anlegen einer Gewohnheit.
+ * Bestätigung nach dem Anlegen oder Verschieben einer Gewohnheit.
  *
  * Sie bleibt stehen, bis sie weggeklickt wird — kein Auto-Ausblenden, weil der
  * Satz eine Auskunft trägt („steht am Montag") und nicht bloß ein Lob ist. Wer
@@ -15,14 +16,19 @@ import { useState } from 'react';
 export function FlashNotice() {
     const { flash } = usePage();
     const created = flash.habitCreated;
+    const adjusted = flash.habitAdjusted;
     // Gemerkt wird die weggeklickte Meldung, nicht ein Ja/Nein. Eine neue
     // Meldung trägt eine andere Kennung und ist damit von selbst wieder
     // sichtbar — ohne Effekt, der den Zustand nachträglich zurücksetzt.
     const [dismissed, setDismissed] = useState<string | null>(null);
 
-    const key = created ? `${created.title}|${created.when}` : null;
+    const key = created
+        ? `created|${created.title}|${created.when}`
+        : adjusted
+          ? `adjusted|${adjusted.habitId}|${adjusted.anchor}`
+          : null;
 
-    if (!created || dismissed === key) {
+    if (key === null || dismissed === key) {
         return null;
     }
 
@@ -40,14 +46,43 @@ export function FlashNotice() {
             </span>
 
             <p className="min-w-0 flex-1 text-sm leading-relaxed">
-                <span className="font-semibold">„{created.title}"</span> ist
-                angelegt. Sie steht {created.when} in deiner Tagesliste.
-                {!created.scheduledToday && (
-                    <span className="text-muted-foreground">
-                        {' '}
-                        Heute ist sie nicht vorgesehen — deshalb siehst du sie
-                        in der Übersicht noch nicht.
-                    </span>
+                {created && (
+                    <>
+                        <span className="font-semibold">„{created.title}"</span>{' '}
+                        ist angelegt. Sie steht {created.when} in deiner
+                        Tagesliste.
+                        {!created.scheduledToday && (
+                            <span className="text-muted-foreground">
+                                {' '}
+                                Heute ist sie nicht vorgesehen — deshalb siehst
+                                du sie in der Übersicht noch nicht.
+                            </span>
+                        )}
+                    </>
+                )}
+
+                {adjusted && (
+                    <>
+                        <span className="font-semibold">
+                            „{adjusted.title}"
+                        </span>{' '}
+                        liegt jetzt bei {adjusted.anchor}.{' '}
+                        {/* Der einzige Weg zurück: Gewohnheiten lassen sich
+                            sonst nirgends bearbeiten. */}
+                        <button
+                            type="button"
+                            onClick={() =>
+                                router.post(
+                                    adjust.url(adjusted.habitId),
+                                    adjusted.previous,
+                                    { preserveScroll: true },
+                                )
+                            }
+                            className="cursor-pointer font-semibold text-primary underline underline-offset-4 transition-colors duration-200 hover:text-primary/80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                        >
+                            Zurück zu „{adjusted.previousLabel}"
+                        </button>
+                    </>
                 )}
             </p>
 

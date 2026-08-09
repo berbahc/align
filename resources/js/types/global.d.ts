@@ -30,6 +30,26 @@ declare module '@inertiajs/core' {
                 when: string;
                 scheduledToday: boolean;
             };
+            /**
+             * Bestätigung nach einer Anpassung. Trägt den vorherigen Anker mit,
+             * weil Gewohnheiten sich sonst nirgends bearbeiten lassen — ein Weg,
+             * der nur vorwärts führt, wäre bei einem Vorschlag der KI die
+             * falsche Richtung.
+             */
+            habitAdjusted?: {
+                habitId: number;
+                title: string;
+                /** Der neue Anker, fertig formatiert. */
+                anchor: string;
+                /** Der bisherige, als Text für den Rückweg. */
+                previousLabel: string;
+                /** Die Felder, mit denen sich der bisherige wiederherstellen lässt. */
+                previous: {
+                    trigger_situation?: string;
+                    scheduled_time?: string;
+                    scheduled_days?: number[];
+                };
+            };
         };
     }
 }

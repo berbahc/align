@@ -18,7 +18,7 @@ class OnboardingController extends Controller
     {
         return Inertia::render('onboarding', [
             'directions' => BehaviorType::options(),
-            'triggerSuggestions' => Habit::TriggerSuggestions,
+            'triggerSuggestions' => array_keys(Habit::TriggerSuggestions),
             'scheduleTypes' => ScheduleType::options(),
         ]);
     }

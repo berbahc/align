@@ -1,5 +1,5 @@
 import { useForm } from '@inertiajs/react';
-import { ArrowRight, BookOpen, Dumbbell, GlassWater, Moon } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { useState } from 'react';
 import { AiSuggestion, AiSuggestionFailure } from '@/components/ai-suggestion';
 import InputError from '@/components/input-error';
@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
 import { useSmallestStep } from '@/hooks/use-smallest-step';
+import { BEHAVIOR_ICONS } from '@/lib/behavior-icons';
 import { cn } from '@/lib/utils';
 import { suggestions } from '@/routes/habits/smallest-step';
 import type { BehaviorType, ScheduleType, Weekday } from '@/types';
@@ -20,13 +21,6 @@ export interface Direction {
     description: string;
     suggestions: string[];
 }
-
-const DIRECTION_ICONS: Record<BehaviorType, typeof Moon> = {
-    movement: Dumbbell,
-    learning: BookOpen,
-    nutrition: GlassWater,
-    other: Moon,
-};
 
 const STEP_COUNT = 5;
 
@@ -159,7 +153,7 @@ export function HabitWizard({
 
                     <div className="grid gap-3 sm:grid-cols-2">
                         {directions.map((candidate) => {
-                            const Icon = DIRECTION_ICONS[candidate.value];
+                            const Icon = BEHAVIOR_ICONS[candidate.value];
                             const isSelected =
                                 data.behavior_type === candidate.value;
 
