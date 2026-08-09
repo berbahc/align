@@ -100,8 +100,13 @@ test('a habit without a single miss is told so instead of being nagged', functio
     ]]);
 
     $user = User::factory()->create();
+    // Der Auslöser steht fest, damit der Vorschlag nicht zufällig derselbe ist:
+    // Die Factory würfelt ihn aus fünf Situationen, und ein Vorschlag, der dem
+    // aktuellen Anker entspricht, wird verworfen — bei „nach dem Aufstehen"
+    // bliebe dann keine Alternative übrig und der Endpunkt antwortete mit 503.
     $habit = Habit::factory()->for($user)->create([
         'title' => 'Wasser trinken',
+        'trigger_situation' => 'vor dem Schlafengehen',
         'created_at' => Carbon::today(),
     ]);
     $habit->completions()->create([
