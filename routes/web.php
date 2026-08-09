@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AppointmentAvailabilityController;
+use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FriendshipController;
@@ -44,6 +45,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::put('appointments/availability', AppointmentAvailabilityController::class)
             ->name('appointments.availability');
+
+        // Die Verabredung hängt an der Gewohnheit der fragenden Seite — ihr
+        // Anker ist der Zeitpunkt, ihr Titel der Text der Anfrage.
+        Route::post('habits/{habit}/appointments', [AppointmentController::class, 'store'])
+            ->name('appointments.store');
+        Route::patch('appointments/{appointment}', [AppointmentController::class, 'update'])
+            ->name('appointments.update');
+        Route::delete('appointments/{appointment}', [AppointmentController::class, 'destroy'])
+            ->name('appointments.destroy');
 
         Route::get('habits', [HabitController::class, 'index'])->name('habits.index');
         Route::get('habits/create', [HabitController::class, 'create'])->name('habits.create');

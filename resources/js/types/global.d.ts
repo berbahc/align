@@ -25,7 +25,11 @@ declare module '@inertiajs/core' {
              * auf der Übersicht sonst spurlos verschwände.
              */
             habitCreated?: {
+                /** Trägt den letzten Schritt: die Verabredung hängt daran. */
+                id: number;
                 title: string;
+                /** Der Wann-Teil, fertig formatiert. */
+                anchor: string;
                 /** Satzteil wie „ab heute" oder „am Montag um 17:00". */
                 when: string;
                 scheduledToday: boolean;

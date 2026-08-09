@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Appointment;
 use App\Models\Friendship;
 use App\Models\Habit;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
@@ -27,6 +29,9 @@ class DashboardController extends Controller
             ->habits()
             ->active()
             ->with(['completions' => fn (Relation $query) => $query->whereDate('completed_on', $today)])
+            // Screen A3: die zugesagte Verabredung sitzt in der Habit-Zeile,
+            // als Doppel-Zeichen an der Stelle der Icon-Kachel.
+            ->with(['appointments' => fn (Relation $query) => $query->accepted()->onDate($today)->with('invitee')])
             ->withCount(['completions as completions_last_30_days' => fn (Builder $query) => $query
                 ->where('completed_on', '>=', $today->copy()->subDays(29)->startOfDay()),
             ])
@@ -47,6 +52,17 @@ class DashboardController extends Controller
             // der einzige Weg, auf dem jemand von ihr erfährt — es gibt keine
             // Mail und kein Nachfassen (community_feature3.md §5).
             'friendRequests' => Friendship::pendingFor($request->user()),
+            // Screen A2 für die Verabredung: dieselbe Stelle, anderer Inhalt.
+            'appointmentRequests' => $this->appointmentRequests($request->user()),
+            // Alles Verabredete, was noch bevorsteht — für beide Seiten.
+            'upcomingAppointments' => $this->upcomingAppointments($request->user(), $today),
+            'friends' => $request->user()->friends()->map(fn (User $friend): array => [
+                'id' => $friend->id,
+                'name' => $friend->name,
+                'initial' => mb_strtoupper(mb_substr($friend->name, 0, 1)),
+            ])->all(),
+            'appointmentDays' => Appointment::dayChoices(),
+            'appointmentsEnabled' => $request->user()->appointments_enabled,
             'todayProgress' => $this->todayProgress($todaysHabits),
             'consistency' => $this->consistencyRate($habits, $today),
             // Eine leere Tagesliste heißt nicht, dass es keine Gewohnheiten
@@ -69,8 +85,84 @@ class DashboardController extends Controller
                 // abstumpfen würde.
                 'motivation' => $habit->motivation,
                 'completedAt' => $habit->completions->first()?->completed_at->format('H:i'),
+                // §6: Zwei Häkchen? Nein — eines. Der Fortschritt der anderen
+                // Person steht hier bewusst nicht, sonst wäre die Verabredung
+                // durch die Hintertür doch ein Dauerstatus.
+                'companion' => $habit->appointments->first()?->companion($request->user()),
+                'appointmentId' => $habit->appointments->first()?->id,
             ])->all(),
         ]);
+    }
+
+    /**
+     * Offene Verabredungs-Anfragen an diese Person.
+     *
+     * @return list<array{id: int, name: string, initial: string, title: string, anchor: string, day: string}>
+     */
+    private function appointmentRequests(User $user): array
+    {
+        return Appointment::query()
+            ->pending()
+            ->where('invitee_id', $user->id)
+            // Vergangenes verfällt still: Eine Anfrage für gestern ist keine
+            // Frage mehr, und ein Hinweis darauf wäre ein Vorwurf.
+            ->whereDate('scheduled_for', '>=', Carbon::today())
+            ->with(['requester', 'habit'])
+            ->get()
+            ->map(fn (Appointment $appointment): array => [
+                'id' => $appointment->id,
+                ...$appointment->companion($user),
+                'title' => $appointment->habit->title,
+                'anchor' => $appointment->habit->scheduleLabel(),
+                'day' => Appointment::dayLabel($appointment->scheduled_for),
+            ])
+            ->all();
+    }
+
+    /**
+     * Was mit jemandem ansteht — zugesagt oder von mir gefragt.
+     *
+     * Eine Verabredung, die erst morgen gilt, war bis eben unsichtbar: Sie
+     * erschien am Tag selbst und davor nirgends. Wer für morgen zusagte, sah
+     * danach nichts mehr und musste annehmen, es sei schiefgegangen.
+     *
+     * Das ist **kein** gemeinsamer Kalender (Top-2 46 %, abgelehnt): Es steht
+     * hier nur, was ohnehin schon vereinbart ist, höchstens drei Tage weit,
+     * und nach dem Tag verschwindet es spurlos (§7).
+     *
+     * Zwei Fälle fehlen bewusst, weil sie anderswo schon stehen: offene
+     * Anfragen an mich (die Karte mit den Knöpfen darüber) und was heute an
+     * meiner eigenen Gewohnheit hängt (das Doppel-Zeichen in der Habit-Zeile).
+     *
+     * @return list<array{id: int, name: string, initial: string, title: string, anchor: string, day: string, accepted: bool, iAsked: bool}>
+     */
+    private function upcomingAppointments(User $user, Carbon $today): array
+    {
+        return Appointment::query()
+            ->involving($user)
+            ->whereDate('scheduled_for', '>=', $today)
+            ->whereDate('scheduled_for', '<=', $today->copy()->addDays(Appointment::DayChoices - 1))
+            ->with(['requester', 'invitee', 'habit'])
+            ->orderBy('scheduled_for')
+            ->get()
+            ->reject(fn (Appointment $appointment): bool => (
+                $appointment->accepted_at === null && $appointment->invitee_id === $user->id
+            ) || (
+                $appointment->accepted_at !== null
+                && $appointment->requester_id === $user->id
+                && $appointment->scheduled_for->isToday()
+            ))
+            ->map(fn (Appointment $appointment): array => [
+                'id' => $appointment->id,
+                ...$appointment->companion($user),
+                'title' => $appointment->habit->title,
+                'anchor' => $appointment->habit->scheduleLabel(),
+                'day' => Appointment::dayLabel($appointment->scheduled_for),
+                'accepted' => $appointment->accepted_at !== null,
+                'iAsked' => $appointment->requester_id === $user->id,
+            ])
+            ->values()
+            ->all();
     }
 
     private function greeting(Carbon $now): string
