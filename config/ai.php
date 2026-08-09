@@ -14,8 +14,10 @@ return [
     */
 
     // Align spricht ausschließlich mit Claude — die Projektvorgabe nennt die
-    // Claude API als Motor des KI-Assistenten.
-    'default' => env('AI_PROVIDER', 'anthropic'),
+    // Claude API als Motor des KI-Assistenten. Über welchen Weg der Schlüssel
+    // dorthin führt, entscheidet die Umgebung: OpenRouter als Vermittler oder
+    // Anthropic direkt. Der Agent kennt den Unterschied nicht.
+    'default' => env('AI_PROVIDER', 'openrouter'),
     'default_for_images' => 'gemini',
     'default_for_audio' => 'openai',
     'default_for_transcription' => 'openai',
@@ -143,6 +145,14 @@ return [
         'openrouter' => [
             'driver' => 'openrouter',
             'key' => env('OPENROUTER_API_KEY'),
+            // OpenRouter benennt Modelle mit Anbieter-Präfix. Welche Slugs es
+            // gerade gibt, steht auf openrouter.ai/models — deshalb ist der
+            // Wert über die Umgebung austauschbar, ohne Codeänderung.
+            'models' => [
+                'text' => [
+                    'default' => env('AI_MODEL', 'anthropic/claude-sonnet-4.6'),
+                ],
+            ],
         ],
 
         'voyageai' => [
