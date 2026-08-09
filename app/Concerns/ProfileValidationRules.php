@@ -17,7 +17,32 @@ trait ProfileValidationRules
     {
         return [
             'name' => $this->nameRules(),
+            'username' => $this->usernameRules($userId),
             'email' => $this->emailRules($userId),
+        ];
+    }
+
+    /**
+     * Get the validation rules used to validate user handles.
+     *
+     * Kleinbuchstaben, Ziffern und Unterstrich. Kein Punkt und kein
+     * Bindestrich, damit ein Handle nie wie eine E-Mail-Adresse oder eine
+     * abgetrennte Silbe aussieht — das Eingabefeld beim Hinzufügen
+     * unterscheidet beide Formen am „@", und das soll eindeutig bleiben.
+     *
+     * @return array<int, ValidationRule|array<mixed>|string>
+     */
+    protected function usernameRules(?int $userId = null): array
+    {
+        return [
+            'required',
+            'string',
+            'min:3',
+            'max:30',
+            'regex:/^[a-z0-9_]+$/',
+            $userId === null
+                ? Rule::unique(User::class)
+                : Rule::unique(User::class)->ignore($userId),
         ];
     }
 

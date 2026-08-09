@@ -1,7 +1,9 @@
 <?php
 
+use App\Http\Controllers\AppointmentAvailabilityController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\FriendshipController;
 use App\Http\Controllers\HabitAdjustmentController;
 use App\Http\Controllers\HabitCompletionController;
 use App\Http\Controllers\HabitController;
@@ -25,10 +27,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::get('calendar', CalendarController::class)->name('calendar');
 
-        // Noch ohne Daten — bekommt einen Controller, sobald es welche liefert;
-        // Route::inertia hält den Platzhalter ehrlich, statt einen leeren
-        // Controller vorzutäuschen.
-        Route::inertia('community', 'community')->name('community');
+        // Der Freundeskreis ist der Unterbau der Verabredung: Screen 1 aus
+        // community_feature3.md wählt aus Personen, die es vorher geben muss.
+        Route::get('community', [FriendshipController::class, 'index'])->name('community');
+
+        // Eine Anfrage kostet die andere Seite Aufmerksamkeit. Gedrosselt, weil
+        // eine Absage bewusst keine Spur hinterlässt — gegen wiederholtes
+        // Fragen schützt die Route, nicht ein Eintrag in der Datenbank.
+        Route::post('friendships', [FriendshipController::class, 'store'])
+            ->middleware('throttle:10,1')
+            ->name('friendships.store');
+        Route::patch('friendships/{friendship}', [FriendshipController::class, 'update'])
+            ->name('friendships.update');
+        Route::delete('friendships/{friendship}', [FriendshipController::class, 'destroy'])
+            ->name('friendships.destroy');
+
+        Route::put('appointments/availability', AppointmentAvailabilityController::class)
+            ->name('appointments.availability');
 
         Route::get('habits', [HabitController::class, 'index'])->name('habits.index');
         Route::get('habits/create', [HabitController::class, 'create'])->name('habits.create');
