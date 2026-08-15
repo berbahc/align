@@ -159,7 +159,7 @@ class Appointment extends Model
      * Vergangenes verfällt still: Eine Anfrage für gestern ist keine Frage
      * mehr, und ein Hinweis darauf wäre ein Vorwurf.
      *
-     * @return list<array{id: int, name: string, initial: string, title: string, anchor: string, day: string}>
+     * @return list<array{id: int, name: string, initial: string, title: string, anchor: string, day: string, blueprint: array{title: string, behaviorType: string, scheduleType: string, triggerSituation: string|null, scheduledTime: string|null, scheduledDays: list<int>|null}}>
      */
     public static function pendingFor(User $user): array
     {
@@ -175,6 +175,11 @@ class Appointment extends Model
                 'title' => $appointment->habit->title,
                 'anchor' => $appointment->habit->scheduleLabel(),
                 'day' => self::dayLabel($appointment->scheduled_for),
+                // Wer gefragt wird, sieht hier zum ersten Mal eine Gewohnheit,
+                // die er selbst nicht führt. Manchmal ist die Antwort nicht ja
+                // oder nein, sondern „das will ich auch" — dafür reist die
+                // Vorlage mit.
+                'blueprint' => $appointment->habit->blueprint(),
             ])
             ->all();
     }

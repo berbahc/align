@@ -18,6 +18,7 @@ export function HabitRow({
     onToggle,
     onStuck,
     onAskCompany,
+    highlighted = false,
 }: {
     habit: Habit;
     /** Die eigene Initiale — die linke Hälfte des Doppel-Zeichens aus §3.2. */
@@ -26,6 +27,13 @@ export function HabitRow({
     onStuck: (habit: Habit) => void;
     /** Null blendet den Weg zur Verabredung aus — Screen A5. */
     onAskCompany: ((habit: Habit) => void) | null;
+    /**
+     * Kurz betont, nachdem eine Absage hierher verwiesen hat.
+     *
+     * Kein Zustand der Gewohnheit, sondern eine Antwort auf einen Klick: Wer
+     * „Mach ich trotzdem" tippt, soll sehen, welche Zeile gemeint ist.
+     */
+    highlighted?: boolean;
 }) {
     const Icon = BEHAVIOR_ICONS[habit.behaviorType];
     const isDone = habit.completedAt !== null;
@@ -42,7 +50,14 @@ export function HabitRow({
               .join(' · ');
 
     return (
-        <li className="flex flex-col gap-2">
+        <li
+            id={`habit-${habit.id}`}
+            className={cn(
+                'flex flex-col gap-2 rounded-2xl transition-shadow duration-300',
+                highlighted &&
+                    'ring-2 ring-primary ring-offset-4 ring-offset-card',
+            )}
+        >
             <div className="flex items-center gap-3">
                 {/* §3.2 — die dritte Ausprägung der Icon-Kachel: zwei Kreise
                     statt einem. Kein neues Element, keine neue Farbe, kein

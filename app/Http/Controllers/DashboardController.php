@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ScheduleType;
 use App\Models\Appointment;
 use App\Models\AppointmentNotice;
 use App\Models\Friendship;
@@ -74,6 +75,11 @@ class DashboardController extends Controller
             ])->all(),
             'appointmentDays' => Appointment::dayChoices(),
             'appointmentsEnabled' => $request->user()->appointments_enabled,
+            // Für das Übernehmen einer fremden Gewohnheit: Dieselbe Wahl wie
+            // beim Anlegen, weil es dasselbe Anlegen ist — nur mit vorbelegten
+            // Feldern. Ein fremder Zeitpunkt passt selten in den eigenen Tag.
+            'scheduleTypes' => ScheduleType::options(),
+            'triggerSuggestions' => array_keys(Habit::TriggerSuggestions),
             'todayProgress' => $this->todayProgress($todaysHabits),
             'consistency' => $this->consistencyRate($habits, $today),
             'streak' => $this->streak($habits, $today),

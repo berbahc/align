@@ -1,17 +1,20 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Plus } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AppointmentNotice } from '@/components/appointment-notice';
 import { AppointmentRequestNotice } from '@/components/appointment-request-notice';
 import { AppointmentSheet } from '@/components/appointment-sheet';
 import { FriendRequestNotice } from '@/components/friend-request-notice';
+import { HabitAdoptionSheet } from '@/components/habit-adoption-sheet';
 import { HabitRow } from '@/components/habit-row';
+import type { ScheduleTypeOption } from '@/components/schedule-picker';
 import { StartingHelpSheet } from '@/components/starting-help-sheet';
 import { StreakCard } from '@/components/streak-card';
 import type { Streak } from '@/components/streak-card';
 import { Card, CardContent } from '@/components/ui/card';
 import { UpcomingAppointments } from '@/components/upcoming-appointments';
 import { dashboard } from '@/routes';
+import { destroy as dismissNotice } from '@/routes/appointment-notices';
 import { create, index as habitsIndex } from '@/routes/habits';
 import { destroy, store } from '@/routes/habits/completions';
 import type {
@@ -21,6 +24,7 @@ import type {
     UpcomingAppointment,
     FriendshipPerson,
     Habit,
+    HabitBlueprint,
 } from '@/types';
 
 interface TodayProgress {
@@ -47,6 +51,9 @@ interface DashboardProps {
     appointmentDays: AppointmentDay[];
     /** Screen A5: aus heißt, der Weg zur Verabredung wird nicht angeboten. */
     appointmentsEnabled: boolean;
+    /** Für das Übernehmen einer fremden Gewohnheit — dieselbe Wahl wie beim Anlegen. */
+    scheduleTypes: ScheduleTypeOption[];
+    triggerSuggestions: string[];
     todayProgress: TodayProgress;
     /** Anteil erfüllter Tage der letzten 30 Tage; null, solange es keine Gewohnheiten gibt. */
     consistency: number | null;
@@ -72,6 +79,8 @@ export default function Dashboard({
     friends,
     appointmentDays,
     appointmentsEnabled,
+    scheduleTypes,
+    triggerSuggestions,
     todayProgress,
     consistency,
     streak,
@@ -88,6 +97,72 @@ export default function Dashboard({
 
     // Welche Gewohnheit gerade im Verabredungs-Sheet steht; null heißt zu.
     const [askingFor, setAskingFor] = useState<Habit | null>(null);
+
+    // Welche fremde Gewohnheit gerade zum Übernehmen offen steht, und aus
+    // welcher Absage heraus — die Notiz verschwindet dann mit.
+    const [adopting, setAdopting] = useState<{
+        blueprint: HabitBlueprint;
+        noticeId?: number;
+    } | null>(null);
+
+    // Die Zeile, auf die eine Absage gerade verwiesen hat.
+    const [highlighted, setHighlighted] = useState<number | null>(null);
+    const fadeHighlight = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    useEffect(
+        () => () => {
+            if (fadeHighlight.current !== null) {
+                clearTimeout(fadeHighlight.current);
+            }
+        },
+        [],
+    );
+
+    /**
+     * „Mach ich trotzdem": Die Absage betraf den Tag, nicht die Gewohnheit.
+     *
+     * Sie steht ohnehin schon in der Liste — es gibt nichts anzulegen und
+     * nichts abzuhaken. Was fehlt, ist der Hinweis, welche Zeile gemeint ist,
+     * und den gibt der Ring für ein paar Sekunden.
+     */
+    function carryOn(notice: Notice) {
+        const habitId = notice.habitId;
+
+        router.delete(dismissNotice.url(notice.id), {
+            preserveScroll: true,
+            onSuccess: () => {
+                if (habitId === null) {
+                    return;
+                }
+
+                const row = document.getElementById(`habit-${habitId}`);
+
+                // Abgesagt wird bis zu drei Tage im Voraus — die Gewohnheit
+                // muss deshalb nicht heute anstehen. Dann steht sie nicht in
+                // der Tagesliste, und der Weg führt dorthin, wo alle stehen.
+                if (row === null) {
+                    router.visit(habitsIndex());
+
+                    return;
+                }
+
+                setHighlighted(habitId);
+                row.scrollIntoView({
+                    behavior: window.matchMedia(
+                        '(prefers-reduced-motion: reduce)',
+                    ).matches
+                        ? 'auto'
+                        : 'smooth',
+                    block: 'center',
+                });
+
+                fadeHighlight.current = setTimeout(
+                    () => setHighlighted(null),
+                    2500,
+                );
+            },
+        });
+    }
 
     function toggle(habit: Habit) {
         const markingDone = habit.completedAt === null;
@@ -151,12 +226,27 @@ export default function Dashboard({
                     darunter — sie ist das Einzige auf dieser Seite, das eine
                     andere Person betrifft und auf eine Antwort wartet. */}
                 <FriendRequestNotice requests={friendRequests} />
-                <AppointmentRequestNotice requests={appointmentRequests} />
+                <AppointmentRequestNotice
+                    requests={appointmentRequests}
+                    onAdopt={(request) =>
+                        setAdopting({ blueprint: request.blueprint })
+                    }
+                />
 
                 {/* Die Absage steht bei den Dingen, die andere Menschen
                     betreffen — und nicht bei den Gewohnheiten, wo sie wie ein
                     eigenes Versäumnis aussähe. */}
-                <AppointmentNotice notices={appointmentNotices} />
+                <AppointmentNotice
+                    notices={appointmentNotices}
+                    onAdopt={(notice) =>
+                        notice.blueprint !== null &&
+                        setAdopting({
+                            blueprint: notice.blueprint,
+                            noticeId: notice.id,
+                        })
+                    }
+                    onCarryOn={carryOn}
+                />
 
                 {todayProgress.total > 0 && (
                     <Card className="gap-0 py-5">
@@ -255,6 +345,9 @@ export default function Dashboard({
                                                     ? setAskingFor
                                                     : null
                                             }
+                                            highlighted={
+                                                highlighted === habit.id
+                                            }
                                         />
                                     ))}
                                 </ul>
@@ -311,6 +404,14 @@ export default function Dashboard({
             <StartingHelpSheet
                 habit={stuckOn}
                 onOpenChange={(open) => !open && setStuckOn(null)}
+            />
+
+            <HabitAdoptionSheet
+                blueprint={adopting?.blueprint ?? null}
+                noticeId={adopting?.noticeId}
+                scheduleTypes={scheduleTypes}
+                triggerSuggestions={triggerSuggestions}
+                onOpenChange={(open) => !open && setAdopting(null)}
             />
 
             <AppointmentSheet

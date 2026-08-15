@@ -18,8 +18,11 @@ import type { AppointmentRequest } from '@/types';
  */
 export function AppointmentRequestNotice({
     requests,
+    onAdopt,
 }: {
     requests: AppointmentRequest[];
+    /** Der dritte Weg: die Gewohnheit selbst führen, unabhängig vom Termin. */
+    onAdopt: (request: AppointmentRequest) => void;
 }) {
     if (requests.length === 0) {
         return null;
@@ -85,6 +88,19 @@ export function AppointmentRequestNotice({
                             Lieber nicht
                         </Button>
                     </div>
+
+                    {/* Leiser und getrennt, weil es keine dritte Antwort ist:
+                        Die Frage nach dem einen Tag bleibt offen, wenn man
+                        hier tippt. Es ist der Weg für „das will ich auch" —
+                        bisher endete er mit dem einen Tag, und die Gewohnheit
+                        blieb die der anderen Person. */}
+                    <button
+                        type="button"
+                        onClick={() => onAdopt(request)}
+                        className="mt-3 cursor-pointer rounded-lg px-1 py-1 text-xs text-muted-foreground underline underline-offset-4 transition-colors duration-200 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    >
+                        Selbst übernehmen
+                    </button>
                 </div>
             ))}
         </section>

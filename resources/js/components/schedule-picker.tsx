@@ -1,4 +1,7 @@
 import { ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
+import { useState } from 'react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import type { ScheduleType, Weekday } from '@/types';
 
@@ -6,6 +9,13 @@ export interface ScheduleTypeOption {
     value: ScheduleType;
     label: string;
 }
+
+/**
+ * §5.5 — Auswahlkachel: Selektion ist ein 2px-Rahmen, die Füllung ändert sich
+ * nicht. Ein bewusst leises Muster, das für alle Einfachauswahlen gilt.
+ */
+export const CHOICE_TILE =
+    'cursor-pointer rounded-[14px] border-2 bg-card text-left transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
 
 const WEEKDAYS: { value: Weekday; label: string; full: string }[] = [
     { value: 1, label: 'Mo', full: 'Montag' },
@@ -60,6 +70,95 @@ export function formatWeekdays(days: Weekday[]): string {
                 : run.map(label).join(', '),
         )
         .join(', ');
+}
+
+/**
+ * Die Situationsauswahl — der `dynamic`-Zweig des SchedulePickers.
+ *
+ * Die Vorschläge sind ein Angebot, kein Katalog: „Eigene Situation" steht
+ * gleichberechtigt darunter, weil der eigene Tag selten dem gemittelten
+ * entspricht. Ob getippt oder gewählt wird, hält die Komponente selbst fest —
+ * es ist eine Frage der Darstellung, nicht des Formulars.
+ */
+export function SituationPicker({
+    suggestions,
+    value,
+    onChange,
+}: {
+    suggestions: string[];
+    value: string;
+    onChange: (value: string) => void;
+}) {
+    // Eine vorbelegte Situation, die nicht in der Liste steht, ist eine
+    // getippte — beim Übernehmen einer fremden Gewohnheit ist das der
+    // Normalfall, und das Feld muss dann offen stehen.
+    const [ownSituation, setOwnSituation] = useState(
+        value !== '' && !suggestions.includes(value),
+    );
+
+    return (
+        <div className="flex flex-col gap-2">
+            {suggestions.map((situation) => {
+                const isSelected = !ownSituation && value === situation;
+
+                return (
+                    <button
+                        key={situation}
+                        type="button"
+                        aria-pressed={isSelected}
+                        onClick={() => {
+                            setOwnSituation(false);
+                            onChange(situation);
+                        }}
+                        className={cn(
+                            CHOICE_TILE,
+                            'px-4 py-3 text-[15px]',
+                            isSelected
+                                ? 'border-primary'
+                                : 'border-border hover:border-secondary',
+                        )}
+                    >
+                        {situation}
+                    </button>
+                );
+            })}
+
+            <button
+                type="button"
+                aria-pressed={ownSituation}
+                onClick={() => {
+                    setOwnSituation(true);
+                    onChange('');
+                }}
+                className={cn(
+                    CHOICE_TILE,
+                    'border-dashed px-4 py-3 text-[15px] text-muted-foreground',
+                    ownSituation
+                        ? 'border-primary'
+                        : 'border-border hover:border-secondary',
+                )}
+            >
+                Eigene Situation
+            </button>
+
+            {ownSituation && (
+                <div className="grid gap-2 pt-1">
+                    <Label htmlFor="trigger_situation" className="sr-only">
+                        Eigene Situation
+                    </Label>
+                    <Input
+                        id="trigger_situation"
+                        name="trigger_situation"
+                        autoFocus
+                        maxLength={120}
+                        placeholder="z. B. wenn ich aus der Bib komme"
+                        value={value}
+                        onChange={(event) => onChange(event.target.value)}
+                    />
+                </div>
+            )}
+        </div>
+    );
 }
 
 const STEPPER_BUTTON =
