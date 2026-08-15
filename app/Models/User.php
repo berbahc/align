@@ -64,6 +64,20 @@ class User extends Authenticatable implements PasskeyUser
     }
 
     /**
+     * Das Gedächtnis der KI zu dieser Person.
+     *
+     * Was sie vorgeschlagen hat und was davon übernommen wurde — die
+     * Grundlage dafür, sich nicht zu wiederholen. Hängt am Konto und
+     * verschwindet mit ihm (Cascade in der Migration).
+     *
+     * @return HasMany<AiSuggestion, $this>
+     */
+    public function aiSuggestions(): HasMany
+    {
+        return $this->hasMany(AiSuggestion::class);
+    }
+
+    /**
      * Der Handle wird immer klein gespeichert.
      *
      * Damit ist „Berkay" und „berkay" dieselbe Person — unabhängig davon, über

@@ -2,6 +2,8 @@
 
 namespace App\Ai\Agents;
 
+use App\Ai\Agents\Concerns\SpeaksForAlign;
+use App\Ai\UserContext;
 use App\Enums\BehaviorType;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
@@ -37,7 +39,7 @@ use RuntimeException;
 #[Timeout(20)]
 class SuggestSmallestStep implements Agent, HasStructuredOutput
 {
-    use Promptable;
+    use Promptable, SpeaksForAlign;
 
     /**
      * Wie viele Vorschläge der Agent liefern soll.
@@ -57,6 +59,7 @@ class SuggestSmallestStep implements Agent, HasStructuredOutput
         private readonly BehaviorType $behaviorType,
         private readonly ?string $situation = null,
         private readonly ?string $tooBig = null,
+        private readonly ?UserContext $context = null,
     ) {}
 
     /**
@@ -78,14 +81,15 @@ class SuggestSmallestStep implements Agent, HasStructuredOutput
           anziehen. „Motiviere dich" ist kein Schritt, „Stell das Glas ans Bett"
           schon.
         - So klein, dass ein Nein sich albern anfühlt.
-        - Ein kurzer Satz, höchstens 120 Zeichen, auf Deutsch, in Du-Form.
-        - Kein Ausrufezeichen, kein Lob, keine Motivationssprache, keine Emojis.
-          Ruhig und sachlich.
+        - Ein kurzer Satz, höchstens 120 Zeichen.
         - Die Schritte müssen sich deutlich voneinander unterscheiden.
+        - Wiederhole keinen Schritt, der schon vorgeschlagen und nicht
+          übernommen wurde. Er hat für diese Person nicht getragen; derselbe
+          Satz noch einmal trägt genauso wenig.
 
         Antworte ausschließlich mit den Schritten selbst, ohne Einleitung und
         ohne Nummerierung.
-        PROMPT;
+        PROMPT."\n\n".$this->voice();
     }
 
     /**
@@ -172,6 +176,11 @@ class SuggestSmallestStep implements Agent, HasStructuredOutput
      * Die Situation wird mitgegeben, weil ein Schritt an ihr hängt: „Leg die
      * Schuhe an die Tür" passt zu „wenn ich nach Hause komme", nicht zu „nach
      * dem Aufstehen".
+     *
+     * Danach folgt, was Align über die Person weiß — der Warum-Satz, ihr
+     * Tagesablauf und was ihr schon einmal vorgeschlagen wurde. Ohne diesen
+     * Block wäre jeder Aufruf ein Kaltstart, und die KI könnte denselben
+     * Schritt zum dritten Mal anbieten.
      */
     private function question(): string
     {
@@ -182,6 +191,10 @@ class SuggestSmallestStep implements Agent, HasStructuredOutput
 
         if ($this->situation !== null && $this->situation !== '') {
             $lines[] = 'Sie beginnt in dieser Situation: '.$this->situation;
+        }
+
+        if ($this->context !== null) {
+            $lines = [...$lines, ...$this->contextLines($this->context), ''];
         }
 
         if ($this->tooBig !== null && $this->tooBig !== '') {

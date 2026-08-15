@@ -97,12 +97,18 @@ export function AdjustmentSheet({
 
         router.post(
             store.url(block.id),
-            alternative.situation
-                ? { trigger_situation: alternative.situation }
-                : {
-                      scheduled_time: alternative.time,
-                      scheduled_days: alternative.days,
-                  },
+            {
+                // Damit die KI später weiß, welcher ihrer Vorschläge es
+                // geworden ist — und die übrigen nicht ein zweites Mal
+                // anbietet.
+                suggestion_id: alternative.id,
+                ...(alternative.situation
+                    ? { trigger_situation: alternative.situation }
+                    : {
+                          scheduled_time: alternative.time,
+                          scheduled_days: alternative.days,
+                      }),
+            },
             { preserveScroll: true },
         );
 
@@ -157,7 +163,7 @@ export function AdjustmentSheet({
                     ) : (
                         suggestion.alternatives.map((alternative, index) => (
                             <button
-                                key={alternativeLabel(alternative)}
+                                key={alternative.id}
                                 type="button"
                                 aria-pressed={chosenIndex === index}
                                 onClick={() => choose(index)}

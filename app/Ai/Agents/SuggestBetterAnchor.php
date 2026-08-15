@@ -2,6 +2,8 @@
 
 namespace App\Ai\Agents;
 
+use App\Ai\Agents\Concerns\SpeaksForAlign;
+use App\Ai\UserContext;
 use App\Enums\ScheduleType;
 use App\Models\Habit;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -43,16 +45,15 @@ class SuggestBetterAnchor implements Agent, HasStructuredOutput
      */
     public const int AlternativeCount = 3;
 
-    use Promptable;
+    use Promptable, SpeaksForAlign;
 
     /**
      * @param  list<array{date: string, label: string}>  $misses  Tage, an denen die Gewohnheit anstand und nichts geschah
-     * @param  list<string>  $otherAnchors  Die Anker der übrigen Gewohnheiten — Grundlage für einen Ketten-Vorschlag
      */
     public function __construct(
         private readonly Habit $habit,
         private readonly array $misses,
-        private readonly array $otherAnchors = [],
+        private readonly ?UserContext $context = null,
     ) {}
 
     public function instructions(): string
@@ -65,13 +66,12 @@ class SuggestBetterAnchor implements Agent, HasStructuredOutput
         zu wenig will, sondern weil der Zeitpunkt nicht trägt. Schlage andere
         Zeitpunkte vor.
 
-        Haltung:
-        - Beobachtend, nie wertend. Kein „du hast versäumt", kein Lob, kein
-          Ausrufezeichen, keine Motivationssprache, keine Emojis.
         - Die Begründung sagt, warum der neue Zeitpunkt tragen könnte — nicht,
           was die Person falsch gemacht hat.
-        - Deutsch, Du-Form, ein kurzer Satz je Begründung, höchstens 100 Zeichen.
-        PROMPT;
+        - Ein kurzer Satz je Begründung, höchstens 100 Zeichen.
+        - Schlage keinen Zeitpunkt vor, der schon einmal vorgeschlagen und nicht
+          übernommen wurde, und keinen, der dem aktuellen entspricht.
+        PROMPT."\n\n".$this->voice();
 
         if ($this->habit->schedule_type === ScheduleType::Fixed) {
             return $shared."\n\n".<<<'PROMPT'
@@ -273,9 +273,8 @@ class SuggestBetterAnchor implements Agent, HasStructuredOutput
             );
         }
 
-        if ($this->otherAnchors !== []) {
-            $lines[] = 'Andere Gewohnheiten dieser Person und ihre Zeitpunkte: '
-                .implode('; ', $this->otherAnchors).'.';
+        if ($this->context !== null) {
+            $lines = [...$lines, ...$this->contextLines($this->context), ''];
         }
 
         $lines[] = sprintf('Gib %d Alternativen.', self::AlternativeCount);
