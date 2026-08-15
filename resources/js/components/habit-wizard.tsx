@@ -3,7 +3,12 @@ import { ArrowRight } from 'lucide-react';
 import { useState } from 'react';
 import { AiSuggestion, AiSuggestionFailure } from '@/components/ai-suggestion';
 import InputError from '@/components/input-error';
-import { formatWeekdays, SchedulePicker } from '@/components/schedule-picker';
+import {
+    CHOICE_TILE,
+    formatWeekdays,
+    SchedulePicker,
+    SituationPicker,
+} from '@/components/schedule-picker';
 import type { ScheduleTypeOption } from '@/components/schedule-picker';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,13 +34,6 @@ const EYEBROW = 'text-[11px] font-semibold tracking-[0.11em] uppercase';
 const PRIMARY_BUTTON =
     'inline-flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary px-6 text-[15px] font-semibold text-primary-foreground transition-colors duration-200 hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50';
 
-/**
- * §5.5 — Auswahlkachel: Selektion ist ein 2px-Rahmen, die Füllung ändert sich
- * nicht. Ein bewusst leises Muster, das für alle Einfachauswahlen gilt.
- */
-const CHOICE_TILE =
-    'cursor-pointer rounded-[14px] border-2 bg-card text-left transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
-
 /** Ein neutraler Nachmittagstermin, von dem aus sich in beide Richtungen steppen lässt. */
 const DEFAULT_TIME = '17:00';
 
@@ -52,7 +50,6 @@ export function HabitWizard({
 }) {
     const [step, setStep] = useState(1);
     const [ownTitle, setOwnTitle] = useState(false);
-    const [ownSituation, setOwnSituation] = useState(false);
     const [ownStep, setOwnStep] = useState(false);
 
     const suggestion = useSmallestStep();
@@ -306,80 +303,13 @@ export function HabitWizard({
                         days={data.scheduled_days}
                         onDaysChange={(days) => setData('scheduled_days', days)}
                     >
-                        <div className="flex flex-col gap-2">
-                            {triggerSuggestions.map((situation) => {
-                                const isSelected =
-                                    !ownSituation &&
-                                    data.trigger_situation === situation;
-
-                                return (
-                                    <button
-                                        key={situation}
-                                        type="button"
-                                        aria-pressed={isSelected}
-                                        onClick={() => {
-                                            setOwnSituation(false);
-                                            setData(
-                                                'trigger_situation',
-                                                situation,
-                                            );
-                                        }}
-                                        className={cn(
-                                            CHOICE_TILE,
-                                            'px-4 py-3 text-[15px]',
-                                            isSelected
-                                                ? 'border-primary'
-                                                : 'border-border hover:border-secondary',
-                                        )}
-                                    >
-                                        {situation}
-                                    </button>
-                                );
-                            })}
-
-                            <button
-                                type="button"
-                                aria-pressed={ownSituation}
-                                onClick={() => {
-                                    setOwnSituation(true);
-                                    setData('trigger_situation', '');
-                                }}
-                                className={cn(
-                                    CHOICE_TILE,
-                                    'border-dashed px-4 py-3 text-[15px] text-muted-foreground',
-                                    ownSituation
-                                        ? 'border-primary'
-                                        : 'border-border hover:border-secondary',
-                                )}
-                            >
-                                Eigene Situation
-                            </button>
-
-                            {ownSituation && (
-                                <div className="grid gap-2 pt-1">
-                                    <Label
-                                        htmlFor="trigger_situation"
-                                        className="sr-only"
-                                    >
-                                        Eigene Situation
-                                    </Label>
-                                    <Input
-                                        id="trigger_situation"
-                                        name="trigger_situation"
-                                        autoFocus
-                                        maxLength={120}
-                                        placeholder="z. B. wenn ich aus der Bib komme"
-                                        value={data.trigger_situation}
-                                        onChange={(event) =>
-                                            setData(
-                                                'trigger_situation',
-                                                event.target.value,
-                                            )
-                                        }
-                                    />
-                                </div>
-                            )}
-                        </div>
+                        <SituationPicker
+                            suggestions={triggerSuggestions}
+                            value={data.trigger_situation}
+                            onChange={(value) =>
+                                setData('trigger_situation', value)
+                            }
+                        />
                     </SchedulePicker>
 
                     <InputError message={errors.trigger_situation} />

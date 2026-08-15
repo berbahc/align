@@ -256,6 +256,30 @@ class Habit extends Model
     }
 
     /**
+     * Die Gewohnheit als Vorlage, mit der jemand anders sie übernehmen kann.
+     *
+     * Nur der Bauplan, nicht die Gewohnheit: Titel, Richtung und Anker reisen
+     * mit, damit die Übernahme nicht bei null anfängt. Der Warum-Satz und der
+     * kleinste Schritt bleiben zurück — sie gehören zu einer Person, nicht zu
+     * einer Gewohnheit („damit ich den Kopf freikriege" ist niemandes Grund
+     * außer dem eigenen). Der Verlauf ohnehin nicht: Die Übernahme beginnt bei
+     * Tag eins, nicht bei der fremden Serie.
+     *
+     * @return array{title: string, behaviorType: string, scheduleType: string, triggerSituation: string|null, scheduledTime: string|null, scheduledDays: list<int>|null}
+     */
+    public function blueprint(): array
+    {
+        return [
+            'title' => $this->title,
+            'behaviorType' => $this->behavior_type->value,
+            'scheduleType' => $this->schedule_type->value,
+            'triggerSituation' => $this->trigger_situation,
+            'scheduledTime' => $this->scheduled_time?->format('H:i'),
+            'scheduledDays' => $this->scheduled_days,
+        ];
+    }
+
+    /**
      * Wie viele Tage bis zum nächsten Termin — 0 heißt heute.
      *
      * Die Sortiergröße der Gewohnheitsliste: Was heute ansteht, steht oben,

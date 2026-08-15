@@ -20,16 +20,21 @@ use Illuminate\Support\Carbon;
  * Sie trägt bewusst nur Text, keinen Verweis auf die absagende Person: Ohne
  * deren `id` lässt sich aus diesen Zeilen keine Quote bilden.
  *
+ * Was sie zusätzlich trägt, ist der Weg, auf dem es allein weitergeht — je nach
+ * Seite ein Verweis auf die eigene Gewohnheit oder ein Bauplan zum Übernehmen.
+ *
  * @property int $id
  * @property int $user_id
+ * @property int|null $habit_id
  * @property AppointmentNoticeKind $kind
  * @property string $companion_name
  * @property string $habit_title
+ * @property array{title: string, behaviorType: string, scheduleType: string, triggerSituation: string|null, scheduledTime: string|null, scheduledDays: list<int>|null}|null $habit_blueprint
  * @property string $day
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['user_id', 'kind', 'companion_name', 'habit_title', 'day'])]
+#[Fillable(['user_id', 'habit_id', 'kind', 'companion_name', 'habit_title', 'habit_blueprint', 'day'])]
 class AppointmentNotice extends Model
 {
     /** @use HasFactory<AppointmentNoticeFactory> */
@@ -66,11 +71,22 @@ class AppointmentNotice extends Model
             return;
         }
 
+        $recipient = $appointment->counterpart($actor);
+        $habit = $appointment->habit;
+
+        // Genau einer der beiden Wege, nie beide: Wem die Gewohnheit gehört,
+        // der hat nichts zu übernehmen — sie steht schon in seiner Liste. Wem
+        // sie nicht gehört, dem nützt ein Verweis nichts, weil er sie nicht
+        // öffnen dürfte; er braucht die Vorlage.
+        $isOwnHabit = $habit->user_id === $recipient->id;
+
         self::query()->create([
-            'user_id' => $appointment->counterpart($actor)->id,
+            'user_id' => $recipient->id,
+            'habit_id' => $isOwnHabit ? $habit->id : null,
             'kind' => $kind,
             'companion_name' => $actor->name,
-            'habit_title' => $appointment->habit->title,
+            'habit_title' => $habit->title,
+            'habit_blueprint' => $isOwnHabit ? null : $habit->blueprint(),
             'day' => Appointment::dayLabel($appointment->scheduled_for),
         ]);
     }
@@ -81,7 +97,7 @@ class AppointmentNotice extends Model
      * Steht hier und nicht im Controller, weil zwei Seiten sie brauchen: die
      * Übersicht und der Community-Bereich.
      *
-     * @return list<array{id: int, message: string, detail: string}>
+     * @return list<array{id: int, message: string, detail: string, habitId: int|null, blueprint: array{title: string, behaviorType: string, scheduleType: string, triggerSituation: string|null, scheduledTime: string|null, scheduledDays: list<int>|null}|null}>
      */
     public static function forUser(User $user): array
     {
@@ -94,6 +110,10 @@ class AppointmentNotice extends Model
                     'id' => $notice->id,
                     'message' => $notice->message(),
                     'detail' => $notice->detail(),
+                    // Die eigene Gewohnheit, zu der es weitergeht …
+                    'habitId' => $notice->habit_id,
+                    // … oder die Vorlage, aus der eine eigene würde.
+                    'blueprint' => $notice->habit_blueprint,
                 ])
                 ->all()
         );
@@ -140,6 +160,7 @@ class AppointmentNotice extends Model
     {
         return [
             'kind' => AppointmentNoticeKind::class,
+            'habit_blueprint' => 'array',
         ];
     }
 }

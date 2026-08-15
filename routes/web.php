@@ -7,6 +7,7 @@ use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FriendshipController;
 use App\Http\Controllers\HabitAdjustmentController;
+use App\Http\Controllers\HabitAdoptionController;
 use App\Http\Controllers\HabitCompletionController;
 use App\Http\Controllers\HabitController;
 use App\Http\Controllers\HabitGraduationController;
@@ -64,6 +65,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('habits', [HabitController::class, 'index'])->name('habits.index');
         Route::get('habits/create', [HabitController::class, 'create'])->name('habits.create');
         Route::post('habits', [HabitController::class, 'store'])->name('habits.store');
+
+        // Übernehmen ist ein Anlegen mit vorbelegten Feldern, kein eigener
+        // Gewohnheitstyp — nur der Rückweg ist ein anderer: zurück auf die
+        // Seite, auf der gefragt oder abgesagt wurde, statt in den Wizard.
+        Route::post('habits/adoptions', [HabitAdoptionController::class, 'store'])
+            ->name('habits.adoptions.store');
 
         // Wie bei den Erinnerungen steht die feste Strecke vor `{habit}`,
         // sonst wird „smallest-step" als Modellschlüssel gelesen.

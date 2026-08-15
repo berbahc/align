@@ -66,6 +66,23 @@ export interface ManagedHabit {
 }
 
 /**
+ * Eine Gewohnheit als Vorlage, aus der eine eigene werden kann.
+ *
+ * Nur der Bauplan, nicht die Gewohnheit: Der Warum-Satz und der kleinste
+ * Schritt reisen nicht mit, weil sie zu einer Person gehören und nicht zu einer
+ * Gewohnheit. Der Verlauf ohnehin nicht — beim Übernehmen beginnt Tag eins.
+ */
+export interface HabitBlueprint {
+    title: string;
+    behaviorType: BehaviorType;
+    scheduleType: ScheduleType;
+    triggerSituation: string | null;
+    /** Feste Uhrzeit im Format „17:00", sonst null. */
+    scheduledTime: string | null;
+    scheduledDays: Weekday[] | null;
+}
+
+/**
  * Ein von der KI vorgeschlagener anderer Zeitpunkt.
  *
  * Vorgeschlagen wird immer in der Form, die der Nutzer selbst gewählt hat:

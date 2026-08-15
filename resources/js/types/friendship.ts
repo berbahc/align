@@ -1,3 +1,5 @@
+import type { HabitBlueprint } from './habit';
+
 /**
  * Eine Person, wie sie im Community-Bereich erscheint.
  *
@@ -32,6 +34,14 @@ export type AppointmentRequest = {
     title: string;
     anchor: string;
     day: string;
+    /**
+     * Die Gewohnheit als Vorlage — für den dritten Weg neben ja und nein.
+     *
+     * Wer gefragt wird, sieht hier eine Gewohnheit, die er selbst nicht führt.
+     * Manchmal ist die Antwort „das will ich auch", und dafür braucht die
+     * Übernahme eine Vorbelegung.
+     */
+    blueprint: HabitBlueprint;
 };
 
 /**
@@ -47,6 +57,16 @@ export type AppointmentNotice = {
     message: string;
     /** Woran es hing — Titel der Gewohnheit, bei einer Absage plus Tag. */
     detail: string;
+    /**
+     * Die eigene Gewohnheit, um die es ging — sie läuft ohne die andere Person
+     * weiter. Null, wenn sie einem nicht gehört; dann steht `blueprint`.
+     */
+    habitId: number | null;
+    /**
+     * Die Vorlage zum Übernehmen — nur für die Seite, die die Gewohnheit nicht
+     * führt. Genau eines von beiden ist gesetzt, nie beide.
+     */
+    blueprint: HabitBlueprint | null;
 };
 
 /**
