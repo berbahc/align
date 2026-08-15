@@ -2,6 +2,7 @@
 
 namespace App\Actions;
 
+use App\Enums\SuggestionKind;
 use App\Models\Habit;
 use App\Models\User;
 
@@ -22,10 +23,45 @@ class CreateHabit
      */
     public function handle(User $user, array $attributes): Habit
     {
-        return $user->habits()->create([
+        $habit = $user->habits()->create([
             ...$attributes,
             'position' => ($user->habits()->max('position') ?? -1) + 1,
             'committed_at' => now(),
         ]);
+
+        $this->claimSuggestedStep($user, $habit);
+
+        return $habit;
+    }
+
+    /**
+     * Verbindet den übernommenen Vorschlag mit der Gewohnheit, die daraus wurde.
+     *
+     * Die Starthilfe schlägt Schritte vor, bevor es die Gewohnheit gibt — ihre
+     * Zeilen im Gedächtnis stehen deshalb zunächst ohne `habit_id` da. Hier
+     * bekommen sie eine, und der gewählte Schritt gilt als angenommen.
+     *
+     * Verglichen wird **wortgleich**, und das ist keine Bequemlichkeit: Das
+     * Feld im Wizard ist editierbar. Wer den Vorschlag umformuliert hat, hat
+     * ihn nicht übernommen, sondern etwas Eigenes geschrieben — und die KI darf
+     * sich das nicht als Erfolg anrechnen.
+     */
+    private function claimSuggestedStep(User $user, Habit $habit): void
+    {
+        if ($habit->smallest_step === null) {
+            return;
+        }
+
+        $user->aiSuggestions()
+            ->ofKind(SuggestionKind::SmallestStep)
+            ->notTaken()
+            ->whereNull('habit_id')
+            ->where('label', $habit->smallest_step)
+            ->latest()
+            ->first()
+            ?->forceFill([
+                'habit_id' => $habit->getKey(),
+                'accepted_at' => now(),
+            ])->save();
     }
 }

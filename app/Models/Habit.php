@@ -347,11 +347,27 @@ class Habit extends Model
      */
     public function scheduleLabel(): string
     {
-        if ($this->schedule_type !== ScheduleType::Fixed) {
-            return (string) $this->trigger_situation;
+        return $this->schedule_type === ScheduleType::Fixed
+            ? self::anchorLabel(time: $this->scheduled_time?->format('H:i'), days: $this->scheduled_days)
+            : self::anchorLabel(situation: $this->trigger_situation);
+    }
+
+    /**
+     * Dieselbe Zeile für einen Anker, den es noch gar nicht gibt.
+     *
+     * Das Gegenstück zu {@see anchorHourFor()} und aus demselben Grund
+     * statisch: Ein Vorschlag der KI muss sich benennen lassen, bevor er
+     * übernommen wurde — im Gedächtnis steht er als Zeile, nicht als Modell.
+     *
+     * @param  list<int>|null  $days
+     */
+    public static function anchorLabel(?string $situation = null, ?string $time = null, ?array $days = null): string
+    {
+        if ($time === null) {
+            return (string) $situation;
         }
 
-        return $this->scheduled_time?->format('H:i').' · '.$this->weekdayLabel();
+        return $time.' · '.self::weekdayLabel($days ?? []);
     }
 
     /**
@@ -360,10 +376,12 @@ class Habit extends Model
      * „Mo, Di, Mi, Do, Fr" ist korrekt, aber schwer zu erfassen — „Mo–Fr"
      * ist dasselbe in einem Blick. Erst ab drei aufeinanderfolgenden Tagen
      * lohnt die Spanne; bei zweien ist die Aufzählung kürzer als der Strich.
+     *
+     * @param  list<int>  $scheduledDays
      */
-    private function weekdayLabel(): string
+    private static function weekdayLabel(array $scheduledDays): string
     {
-        $days = collect($this->scheduled_days ?? [])->sort()->values();
+        $days = collect($scheduledDays)->sort()->values();
 
         if ($days->isEmpty()) {
             return 'kein Tag gewählt';
@@ -401,6 +419,16 @@ class Habit extends Model
     public function completions(): HasMany
     {
         return $this->hasMany(HabitCompletion::class);
+    }
+
+    /**
+     * Was die KI zu dieser Gewohnheit schon vorgeschlagen hat.
+     *
+     * @return HasMany<AiSuggestion, $this>
+     */
+    public function aiSuggestions(): HasMany
+    {
+        return $this->hasMany(AiSuggestion::class);
     }
 
     /**

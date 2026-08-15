@@ -74,6 +74,13 @@ export interface ManagedHabit {
  * Entscheidung.
  */
 export interface AnchorAlternative {
+    /**
+     * Die Zeile im Gedächtnis der KI, zu der dieser Vorschlag gehört.
+     *
+     * Reist beim Übernehmen zurück, damit der Server weiß, welcher der
+     * angebotenen Zeitpunkte es geworden ist — ein Textvergleich wäre geraten.
+     */
+    id: number;
     situation?: string;
     time?: string;
     days?: Weekday[];

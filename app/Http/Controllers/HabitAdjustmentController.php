@@ -2,12 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\RememberSuggestions;
 use App\Ai\Agents\SuggestBetterAnchor;
+use App\Ai\UserContext;
+use App\Enums\SuggestionKind;
 use App\Http\Requests\AdjustHabitRequest;
+use App\Models\AiSuggestion;
 use App\Models\Habit;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
@@ -38,7 +43,7 @@ class HabitAdjustmentController extends Controller
      * aufgefallen ist, dann was sie daraus schließt (Transparenz-light). Ohne
      * diesen Satz wäre der Vorschlag eine Ansage aus dem Nichts.
      */
-    public function suggestions(Habit $habit): JsonResponse
+    public function suggestions(Request $request, Habit $habit, RememberSuggestions $remember): JsonResponse
     {
         Gate::authorize('update', $habit);
 
@@ -48,7 +53,10 @@ class HabitAdjustmentController extends Controller
             $alternatives = (new SuggestBetterAnchor(
                 habit: $habit,
                 misses: $misses,
-                otherAnchors: $this->otherAnchors($habit),
+                // Was Align über die Person weiß: ihr Warum, ihr Tagesablauf,
+                // ihr Rhythmus — und welche Zeitpunkte sie schon einmal
+                // angeboten bekam, ohne sie zu nehmen.
+                context: UserContext::for($request->user(), SuggestionKind::Anchor, $habit),
             ))->alternatives();
         } catch (Throwable $exception) {
             Log::warning('Vorschlag für einen anderen Zeitpunkt fehlgeschlagen.', [
@@ -60,20 +68,25 @@ class HabitAdjustmentController extends Controller
             ], 503);
         }
 
+        // Erst merken, dann ausliefern: Die Oberfläche schickt beim Übernehmen
+        // die ID zurück, und ohne sie ließe sich der gewählte Vorschlag später
+        // nur über einen Textvergleich erraten.
+        $remembered = $remember->anchors($request->user(), $habit, $alternatives);
+
         return response()->json([
             'observation' => $this->observation($habit, $misses),
-            'alternatives' => array_map(
-                fn (array $alternative): array => [
-                    ...$alternative,
+            'alternatives' => $remembered->map(
+                fn (AiSuggestion $suggestion, int $index): array => [
+                    ...$alternatives[$index],
+                    'id' => $suggestion->id,
                     // Damit die Oberfläche den Block an seine mögliche neue
                     // Stelle legen kann, bevor irgendetwas entschieden ist.
                     'anchorHour' => Habit::anchorHourFor(
-                        situation: $alternative['situation'] ?? null,
-                        time: $alternative['time'] ?? null,
+                        situation: $alternatives[$index]['situation'] ?? null,
+                        time: $alternatives[$index]['time'] ?? null,
                     ),
                 ],
-                $alternatives,
-            ),
+            )->values(),
         ]);
     }
 
@@ -96,6 +109,11 @@ class HabitAdjustmentController extends Controller
         ];
 
         $habit->update($request->anchor());
+
+        // Ohne diesen Eintrag bliebe der Vorschlag im Gedächtnis offen — und
+        // die KI würde ihn beim nächsten Mal als „nicht genommen" lesen,
+        // obwohl er gerade übernommen wurde.
+        $request->acceptedSuggestion()?->markAccepted();
 
         Inertia::flash('habitAdjusted', [
             'title' => $habit->title,
@@ -150,27 +168,5 @@ class HabitAdjustmentController extends Controller
             $habit->title,
             $count,
         );
-    }
-
-    /**
-     * Die Anker der übrigen aktiven Gewohnheiten.
-     *
-     * Grundlage für einen Ketten-Vorschlag: eine bestehende Gewohnheit ist der
-     * zuverlässigste Auslöser, den es gibt (Domino-Prinzip, time-blocking.md).
-     *
-     * @return list<string>
-     */
-    private function otherAnchors(Habit $habit): array
-    {
-        /** @var list<string> $anchors */
-        $anchors = $habit->user->habits()
-            ->active()
-            ->whereKeyNot($habit->getKey())
-            ->get()
-            ->map(fn (Habit $other): string => $other->title.' → '.$other->scheduleLabel())
-            ->values()
-            ->all();
-
-        return $anchors;
     }
 }

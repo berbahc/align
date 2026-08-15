@@ -3,6 +3,8 @@
 namespace App\Http\Requests;
 
 use App\Enums\ScheduleType;
+use App\Enums\SuggestionKind;
+use App\Models\AiSuggestion;
 use App\Models\Habit;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -46,7 +48,36 @@ class AdjustHabitRequest extends FormRequest
                 Rule::requiredIf($isFixed), 'nullable', 'array', 'min:1', 'max:7',
             ],
             'scheduled_days.*' => ['integer', 'between:1,7', 'distinct'],
+
+            // Welcher der angebotenen Zeitpunkte es geworden ist. Optional,
+            // weil die Anpassung auch ohne Gedächtnis funktionieren muss:
+            // Fällt die Zuordnung weg, ist der Vorschlag verloren — die
+            // Gewohnheit umzustellen darf daran nicht scheitern.
+            'suggestion_id' => ['nullable', 'integer'],
         ];
+    }
+
+    /**
+     * Der übernommene Vorschlag — sofern er zu dieser Gewohnheit gehört.
+     *
+     * Bewusst keine `exists`-Regel: Eine fremde oder abgelaufene ID darf keine
+     * Fehlermeldung auslösen, sondern nur ins Leere laufen. Der Nutzer hat
+     * einen Zeitpunkt gewählt, und der gilt — ob die App ihn sich merken kann,
+     * ist ihr Problem, nicht seins.
+     */
+    public function acceptedSuggestion(): ?AiSuggestion
+    {
+        $id = $this->integer('suggestion_id');
+
+        if ($id < 1) {
+            return null;
+        }
+
+        return AiSuggestion::query()
+            ->whereKey($id)
+            ->where('habit_id', $this->habit()->getKey())
+            ->ofKind(SuggestionKind::Anchor)
+            ->first();
     }
 
     /**
