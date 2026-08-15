@@ -49,6 +49,14 @@ export interface ManagedHabit {
     canRemind: boolean;
     reminderEnabled: boolean;
     /**
+     * Wann die Gewohnheit das nächste Mal ansteht: „heute", „morgen",
+     * „am Freitag" — die Größe, nach der die Liste sortiert ist. Null, solange
+     * kein Wochentag gewählt ist.
+     */
+    nextOccurrence: string | null;
+    /** Trennt die beiden Blöcke der Liste: steht heute an oder später. */
+    dueToday: boolean;
+    /**
      * Die laufende Serie als fertige Zeile („12× in Folge"), sonst null.
      *
      * Gezählt werden vorgesehene Termine, nicht Kalendertage — eine

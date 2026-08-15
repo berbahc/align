@@ -20,8 +20,10 @@ test('authenticated users can visit the dashboard', function () {
 
 test('the dashboard lists the active habits of the current user', function () {
     $user = User::factory()->create();
-    Habit::factory()->for($user)->create(['title' => 'Morgentraining', 'position' => 0]);
-    Habit::factory()->for($user)->create(['title' => '10 Seiten lesen', 'position' => 1]);
+    // Gleicher Anker für beide: die Tagesliste sortiert nach Tageszeit, hier
+    // soll aber geprüft werden, wer überhaupt in ihr steht.
+    Habit::factory()->for($user)->create(['title' => 'Morgentraining', 'trigger_situation' => 'nach dem Aufstehen', 'position' => 0]);
+    Habit::factory()->for($user)->create(['title' => '10 Seiten lesen', 'trigger_situation' => 'nach dem Aufstehen', 'position' => 1]);
     Habit::factory()->for($user)->graduated()->create(['title' => 'Trinken']);
     Habit::factory()->create(['title' => 'Fremde Gewohnheit']);
 
@@ -32,6 +34,58 @@ test('the dashboard lists the active habits of the current user', function () {
             ->has('habits', 2)
             ->where('habits.0.title', 'Morgentraining')
             ->where('habits.1.title', '10 Seiten lesen')
+        );
+});
+
+test('the daily list runs from morning to evening, not by creation order', function () {
+    // Ein Montag, damit auch die Mo–Fr-Gewohnheit heute ansteht.
+    Carbon::setTestNow(Carbon::parse('2026-08-03'));
+
+    $user = User::factory()->create();
+    Habit::factory()->for($user)->create([
+        'title' => 'Abendritual',
+        'trigger_situation' => 'vor dem Schlafengehen',
+        'position' => 0,
+    ]);
+    Habit::factory()->for($user)->fixedSchedule('07:30', [1, 2, 3, 4, 5])->create([
+        'title' => 'Morgentraining',
+        'position' => 1,
+    ]);
+    Habit::factory()->for($user)->create([
+        'title' => 'Mittagspause',
+        'trigger_situation' => 'nach dem Mittagessen',
+        'position' => 2,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('habits.0.title', 'Morgentraining')
+            ->where('habits.1.title', 'Mittagspause')
+            ->where('habits.2.title', 'Abendritual')
+        );
+});
+
+test('habits anchored to the same hour keep their own order', function () {
+    Carbon::setTestNow(Carbon::parse('2026-08-03'));
+
+    $user = User::factory()->create();
+    Habit::factory()->for($user)->create([
+        'title' => 'Zuerst angelegt',
+        'trigger_situation' => 'nach dem Aufstehen',
+        'position' => 0,
+    ]);
+    Habit::factory()->for($user)->create([
+        'title' => 'Danach angelegt',
+        'trigger_situation' => 'nach dem Aufstehen',
+        'position' => 1,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('habits.0.title', 'Zuerst angelegt')
+            ->where('habits.1.title', 'Danach angelegt')
         );
 });
 

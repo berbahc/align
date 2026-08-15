@@ -45,9 +45,14 @@ class DashboardController extends Controller
         // Die Tagesliste zeigt nur, was heute ansteht. Eine Mo–Fr-Gewohnheit
         // ist am Samstag nicht offen, sondern nicht vorgesehen — sie dennoch
         // als unerledigt zu zeigen wäre eine Forderung, die niemand erhoben hat.
-        $todaysHabits = $habits->filter(
-            fn (Habit $habit): bool => $habit->isScheduledOn($today),
-        )->values();
+        // Der Tag wird von oben nach unten gelesen: Morgen zuerst, Abend
+        // zuletzt — dieselbe Achse wie im Kalender. Die Anlege-Reihenfolge
+        // entscheidet nur noch bei gleicher Stunde; als alleinige Sortierung
+        // stellte sie das Abendritual über die Gewohnheit nach dem Aufstehen.
+        $todaysHabits = $habits
+            ->filter(fn (Habit $habit): bool => $habit->isScheduledOn($today))
+            ->sortBy(fn (Habit $habit): array => [$habit->dayAnchorHour(), $habit->position])
+            ->values();
 
         return Inertia::render('dashboard', [
             'greeting' => $this->greeting($today),

@@ -26,12 +26,25 @@ class HabitController extends Controller
      */
     public function index(Request $request): Response
     {
+        $today = Carbon::today();
+
         $habits = $request->user()
             ->habits()
             ->active()
             ->with('completionDates')
             ->orderBy('position')
-            ->get();
+            ->get()
+            // Zeitlich statt nach Anlegedatum: Was heute ansteht, steht oben,
+            // dann morgen, dann der Rest der Woche. Innerhalb eines Tages
+            // entscheidet die Tageszeit — dieselbe Achse wie im Kalender.
+            // Gewohnheiten ohne gewählten Wochentag haben keinen nächsten
+            // Termin und rutschen ans Ende, statt die Reihe anzuführen.
+            ->sortBy(fn (Habit $habit): array => [
+                $habit->daysUntilNextOccurrence($today) ?? PHP_INT_MAX,
+                $habit->dayAnchorHour(),
+                $habit->position,
+            ])
+            ->values();
 
         // Die Zahl trägt das Archiv: sie beziffert, was ein endgültiges Löschen
         // kosten würde, und macht aus der Rückfrage mehr als eine Formalie.
@@ -51,6 +64,15 @@ class HabitController extends Controller
                 'scheduleLabel' => $habit->scheduleLabel(),
                 'canRemind' => $habit->canRemind(),
                 'reminderEnabled' => $habit->reminder_enabled,
+                // Benennt, was die Reihenfolge ohnehin schon behauptet. Ohne
+                // diese Zeile sähe die Liste sortiert aus, ohne dass erkennbar
+                // wäre, wonach — „17:00 · Mo–Fr" sagt nicht, ob das heute ist.
+                'nextOccurrence' => $habit->nextOccurrenceLabel($today),
+                // Die Trennlinie der Liste: heute oder später. Serverseitig,
+                // weil dieselbe Frage schon die Sortierung entscheidet — sie im
+                // Browser ein zweites Mal zu beantworten hieße, zwei Antworten
+                // deckungsgleich halten zu müssen.
+                'dueToday' => $habit->isScheduledOn($today),
                 // Die Serie steht hier für jede Gewohnheit einzeln — anders als
                 // auf der Übersicht, die nur die stärkste zeigt. Unterhalb der
                 // Mindestlänge bleibt die Zeile weg statt eine „1" zu behaupten.

@@ -1,18 +1,11 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { CircleCheck, MoreHorizontal, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { GraduatedHabitRow } from '@/components/graduated-habit-row';
 import { HabitLimitNote } from '@/components/habit-limit-note';
-import { Button } from '@/components/ui/button';
+import { ManagedHabitRow } from '@/components/managed-habit-row';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { requestReminderPermission } from '@/hooks/use-habit-reminders';
-import { BEHAVIOR_ICONS } from '@/lib/behavior-icons';
 import { dashboard } from '@/routes';
 import { create } from '@/routes/habits';
 import { store as graduate } from '@/routes/habits/graduation';
@@ -47,6 +40,19 @@ export default function HabitsIndex({
     const allRemindersOn =
         remindable.length > 0 &&
         remindable.every((habit) => habit.reminderEnabled);
+
+    const dueToday = habits.filter((habit) => habit.dueToday);
+    const dueLater = habits.filter((habit) => !habit.dueToday);
+
+    // Zwei Blöcke lohnen nur, wenn beide besetzt sind. Wer ausschließlich
+    // situative Gewohnheiten hat, sieht sonst eine Überschrift, die nichts
+    // abgrenzt — und am Wochenende stünde „Steht später an" über allem.
+    const splitIntoBlocks = dueToday.length > 0 && dueLater.length > 0;
+
+    const groups = [
+        { key: 'heute', heading: 'Steht heute an', entries: dueToday },
+        { key: 'spaeter', heading: 'Steht später an', entries: dueLater },
+    ].filter((group) => group.entries.length > 0);
 
     /**
      * Die Berechtigung wird erst beim Einschalten erfragt, nie beim Aufruf der
@@ -155,97 +161,44 @@ export default function HabitsIndex({
                         </CardContent>
                     </Card>
                 ) : (
-                    <ul className="flex flex-col gap-3">
-                        {habits.map((habit) => {
-                            const Icon = BEHAVIOR_ICONS[habit.behaviorType];
+                    /* Zwei Blöcke statt einer pro Tag: Bei höchstens fünf
+                       Gewohnheiten wären fünf Überschriften mehr Gliederung als
+                       Inhalt. Was hier zählt, ist die eine Unterscheidung —
+                       betrifft mich heute oder später; der genaue Tag steht
+                       ohnehin in der Zeile. */
+                    <div className="flex flex-col gap-6">
+                        {groups.map(({ key, heading, entries }) => (
+                            <section key={key} aria-labelledby={key}>
+                                {/* Die Überschrift erscheint nur, wenn es etwas
+                                    abzugrenzen gibt. Steht alles heute an, wäre
+                                    sie ein Titel über einer Liste ohne
+                                    Gegenstück — Gliederung ohne Grenze. */}
+                                {splitIntoBlocks ? (
+                                    <h2
+                                        id={key}
+                                        className={`${EYEBROW} mb-2 text-muted-foreground`}
+                                    >
+                                        {heading}
+                                    </h2>
+                                ) : (
+                                    <h2 id={key} className="sr-only">
+                                        {heading}
+                                    </h2>
+                                )}
 
-                            return (
-                                <li key={habit.id}>
-                                    <Card>
-                                        <CardContent className="flex items-center gap-3">
-                                            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-sand text-primary">
-                                                <Icon
-                                                    className="size-5"
-                                                    strokeWidth={1.5}
-                                                    aria-hidden="true"
-                                                />
-                                            </span>
-
-                                            <span className="min-w-0 flex-1">
-                                                <span className="block truncate text-[15px] leading-snug font-semibold">
-                                                    {habit.title}
-                                                </span>
-                                                <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-                                                    {habit.scheduleLabel}
-                                                </span>
-                                                {/* Leise Zeile, kein Abzeichen:
-                                                    die Serie steht neben der
-                                                    Planung, nicht über ihr. */}
-                                                {habit.streak !== null && (
-                                                    <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-                                                        {habit.streak}
-                                                    </span>
-                                                )}
-                                            </span>
-
-                                            <span className="flex shrink-0 flex-col items-end gap-1">
-                                                <ToggleSwitch
-                                                    checked={
-                                                        habit.reminderEnabled
-                                                    }
-                                                    disabled={!habit.canRemind}
-                                                    onChange={(enabled) =>
-                                                        toggleOne(
-                                                            habit,
-                                                            enabled,
-                                                        )
-                                                    }
-                                                    label={`Erinnerung für ${habit.title}`}
-                                                />
-                                                <span
-                                                    className={`${EYEBROW} text-muted-foreground`}
-                                                >
-                                                    {habit.canRemind
-                                                        ? '10 Min vorher'
-                                                        : 'ohne Uhrzeit'}
-                                                </span>
-                                            </span>
-
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="size-11 shrink-0 cursor-pointer text-muted-foreground hover:bg-accent"
-                                                    >
-                                                        <MoreHorizontal
-                                                            className="size-5"
-                                                            aria-hidden="true"
-                                                        />
-                                                        <span className="sr-only">
-                                                            Aktionen für{' '}
-                                                            {habit.title}
-                                                        </span>
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem
-                                                        className="cursor-pointer"
-                                                        onSelect={() =>
-                                                            endHabit(habit)
-                                                        }
-                                                    >
-                                                        <CircleCheck aria-hidden="true" />
-                                                        Beenden
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </CardContent>
-                                    </Card>
-                                </li>
-                            );
-                        })}
-                    </ul>
+                                <ul className="flex flex-col gap-3">
+                                    {entries.map((habit) => (
+                                        <ManagedHabitRow
+                                            key={habit.id}
+                                            habit={habit}
+                                            onToggleReminder={toggleOne}
+                                            onEnd={endHabit}
+                                        />
+                                    ))}
+                                </ul>
+                            </section>
+                        ))}
+                    </div>
                 )}
 
                 {graduatedHabits.length > 0 && (

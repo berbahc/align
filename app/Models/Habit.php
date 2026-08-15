@@ -256,6 +256,50 @@ class Habit extends Model
     }
 
     /**
+     * Wie viele Tage bis zum nächsten Termin — 0 heißt heute.
+     *
+     * Die Sortiergröße der Gewohnheitsliste: Was heute ansteht, steht oben,
+     * was in vier Tagen wieder dran ist, unten. Ohne gewählten Wochentag gibt
+     * es keinen nächsten Termin und damit keine Stelle in der Reihe.
+     */
+    public function daysUntilNextOccurrence(?Carbon $from = null): ?int
+    {
+        $from ??= Carbon::today();
+        $next = $this->nextOccurrence($from);
+
+        return $next === null
+            ? null
+            : (int) $from->copy()->startOfDay()->diffInDays($next->copy()->startOfDay());
+    }
+
+    /**
+     * Wann die Gewohnheit das nächste Mal ansteht, als Satzteil.
+     *
+     * „heute", „morgen", „am Freitag" — ab dem übernächsten Tag trägt der
+     * Wochentag mehr als eine Zahl: „am Freitag" lässt sich einordnen, „in vier
+     * Tagen" muss man nachrechnen.
+     *
+     * Ohne gewählten Wochentag gibt es keinen Termin und damit nichts zu
+     * benennen; der Wann-Teil sagt dort ohnehin schon „kein Tag gewählt".
+     */
+    public function nextOccurrenceLabel(?Carbon $from = null): ?string
+    {
+        $from ??= Carbon::today();
+        $days = $this->daysUntilNextOccurrence($from);
+
+        if ($days === null) {
+            return null;
+        }
+
+        return match ($days) {
+            0 => 'heute',
+            1 => 'morgen',
+            // Die App-Locale ist nicht deutsch, die Oberfläche schon.
+            default => 'am '.$from->copy()->addDays($days)->locale('de')->isoFormat('dddd'),
+        };
+    }
+
+    /**
      * Wo im Tag die Gewohnheit sitzt, als Stunde — die Sortierung des Kalenders.
      *
      * Feste Uhrzeiten bringen ihre Stelle mit, bekannte Situationen bekommen
