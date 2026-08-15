@@ -182,10 +182,13 @@ test('die Gewohnheiten-Liste zeigt die Serie je Gewohnheit als fertige Zeile', f
     $fresh = existingSince(Habit::factory()->for($user)->create(['position' => 1]), 30);
     complete($fresh, [0]);
 
+    // Die Liste ist nach dem nächsten Termin sortiert: Die situative
+    // Gewohnheit steht an diesem Samstag an, die Mo–Fr-Gewohnheit erst wieder
+    // am Montag — deshalb steht sie hier hinten, trotz der längeren Serie.
     $this->actingAs($user)
         ->get(route('habits.index'))
         ->assertInertia(fn (AssertableInertia $page) => $page
-            ->where('habits.0.streak', '5× in Folge')
-            ->where('habits.1.streak', null)
+            ->where('habits.0.streak', null)
+            ->where('habits.1.streak', '5× in Folge')
         );
 });

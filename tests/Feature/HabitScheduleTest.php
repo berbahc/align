@@ -197,6 +197,119 @@ test('a situational habit is due every day', function () {
     expect(Habit::factory()->create()->nextOccurrence()->isToday())->toBeTrue();
 });
 
+test('the habits page lists what is due first, then the following days', function () {
+    // Ein Samstag: heute steht nur die situative Gewohnheit an, die anderen
+    // liegen am Montag und am Mittwoch.
+    Carbon::setTestNow(Carbon::parse('2026-08-08'));
+
+    $user = User::factory()->create();
+    Habit::factory()->for($user)->fixedSchedule('09:00', [3])->create([
+        'title' => 'Am Mittwoch',
+        'position' => 0,
+    ]);
+    Habit::factory()->for($user)->fixedSchedule('09:00', [1])->create([
+        'title' => 'Am Montag',
+        'position' => 1,
+    ]);
+    Habit::factory()->for($user)->create([
+        'title' => 'Heute',
+        'trigger_situation' => 'nach dem Aufstehen',
+        'position' => 2,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('habits.index'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('habits.0.title', 'Heute')
+            ->where('habits.1.title', 'Am Montag')
+            ->where('habits.2.title', 'Am Mittwoch')
+            ->where('habits.0.nextOccurrence', 'heute')
+            ->where('habits.1.nextOccurrence', 'am Montag')
+            ->where('habits.2.nextOccurrence', 'am Mittwoch')
+        );
+});
+
+test('within the same day the habits page reads from morning to evening', function () {
+    Carbon::setTestNow(Carbon::parse('2026-08-03'));
+
+    $user = User::factory()->create();
+    Habit::factory()->for($user)->fixedSchedule('19:00', [1, 2, 3, 4, 5])->create([
+        'title' => 'Abends',
+        'position' => 0,
+    ]);
+    Habit::factory()->for($user)->fixedSchedule('06:30', [1, 2, 3, 4, 5])->create([
+        'title' => 'Früh',
+        'position' => 1,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('habits.index'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('habits.0.title', 'Früh')
+            ->where('habits.1.title', 'Abends')
+        );
+});
+
+test('the habits page marks which habits belong in the today block', function () {
+    // Ein Samstag: die Mo–Fr-Gewohnheit steht heute nicht an.
+    Carbon::setTestNow(Carbon::parse('2026-08-08'));
+
+    $user = User::factory()->create();
+    Habit::factory()->for($user)->create([
+        'title' => 'Heute',
+        'trigger_situation' => 'nach dem Aufstehen',
+        'position' => 0,
+    ]);
+    Habit::factory()->for($user)->fixedSchedule('09:00', [1, 2, 3, 4, 5])->create([
+        'title' => 'Später',
+        'position' => 1,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('habits.index'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('habits.0.dueToday', true)
+            ->where('habits.1.dueToday', false)
+        );
+});
+
+test('tomorrow is named as such instead of by its weekday', function () {
+    Carbon::setTestNow(Carbon::parse('2026-08-08'));
+
+    $user = User::factory()->create();
+    Habit::factory()->for($user)->fixedSchedule('09:00', [7])->create();
+
+    $this->actingAs($user)
+        ->get(route('habits.index'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('habits.0.nextOccurrence', 'morgen'));
+});
+
+test('a habit without a chosen weekday has no next occurrence and sorts last', function () {
+    Carbon::setTestNow(Carbon::parse('2026-08-08'));
+
+    $user = User::factory()->create();
+    // Über die Validierung ginge das nicht — im Bestand kann es die Zeile
+    // trotzdem geben, und sie darf die Liste nicht anführen.
+    Habit::factory()->for($user)->fixedSchedule('06:00', [])->create([
+        'title' => 'Ohne Tag',
+        'position' => 0,
+    ]);
+    Habit::factory()->for($user)->create([
+        'title' => 'Heute',
+        'trigger_situation' => 'vor dem Schlafengehen',
+        'position' => 1,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('habits.index'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('habits.0.title', 'Heute')
+            ->where('habits.1.title', 'Ohne Tag')
+            ->where('habits.1.nextOccurrence', null)
+        );
+});
+
 test('the overview carries the limit so the interface never hardcodes it', function () {
     $this->actingAs(User::factory()->create())
         ->get(route('habits.index'))

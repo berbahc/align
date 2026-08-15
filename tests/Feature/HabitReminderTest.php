@@ -2,6 +2,7 @@
 
 use App\Models\Habit;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia;
 
 test('a reminder can be switched on for a single fixed habit', function () {
@@ -79,9 +80,13 @@ test('the bulk switch leaves other users alone', function () {
 });
 
 test('the habits page reports which habits can be reminded', function () {
+    // Ein Montag: beide Gewohnheiten stehen heute an, damit die Reihenfolge
+    // der Liste an der Tageszeit hängt und nicht am Wochentag.
+    Carbon::setTestNow(Carbon::parse('2026-08-03'));
+
     $user = User::factory()->create();
     Habit::factory()->for($user)->fixedSchedule()->create(['title' => 'Lesen', 'position' => 0]);
-    Habit::factory()->for($user)->create(['title' => 'Spazieren', 'position' => 1]);
+    Habit::factory()->for($user)->create(['title' => 'Spazieren', 'trigger_situation' => 'vor dem Schlafengehen', 'position' => 1]);
 
     $this->actingAs($user)
         ->get(route('habits.index'))
