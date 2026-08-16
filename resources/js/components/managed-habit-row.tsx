@@ -1,4 +1,5 @@
-import { CircleCheck, MoreHorizontal } from 'lucide-react';
+import { Link } from '@inertiajs/react';
+import { CircleCheck, MoreHorizontal, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -9,6 +10,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { BEHAVIOR_ICONS } from '@/lib/behavior-icons';
+import { edit } from '@/routes/habits';
 import type { ManagedHabit } from '@/types';
 
 const EYEBROW = 'text-[11px] font-semibold tracking-[0.11em] uppercase';
@@ -45,6 +47,14 @@ export function ManagedHabitRow({
                     <span className="min-w-0 flex-1">
                         <span className="block truncate text-[15px] leading-snug font-semibold">
                             {habit.title}
+                            {/* Der Umfang steht leiser als die Handlung: Er
+                                sagt, wie viel — nicht, worum es geht. */}
+                            {habit.measureLabel !== null && (
+                                <span className="font-normal text-muted-foreground">
+                                    {' · '}
+                                    {habit.measureLabel}
+                                </span>
+                            )}
                         </span>
 
                         {/* Der nächste Termin führt die Zeile an — er ist es,
@@ -106,6 +116,15 @@ export function ManagedHabitRow({
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                            {/* Der einzige Weg zum Bearbeiten in der App: Hier
+                                geht es um die Gewohnheit an sich, auf der
+                                Übersicht um den heutigen Tag. */}
+                            <DropdownMenuItem asChild className="cursor-pointer">
+                                <Link href={edit(habit.id)}>
+                                    <Pencil aria-hidden="true" />
+                                    Bearbeiten
+                                </Link>
+                            </DropdownMenuItem>
                             <DropdownMenuItem
                                 className="cursor-pointer"
                                 onSelect={() => onEnd(habit)}

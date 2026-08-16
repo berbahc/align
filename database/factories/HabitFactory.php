@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\BehaviorType;
+use App\Enums\MeasureUnit;
 use App\Enums\ScheduleType;
 use App\Models\Habit;
 use App\Models\User;
@@ -18,10 +19,14 @@ class HabitFactory extends Factory
      */
     public function definition(): array
     {
+        // Menge und Einheit gehören zusammen: eine Einheit ohne Zahl beschriebe
+        // einen Zustand, den kein Formular erzeugen kann.
+        $amount = fake()->optional()->randomElement([10, 15, 30, 45]);
+
         return [
             'user_id' => User::factory(),
             'title' => fake()->randomElement([
-                '10 Seiten lesen',
+                'Lesen',
                 'Morgentraining',
                 'Trinken',
                 'Meditation',
@@ -35,10 +40,33 @@ class HabitFactory extends Factory
                 'vor dem Schlafengehen',
             ]),
             'behavior_type' => fake()->randomElement(BehaviorType::cases()),
-            'focus_minutes' => fake()->optional()->randomElement([10, 15, 30, 45]),
+            'target_amount' => $amount,
+            'target_unit' => $amount === null ? null : MeasureUnit::Minutes,
             'position' => 0,
             'committed_at' => now(),
         ];
+    }
+
+    /**
+     * Gewohnheit mit einem festgelegten Umfang.
+     */
+    public function withMeasure(float $amount, MeasureUnit $unit = MeasureUnit::Minutes): static
+    {
+        return $this->state(fn (): array => [
+            'target_amount' => $amount,
+            'target_unit' => $unit,
+        ]);
+    }
+
+    /**
+     * Gewohnheit ohne Umfang — „Treppe statt Aufzug" misst sich nicht.
+     */
+    public function withoutMeasure(): static
+    {
+        return $this->state(fn (): array => [
+            'target_amount' => null,
+            'target_unit' => null,
+        ]);
     }
 
     /**

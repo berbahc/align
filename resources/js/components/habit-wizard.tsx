@@ -3,6 +3,7 @@ import { ArrowRight } from 'lucide-react';
 import { useState } from 'react';
 import { AiSuggestion, AiSuggestionFailure } from '@/components/ai-suggestion';
 import InputError from '@/components/input-error';
+import { MeasurePicker } from '@/components/measure-picker';
 import {
     CHOICE_TILE,
     formatWeekdays,
@@ -16,15 +17,35 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
 import { useSmallestStep } from '@/hooks/use-smallest-step';
 import { BEHAVIOR_ICONS } from '@/lib/behavior-icons';
+import { formatMeasure } from '@/lib/measure';
 import { cn } from '@/lib/utils';
 import { suggestions } from '@/routes/habits/smallest-step';
-import type { BehaviorType, ScheduleType, Weekday } from '@/types';
+import type {
+    BehaviorType,
+    MeasureUnit,
+    MeasureUnitOption,
+    ScheduleType,
+    Weekday,
+} from '@/types';
+
+/**
+ * Ein Vorschlag aus dem Studienalltag — Handlung und Umfang getrennt.
+ *
+ * Spiegelt `BehaviorType::suggestions()`. Die Kachel zeigt beides und bleibt
+ * damit so konkret wie vorher, nur ist die Zahl jetzt verstellbar. Wo kein
+ * Umfang passt, steht `null`.
+ */
+export interface DirectionSuggestion {
+    title: string;
+    amount: number | null;
+    unit: MeasureUnit | null;
+}
 
 export interface Direction {
     value: BehaviorType;
     label: string;
     description: string;
-    suggestions: string[];
+    suggestions: DirectionSuggestion[];
 }
 
 const STEP_COUNT = 5;
@@ -41,11 +62,13 @@ export function HabitWizard({
     directions,
     triggerSuggestions,
     scheduleTypes,
+    measureUnits,
     action,
 }: {
     directions: Direction[];
     triggerSuggestions: string[];
     scheduleTypes: ScheduleTypeOption[];
+    measureUnits: MeasureUnitOption[];
     action: string;
 }) {
     const [step, setStep] = useState(1);
@@ -57,6 +80,8 @@ export function HabitWizard({
     const { data, setData, post, processing, errors } = useForm({
         behavior_type: '' as BehaviorType | '',
         title: '',
+        target_amount: null as number | null,
+        target_unit: '' as MeasureUnit | '',
         schedule_type: 'dynamic' as ScheduleType,
         trigger_situation: '',
         scheduled_time: DEFAULT_TIME,
@@ -70,6 +95,12 @@ export function HabitWizard({
     );
 
     const isFixed = data.schedule_type === 'fixed';
+
+    const measureLabel = formatMeasure(
+        data.target_amount,
+        data.target_unit === '' ? null : data.target_unit,
+        measureUnits,
+    );
 
     const canContinue = [
         data.behavior_type !== '',
@@ -88,10 +119,16 @@ export function HabitWizard({
      * Die Situation reist mit, weil ein Schritt an ihr hängt: „Leg die Schuhe
      * an die Tür" passt zu „wenn ich nach Hause komme", nicht zu „nach dem
      * Aufstehen". Bei fester Uhrzeit gibt es keine — dann entscheidet der Titel.
+     *
+     * Der Umfang reist im Titel mit: Ob jemand 10 oder 45 Minuten vorhat, ändert,
+     * was ein sinnvoller erster Handgriff ist.
      */
     function loadSuggestions() {
         void suggestion.load(suggestions.url(), {
-            title: data.title,
+            title:
+                measureLabel === null
+                    ? data.title
+                    : `${data.title} · ${measureLabel}`,
             behavior_type: data.behavior_type,
             trigger_situation: isFixed ? undefined : data.trigger_situation,
         });
@@ -111,10 +148,25 @@ export function HabitWizard({
             ...current,
             behavior_type: value,
             // Ein Richtungswechsel macht einen Vorschlag aus der alten
-            // Richtung ungültig — sonst bleibt er still stehen.
+            // Richtung ungültig — sonst bleibt er still stehen. Der Umfang
+            // gehörte zu ihm und geht mit: „2 Liter" hat nach dem Wechsel auf
+            // „Bewegung" niemand mehr gemeint.
             title: '',
+            target_amount: null,
+            target_unit: '',
         }));
         setOwnTitle(false);
+    }
+
+    /** Ein Vorschlag setzt Titel und Umfang in einem Zug. */
+    function chooseSuggestion(candidate: DirectionSuggestion) {
+        setOwnTitle(false);
+        setData((current) => ({
+            ...current,
+            title: candidate.title,
+            target_amount: candidate.amount,
+            target_unit: candidate.unit ?? '',
+        }));
     }
 
     function submit(event: React.FormEvent) {
@@ -206,28 +258,37 @@ export function HabitWizard({
                     </p>
 
                     <div className="flex flex-col gap-2">
-                        {direction.suggestions.map((suggestion) => {
+                        {direction.suggestions.map((candidate) => {
                             const isSelected =
-                                !ownTitle && data.title === suggestion;
+                                !ownTitle && data.title === candidate.title;
+                            const suggested = formatMeasure(
+                                candidate.amount,
+                                candidate.unit,
+                                measureUnits,
+                            );
 
                             return (
                                 <button
-                                    key={suggestion}
+                                    key={candidate.title}
                                     type="button"
                                     aria-pressed={isSelected}
-                                    onClick={() => {
-                                        setOwnTitle(false);
-                                        setData('title', suggestion);
-                                    }}
+                                    onClick={() => chooseSuggestion(candidate)}
                                     className={cn(
                                         CHOICE_TILE,
-                                        'px-4 py-3 text-[15px]',
+                                        'flex items-baseline justify-between gap-3 px-4 py-3 text-[15px]',
                                         isSelected
                                             ? 'border-primary'
                                             : 'border-border hover:border-secondary',
                                     )}
                                 >
-                                    {suggestion}
+                                    <span>{candidate.title}</span>
+                                    {/* Der Umfang steht leiser als die Handlung:
+                                        er ist ein Startwert, keine Vorgabe. */}
+                                    {suggested !== null && (
+                                        <span className="shrink-0 text-xs text-muted-foreground">
+                                            {suggested}
+                                        </span>
+                                    )}
                                 </button>
                             );
                         })}
@@ -237,7 +298,12 @@ export function HabitWizard({
                             aria-pressed={ownTitle}
                             onClick={() => {
                                 setOwnTitle(true);
-                                setData('title', '');
+                                setData((current) => ({
+                                    ...current,
+                                    title: '',
+                                    target_amount: null,
+                                    target_unit: '',
+                                }));
                             }}
                             className={cn(
                                 CHOICE_TILE,
@@ -270,6 +336,35 @@ export function HabitWizard({
                         )}
                     </div>
                     <InputError message={errors.title} />
+
+                    {/* Der Umfang steht hier und nicht in einem eigenen Schritt:
+                        „Klein anfangen wirkt besser als groß planen" steht
+                        oben auf dieser Seite — hier wird es entschieden.
+                        Sichtbar erst, wenn es eine Gewohnheit gibt, an der ein
+                        Umfang hängen könnte. */}
+                    {data.title.trim().length > 0 && (
+                        <div className="flex flex-col gap-2">
+                            <p className={`${EYEBROW} text-muted-foreground`}>
+                                Umfang{' '}
+                                <span className="font-normal normal-case">
+                                    (optional)
+                                </span>
+                            </p>
+                            <MeasurePicker
+                                units={measureUnits}
+                                amount={data.target_amount}
+                                unit={data.target_unit}
+                                onChange={(amount, unit) =>
+                                    setData((current) => ({
+                                        ...current,
+                                        target_amount: amount,
+                                        target_unit: unit,
+                                    }))
+                                }
+                            />
+                            <InputError message={errors.target_amount} />
+                        </div>
+                    )}
                 </fieldset>
             )}
 
@@ -467,6 +562,12 @@ export function HabitWizard({
                             </p>
                             <p className="mt-1 text-lg leading-snug font-semibold text-primary">
                                 {data.title}
+                                {measureLabel !== null && (
+                                    <span className="font-normal text-muted-foreground">
+                                        {' · '}
+                                        {measureLabel}
+                                    </span>
+                                )}
                             </p>
                         </div>
 

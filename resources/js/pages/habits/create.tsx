@@ -5,12 +5,17 @@ import type { Direction } from '@/components/habit-wizard';
 import type { ScheduleTypeOption } from '@/components/schedule-picker';
 import { dashboard } from '@/routes';
 import { store } from '@/routes/habits';
-import type { AppointmentDay, FriendshipPerson } from '@/types';
+import type {
+    AppointmentDay,
+    FriendshipPerson,
+    MeasureUnitOption,
+} from '@/types';
 
 interface CreateHabitProps {
     directions: Direction[];
     triggerSuggestions: string[];
     scheduleTypes: ScheduleTypeOption[];
+    measureUnits: MeasureUnitOption[];
     /** Der eigene Kreis, für den letzten Schritt. */
     friends: FriendshipPerson[];
     appointmentDays: AppointmentDay[];
@@ -20,6 +25,7 @@ export default function CreateHabit({
     directions,
     triggerSuggestions,
     scheduleTypes,
+    measureUnits,
     friends,
     appointmentDays,
 }: CreateHabitProps) {
@@ -57,6 +63,7 @@ export default function CreateHabit({
                         directions={directions}
                         triggerSuggestions={triggerSuggestions}
                         scheduleTypes={scheduleTypes}
+                        measureUnits={measureUnits}
                         action={store.url()}
                     />
                 )}

@@ -19,7 +19,7 @@ class CreateHabit
      * bewusste Willensakt ist laut Gollwitzer die Voraussetzung dafür, dass die
      * Wenn-Dann-Planung überhaupt wirkt.
      *
-     * @param  array{title: string, behavior_type: string, schedule_type: string, trigger_situation: string|null, scheduled_time: string|null, scheduled_days: list<int>|null, motivation: string|null, smallest_step: string|null, focus_minutes: int|null}  $attributes
+     * @param  array{title: string, behavior_type: string, schedule_type: string, trigger_situation: string|null, scheduled_time: string|null, scheduled_days: list<int>|null, motivation: string|null, smallest_step: string|null, target_amount: float|null, target_unit: string|null}  $attributes
      */
     public function handle(User $user, array $attributes): Habit
     {

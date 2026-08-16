@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Actions\CreateHabit;
 use App\Enums\BehaviorType;
+use App\Enums\MeasureUnit;
 use App\Enums\ScheduleType;
 use App\Http\Requests\StoreHabitRequest;
+use App\Http\Requests\UpdateHabitRequest;
 use App\Models\Appointment;
 use App\Models\Habit;
 use App\Models\User;
@@ -61,6 +63,8 @@ class HabitController extends Controller
                 'id' => $habit->id,
                 'title' => $habit->title,
                 'behaviorType' => $habit->behavior_type->value,
+                // Steht hinter dem Titel, nicht darin: „Spazieren gehen · 20 Min".
+                'measureLabel' => $habit->measureLabel(),
                 'scheduleLabel' => $habit->scheduleLabel(),
                 'canRemind' => $habit->canRemind(),
                 'reminderEnabled' => $habit->reminder_enabled,
@@ -107,6 +111,7 @@ class HabitController extends Controller
             'directions' => BehaviorType::options(),
             'triggerSuggestions' => array_keys(Habit::TriggerSuggestions),
             'scheduleTypes' => ScheduleType::options(),
+            'measureUnits' => MeasureUnit::options(),
             // Für den letzten, freiwilligen Schritt: mit wem und wann.
             'friends' => $request->user()->friends()->map(fn (User $friend): array => [
                 'id' => $friend->id,
@@ -154,6 +159,69 @@ class HabitController extends Controller
         }
 
         return to_route('dashboard');
+    }
+
+    /**
+     * Das Formular, in dem sich eine Gewohnheit vollständig ändern lässt.
+     *
+     * Flach statt in fünf Schritten: Der Wizard führt jemanden, der noch nicht
+     * weiß, was er will. Wer etwas ändert, weiß es — für ihn wäre die Führung
+     * ein Umweg.
+     */
+    public function edit(Habit $habit): Response
+    {
+        Gate::authorize('update', $habit);
+
+        return Inertia::render('habits/edit', [
+            'habit' => [
+                'id' => $habit->id,
+                'title' => $habit->title,
+                'behaviorType' => $habit->behavior_type->value,
+                'targetAmount' => $habit->target_amount,
+                'targetUnit' => $habit->target_unit?->value,
+                'scheduleType' => $habit->schedule_type->value,
+                'triggerSituation' => $habit->trigger_situation,
+                'scheduledTime' => $habit->scheduled_time?->format('H:i'),
+                'scheduledDays' => $habit->scheduled_days,
+                'smallestStep' => $habit->smallest_step,
+                'motivation' => $habit->motivation,
+            ],
+            'directions' => BehaviorType::options(),
+            'triggerSuggestions' => array_keys(Habit::TriggerSuggestions),
+            'scheduleTypes' => ScheduleType::options(),
+            'measureUnits' => MeasureUnit::options(),
+        ]);
+    }
+
+    /**
+     * Die Änderungen übernehmen — ohne den Verlauf anzutasten.
+     *
+     * `position`, `committed_at` und die abgehakten Tage bleiben, wo sie sind:
+     * Sie gehören zum Ablauf, nicht zum Formular. Genau darin liegt der Sinn
+     * des Bearbeitens — bisher blieb nur Beenden und Neuanlegen, und das kostete
+     * jedes Mal die Serie.
+     */
+    public function update(UpdateHabitRequest $request, Habit $habit): RedirectResponse
+    {
+        Gate::authorize('update', $habit);
+
+        $habit->update($request->habitAttributes());
+
+        // Wer von fester Uhrzeit auf eine Situation wechselt, nimmt der
+        // Gewohnheit den Zeitpunkt, an dem eine Erinnerung hängen könnte. Bliebe
+        // das Flag stehen, zeigte die Liste einen Schalter, der an aussieht und
+        // nichts auslöst.
+        if (! $habit->canRemind() && $habit->reminder_enabled) {
+            $habit->update(['reminder_enabled' => false]);
+        }
+
+        Inertia::flash('habitUpdated', [
+            'id' => $habit->id,
+            'title' => $habit->title,
+            'anchor' => $habit->scheduleLabel(),
+        ]);
+
+        return to_route('habits.index');
     }
 
     /**

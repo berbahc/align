@@ -12,13 +12,35 @@ export type ScheduleType = 'dynamic' | 'fixed';
 /** ISO-Wochentag: 1 = Montag … 7 = Sonntag. */
 export type Weekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
+/** Die Einheit, in der der Umfang einer Gewohnheit gemessen wird. */
+export type MeasureUnit = 'minutes' | 'pages' | 'liters' | 'times';
+
+/**
+ * Eine Einheit mit ihren Grenzen — kommt als Prop aus `MeasureUnit::options()`.
+ *
+ * Schrittweite und Grenzen stehen bewusst nicht als TS-Konstanten hier: Der
+ * Stepper im Browser und die Validierung auf dem Server müssen dieselben Werte
+ * benutzen, und dafür darf es nur eine Quelle geben.
+ */
+export interface MeasureUnitOption {
+    value: MeasureUnit;
+    /** Ausgeschrieben, für den Stepper: „Minuten". */
+    label: string;
+    /** Kurzform, für die Zeile in der Liste: „Min". */
+    short: string;
+    step: number;
+    min: number;
+    max: number;
+}
+
 export interface Habit {
     id: number;
     title: string;
     /** Der Wann-Teil, fertig formatiert: „nach dem Aufstehen" oder „17:00 · Mo–Fr". */
     scheduleLabel: string;
     behaviorType: BehaviorType;
-    focusMinutes: number | null;
+    /** Der Umfang als fertige Zeile („20 Min", „1,5 L"), sonst null. */
+    measureLabel: string | null;
     /**
      * Der vorbereitete erste Handgriff („Stell das Glas ans Bett").
      * Null, solange keiner formuliert wurde — der Schritt ist optional.
@@ -45,6 +67,8 @@ export interface ManagedHabit {
     title: string;
     scheduleLabel: string;
     behaviorType: BehaviorType;
+    /** Der Umfang als fertige Zeile („20 Min", „1,5 L"), sonst null. */
+    measureLabel: string | null;
     /** Nur bei fester Uhrzeit lässt sich eine Erinnerung setzen. */
     canRemind: boolean;
     reminderEnabled: boolean;
@@ -71,10 +95,17 @@ export interface ManagedHabit {
  * Nur der Bauplan, nicht die Gewohnheit: Der Warum-Satz und der kleinste
  * Schritt reisen nicht mit, weil sie zu einer Person gehören und nicht zu einer
  * Gewohnheit. Der Verlauf ohnehin nicht — beim Übernehmen beginnt Tag eins.
+ *
+ * Der Umfang reist mit: Er beschreibt, was gemacht wird, nicht warum — und
+ * lässt sich nach dem Übernehmen umstellen.
  */
 export interface HabitBlueprint {
     title: string;
     behaviorType: BehaviorType;
+    targetAmount: number | null;
+    targetUnit: MeasureUnit | null;
+    /** Der Umfang als fertige Zeile, für die Vorschau im Übernahme-Sheet. */
+    measureLabel: string | null;
     scheduleType: ScheduleType;
     triggerSituation: string | null;
     /** Feste Uhrzeit im Format „17:00", sonst null. */
