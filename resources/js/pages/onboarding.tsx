@@ -4,17 +4,20 @@ import { HabitWizard } from '@/components/habit-wizard';
 import type { Direction } from '@/components/habit-wizard';
 import type { ScheduleTypeOption } from '@/components/schedule-picker';
 import { skip, store } from '@/routes/onboarding';
+import type { MeasureUnitOption } from '@/types';
 
 interface OnboardingProps {
     directions: Direction[];
     triggerSuggestions: string[];
     scheduleTypes: ScheduleTypeOption[];
+    measureUnits: MeasureUnitOption[];
 }
 
 export default function Onboarding({
     directions,
     triggerSuggestions,
     scheduleTypes,
+    measureUnits,
 }: OnboardingProps) {
     return (
         <>
@@ -56,6 +59,7 @@ export default function Onboarding({
                         directions={directions}
                         triggerSuggestions={triggerSuggestions}
                         scheduleTypes={scheduleTypes}
+                        measureUnits={measureUnits}
                         action={store.url()}
                     />
                 </main>

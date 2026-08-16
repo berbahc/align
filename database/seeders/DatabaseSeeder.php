@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Enums\BehaviorType;
+use App\Enums\MeasureUnit;
 use App\Models\Habit;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
@@ -18,35 +19,42 @@ class DatabaseSeeder extends Seeder
      * Gewohnheiten"), damit die Oberfläche gegen realistische Daten entwickelt
      * werden kann statt gegen erfundene Konstanten im Frontend.
      *
-     * @var list<array{title: string, trigger_situation: string, behavior_type: BehaviorType, focus_minutes: int|null, consistency: float}>
+     * Die vier decken zugleich die drei Zustände ab, die der Umfang kennt:
+     * ohne Umfang, in Minuten, und in einer anderen Einheit als Minuten.
+     *
+     * @var list<array{title: string, trigger_situation: string, behavior_type: BehaviorType, target_amount: float|null, target_unit: MeasureUnit|null, consistency: float}>
      */
     private const array DemoHabits = [
         [
             'title' => 'Morgentraining',
             'trigger_situation' => 'nach dem Aufstehen',
             'behavior_type' => BehaviorType::Movement,
-            'focus_minutes' => null,
+            'target_amount' => null,
+            'target_unit' => null,
             'consistency' => 0.85,
         ],
         [
-            'title' => '10 Seiten lesen',
+            'title' => 'Lesen',
             'trigger_situation' => 'vor dem Schlafengehen',
             'behavior_type' => BehaviorType::Learning,
-            'focus_minutes' => 30,
+            'target_amount' => 10,
+            'target_unit' => MeasureUnit::Pages,
             'consistency' => 0.6,
         ],
         [
-            'title' => 'Trinken',
+            'title' => 'Wasser trinken',
             'trigger_situation' => 'nach dem Mittagessen',
             'behavior_type' => BehaviorType::Nutrition,
-            'focus_minutes' => null,
+            'target_amount' => 2,
+            'target_unit' => MeasureUnit::Liters,
             'consistency' => 0.4,
         ],
         [
-            'title' => 'Meditation',
+            'title' => 'Meditieren',
             'trigger_situation' => 'wenn ich nach Hause komme',
             'behavior_type' => BehaviorType::Other,
-            'focus_minutes' => 15,
+            'target_amount' => 15,
+            'target_unit' => MeasureUnit::Minutes,
             'consistency' => 0.25,
         ],
     ];
@@ -71,7 +79,8 @@ class DatabaseSeeder extends Seeder
                 'title' => $demo['title'],
                 'trigger_situation' => $demo['trigger_situation'],
                 'behavior_type' => $demo['behavior_type'],
-                'focus_minutes' => $demo['focus_minutes'],
+                'target_amount' => $demo['target_amount'],
+                'target_unit' => $demo['target_unit'],
                 'position' => $position,
                 'committed_at' => now(),
             ]);

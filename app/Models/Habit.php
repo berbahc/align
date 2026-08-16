@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\BehaviorType;
+use App\Enums\MeasureUnit;
 use App\Enums\ScheduleType;
 use Database\Factories\HabitFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -26,14 +27,15 @@ use Illuminate\Support\Carbon;
  * @property string|null $motivation
  * @property string|null $smallest_step
  * @property BehaviorType $behavior_type
- * @property int|null $focus_minutes
+ * @property float|null $target_amount
+ * @property MeasureUnit|null $target_unit
  * @property int $position
  * @property Carbon|null $committed_at
  * @property Carbon|null $graduated_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['title', 'schedule_type', 'trigger_situation', 'scheduled_time', 'scheduled_days', 'reminder_enabled', 'motivation', 'smallest_step', 'behavior_type', 'focus_minutes', 'position', 'committed_at'])]
+#[Fillable(['title', 'schedule_type', 'trigger_situation', 'scheduled_time', 'scheduled_days', 'reminder_enabled', 'motivation', 'smallest_step', 'behavior_type', 'target_amount', 'target_unit', 'position', 'committed_at'])]
 class Habit extends Model
 {
     /** @use HasFactory<HabitFactory> */
@@ -265,13 +267,22 @@ class Habit extends Model
      * außer dem eigenen). Der Verlauf ohnehin nicht: Die Übernahme beginnt bei
      * Tag eins, nicht bei der fremden Serie.
      *
-     * @return array{title: string, behaviorType: string, scheduleType: string, triggerSituation: string|null, scheduledTime: string|null, scheduledDays: list<int>|null}
+     * Der Umfang reist mit: Er gehört zur Gewohnheit, nicht zur Person — „20
+     * Minuten" beschreibt, was gemacht wird, nicht warum. Wem das zu viel ist,
+     * stellt ihn nach dem Übernehmen um.
+     *
+     * @return array{title: string, behaviorType: string, targetAmount: float|null, targetUnit: string|null, measureLabel: string|null, scheduleType: string, triggerSituation: string|null, scheduledTime: string|null, scheduledDays: list<int>|null}
      */
     public function blueprint(): array
     {
         return [
             'title' => $this->title,
             'behaviorType' => $this->behavior_type->value,
+            'targetAmount' => $this->target_amount,
+            'targetUnit' => $this->target_unit?->value,
+            // Fertig formatiert, damit das Übernahme-Sheet die Zeile zeigen
+            // kann, ohne die Einheiten-Metadaten mitgereicht zu bekommen.
+            'measureLabel' => $this->measureLabel(),
             'scheduleType' => $this->schedule_type->value,
             'triggerSituation' => $this->trigger_situation,
             'scheduledTime' => $this->scheduled_time?->format('H:i'),
@@ -362,6 +373,36 @@ class Habit extends Model
     {
         return $this->schedule_type === ScheduleType::Fixed
             && $this->scheduled_time !== null;
+    }
+
+    /**
+     * Der Umfang als fertige Zeile: „20 Min", „1,5 L" — oder nichts.
+     *
+     * Ein Umfang ist immer freiwillig. „Treppe statt Aufzug" hat keinen, und
+     * eine erfundene Zahl wäre dort schlechter als gar keine.
+     */
+    public function measureLabel(): ?string
+    {
+        return $this->target_amount === null
+            ? null
+            : $this->target_unit?->format($this->target_amount);
+    }
+
+    /**
+     * Titel und Umfang in einer Zeile — „Spazieren gehen · 20 Min".
+     *
+     * Für die Stellen, an denen nur ein einzelner String Platz hat: der Prompt
+     * der KI und die Zusammenfassung. Wo die Oberfläche zwei Felder setzen
+     * kann, nimmt sie lieber Titel und {@see measureLabel()} getrennt — dann
+     * kann der Umfang leiser gesetzt werden als die Handlung.
+     */
+    public function titleWithMeasure(): string
+    {
+        $measure = $this->measureLabel();
+
+        return $measure === null
+            ? $this->title
+            : $this->title.' · '.$measure;
     }
 
     /**
@@ -665,6 +706,8 @@ class Habit extends Model
     {
         return [
             'behavior_type' => BehaviorType::class,
+            'target_amount' => 'float',
+            'target_unit' => MeasureUnit::class,
             'schedule_type' => ScheduleType::class,
             'scheduled_time' => 'datetime:H:i',
             'scheduled_days' => 'array',

@@ -19,6 +19,7 @@ import { store } from '@/routes/habits/adoptions';
 import type {
     BehaviorType,
     HabitBlueprint,
+    MeasureUnit,
     ScheduleType,
     Weekday,
 } from '@/types';
@@ -65,6 +66,11 @@ export function HabitAdoptionSheet({
         useForm({
             title: '',
             behavior_type: 'other' as BehaviorType,
+            // Der Umfang reist mit der Vorlage: Er beschreibt, was gemacht
+            // wird, nicht warum — und lässt sich danach im Verzeichnis
+            // umstellen.
+            target_amount: null as number | null,
+            target_unit: '' as MeasureUnit | '',
             schedule_type: 'dynamic' as ScheduleType,
             trigger_situation: '',
             scheduled_time: DEFAULT_TIME,
@@ -84,6 +90,8 @@ export function HabitAdoptionSheet({
         setData({
             title: blueprint.title,
             behavior_type: blueprint.behaviorType,
+            target_amount: blueprint.targetAmount,
+            target_unit: blueprint.targetUnit ?? '',
             schedule_type: blueprint.scheduleType,
             trigger_situation: blueprint.triggerSituation ?? '',
             scheduled_time: blueprint.scheduledTime ?? DEFAULT_TIME,
@@ -134,6 +142,12 @@ export function HabitAdoptionSheet({
                         <span className="min-w-0">
                             <span className="block truncate text-[15px] leading-snug font-semibold">
                                 {data.title}
+                                {blueprint?.measureLabel != null && (
+                                    <span className="font-normal text-muted-foreground">
+                                        {' · '}
+                                        {blueprint.measureLabel}
+                                    </span>
+                                )}
                             </span>
                             <span className="mt-0.5 block text-xs text-muted-foreground">
                                 {isFixed

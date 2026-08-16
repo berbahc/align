@@ -44,7 +44,7 @@ export function HabitRow({
         : [
               companion && `mit ${companion.name}`,
               habit.scheduleLabel,
-              habit.focusMinutes && `${habit.focusMinutes} Min`,
+              habit.measureLabel,
           ]
               .filter(Boolean)
               .join(' · ');

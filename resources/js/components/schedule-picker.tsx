@@ -161,8 +161,9 @@ export function SituationPicker({
     );
 }
 
-const STEPPER_BUTTON =
-    'flex size-8 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors duration-200 hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
+/** Auch der Umfang-Stepper greift darauf zu — dieselbe Geste, dieselbe Form. */
+export const STEPPER_BUTTON =
+    'flex size-8 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors duration-200 hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-30';
 
 function shift(value: string, unit: 'hour' | 'minute', direction: 1 | -1) {
     const [hours = 0, minutes = 0] = value.split(':').map(Number);

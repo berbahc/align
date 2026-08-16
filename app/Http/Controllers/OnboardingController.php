@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\CreateHabit;
 use App\Enums\BehaviorType;
+use App\Enums\MeasureUnit;
 use App\Enums\ScheduleType;
 use App\Http\Requests\StoreHabitRequest;
 use App\Models\Habit;
@@ -20,6 +21,7 @@ class OnboardingController extends Controller
             'directions' => BehaviorType::options(),
             'triggerSuggestions' => array_keys(Habit::TriggerSuggestions),
             'scheduleTypes' => ScheduleType::options(),
+            'measureUnits' => MeasureUnit::options(),
         ]);
     }
 

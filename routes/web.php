@@ -66,6 +66,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('habits/create', [HabitController::class, 'create'])->name('habits.create');
         Route::post('habits', [HabitController::class, 'store'])->name('habits.store');
 
+        // Der Wizard verspricht auf dem letzten Schritt „Du kannst das jederzeit
+        // ändern" — hier wird das eingelöst. Angeboten wird der Weg nur im
+        // Gewohnheitsverzeichnis: Auf der Übersicht geht es um den heutigen Tag,
+        // nicht um die Gewohnheit an sich.
+        //
+        // Das Formular steht hier, das Speichern dagegen ganz unten: `PUT
+        // habits/{habit}` verdeckt sonst `PUT habits/reminders`, genau wie es
+        // die Kommentare weiter unten für die anderen festen Strecken
+        // beschreiben.
+        Route::get('habits/{habit}/edit', [HabitController::class, 'edit'])->name('habits.edit');
+
         // Übernehmen ist ein Anlegen mit vorbelegten Feldern, kein eigener
         // Gewohnheitstyp — nur der Rückweg ist ein anderer: zurück auf die
         // Seite, auf der gefragt oder abgesagt wurde, statt in den Wizard.
@@ -112,6 +123,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('habits/{habit}/graduation', [HabitGraduationController::class, 'destroy'])
             ->name('habits.graduation.destroy');
 
+        // Die beiden Strecken ohne festes Wort dahinter stehen zuletzt: Sie
+        // würden jedes `habits/…` schlucken, das über ihnen steht.
+        Route::put('habits/{habit}', [HabitController::class, 'update'])->name('habits.update');
         Route::delete('habits/{habit}', [HabitController::class, 'destroy'])->name('habits.destroy');
     });
 });

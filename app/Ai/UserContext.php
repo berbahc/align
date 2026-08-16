@@ -162,7 +162,7 @@ final readonly class UserContext
     {
         $others = $habits
             ->when($habit !== null, fn (Collection $all): Collection => $all->except([$habit?->getKey()]))
-            ->map(fn (Habit $other): string => $other->title.' → '.$other->scheduleLabel());
+            ->map(fn (Habit $other): string => $other->titleWithMeasure().' → '.$other->scheduleLabel());
 
         if ($others->isEmpty()) {
             return null;

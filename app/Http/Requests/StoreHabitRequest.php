@@ -2,109 +2,19 @@
 
 namespace App\Http\Requests;
 
-use App\Enums\BehaviorType;
-use App\Enums\ScheduleType;
 use App\Models\Habit;
-use Illuminate\Contracts\Validation\ValidationRule;
-use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
-class StoreHabitRequest extends FormRequest
+/**
+ * Eine neue Gewohnheit anlegen.
+ *
+ * Die Felder selbst stehen in {@see HabitFormRequest} — hier kommt nur dazu,
+ * was ausschließlich beim Anlegen gilt: die Grenze von fünf aktiven
+ * Gewohnheiten. Beim Bearbeiten darf sie nicht greifen, sonst blockierte sich
+ * die fünfte Gewohnheit selbst.
+ */
+class StoreHabitRequest extends HabitFormRequest
 {
-    public function authorize(): bool
-    {
-        return true;
-    }
-
-    /**
-     * Fehlt die Art der Planung, ist sie situativ.
-     *
-     * Das ist keine Bequemlichkeit, sondern die Voreinstellung des Systems:
-     * time-blocking.md macht die Situation zum Standard, die feste Uhrzeit
-     * zur ausdrücklich gewählten Ausnahme.
-     */
-    protected function prepareForValidation(): void
-    {
-        if (! $this->has('schedule_type')) {
-            $this->merge(['schedule_type' => ScheduleType::Dynamic->value]);
-        }
-    }
-
-    /**
-     * @return array<string, ValidationRule|array<mixed>|string>
-     */
-    public function rules(): array
-    {
-        // `behavior_type` ist die im ersten Schritt gewählte Richtung.
-        // Der Wann-Teil hat zwei sich ausschließende Formen: entweder eine
-        // Situation oder eine Uhrzeit mit Wochentagen. Welche gilt, entscheidet
-        // `schedule_type` — die jeweils andere Hälfte muss leer bleiben.
-        $isFixed = $this->enum('schedule_type', ScheduleType::class) === ScheduleType::Fixed;
-
-        return [
-            'behavior_type' => ['required', Rule::enum(BehaviorType::class)],
-            'schedule_type' => ['required', Rule::enum(ScheduleType::class)],
-            'title' => ['required', 'string', 'max:80'],
-            'trigger_situation' => [
-                Rule::requiredIf(! $isFixed), 'nullable', 'string', 'max:120',
-            ],
-            'scheduled_time' => [
-                Rule::requiredIf($isFixed), 'nullable', 'date_format:H:i',
-            ],
-            'scheduled_days' => [
-                Rule::requiredIf($isFixed), 'nullable', 'array', 'min:1', 'max:7',
-            ],
-            'scheduled_days.*' => ['integer', 'between:1,7', 'distinct'],
-            'motivation' => ['nullable', 'string', 'max:200'],
-            'smallest_step' => ['nullable', 'string', 'max:160'],
-            'focus_minutes' => ['nullable', 'integer', 'min:1', 'max:240'],
-        ];
-    }
-
-    /**
-     * Die validierten Werte in der Form, die CreateHabit erwartet.
-     *
-     * Der nicht gewählte Zweig wird ausdrücklich auf `null` gesetzt, nicht
-     * weggelassen — sonst bliebe beim Wechsel der Form ein Wert stehen, der
-     * zur gewählten Art nicht mehr passt.
-     *
-     * @return array{title: string, behavior_type: string, schedule_type: string, trigger_situation: string|null, scheduled_time: string|null, scheduled_days: list<int>|null, motivation: string|null, smallest_step: string|null, focus_minutes: int|null}
-     */
-    public function habitAttributes(): array
-    {
-        $isFixed = $this->enum('schedule_type', ScheduleType::class) === ScheduleType::Fixed;
-
-        /** @var list<int> $days */
-        $days = array_values(array_unique(array_map(
-            intval(...),
-            $this->array('scheduled_days'),
-        )));
-        sort($days);
-
-        return [
-            'title' => $this->string('title')->trim()->toString(),
-            'behavior_type' => $this->string('behavior_type')->toString(),
-            'schedule_type' => $this->string('schedule_type')->toString(),
-            'trigger_situation' => $isFixed
-                ? null
-                : $this->string('trigger_situation')->trim()->toString(),
-            'scheduled_time' => $isFixed
-                ? $this->string('scheduled_time')->toString()
-                : null,
-            'scheduled_days' => $isFixed ? $days : null,
-            'motivation' => $this->filled('motivation')
-                ? $this->string('motivation')->trim()->toString()
-                : null,
-            'smallest_step' => $this->filled('smallest_step')
-                ? $this->string('smallest_step')->trim()->toString()
-                : null,
-            'focus_minutes' => $this->filled('focus_minutes')
-                ? $this->integer('focus_minutes')
-                : null,
-        ];
-    }
-
     /**
      * progress-tracking.md begrenzt auf 5 gleichzeitig aktive Gewohnheiten.
      * Die Grenze gehört in die Validierung, nicht nur ins Frontend — sonst
@@ -115,6 +25,7 @@ class StoreHabitRequest extends FormRequest
     public function after(): array
     {
         return [
+            ...parent::after(),
             function (Validator $validator): void {
                 $active = $this->user()->habits()->active()->count();
 
@@ -125,23 +36,6 @@ class StoreHabitRequest extends FormRequest
                     ));
                 }
             },
-        ];
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    public function attributes(): array
-    {
-        return [
-            'title' => 'Gewohnheit',
-            'behavior_type' => 'Richtung',
-            'schedule_type' => 'Art der Planung',
-            'trigger_situation' => 'Auslöser',
-            'scheduled_time' => 'Uhrzeit',
-            'scheduled_days' => 'Wochentage',
-            'motivation' => 'Grund',
-            'smallest_step' => 'Erster Schritt',
         ];
     }
 }
