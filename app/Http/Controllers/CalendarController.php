@@ -67,6 +67,11 @@ class CalendarController extends Controller
                 // Reist mit, damit ein Vorschlag der KI sich einsortieren kann,
                 // bevor er übernommen wurde.
                 'anchorHour' => $habit->dayAnchorHour(),
+                // Der Umfang und, wo er eine Dauer ist, die belegte Spanne.
+                // „17:00 – 17:20" sagt zusätzlich, wann der Platz wieder frei
+                // ist — die Größe, an der eine angehängte Gewohnheit beginnt.
+                'measureLabel' => $habit->measureLabel(),
+                'timeRange' => $habit->timeRangeLabel(),
                 'behaviorType' => $habit->behavior_type->value,
                 'smallestStep' => $habit->smallest_step,
                 'completed' => $habit->completions->isNotEmpty(),

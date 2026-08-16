@@ -42,8 +42,13 @@ export function CalendarBlock({
                 !ghost && !faded && 'bg-card',
             )}
         >
+            {/* Wo eine Dauer auf eine feste Uhrzeit trifft, tritt die belegte
+                Spanne an die Stelle des Ankers: Sie sagt dasselbe und dazu, wann
+                der Platz wieder frei ist. Das bleibt eine Zeile Text — eine nach
+                Dauer skalierte Blockhöhe wäre das Stundenraster, das oben aus
+                gutem Grund ausgeschlossen ist. */}
             <p className="text-[11px] font-semibold tracking-[0.11em] text-muted-foreground uppercase">
-                {block.anchor}
+                {block.timeRange ?? block.anchor}
             </p>
 
             <div className="flex items-center gap-3">
@@ -72,6 +77,16 @@ export function CalendarBlock({
                         )}
                     >
                         {block.title}
+                        {/* Steht die Spanne schon oben, wäre „20 Min" hier ihre
+                            Wiederholung — der Umfang erscheint dann nur, wo er
+                            sonst nirgends abzulesen ist. */}
+                        {block.measureLabel !== null &&
+                            block.timeRange === null && (
+                                <span className="font-normal text-muted-foreground">
+                                    {' · '}
+                                    {block.measureLabel}
+                                </span>
+                            )}
                     </span>
                     {block.smallestStep && !block.completed && (
                         <span className="mt-0.5 block truncate text-xs text-muted-foreground">
