@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\BehaviorType;
 use App\Enums\MeasureUnit;
 use App\Enums\ScheduleType;
+use Carbon\CarbonInterface;
 use Database\Factories\HabitFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -403,6 +404,66 @@ class Habit extends Model
         return $measure === null
             ? $this->title
             : $this->title.' · '.$measure;
+    }
+
+    /**
+     * Wie lange die Gewohnheit dauert — in Minuten, oder gar nicht.
+     *
+     * **Nur Minuten sind eine Dauer.** „10 Seiten" und „2 Liter" sind ein
+     * Umfang, aber keine Zeitspanne: Sie sagen, wie viel, nicht wie lange. Diese
+     * Unterscheidung trägt alles Weitere — den belegten Platz im Tag und den
+     * Beginn einer angehängten Gewohnheit.
+     */
+    public function durationMinutes(): ?int
+    {
+        return $this->target_unit === MeasureUnit::Minutes && $this->target_amount !== null
+            ? (int) round($this->target_amount)
+            : null;
+    }
+
+    /**
+     * Wann die Gewohnheit anfängt, als Uhrzeit — sofern sie eine hat.
+     *
+     * Nur feste Uhrzeiten bringen einen Zeitpunkt mit. Eine Situation ist keine
+     * Uhrzeit, und „wenn es sich ergibt" erst recht nicht.
+     */
+    public function startsAt(): ?CarbonInterface
+    {
+        return $this->schedule_type === ScheduleType::Fixed
+            ? $this->scheduled_time?->copy()
+            : null;
+    }
+
+    /**
+     * Wann der Block wieder frei ist — Beginn plus Dauer.
+     *
+     * Ohne eines von beidem gibt es kein Ende: Eine Gewohnheit ohne Uhrzeit
+     * belegt keinen Platz, und eine ohne Dauer ist ein Punkt, keine Spanne.
+     */
+    public function endsAt(): ?CarbonInterface
+    {
+        $start = $this->startsAt();
+        $minutes = $this->durationMinutes();
+
+        return $start === null || $minutes === null
+            ? null
+            : $start->copy()->addMinutes($minutes);
+    }
+
+    /**
+     * Die belegte Spanne als fertige Zeile: „17:00 – 17:20".
+     *
+     * Steht im Kalender an der Stelle, an der sonst der Anker steht — sie sagt
+     * dasselbe und dazu, wann der Platz wieder frei ist. Ohne Dauer bleibt es
+     * beim Anker allein; eine erfundene Länge wäre schlechter als keine.
+     */
+    public function timeRangeLabel(): ?string
+    {
+        $end = $this->endsAt();
+
+        return $end === null
+            ? null
+            : $this->startsAt()?->format('H:i').' – '.$end->format('H:i');
     }
 
     /**

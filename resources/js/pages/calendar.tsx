@@ -59,6 +59,11 @@ export default function Calendar({
             ...adjusting,
             anchor: alternativeLabel(preview),
             anchorHour: preview.anchorHour,
+            // Die Spanne des bisherigen Platzes gilt am neuen nicht mehr. Sie
+            // hier nachzurechnen hieße, die Server-Logik im Browser zu
+            // wiederholen — der Ghost zeigt deshalb den Anker des Vorschlags,
+            // und die Spanne kommt zurück, sobald er übernommen ist.
+            timeRange: null,
         };
 
         const index = axis.findIndex(

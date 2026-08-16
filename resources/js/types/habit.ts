@@ -151,6 +151,15 @@ export interface CalendarBlock {
     anchor: string;
     /** Die Stelle im Tag als Stunde — sortiert die Achse. */
     anchorHour: number;
+    /** Der Umfang als fertige Zeile („20 Min", „10 Seiten"), sonst null. */
+    measureLabel: string | null;
+    /**
+     * Die belegte Spanne („17:00 – 17:20"), sonst null.
+     *
+     * Gibt es nur, wo eine feste Uhrzeit auf eine Dauer trifft — nur Minuten
+     * sind eine Dauer, „10 Seiten" belegt keinen Platz im Tag.
+     */
+    timeRange: string | null;
     behaviorType: BehaviorType;
     smallestStep: string | null;
     completed: boolean;
