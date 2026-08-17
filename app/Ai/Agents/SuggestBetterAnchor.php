@@ -4,7 +4,6 @@ namespace App\Ai\Agents;
 
 use App\Ai\Agents\Concerns\SpeaksForAlign;
 use App\Ai\UserContext;
-use App\Enums\ScheduleType;
 use App\Models\Habit;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
@@ -73,7 +72,7 @@ class SuggestBetterAnchor implements Agent, HasStructuredOutput
           übernommen wurde, und keinen, der dem aktuellen entspricht.
         PROMPT."\n\n".$this->voice();
 
-        if ($this->habit->schedule_type === ScheduleType::Fixed) {
+        if ($this->habit->schedule_type->hasClockTime()) {
             return $shared."\n\n".<<<'PROMPT'
             Diese Gewohnheit hängt an einer festen Uhrzeit. Schlage andere
             Uhrzeiten und Wochentage vor.
@@ -115,7 +114,7 @@ class SuggestBetterAnchor implements Agent, HasStructuredOutput
      */
     public function schema(JsonSchema $schema): array
     {
-        $item = $this->habit->schedule_type === ScheduleType::Fixed
+        $item = $this->habit->schedule_type->hasClockTime()
             ? $schema->object([
                 'time' => $schema->string()->description('Uhrzeit im Format HH:MM.')->required(),
                 'days' => $schema->array()
@@ -170,7 +169,7 @@ class SuggestBetterAnchor implements Agent, HasStructuredOutput
                 continue;
             }
 
-            $alternative = $this->habit->schedule_type === ScheduleType::Fixed
+            $alternative = $this->habit->schedule_type->hasClockTime()
                 ? $this->fixedAlternative($candidate)
                 : $this->dynamicAlternative($candidate);
 

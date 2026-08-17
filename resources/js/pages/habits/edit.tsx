@@ -223,8 +223,10 @@ export default function EditHabit({
 
                         {/* Beobachtend statt belehrend: der Satz erklärt die
                             Folge, bevor sie eintritt, statt sie hinterher zu
-                            melden. */}
-                        {!isFixed && (
+                            melden. Bei „Wenn es sich ergibt" steht dieselbe
+                            Auskunft schon im Picker — zweimal wäre sie eine
+                            Ermahnung. */}
+                        {!isFixed && data.schedule_type !== 'opportunistic' && (
                             <p className="text-xs leading-relaxed text-muted-foreground">
                                 Ohne feste Uhrzeit gibt es nichts zu erinnern —
                                 eine gesetzte Erinnerung wird beim Speichern

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ScheduleType;
 use App\Models\Habit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -48,7 +49,7 @@ class HabitReminderController extends Controller
         $request->user()
             ->habits()
             ->active()
-            ->where('schedule_type', 'fixed')
+            ->where('schedule_type', ScheduleType::Fixed->value)
             ->whereNotNull('scheduled_time')
             ->update(['reminder_enabled' => $validated['enabled']]);
 

@@ -8,6 +8,8 @@ import type { ScheduleType, Weekday } from '@/types';
 export interface ScheduleTypeOption {
     value: ScheduleType;
     label: string;
+    /** Ein Satz unter der Kachel — die Wahl ist ohne ihn nicht zu treffen. */
+    description: string;
 }
 
 /**
@@ -218,44 +220,68 @@ export function SchedulePicker({
 
     return (
         <div className="flex flex-col gap-4">
+            {/* Kacheln statt einer Tab-Leiste: Drei Formen nebeneinander sind
+                auf einem Telefon nicht mehr zu lesen, und die dritte braucht
+                ohnehin einen erklärenden Satz — „Wenn es sich ergibt" erklärt
+                sich nicht aus zwei Wörtern. Dieselbe Kachel wie bei der
+                Richtungswahl in Schritt 1. */}
             <div
-                role="tablist"
+                role="group"
                 aria-label="Art der Planung"
-                className="flex gap-1 rounded-2xl bg-secondary p-1"
+                className="grid gap-2 sm:grid-cols-2"
             >
                 {scheduleTypes.map((option) => {
                     const isSelected = scheduleType === option.value;
+                    // Was sich ergibt, ist keine dritte Art zu planen, sondern
+                    // der Verzicht darauf — die gestrichelte Kante sagt das,
+                    // wie schon bei „Etwas anderes" im Schritt davor.
+                    const unplanned = option.value === 'opportunistic';
 
                     return (
                         <button
                             key={option.value}
                             type="button"
-                            role="tab"
-                            aria-selected={isSelected}
+                            aria-pressed={isSelected}
                             onClick={() => onScheduleTypeChange(option.value)}
                             className={cn(
-                                'flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl px-4 py-3 text-[15px] font-semibold transition-colors duration-200',
-                                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+                                CHOICE_TILE,
+                                'flex flex-col gap-1 px-4 py-3',
+                                unplanned && 'border-dashed',
                                 isSelected
-                                    ? 'bg-card text-foreground shadow-sm'
-                                    : 'text-muted-foreground hover:text-foreground',
+                                    ? 'border-primary'
+                                    : 'border-border hover:border-secondary',
                             )}
                         >
-                            {/* ✦ ist für Momente reserviert, in denen die App mitdenkt (§8). */}
-                            {option.value === 'dynamic' && (
-                                <Sparkles
-                                    className="size-4"
-                                    strokeWidth={1.5}
-                                    aria-hidden="true"
-                                />
-                            )}
-                            {option.label}
+                            <span className="flex items-center gap-1.5 text-[15px] font-semibold">
+                                {/* ✦ ist für Momente reserviert, in denen die App mitdenkt (§8). */}
+                                {option.value === 'dynamic' && (
+                                    <Sparkles
+                                        className="size-4 text-primary"
+                                        strokeWidth={1.5}
+                                        aria-hidden="true"
+                                    />
+                                )}
+                                {option.label}
+                            </span>
+                            <span className="text-xs leading-relaxed text-muted-foreground">
+                                {option.description}
+                            </span>
                         </button>
                     );
                 })}
             </div>
 
-            {scheduleType === 'dynamic' ? (
+            {scheduleType === 'opportunistic' ? (
+                /* Kein Picker, sondern die Begründung: Hier ist nichts
+                   einzustellen, und ein leerer Bereich sähe aus, als fehle
+                   etwas. §1.5 — benannt wird, was gilt. */
+                <p className="rounded-2xl bg-card p-4 text-sm leading-relaxed text-muted-foreground">
+                    Diese Gewohnheit bekommt keinen festen Platz im Tag. Sie
+                    steht im Kalender unter der Achse und lässt sich an jedem Tag
+                    abhaken, an dem sich die Gelegenheit ergibt — ohne Uhrzeit,
+                    ohne Erinnerung und ohne Quote, die sie verlieren könnte.
+                </p>
+            ) : scheduleType === 'dynamic' ? (
                 children
             ) : (
                 <div className="flex flex-col gap-5">

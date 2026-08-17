@@ -50,9 +50,15 @@ class DashboardController extends Controller
         // zuletzt — dieselbe Achse wie im Kalender. Die Anlege-Reihenfolge
         // entscheidet nur noch bei gleicher Stunde; als alleinige Sortierung
         // stellte sie das Abendritual über die Gewohnheit nach dem Aufstehen.
+        // Was sich ergibt, war an keinem Tag vorgesehen, steht aber jeden Tag
+        // zur Verfügung — es gehört in die Liste, nur ohne Stelle darin und
+        // deshalb ans Ende.
         $todaysHabits = $habits
-            ->filter(fn (Habit $habit): bool => $habit->isScheduledOn($today))
-            ->sortBy(fn (Habit $habit): array => [$habit->dayAnchorHour(), $habit->position])
+            ->filter(fn (Habit $habit): bool => $habit->isAvailableOn($today))
+            ->sortBy(fn (Habit $habit): array => [
+                $habit->dayAnchorHour() ?? PHP_INT_MAX,
+                $habit->position,
+            ])
             ->values();
 
         return Inertia::render('dashboard', [

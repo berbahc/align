@@ -47,6 +47,11 @@ class HabitAdjustmentController extends Controller
     {
         Gate::authorize('update', $habit);
 
+        // Ohne Platz im Tag gibt es keinen besseren Platz im Tag. Die Frage
+        // stellt die Oberfläche für solche Gewohnheiten gar nicht erst; kommt
+        // sie trotzdem an, wird sie hier beantwortet statt an die KI gereicht.
+        abort_unless($habit->schedule_type->isPlanned(), 404);
+
         $misses = $this->misses($habit);
 
         try {
@@ -100,6 +105,8 @@ class HabitAdjustmentController extends Controller
     public function store(AdjustHabitRequest $request, Habit $habit): RedirectResponse
     {
         Gate::authorize('update', $habit);
+
+        abort_unless($habit->schedule_type->isPlanned(), 404);
 
         $previousLabel = $habit->scheduleLabel();
         $previous = [

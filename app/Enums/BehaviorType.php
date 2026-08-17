@@ -22,7 +22,7 @@ enum BehaviorType: string
     case Other = 'other';
 
     /**
-     * @return list<array{value: string, label: string, description: string, suggestions: list<array{title: string, amount: float|null, unit: string|null}>}>
+     * @return list<array{value: string, label: string, description: string, suggestions: list<array{title: string, amount: float|null, unit: string|null, plannable: bool}>}>
      */
     public static function options(): array
     {
@@ -68,34 +68,43 @@ enum BehaviorType: string
      * Vorgabe mehr. Wo kein Umfang passt, steht keiner: „Treppe statt Aufzug"
      * misst sich nicht.
      *
-     * @return list<array{title: string, amount: float|null, unit: string|null}>
+     * `plannable` sagt, ob der Vorschlag überhaupt eine Stelle im Tag haben
+     * kann. „Treppe statt Aufzug" und „eine Station früher aussteigen" haben
+     * keine: Sie hängen an einer Gelegenheit, die auftaucht, wann sie will —
+     * für sie steht Schritt 3 auf `Opportunistic` statt auf einer erfundenen
+     * Uhrzeit. Vorgewählt, nicht erzwungen: Wer einen festen Platz dafür hat,
+     * stellt um.
+     *
+     * @return list<array{title: string, amount: float|null, unit: string|null, plannable: bool}>
      */
     public function suggestions(): array
     {
         return match ($this) {
             self::Movement => [
-                ['title' => 'Spazieren gehen', 'amount' => 20, 'unit' => MeasureUnit::Minutes->value],
-                ['title' => 'Dehnen', 'amount' => 10, 'unit' => MeasureUnit::Minutes->value],
-                ['title' => 'Eine Station früher aussteigen', 'amount' => null, 'unit' => null],
-                ['title' => 'Treppe statt Aufzug', 'amount' => null, 'unit' => null],
+                ['title' => 'Spazieren gehen', 'amount' => 20, 'unit' => MeasureUnit::Minutes->value, 'plannable' => true],
+                ['title' => 'Dehnen', 'amount' => 10, 'unit' => MeasureUnit::Minutes->value, 'plannable' => true],
+                ['title' => 'Eine Station früher aussteigen', 'amount' => null, 'unit' => null, 'plannable' => false],
+                ['title' => 'Treppe statt Aufzug', 'amount' => null, 'unit' => null, 'plannable' => false],
             ],
             self::Learning => [
-                ['title' => 'Lesen', 'amount' => 10, 'unit' => MeasureUnit::Pages->value],
-                ['title' => 'Fokussiert lernen', 'amount' => 25, 'unit' => MeasureUnit::Minutes->value],
-                ['title' => 'Vorlesung nachbereiten', 'amount' => null, 'unit' => null],
-                ['title' => 'Karteikarten wiederholen', 'amount' => null, 'unit' => null],
+                ['title' => 'Lesen', 'amount' => 10, 'unit' => MeasureUnit::Pages->value, 'plannable' => true],
+                ['title' => 'Fokussiert lernen', 'amount' => 25, 'unit' => MeasureUnit::Minutes->value, 'plannable' => true],
+                ['title' => 'Vorlesung nachbereiten', 'amount' => null, 'unit' => null, 'plannable' => true],
+                ['title' => 'Karteikarten wiederholen', 'amount' => null, 'unit' => null, 'plannable' => true],
             ],
             self::Nutrition => [
-                ['title' => 'Wasser trinken', 'amount' => 2, 'unit' => MeasureUnit::Liters->value],
-                ['title' => 'Essen für morgen vorbereiten', 'amount' => null, 'unit' => null],
-                ['title' => 'Frühstücken statt auslassen', 'amount' => null, 'unit' => null],
-                ['title' => 'Obst als Snack einpacken', 'amount' => null, 'unit' => null],
+                ['title' => 'Wasser trinken', 'amount' => 2, 'unit' => MeasureUnit::Liters->value, 'plannable' => true],
+                ['title' => 'Essen für morgen vorbereiten', 'amount' => null, 'unit' => null, 'plannable' => true],
+                ['title' => 'Frühstücken statt auslassen', 'amount' => null, 'unit' => null, 'plannable' => true],
+                ['title' => 'Obst als Snack einpacken', 'amount' => null, 'unit' => null, 'plannable' => true],
             ],
             self::Other => [
-                ['title' => 'Zur gleichen Zeit ins Bett', 'amount' => null, 'unit' => null],
-                ['title' => 'Handy vor dem Schlafen weglegen', 'amount' => 30, 'unit' => MeasureUnit::Minutes->value],
-                ['title' => 'Meditieren', 'amount' => 10, 'unit' => MeasureUnit::Minutes->value],
-                ['title' => 'Kurze Pause zwischen Vorlesungen', 'amount' => null, 'unit' => null],
+                ['title' => 'Zur gleichen Zeit ins Bett', 'amount' => null, 'unit' => null, 'plannable' => true],
+                ['title' => 'Handy vor dem Schlafen weglegen', 'amount' => 30, 'unit' => MeasureUnit::Minutes->value, 'plannable' => true],
+                ['title' => 'Meditieren', 'amount' => 10, 'unit' => MeasureUnit::Minutes->value, 'plannable' => true],
+                // Zwischen zwei Vorlesungen — ob und wann es die gibt, weiß der
+                // Stundenplan, nicht die App.
+                ['title' => 'Kurze Pause zwischen Vorlesungen', 'amount' => null, 'unit' => null, 'plannable' => false],
             ],
         };
     }

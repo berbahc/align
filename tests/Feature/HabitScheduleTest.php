@@ -112,13 +112,19 @@ test('a dynamic habit shows its situation as the schedule label', function () {
     expect($habit->scheduleLabel())->toBe('nach dem Aufstehen');
 });
 
-test('the wizard receives both ways of anchoring a habit', function () {
+test('the wizard receives every way of anchoring a habit', function () {
     $this->actingAs(User::factory()->create())
         ->get(route('habits.create'))
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->component('habits/create')
-            ->has('scheduleTypes', 2)
+            // Situation, feste Uhrzeit — und die dritte Form, die gar keinen
+            // Platz im Tag hat.
+            ->has('scheduleTypes', 3)
+            // Die Situation steht vorn: sie ist die Empfehlung, nicht nur eine
+            // von drei gleichrangigen Optionen (time-blocking.md).
             ->where('scheduleTypes.0.value', ScheduleType::Dynamic->value)
+            ->where('scheduleTypes.2.value', ScheduleType::Opportunistic->value)
+            ->has('scheduleTypes.0.description')
         );
 });
 

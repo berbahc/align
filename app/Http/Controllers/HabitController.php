@@ -21,6 +21,14 @@ use Inertia\Response;
 class HabitController extends Controller
 {
     /**
+     * Das Fenster, über das gezählt wird, was sich ergeben hat.
+     *
+     * Dieselben dreißig Tage wie bei der Konsistenzrate — damit die beiden
+     * Zahlen nebeneinander dasselbe meinen, auch wenn sie verschieden rechnen.
+     */
+    private const int RecentCountDays = 30;
+
+    /**
      * Die Verwaltungsansicht: alle aktiven Gewohnheiten mit ihrer Planung.
      *
      * Anders als die Übersicht zeigt sie auch, was heute nicht ansteht — hier
@@ -43,7 +51,7 @@ class HabitController extends Controller
             // Termin und rutschen ans Ende, statt die Reihe anzuführen.
             ->sortBy(fn (Habit $habit): array => [
                 $habit->daysUntilNextOccurrence($today) ?? PHP_INT_MAX,
-                $habit->dayAnchorHour(),
+                $habit->dayAnchorHour() ?? PHP_INT_MAX,
                 $habit->position,
             ])
             ->values();
@@ -81,6 +89,13 @@ class HabitController extends Controller
                 // auf der Übersicht, die nur die stärkste zeigt. Unterhalb der
                 // Mindestlänge bleibt die Zeile weg statt eine „1" zu behaupten.
                 'streak' => $this->streakLabel($habit),
+                // Was sich ergibt, kennt keine Serie: Zwei Tage ohne Gelegenheit
+                // würden den Kulanztag aufbrauchen und die Kette reißen lassen,
+                // obwohl nichts versäumt wurde. Gezählt wird stattdessen, was
+                // war — ohne Soll, gegen das es sich messen ließe.
+                'recentCount' => $habit->schedule_type->isPlanned()
+                    ? null
+                    : $habit->completionsSince(self::RecentCountDays).'× in '.self::RecentCountDays.' Tagen',
             ])->all(),
             'graduatedHabits' => $graduated->map(fn (Habit $habit): array => [
                 'id' => $habit->id,
@@ -230,7 +245,11 @@ class HabitController extends Controller
      */
     private function nextOccurrenceLabel(Habit $habit, ?Carbon $next): string
     {
-        if ($habit->schedule_type !== ScheduleType::Fixed) {
+        if (! $habit->schedule_type->isPlanned()) {
+            return 'sobald es sich ergibt';
+        }
+
+        if (! $habit->schedule_type->hasClockTime()) {
             return 'ab heute';
         }
 

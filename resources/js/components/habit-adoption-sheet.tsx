@@ -102,9 +102,15 @@ export function HabitAdoptionSheet({
     }, [blueprint, noticeId]);
 
     const isFixed = data.schedule_type === 'fixed';
-    const ready = isFixed
-        ? data.scheduled_days.length > 0
-        : data.trigger_situation.trim().length > 0;
+    // Was sich ergibt, verlangt nichts — sonst ließe sich die übernommene
+    // Gewohnheit nie abschicken, weil auf eine Situation gewartet wird, die es
+    // für sie gar nicht gibt.
+    const ready =
+        data.schedule_type === 'opportunistic'
+            ? true
+            : isFixed
+              ? data.scheduled_days.length > 0
+              : data.trigger_situation.trim().length > 0;
 
     const Icon = BEHAVIOR_ICONS[data.behavior_type];
 
@@ -150,10 +156,12 @@ export function HabitAdoptionSheet({
                                 )}
                             </span>
                             <span className="mt-0.5 block text-xs text-muted-foreground">
-                                {isFixed
-                                    ? `${data.scheduled_time} · ${formatWeekdays(data.scheduled_days)}`
-                                    : data.trigger_situation ||
-                                      'noch kein Auslöser'}
+                                {data.schedule_type === 'opportunistic'
+                                    ? 'wenn es sich ergibt'
+                                    : isFixed
+                                      ? `${data.scheduled_time} · ${formatWeekdays(data.scheduled_days)}`
+                                      : data.trigger_situation ||
+                                        'noch kein Auslöser'}
                             </span>
                         </span>
                     </div>
