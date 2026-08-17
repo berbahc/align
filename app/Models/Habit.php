@@ -43,6 +43,21 @@ class Habit extends Model
     use HasFactory;
 
     /**
+     * Was gilt, solange die Datenbank noch nichts gesagt hat.
+     *
+     * Die Spalte hat denselben Default, aber der greift erst beim Einfügen.
+     * Ohne diese Zeile hätte eine noch nicht gespeicherte Gewohnheit gar keine
+     * Planungsart — und jede Frage danach liefe ins Leere, statt die
+     * Voreinstellung des Systems zu bekommen (time-blocking.md: die Situation
+     * ist der Standard, die Uhrzeit die Wahl).
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'schedule_type' => ScheduleType::Dynamic->value,
+    ];
+
+    /**
      * Gemeinsame Termine zu dieser Gewohnheit.
      *
      * @return HasMany<Appointment, $this>
@@ -153,14 +168,58 @@ class Habit extends Model
      * nur an ihren Wochentagen; an allen anderen Tagen sind sie nicht offen,
      * sondern schlicht nicht vorgesehen. Der Unterschied entscheidet darüber,
      * ob ein Tag in die Konsistenzrate zählt.
+     *
+     * Für Gewohnheiten ohne Platz im Tag lautet die Antwort **nie**: „Treppe
+     * statt Aufzug" war an keinem Tag vorgesehen. Das ist keine Herabstufung,
+     * sondern der Schutz vor einer Rechnung, die sie nur verlieren kann — wer
+     * an keinem Aufzug vorbeikam, hat nichts ausgelassen. Abhaken lässt sie
+     * sich trotzdem an jedem Tag; dafür fragt die Oberfläche
+     * {@see isAvailableOn()}.
      */
     public function isScheduledOn(Carbon $date): bool
     {
-        if ($this->schedule_type !== ScheduleType::Fixed) {
+        if (! $this->schedule_type->isPlanned()) {
+            return false;
+        }
+
+        if (! $this->schedule_type->hasClockTime()) {
             return true;
         }
 
         return in_array($date->dayOfWeekIso, $this->scheduled_days ?? [], strict: true);
+    }
+
+    /**
+     * Lässt sich die Gewohnheit an diesem Tag abhaken?
+     *
+     * Das Gegenstück zu {@see isScheduledOn()} und der Filter der Oberfläche.
+     * Was sich ergibt, war nie vorgesehen — kann aber jeden Tag vorkommen und
+     * muss deshalb jeden Tag anzutippen sein.
+     */
+    public function isAvailableOn(Carbon $date): bool
+    {
+        return $this->schedule_type->isPlanned()
+            ? $this->isScheduledOn($date)
+            : true;
+    }
+
+    /**
+     * Wie oft die Gewohnheit im Rückblickfenster erfüllt wurde.
+     *
+     * Die ehrliche Zahl für alles, was sich ergibt: Eine Quote braucht einen
+     * Nenner, und den gibt es hier nicht. „7× in 30 Tagen" behauptet nichts
+     * über ein Soll — es zählt nur, was war.
+     */
+    public function completionsSince(int $days = 30, ?Carbon $until = null): int
+    {
+        $until ??= Carbon::today();
+
+        return $this->completions()
+            ->whereBetween('completed_on', [
+                $until->copy()->subDays($days - 1)->startOfDay(),
+                $until->copy()->endOfDay(),
+            ])
+            ->count();
     }
 
     /**
@@ -343,9 +402,13 @@ class Habit extends Model
      * Eine Näherung, die nur eine Aufgabe hat: den Tag von oben nach unten
      * lesbar zu machen.
      */
-    public function dayAnchorHour(): int
+    public function dayAnchorHour(): ?int
     {
-        return $this->schedule_type === ScheduleType::Fixed
+        if (! $this->schedule_type->isPlanned()) {
+            return null;
+        }
+
+        return $this->schedule_type->hasClockTime()
             ? self::anchorHourFor(time: $this->scheduled_time?->format('H:i'))
             : self::anchorHourFor(situation: $this->trigger_situation);
     }
@@ -372,7 +435,7 @@ class Habit extends Model
      */
     public function canRemind(): bool
     {
-        return $this->schedule_type === ScheduleType::Fixed
+        return $this->schedule_type->hasClockTime()
             && $this->scheduled_time !== null;
     }
 
@@ -429,7 +492,7 @@ class Habit extends Model
      */
     public function startsAt(): ?CarbonInterface
     {
-        return $this->schedule_type === ScheduleType::Fixed
+        return $this->schedule_type->hasClockTime()
             ? $this->scheduled_time?->copy()
             : null;
     }
@@ -470,10 +533,18 @@ class Habit extends Model
      * Der Wann-Teil als fertige Zeile für die Oberfläche.
      *
      * Beispiele: „nach dem Aufstehen", „17:00 · Mo–Fr", „08:30 · täglich".
+     *
+     * Was sich ergibt, benennt sich selbst. Ohne diesen Zweig fiele es durch
+     * {@see anchorLabel()} auf den **leeren String** — und der stünde dann
+     * wortlos im Kalender, im Verzeichnis, im Bauplan und im Prompt der KI.
      */
     public function scheduleLabel(): string
     {
-        return $this->schedule_type === ScheduleType::Fixed
+        if (! $this->schedule_type->isPlanned()) {
+            return mb_lcfirst($this->schedule_type->label());
+        }
+
+        return $this->schedule_type->hasClockTime()
             ? self::anchorLabel(time: $this->scheduled_time?->format('H:i'), days: $this->scheduled_days)
             : self::anchorLabel(situation: $this->trigger_situation);
     }
@@ -719,7 +790,7 @@ class Habit extends Model
      */
     private function runsEveryDay(): bool
     {
-        return $this->schedule_type !== ScheduleType::Fixed
+        return ! $this->schedule_type->hasClockTime()
             || count($this->scheduled_days ?? []) === 7;
     }
 
@@ -728,12 +799,21 @@ class Habit extends Model
      *
      * Beide Grenzen zählen mit. Für dynamische Gewohnheiten ist das schlicht
      * die Länge des Zeitraums.
+     *
+     * Für Gewohnheiten ohne Platz im Tag ist es **null** — und damit gibt es
+     * keinen Nenner und keine Quote. Genau die Begründung, mit der unten schon
+     * die nicht gewählten Wochentage herausfallen: eine Rate darf nicht Tage
+     * mitzählen, an denen nichts vorgesehen war.
      */
     public function scheduledDaysBetween(Carbon $start, Carbon $until): int
     {
+        if (! $this->schedule_type->isPlanned()) {
+            return 0;
+        }
+
         $length = (int) $start->copy()->startOfDay()->diffInDays($until->copy()->startOfDay()) + 1;
 
-        if ($this->schedule_type !== ScheduleType::Fixed) {
+        if (! $this->schedule_type->hasClockTime()) {
             return $length;
         }
 

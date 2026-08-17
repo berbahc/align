@@ -77,10 +77,12 @@ export function ManagedHabitRow({
                         </span>
 
                         {/* Leise Zeile, kein Abzeichen: die Serie steht neben
-                            der Planung, nicht über ihr. */}
-                        {habit.streak !== null && (
+                            der Planung, nicht über ihr. Wo es keine Serie geben
+                            kann, steht die blanke Zahl — „7× in 30 Tagen"
+                            behauptet kein Soll, an dem sie scheitern könnte. */}
+                        {(habit.streak ?? habit.recentCount) !== null && (
                             <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-                                {habit.streak}
+                                {habit.streak ?? habit.recentCount}
                             </span>
                         )}
                     </span>

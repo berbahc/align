@@ -41,13 +41,25 @@ class CalendarController extends Controller
             ->orderBy('position')
             ->get();
 
-        $blocks = $habits
+        $present = $habits
             ->filter(fn (Habit $habit): bool => $this->existedOn($habit, $date))
-            ->filter(fn (Habit $habit): bool => $habit->isScheduledOn($date))
+            ->filter(fn (Habit $habit): bool => $habit->isAvailableOn($date));
+
+        $blocks = $present
+            ->filter(fn (Habit $habit): bool => $habit->schedule_type->isPlanned())
             // Der Tag wird von oben nach unten gelesen: Morgen zuerst, Abend
             // zuletzt. Bei gleicher Stunde entscheidet die eigene Reihenfolge
             // aus der Gewohnheitsliste.
-            ->sortBy(fn (Habit $habit): array => [$habit->dayAnchorHour(), $habit->position])
+            ->sortBy(fn (Habit $habit): array => [$habit->dayAnchorHour() ?? PHP_INT_MAX, $habit->position])
+            ->values();
+
+        // Was sich ergibt, hat keine Stelle im Tag und bekommt deshalb auch
+        // keine. Bis hierher landete „Treppe statt Aufzug" über
+        // `UnknownAnchorHour` mittags auf der Achse, als wäre es für 12 Uhr
+        // geplant — eine erfundene Position, die den ganzen Tag verschob.
+        $whenever = $present
+            ->reject(fn (Habit $habit): bool => $habit->schedule_type->isPlanned())
+            ->sortBy('position')
             ->values();
 
         return Inertia::render('calendar', [
@@ -60,24 +72,38 @@ class CalendarController extends Controller
             'canComplete' => $this->withinBackdatingWindow($date, $today),
             'previousDate' => $this->previousDate($habits, $date),
             'nextDate' => $date->copy()->addDay()->toDateString(),
-            'blocks' => $blocks->map(fn (Habit $habit): array => [
-                'id' => $habit->id,
-                'title' => $habit->title,
-                'anchor' => $habit->scheduleLabel(),
-                // Reist mit, damit ein Vorschlag der KI sich einsortieren kann,
-                // bevor er übernommen wurde.
-                'anchorHour' => $habit->dayAnchorHour(),
-                // Der Umfang und, wo er eine Dauer ist, die belegte Spanne.
-                // „17:00 – 17:20" sagt zusätzlich, wann der Platz wieder frei
-                // ist — die Größe, an der eine angehängte Gewohnheit beginnt.
-                'measureLabel' => $habit->measureLabel(),
-                'timeRange' => $habit->timeRangeLabel(),
-                'behaviorType' => $habit->behavior_type->value,
-                'smallestStep' => $habit->smallest_step,
-                'completed' => $habit->completions->isNotEmpty(),
-                'graduated' => $habit->graduated_at !== null,
-            ])->all(),
+            'blocks' => $blocks->map($this->block(...))->all(),
+            'whenever' => $whenever->map($this->block(...))->all(),
         ]);
+    }
+
+    /**
+     * Eine Gewohnheit als Block — für die Achse wie für den Bereich darunter.
+     *
+     * @return array{id: int, title: string, anchor: string, anchorHour: int, measureLabel: string|null, timeRange: string|null, behaviorType: string, smallestStep: string|null, completed: bool, graduated: bool, adjustable: bool}
+     */
+    private function block(Habit $habit): array
+    {
+        return [
+            'id' => $habit->id,
+            'title' => $habit->title,
+            'anchor' => $habit->scheduleLabel(),
+            // Reist mit, damit ein Vorschlag der KI sich einsortieren kann,
+            // bevor er übernommen wurde.
+            'anchorHour' => $habit->dayAnchorHour() ?? Habit::UnknownAnchorHour,
+            // Der Umfang und, wo er eine Dauer ist, die belegte Spanne.
+            // „17:00 – 17:20" sagt zusätzlich, wann der Platz wieder frei
+            // ist — die Größe, an der eine angehängte Gewohnheit beginnt.
+            'measureLabel' => $habit->measureLabel(),
+            'timeRange' => $habit->timeRangeLabel(),
+            'behaviorType' => $habit->behavior_type->value,
+            'smallestStep' => $habit->smallest_step,
+            'completed' => $habit->completions->isNotEmpty(),
+            'graduated' => $habit->graduated_at !== null,
+            // Ohne Zeitpunkt gibt es keinen besseren Zeitpunkt: Der
+            // `✦ Passt der Zeitpunkt?`-Chip hätte hier nichts anzubieten.
+            'adjustable' => $habit->schedule_type->isPlanned(),
+        ];
     }
 
     /**

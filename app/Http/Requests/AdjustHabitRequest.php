@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests;
 
-use App\Enums\ScheduleType;
 use App\Enums\SuggestionKind;
 use App\Models\AiSuggestion;
 use App\Models\Habit;
@@ -35,7 +34,7 @@ class AdjustHabitRequest extends FormRequest
      */
     public function rules(): array
     {
-        $isFixed = $this->habit()->schedule_type === ScheduleType::Fixed;
+        $isFixed = $this->habit()->schedule_type->hasClockTime();
 
         return [
             'trigger_situation' => [
@@ -91,7 +90,7 @@ class AdjustHabitRequest extends FormRequest
      */
     public function anchor(): array
     {
-        if ($this->habit()->schedule_type !== ScheduleType::Fixed) {
+        if (! $this->habit()->schedule_type->hasClockTime()) {
             return [
                 'trigger_situation' => $this->string('trigger_situation')->trim()->toString(),
             ];

@@ -23,7 +23,16 @@ interface CalendarProps {
     previousDate: string | null;
     nextDate: string;
     blocks: Block[];
+    /**
+     * Gewohnheiten ohne Platz im Tag.
+     *
+     * Sie stehen unter der Achse statt darin: „Treppe statt Aufzug" hat keine
+     * Stelle im Tag, und ihr eine zu geben hieße, sie zu erfinden.
+     */
+    whenever: Block[];
 }
+
+const EYEBROW = 'text-[11px] font-semibold tracking-[0.11em] uppercase';
 
 const NAV_BUTTON =
     'flex size-11 shrink-0 items-center justify-center rounded-full text-primary transition-colors duration-200 hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
@@ -36,6 +45,7 @@ export default function Calendar({
     previousDate,
     nextDate,
     blocks,
+    whenever,
 }: CalendarProps) {
     /** Welcher Block gerade im Anpassungs-Sheet steht; null heißt zu. */
     const [adjusting, setAdjusting] = useState<Block | null>(null);
@@ -156,25 +166,59 @@ export default function Calendar({
 
                 <Card className="gap-0 py-5">
                     <CardContent className="px-5">
-                        {blocks.length > 0 ? (
+                        {blocks.length > 0 || whenever.length > 0 ? (
                             <>
-                                <ul className="flex flex-col gap-3">
-                                    {axis.map(({ block, ghost, faded }) => (
-                                        <CalendarBlock
-                                            key={
-                                                ghost
-                                                    ? `${block.id}-ghost`
-                                                    : block.id
-                                            }
-                                            block={block}
-                                            canComplete={canComplete}
-                                            onToggle={toggle}
-                                            onAdjust={setAdjusting}
-                                            ghost={ghost}
-                                            faded={faded}
-                                        />
-                                    ))}
-                                </ul>
+                                {blocks.length > 0 && (
+                                    <ul className="flex flex-col gap-3">
+                                        {axis.map(({ block, ghost, faded }) => (
+                                            <CalendarBlock
+                                                key={
+                                                    ghost
+                                                        ? `${block.id}-ghost`
+                                                        : block.id
+                                                }
+                                                block={block}
+                                                canComplete={canComplete}
+                                                onToggle={toggle}
+                                                onAdjust={setAdjusting}
+                                                ghost={ghost}
+                                                faded={faded}
+                                            />
+                                        ))}
+                                    </ul>
+                                )}
+
+                                {/* Unter der Achse, nicht darin: Diese
+                                    Gewohnheiten haben keine Stelle im Tag, und
+                                    eine erfundene Uhrzeit hätte den ganzen Tag
+                                    um sie herum verschoben. Sie gelten den
+                                    ganzen Tag, deshalb steht keine Zeit dabei. */}
+                                {whenever.length > 0 && (
+                                    <section
+                                        className={
+                                            blocks.length > 0
+                                                ? 'mt-5 border-t border-border pt-5'
+                                                : undefined
+                                        }
+                                    >
+                                        <h2
+                                            className={`${EYEBROW} mb-2 text-muted-foreground`}
+                                        >
+                                            Wenn es sich ergibt
+                                        </h2>
+                                        <ul className="flex flex-col gap-3">
+                                            {whenever.map((block) => (
+                                                <CalendarBlock
+                                                    key={block.id}
+                                                    block={block}
+                                                    canComplete={canComplete}
+                                                    onToggle={toggle}
+                                                    onAdjust={setAdjusting}
+                                                />
+                                            ))}
+                                        </ul>
+                                    </section>
+                                )}
 
                                 {/* Kein Fehler, sondern eine Grenze: Was der
                                     Wochenstreifen nicht mehr zeigt, lässt sich

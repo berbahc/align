@@ -148,6 +148,9 @@ test('the create page ships the suggestions and the units the stepper needs', fu
                 ->has('title')
                 ->has('amount')
                 ->has('unit')
+                // Sagt Schritt 3 vor, ob die Gewohnheit überhaupt eine Stelle
+                // im Tag haben kann.
+                ->has('plannable')
             )
             // Schrittweite und Grenzen kommen vom Server, damit der Stepper mit
             // der Validierung deckungsgleich bleibt.

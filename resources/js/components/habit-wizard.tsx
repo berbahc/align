@@ -39,6 +39,14 @@ export interface DirectionSuggestion {
     title: string;
     amount: number | null;
     unit: MeasureUnit | null;
+    /**
+     * Kann die Gewohnheit überhaupt eine Stelle im Tag haben?
+     *
+     * „Treppe statt Aufzug" kann es nicht — für sie steht Schritt 3 auf „Wenn
+     * es sich ergibt", statt eine Uhrzeit zu erfinden. Vorgewählt, nicht
+     * erzwungen.
+     */
+    plannable: boolean;
 }
 
 export interface Direction {
@@ -95,6 +103,7 @@ export function HabitWizard({
     );
 
     const isFixed = data.schedule_type === 'fixed';
+    const isUnplanned = data.schedule_type === 'opportunistic';
 
     const measureLabel = formatMeasure(
         data.target_amount,
@@ -105,9 +114,12 @@ export function HabitWizard({
     const canContinue = [
         data.behavior_type !== '',
         data.title.trim().length > 0,
-        isFixed
-            ? data.scheduled_days.length > 0
-            : data.trigger_situation.trim().length > 0,
+        // Was sich ergibt, verlangt nichts: keine Situation, keine Uhrzeit.
+        isUnplanned
+            ? true
+            : isFixed
+              ? data.scheduled_days.length > 0
+              : data.trigger_situation.trim().length > 0,
         // Der kleinste Schritt ist überspringbar — bei ø 3,92 Schuldgefühl
         // darf hier kein weiteres Pflichtfeld entstehen.
         true,
@@ -158,7 +170,13 @@ export function HabitWizard({
         setOwnTitle(false);
     }
 
-    /** Ein Vorschlag setzt Titel und Umfang in einem Zug. */
+    /**
+     * Ein Vorschlag setzt Titel, Umfang und die Art der Planung in einem Zug.
+     *
+     * Für „Treppe statt Aufzug" steht danach „Wenn es sich ergibt" — der
+     * Katalog weiß, dass diese Gewohnheit keinen Platz im Tag haben kann. Wer
+     * widerspricht, stellt in Schritt 3 um; die Wahl bleibt offen.
+     */
     function chooseSuggestion(candidate: DirectionSuggestion) {
         setOwnTitle(false);
         setData((current) => ({
@@ -166,6 +184,7 @@ export function HabitWizard({
             title: candidate.title,
             target_amount: candidate.amount,
             target_unit: candidate.unit ?? '',
+            schedule_type: candidate.plannable ? 'dynamic' : 'opportunistic',
         }));
     }
 
@@ -303,6 +322,10 @@ export function HabitWizard({
                                     title: '',
                                     target_amount: null,
                                     target_unit: '',
+                                    // Die Planbarkeit gehörte zum Vorschlag,
+                                    // nicht zur eigenen Gewohnheit — für die
+                                    // entscheidet Schritt 3 wieder von vorn.
+                                    schedule_type: 'dynamic',
                                 }));
                             }}
                             className={cn(
@@ -547,12 +570,18 @@ export function HabitWizard({
                     <div className="flex flex-col gap-3 rounded-2xl bg-card p-5">
                         <div>
                             <p className={`${EYEBROW} text-muted-foreground`}>
-                                {isFixed ? 'Zeitpunkt' : 'Auslöser'}
+                                {isUnplanned
+                                    ? 'Gelegenheit'
+                                    : isFixed
+                                      ? 'Zeitpunkt'
+                                      : 'Auslöser'}
                             </p>
                             <p className="mt-1 text-lg leading-snug font-semibold">
-                                {isFixed
-                                    ? `${data.scheduled_time} Uhr · ${formatWeekdays(data.scheduled_days)}`
-                                    : data.trigger_situation}
+                                {isUnplanned
+                                    ? 'wenn es sich ergibt'
+                                    : isFixed
+                                      ? `${data.scheduled_time} Uhr · ${formatWeekdays(data.scheduled_days)}`
+                                      : data.trigger_situation}
                             </p>
                         </div>
                         <div className="h-4 w-px self-center bg-sand" />

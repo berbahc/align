@@ -40,28 +40,40 @@ abstract class HabitFormRequest extends FormRequest
     }
 
     /**
+     * Die gewählte Planungsart — ungültige Eingaben fallen auf die Vorgabe
+     * zurück, damit die Regeln unten nicht selbst noch prüfen müssen. Über die
+     * Gültigkeit entscheidet die `Rule::enum`-Regel.
+     */
+    protected function scheduleType(): ScheduleType
+    {
+        return $this->enum('schedule_type', ScheduleType::class) ?? ScheduleType::Dynamic;
+    }
+
+    /**
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         // `behavior_type` ist die im ersten Schritt gewählte Richtung.
-        // Der Wann-Teil hat zwei sich ausschließende Formen: entweder eine
-        // Situation oder eine Uhrzeit mit Wochentagen. Welche gilt, entscheidet
-        // `schedule_type` — die jeweils andere Hälfte muss leer bleiben.
-        $isFixed = $this->enum('schedule_type', ScheduleType::class) === ScheduleType::Fixed;
+        // Der Wann-Teil hat drei Formen, die sich ausschließen: eine Situation,
+        // eine Uhrzeit mit Wochentagen — oder gar keinen Platz im Tag. Welche
+        // gilt, entscheidet `schedule_type`; die jeweils anderen Hälften müssen
+        // leer bleiben. Was sich ergibt, verlangt von beiden nichts.
+        $type = $this->scheduleType();
 
         return [
             'behavior_type' => ['required', Rule::enum(BehaviorType::class)],
             'schedule_type' => ['required', Rule::enum(ScheduleType::class)],
             'title' => ['required', 'string', 'max:80'],
             'trigger_situation' => [
-                Rule::requiredIf(! $isFixed), 'nullable', 'string', 'max:120',
+                Rule::requiredIf($type->isPlanned() && ! $type->hasClockTime()),
+                'nullable', 'string', 'max:120',
             ],
             'scheduled_time' => [
-                Rule::requiredIf($isFixed), 'nullable', 'date_format:H:i',
+                Rule::requiredIf($type->hasClockTime()), 'nullable', 'date_format:H:i',
             ],
             'scheduled_days' => [
-                Rule::requiredIf($isFixed), 'nullable', 'array', 'min:1', 'max:7',
+                Rule::requiredIf($type->hasClockTime()), 'nullable', 'array', 'min:1', 'max:7',
             ],
             'scheduled_days.*' => ['integer', 'between:1,7', 'distinct'],
             'motivation' => ['nullable', 'string', 'max:200'],
@@ -118,7 +130,8 @@ abstract class HabitFormRequest extends FormRequest
      */
     public function habitAttributes(): array
     {
-        $isFixed = $this->enum('schedule_type', ScheduleType::class) === ScheduleType::Fixed;
+        $type = $this->scheduleType();
+        $wantsSituation = $type->isPlanned() && ! $type->hasClockTime();
 
         /** @var list<int> $days */
         $days = array_values(array_unique(array_map(
@@ -132,14 +145,14 @@ abstract class HabitFormRequest extends FormRequest
         return [
             'title' => $this->string('title')->trim()->toString(),
             'behavior_type' => $this->string('behavior_type')->toString(),
-            'schedule_type' => $this->string('schedule_type')->toString(),
-            'trigger_situation' => $isFixed
-                ? null
-                : $this->string('trigger_situation')->trim()->toString(),
-            'scheduled_time' => $isFixed
+            'schedule_type' => $type->value,
+            'trigger_situation' => $wantsSituation
+                ? $this->string('trigger_situation')->trim()->toString()
+                : null,
+            'scheduled_time' => $type->hasClockTime()
                 ? $this->string('scheduled_time')->toString()
                 : null,
-            'scheduled_days' => $isFixed ? $days : null,
+            'scheduled_days' => $type->hasClockTime() ? $days : null,
             'motivation' => $this->filled('motivation')
                 ? $this->string('motivation')->trim()->toString()
                 : null,

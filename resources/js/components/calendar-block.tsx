@@ -148,8 +148,10 @@ export function CalendarBlock({
             </div>
 
             {/* Der Weg zur KI steht nur an lebenden Gewohnheiten: eine beendete
-                verschiebt man nicht mehr, und einen Ghost erst recht nicht. */}
-            {onAdjust && !ghost && !block.graduated && (
+                verschiebt man nicht mehr, und einen Ghost erst recht nicht.
+                Ohne Zeitpunkt gibt es auch keinen besseren — für „Treppe statt
+                Aufzug" hätte die Frage nichts anzubieten. */}
+            {onAdjust && !ghost && !block.graduated && block.adjustable && (
                 <button
                     type="button"
                     onClick={() => onAdjust(block)}

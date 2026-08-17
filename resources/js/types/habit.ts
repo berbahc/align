@@ -6,8 +6,13 @@ export type BehaviorType = 'nutrition' | 'movement' | 'learning' | 'other';
  * `dynamic` hängt an einer Situation („nach dem Aufstehen") und gilt an jedem
  * Tag. `fixed` hängt an einer Uhrzeit und gilt nur an den gewählten Wochentagen
  * — nur diese Form lässt sich erinnern.
+ *
+ * `opportunistic` hat gar keinen Platz im Tag: „Treppe statt Aufzug" ergibt
+ * sich, wo die Gelegenheit auftaucht. Solche Gewohnheiten stehen nicht auf der
+ * Tagesachse und werden nicht als Quote gemessen — versäumt hat nichts, wer an
+ * keinem Aufzug vorbeikam.
  */
-export type ScheduleType = 'dynamic' | 'fixed';
+export type ScheduleType = 'dynamic' | 'fixed' | 'opportunistic';
 
 /** ISO-Wochentag: 1 = Montag … 7 = Sonntag. */
 export type Weekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
@@ -87,6 +92,13 @@ export interface ManagedHabit {
      * Mo–Fr-Gewohnheit bricht am Wochenende nicht.
      */
     streak: string | null;
+    /**
+     * Die blanke Zahl statt einer Serie („7× in 30 Tagen"), sonst null.
+     *
+     * Nur für Gewohnheiten, die sich ergeben: Zwei Tage ohne Gelegenheit würden
+     * jede Serie reißen lassen, obwohl nichts versäumt wurde.
+     */
+    recentCount: string | null;
 }
 
 /**
@@ -165,6 +177,13 @@ export interface CalendarBlock {
     completed: boolean;
     /** Beendete Gewohnheiten bleiben in ihrer Vergangenheit sichtbar. */
     graduated: boolean;
+    /**
+     * Lässt sich der Zeitpunkt überhaupt verbessern?
+     *
+     * Nur wo es einen gibt. Was sich ergibt, hat keinen — der
+     * `✦ Passt der Zeitpunkt?`-Chip hätte dort nichts anzubieten.
+     */
+    adjustable: boolean;
 }
 
 /**
