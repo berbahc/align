@@ -24,6 +24,8 @@ use Illuminate\Support\Carbon;
  * @property string|null $trigger_situation
  * @property Carbon|null $scheduled_time
  * @property list<int>|null $scheduled_days
+ * @property int|null $chained_to_habit_id
+ * @property Habit|null $chainedTo
  * @property bool $reminder_enabled
  * @property string|null $motivation
  * @property string|null $smallest_step
@@ -36,7 +38,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['title', 'schedule_type', 'trigger_situation', 'scheduled_time', 'scheduled_days', 'reminder_enabled', 'motivation', 'smallest_step', 'behavior_type', 'target_amount', 'target_unit', 'position', 'committed_at'])]
+#[Fillable(['title', 'schedule_type', 'trigger_situation', 'scheduled_time', 'scheduled_days', 'chained_to_habit_id', 'reminder_enabled', 'motivation', 'smallest_step', 'behavior_type', 'target_amount', 'target_unit', 'position', 'committed_at'])]
 class Habit extends Model
 {
     /** @use HasFactory<HabitFactory> */
@@ -107,6 +109,15 @@ class Habit extends Model
     public const int StreakMinimum = 3;
 
     /**
+     * Wie viele Glieder eine Kette haben darf.
+     *
+     * Bei höchstens fünf gleichzeitigen Gewohnheiten kann keine Kette länger
+     * sein — die Zahl ist zugleich die Abbruchbedingung der Rekursion, die den
+     * Beginn einer gekoppelten Gewohnheit ausrechnet.
+     */
+    public const int MaxChainDepth = 5;
+
+    /**
      * Vorschläge für den Situations-Picker, mit ihrer ungefähren Tagesstunde.
      *
      * time-blocking.md: situative Cues statt Uhrzeiten. Eine Situation löst
@@ -161,6 +172,62 @@ class Habit extends Model
     }
 
     /**
+     * Die Gewohnheit, an der diese hängt — der Vorgänger in der Kette.
+     *
+     * @return BelongsTo<Habit, $this>
+     */
+    public function chainedTo(): BelongsTo
+    {
+        return $this->belongsTo(Habit::class, 'chained_to_habit_id');
+    }
+
+    /**
+     * Die Gewohnheiten, die an dieser hängen.
+     *
+     * @return HasMany<Habit, $this>
+     */
+    public function chainedHabits(): HasMany
+    {
+        return $this->hasMany(Habit::class, 'chained_to_habit_id');
+    }
+
+    /**
+     * Die Gewohnheit, von der diese ihre Stelle im Tag hat.
+     *
+     * Für alles mit eigenem Anker ist das sie selbst. Eine gekoppelte
+     * Gewohnheit fragt ihren Vorgänger, und der notfalls seinen — bis jemand
+     * einen eigenen Anker hat.
+     *
+     * Die Tiefengrenze ist eine Notbremse, keine Regel: Zyklen weist die
+     * Validierung ab. Sie schützt die Rekursion vor Daten, die nie durch ein
+     * Formular gegangen sind.
+     */
+    public function anchorHabit(): ?Habit
+    {
+        $habit = $this;
+
+        for ($depth = 0; $depth < self::MaxChainDepth; $depth++) {
+            if ($habit->schedule_type->hasOwnAnchor()) {
+                return $habit;
+            }
+
+            if ($habit->schedule_type !== ScheduleType::Chained) {
+                return null;
+            }
+
+            $next = $habit->chainedTo;
+
+            if ($next === null) {
+                return null;
+            }
+
+            $habit = $next;
+        }
+
+        return null;
+    }
+
+    /**
      * Ist die Gewohnheit an diesem Tag überhaupt vorgesehen?
      *
      * Dynamische Gewohnheiten hängen an einer Situation, die an jedem Tag
@@ -180,6 +247,13 @@ class Habit extends Model
     {
         if (! $this->schedule_type->isPlanned()) {
             return false;
+        }
+
+        // Eine gekoppelte Gewohnheit findet statt, wenn die stattfindet, an der
+        // sie hängt — nicht öfter und nicht seltener. Ist der Vorgänger
+        // verschwunden, steht sie an keinem Tag an.
+        if (! $this->schedule_type->hasOwnAnchor()) {
+            return $this->anchorHabit()?->isScheduledOn($date) ?? false;
         }
 
         if (! $this->schedule_type->hasClockTime()) {
@@ -335,6 +409,19 @@ class Habit extends Model
      */
     public function blueprint(): array
     {
+        // Eine Kette lässt sich nicht verschenken: „nach dem Spaziergang" meint
+        // *meinen* Spaziergang, und den hat die andere Person nicht. Die Vorlage
+        // trägt deshalb den Anker, an dem die Kette hängt, statt der Kopplung —
+        // wer sie übernimmt, bekommt den Zeitpunkt, nicht die fremde Reihe.
+        $anchor = $this->schedule_type->hasOwnAnchor()
+            ? $this
+            : $this->anchorHabit();
+
+        // Eine Kette ohne Anker ist kaputt — dann bekommt die Vorlage die
+        // Voreinstellung des Systems und die übernehmende Person wählt selbst
+        // eine Situation, statt einen Anschluss zu erben, den es nicht gibt.
+        $type = $anchor === null ? ScheduleType::Dynamic : $anchor->schedule_type;
+
         return [
             'title' => $this->title,
             'behaviorType' => $this->behavior_type->value,
@@ -343,10 +430,10 @@ class Habit extends Model
             // Fertig formatiert, damit das Übernahme-Sheet die Zeile zeigen
             // kann, ohne die Einheiten-Metadaten mitgereicht zu bekommen.
             'measureLabel' => $this->measureLabel(),
-            'scheduleType' => $this->schedule_type->value,
-            'triggerSituation' => $this->trigger_situation,
-            'scheduledTime' => $this->scheduled_time?->format('H:i'),
-            'scheduledDays' => $this->scheduled_days,
+            'scheduleType' => $type->value,
+            'triggerSituation' => $anchor?->trigger_situation,
+            'scheduledTime' => $anchor?->scheduled_time?->format('H:i'),
+            'scheduledDays' => $anchor?->scheduled_days,
         ];
     }
 
@@ -406,6 +493,13 @@ class Habit extends Model
     {
         if (! $this->schedule_type->isPlanned()) {
             return null;
+        }
+
+        // Die gekoppelte Gewohnheit sortiert sich zur Stunde ihres Vorgängers
+        // und landet damit direkt unter ihm — die Reihenfolge innerhalb der
+        // Stunde entscheidet dann `position`.
+        if (! $this->schedule_type->hasOwnAnchor()) {
+            return $this->anchorHabit()?->dayAnchorHour();
         }
 
         return $this->schedule_type->hasClockTime()
@@ -492,9 +586,44 @@ class Habit extends Model
      */
     public function startsAt(): ?CarbonInterface
     {
-        return $this->schedule_type->hasClockTime()
-            ? $this->scheduled_time?->copy()
-            : null;
+        return $this->resolveStart(0);
+    }
+
+    /**
+     * Hier zahlt sich die Dauer aus: Eine gekoppelte Gewohnheit beginnt, wo die
+     * vorige aufhört. Ein 20-Minuten-Block um 17:00 setzt die nächste auf 17:20,
+     * und über mehrere Glieder rechnet sich das durch.
+     *
+     * Ohne bekannte Dauer beim Vorgänger bleibt dessen eigener Beginn stehen —
+     * gleichzeitig anzufangen ist falsch, aber weniger falsch als eine
+     * erfundene Länge.
+     */
+    private function resolveStart(int $depth): ?CarbonInterface
+    {
+        if ($depth >= self::MaxChainDepth) {
+            return null;
+        }
+
+        if ($this->schedule_type->hasClockTime()) {
+            return $this->scheduled_time?->copy();
+        }
+
+        if ($this->schedule_type !== ScheduleType::Chained) {
+            return null;
+        }
+
+        $previous = $this->chainedTo;
+
+        if ($previous === null) {
+            return null;
+        }
+
+        $start = $previous->resolveStart($depth + 1);
+        $minutes = $previous->durationMinutes();
+
+        return $start !== null && $minutes !== null
+            ? $start->copy()->addMinutes($minutes)
+            : $start;
     }
 
     /**
@@ -522,11 +651,24 @@ class Habit extends Model
      */
     public function timeRangeLabel(): ?string
     {
+        $start = $this->startsAt();
+
+        if ($start === null) {
+            return null;
+        }
+
         $end = $this->endsAt();
 
-        return $end === null
+        if ($end !== null) {
+            return $start->format('H:i').' – '.$end->format('H:i');
+        }
+
+        // Ohne Dauer bleibt nur der Beginn — und der lohnt die Zeile nur da, wo
+        // er sonst nirgends steht. Bei fester Uhrzeit nennt ihn der Anker schon;
+        // bei „nach dem Spaziergang" wüsste man ihn sonst nicht.
+        return $this->schedule_type->hasOwnAnchor()
             ? null
-            : $this->startsAt()?->format('H:i').' – '.$end->format('H:i');
+            : 'ab '.$start->format('H:i');
     }
 
     /**
@@ -542,6 +684,18 @@ class Habit extends Model
     {
         if (! $this->schedule_type->isPlanned()) {
             return mb_lcfirst($this->schedule_type->label());
+        }
+
+        // Der Vorgänger ist der Auslöser, also heißt er auch so: „nach dem
+        // Spaziergang". Genau die Form, die time-blocking.md für Ketten
+        // vorsieht — eine bestehende Gewohnheit ist der zuverlässigste Auslöser,
+        // den es gibt.
+        if (! $this->schedule_type->hasOwnAnchor()) {
+            $previous = $this->chainedTo;
+
+            return $previous === null
+                ? 'noch ohne Anschluss'
+                : 'nach „'.$previous->title.'"';
         }
 
         return $this->schedule_type->hasClockTime()
@@ -790,6 +944,12 @@ class Habit extends Model
      */
     private function runsEveryDay(): bool
     {
+        // Eine gekoppelte Gewohnheit läuft so oft wie die, an der sie hängt —
+        // hinter einer Mo–Fr-Gewohnheit wären „12 Tage in Folge" gelogen.
+        if (! $this->schedule_type->hasOwnAnchor()) {
+            return $this->anchorHabit()?->runsEveryDay() ?? true;
+        }
+
         return ! $this->schedule_type->hasClockTime()
             || count($this->scheduled_days ?? []) === 7;
     }
@@ -809,6 +969,13 @@ class Habit extends Model
     {
         if (! $this->schedule_type->isPlanned()) {
             return 0;
+        }
+
+        // Die gekoppelte Gewohnheit steht an denselben Tagen an wie die, an der
+        // sie hängt — sonst rechnete sie mit einem Soll, das ihr Vorgänger gar
+        // nicht hat.
+        if (! $this->schedule_type->hasOwnAnchor()) {
+            return $this->anchorHabit()?->scheduledDaysBetween($start, $until) ?? 0;
         }
 
         $length = (int) $start->copy()->startOfDay()->diffInDays($until->copy()->startOfDay()) + 1;

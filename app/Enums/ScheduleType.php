@@ -29,6 +29,7 @@ enum ScheduleType: string
 {
     case Dynamic = 'dynamic';
     case Fixed = 'fixed';
+    case Chained = 'chained';
     case Opportunistic = 'opportunistic';
 
     /**
@@ -48,6 +49,7 @@ enum ScheduleType: string
         return match ($this) {
             self::Dynamic => 'Situation',
             self::Fixed => 'Feste Uhrzeit',
+            self::Chained => 'Nach einer Gewohnheit',
             self::Opportunistic => 'Wenn es sich ergibt',
         };
     }
@@ -60,6 +62,7 @@ enum ScheduleType: string
         return match ($this) {
             self::Dynamic => 'Hängt an einem Moment im Tag.',
             self::Fixed => 'Steht ohnehin im Kalender.',
+            self::Chained => 'Hängt an einer, die schon läuft.',
             self::Opportunistic => 'Taucht auf, wann sie will.',
         };
     }
@@ -79,6 +82,20 @@ enum ScheduleType: string
     public function isPlanned(): bool
     {
         return $this !== self::Opportunistic;
+    }
+
+    /**
+     * Trägt die Gewohnheit ihren Anker selbst?
+     *
+     * `Chained` ist geplant, aber leiht sich die Stelle im Tag von der
+     * Gewohnheit, an der sie hängt: „nach dem Spaziergang" ist nur so genau,
+     * wie der Spaziergang es ist. Deshalb hat sie weder Situation noch Uhrzeit
+     * — und deshalb muss überall dort, wo eine der beiden Spalten gelesen wird,
+     * erst diese Frage stehen.
+     */
+    public function hasOwnAnchor(): bool
+    {
+        return $this === self::Dynamic || $this === self::Fixed;
     }
 
     /**

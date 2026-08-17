@@ -1,9 +1,10 @@
-import { ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
+import { ChevronDown, ChevronUp, Sparkles, TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { findConflict, nextFreeTime } from '@/lib/slots';
 import { cn } from '@/lib/utils';
-import type { ScheduleType, Weekday } from '@/types';
+import type { BusySlot, ChainCandidate, ScheduleType, Weekday } from '@/types';
 
 export interface ScheduleTypeOption {
     value: ScheduleType;
@@ -196,6 +197,10 @@ export function SchedulePicker({
     onTimeChange,
     days,
     onDaysChange,
+    chainCandidates = [],
+    chainedTo = null,
+    onChainedToChange,
+    busySlots = [],
     children,
 }: {
     scheduleTypes: ScheduleTypeOption[];
@@ -205,10 +210,19 @@ export function SchedulePicker({
     onTimeChange: (value: string) => void;
     days: Weekday[];
     onDaysChange: (days: Weekday[]) => void;
+    /** Woran sich anhängen lässt — leer heißt: es gibt noch nichts. */
+    chainCandidates?: ChainCandidate[];
+    chainedTo?: number | null;
+    onChainedToChange?: (id: number) => void;
+    /** Was im Tag schon belegt ist, für den Überschneidungshinweis. */
+    busySlots?: BusySlot[];
     /** Die Situationsauswahl — sie bleibt im Wizard, wo ihre Vorschläge herkommen. */
     children: React.ReactNode;
 }) {
     const [hours = '00', minutes = '00'] = time.split(':');
+
+    const conflict = findConflict(time, days, busySlots);
+    const free = conflict === null ? null : nextFreeTime(time, days, busySlots);
 
     function toggleDay(day: Weekday) {
         onDaysChange(
@@ -281,6 +295,55 @@ export function SchedulePicker({
                     abhaken, an dem sich die Gelegenheit ergibt — ohne Uhrzeit,
                     ohne Erinnerung und ohne Quote, die sie verlieren könnte.
                 </p>
+            ) : scheduleType === 'chained' ? (
+                /* Das Domino-Prinzip: Eine bestehende Gewohnheit ist der
+                   zuverlässigste Auslöser, den es gibt (time-blocking.md).
+                   Alissa beschreibt es im Interview von selbst — „wenn ich dann
+                   im Bett bin, kann ich es direkt machen". */
+                <div className="flex flex-col gap-2">
+                    {chainCandidates.length === 0 ? (
+                        <p className="rounded-2xl bg-card p-4 text-sm leading-relaxed text-muted-foreground">
+                            Dafür braucht es eine Gewohnheit, die schon läuft.
+                            Sobald du eine zweite hast, kannst du sie hier
+                            aneinanderhängen.
+                        </p>
+                    ) : (
+                        chainCandidates.map((candidate) => {
+                            const isSelected = chainedTo === candidate.id;
+
+                            return (
+                                <button
+                                    key={candidate.id}
+                                    type="button"
+                                    aria-pressed={isSelected}
+                                    onClick={() =>
+                                        onChainedToChange?.(candidate.id)
+                                    }
+                                    className={cn(
+                                        CHOICE_TILE,
+                                        'flex flex-col gap-0.5 px-4 py-3',
+                                        isSelected
+                                            ? 'border-primary'
+                                            : 'border-border hover:border-secondary',
+                                    )}
+                                >
+                                    <span className="text-[15px] font-semibold">
+                                        {candidate.title}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                        {candidate.anchor}
+                                        {/* Erst die Dauer der vorigen
+                                            Gewohnheit macht diesen Satz
+                                            möglich — sie sagt, wann sie fertig
+                                            ist. */}
+                                        {candidate.startsAt !== null &&
+                                            ` · danach ab ${candidate.startsAt}`}
+                                    </span>
+                                </button>
+                            );
+                        })
+                    )}
+                </div>
             ) : scheduleType === 'dynamic' ? (
                 children
             ) : (
@@ -350,6 +413,40 @@ export function SchedulePicker({
                             ))}
                         </div>
                     </div>
+
+                    {/* Ein Hinweis, keine Sperre: Wer zwei Dinge bewusst
+                        übereinanderlegt, darf das — die App sagt nur, was sie
+                        sieht. Möglich wird der Satz erst durch die Dauer, die
+                        das Ende des anderen Blocks kennt. */}
+                    {conflict !== null && (
+                        <p className="flex items-start gap-2 rounded-2xl bg-sand/50 p-3 text-xs leading-relaxed text-muted-foreground">
+                            <TriangleAlert
+                                className="mt-0.5 size-4 shrink-0 text-primary"
+                                strokeWidth={1.5}
+                                aria-hidden="true"
+                            />
+                            <span>
+                                Um diese Zeit läuft schon „{conflict.title}"
+                                {conflict.to !== conflict.from &&
+                                    ` bis ${conflict.to}`}
+                                .
+                                {free !== null && (
+                                    <>
+                                        {' '}
+                                        Frei ist es ab{' '}
+                                        <button
+                                            type="button"
+                                            onClick={() => onTimeChange(free)}
+                                            className="cursor-pointer font-semibold text-primary underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                                        >
+                                            {free}
+                                        </button>
+                                        .
+                                    </>
+                                )}
+                            </span>
+                        </p>
+                    )}
 
                     <div className="flex flex-col gap-3">
                         <p className="text-[11px] font-semibold tracking-[0.11em] text-muted-foreground uppercase">

@@ -22,6 +22,8 @@ import { cn } from '@/lib/utils';
 import { suggestions } from '@/routes/habits/smallest-step';
 import type {
     BehaviorType,
+    BusySlot,
+    ChainCandidate,
     MeasureUnit,
     MeasureUnitOption,
     ScheduleType,
@@ -71,12 +73,16 @@ export function HabitWizard({
     triggerSuggestions,
     scheduleTypes,
     measureUnits,
+    chainCandidates = [],
+    busySlots = [],
     action,
 }: {
     directions: Direction[];
     triggerSuggestions: string[];
     scheduleTypes: ScheduleTypeOption[];
     measureUnits: MeasureUnitOption[];
+    chainCandidates?: ChainCandidate[];
+    busySlots?: BusySlot[];
     action: string;
 }) {
     const [step, setStep] = useState(1);
@@ -94,6 +100,7 @@ export function HabitWizard({
         trigger_situation: '',
         scheduled_time: DEFAULT_TIME,
         scheduled_days: [1, 2, 3, 4, 5] as Weekday[],
+        chained_to_habit_id: null as number | null,
         motivation: '',
         smallest_step: '',
     });
@@ -117,9 +124,11 @@ export function HabitWizard({
         // Was sich ergibt, verlangt nichts: keine Situation, keine Uhrzeit.
         isUnplanned
             ? true
-            : isFixed
-              ? data.scheduled_days.length > 0
-              : data.trigger_situation.trim().length > 0,
+            : data.schedule_type === 'chained'
+              ? data.chained_to_habit_id !== null
+              : isFixed
+                ? data.scheduled_days.length > 0
+                : data.trigger_situation.trim().length > 0,
         // Der kleinste Schritt ist überspringbar — bei ø 3,92 Schuldgefühl
         // darf hier kein weiteres Pflichtfeld entstehen.
         true,
@@ -420,6 +429,12 @@ export function HabitWizard({
                         }
                         days={data.scheduled_days}
                         onDaysChange={(days) => setData('scheduled_days', days)}
+                        chainCandidates={chainCandidates}
+                        chainedTo={data.chained_to_habit_id}
+                        onChainedToChange={(id) =>
+                            setData('chained_to_habit_id', id)
+                        }
+                        busySlots={busySlots}
                     >
                         <SituationPicker
                             suggestions={triggerSuggestions}
@@ -579,9 +594,11 @@ export function HabitWizard({
                             <p className="mt-1 text-lg leading-snug font-semibold">
                                 {isUnplanned
                                     ? 'wenn es sich ergibt'
-                                    : isFixed
-                                      ? `${data.scheduled_time} Uhr · ${formatWeekdays(data.scheduled_days)}`
-                                      : data.trigger_situation}
+                                    : data.schedule_type === 'chained'
+                                      ? `nach „${chainCandidates.find((candidate) => candidate.id === data.chained_to_habit_id)?.title ?? ''}"`
+                                      : isFixed
+                                        ? `${data.scheduled_time} Uhr · ${formatWeekdays(data.scheduled_days)}`
+                                        : data.trigger_situation}
                             </p>
                         </div>
                         <div className="h-4 w-px self-center bg-sand" />

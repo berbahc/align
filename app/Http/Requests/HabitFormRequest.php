@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Enums\BehaviorType;
 use App\Enums\MeasureUnit;
 use App\Enums\ScheduleType;
+use App\Models\Habit;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -76,6 +77,9 @@ abstract class HabitFormRequest extends FormRequest
                 Rule::requiredIf($type->hasClockTime()), 'nullable', 'array', 'min:1', 'max:7',
             ],
             'scheduled_days.*' => ['integer', 'between:1,7', 'distinct'],
+            'chained_to_habit_id' => [
+                Rule::requiredIf($type === ScheduleType::Chained), 'nullable', 'integer',
+            ],
             'motivation' => ['nullable', 'string', 'max:200'],
             'smallest_step' => ['nullable', 'string', 'max:160'],
             // Menge und Einheit sind ein Paar: eine Zahl ohne Einheit ist
@@ -115,7 +119,100 @@ abstract class HabitFormRequest extends FormRequest
                     ));
                 }
             },
+            $this->validateChain(...),
         ];
+    }
+
+    /**
+     * An wen sich anhängen lässt — und an wen nicht.
+     *
+     * Drei Bedingungen, jede aus einem eigenen Grund:
+     *
+     * 1. **Die eigene Gewohnheit**, aktiv und nicht beendet. Eine fremde wäre
+     *    ein Blick in einen fremden Tag, eine beendete ein Anschluss an etwas,
+     *    das nicht mehr stattfindet.
+     * 2. **Etwas mit Platz im Tag.** Was sich ergibt, hat keine Stelle — und
+     *    kann deshalb auch keine weitergeben.
+     * 3. **Kein Zyklus.** Ohne diese Prüfung liefe die Rekursion in
+     *    `Habit::startsAt()` gegen ihre Tiefengrenze, und die Kette hätte
+     *    keinen Anfang mehr.
+     */
+    private function validateChain(Validator $validator): void
+    {
+        if ($this->scheduleType() !== ScheduleType::Chained) {
+            return;
+        }
+
+        $previous = $this->user()->habits()
+            ->active()
+            ->find($this->integer('chained_to_habit_id'));
+
+        if ($previous === null) {
+            $validator->errors()->add(
+                'chained_to_habit_id',
+                'Diese Gewohnheit gibt es nicht mehr.',
+            );
+
+            return;
+        }
+
+        if (! $previous->schedule_type->isPlanned()) {
+            $validator->errors()->add('chained_to_habit_id', sprintf(
+                '„%s" hat selbst keinen festen Platz im Tag — daran lässt sich nichts anschließen.',
+                $previous->title,
+            ));
+
+            return;
+        }
+
+        $edited = $this->editedHabit();
+
+        if ($edited === null) {
+            return;
+        }
+
+        if ($previous->is($edited) || $this->chainReaches($previous, $edited)) {
+            $validator->errors()->add(
+                'chained_to_habit_id',
+                'Damit hinge die Gewohnheit an sich selbst.',
+            );
+        }
+    }
+
+    /**
+     * Führt die Kette ab `$start` irgendwann auf `$target` zurück?
+     */
+    private function chainReaches(Habit $start, Habit $target): bool
+    {
+        $habit = $start;
+
+        for ($depth = 0; $depth < Habit::MaxChainDepth; $depth++) {
+            $next = $habit->chainedTo;
+
+            if ($next === null) {
+                return false;
+            }
+
+            if ($next->is($target)) {
+                return true;
+            }
+
+            $habit = $next;
+        }
+
+        // Tiefer als erlaubt heißt: hier stimmt etwas nicht. Lieber abweisen
+        // als eine Kette bauen, die sich nicht mehr auflösen lässt.
+        return true;
+    }
+
+    /**
+     * Die Gewohnheit, die gerade bearbeitet wird — beim Anlegen gibt es keine.
+     */
+    protected function editedHabit(): ?Habit
+    {
+        $habit = $this->route('habit');
+
+        return $habit instanceof Habit ? $habit : null;
     }
 
     /**
@@ -126,7 +223,7 @@ abstract class HabitFormRequest extends FormRequest
      * zur gewählten Art nicht mehr passt. Aus demselben Grund fällt der Umfang
      * ganz weg, sobald eine seiner beiden Hälften fehlt.
      *
-     * @return array{title: string, behavior_type: string, schedule_type: string, trigger_situation: string|null, scheduled_time: string|null, scheduled_days: list<int>|null, motivation: string|null, smallest_step: string|null, target_amount: float|null, target_unit: string|null}
+     * @return array{title: string, behavior_type: string, schedule_type: string, trigger_situation: string|null, scheduled_time: string|null, scheduled_days: list<int>|null, chained_to_habit_id: int|null, motivation: string|null, smallest_step: string|null, target_amount: float|null, target_unit: string|null}
      */
     public function habitAttributes(): array
     {
@@ -153,6 +250,9 @@ abstract class HabitFormRequest extends FormRequest
                 ? $this->string('scheduled_time')->toString()
                 : null,
             'scheduled_days' => $type->hasClockTime() ? $days : null,
+            'chained_to_habit_id' => $type === ScheduleType::Chained
+                ? $this->integer('chained_to_habit_id')
+                : null,
             'motivation' => $this->filled('motivation')
                 ? $this->string('motivation')->trim()->toString()
                 : null,
@@ -180,6 +280,7 @@ abstract class HabitFormRequest extends FormRequest
             'smallest_step' => 'Erster Schritt',
             'target_amount' => 'Umfang',
             'target_unit' => 'Einheit',
+            'chained_to_habit_id' => 'Vorherige Gewohnheit',
         ];
     }
 }

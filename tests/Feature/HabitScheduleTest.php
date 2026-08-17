@@ -117,13 +117,13 @@ test('the wizard receives every way of anchoring a habit', function () {
         ->get(route('habits.create'))
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->component('habits/create')
-            // Situation, feste Uhrzeit — und die dritte Form, die gar keinen
-            // Platz im Tag hat.
-            ->has('scheduleTypes', 3)
+            // Situation, feste Uhrzeit, Anschluss an eine andere — und die
+            // vierte Form, die gar keinen Platz im Tag hat.
+            ->has('scheduleTypes', 4)
             // Die Situation steht vorn: sie ist die Empfehlung, nicht nur eine
-            // von drei gleichrangigen Optionen (time-blocking.md).
+            // von vier gleichrangigen Optionen (time-blocking.md).
             ->where('scheduleTypes.0.value', ScheduleType::Dynamic->value)
-            ->where('scheduleTypes.2.value', ScheduleType::Opportunistic->value)
+            ->where('scheduleTypes.3.value', ScheduleType::Opportunistic->value)
             ->has('scheduleTypes.0.description')
         );
 });

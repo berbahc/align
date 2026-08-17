@@ -7,6 +7,8 @@ import { dashboard } from '@/routes';
 import { store } from '@/routes/habits';
 import type {
     AppointmentDay,
+    BusySlot,
+    ChainCandidate,
     FriendshipPerson,
     MeasureUnitOption,
 } from '@/types';
@@ -16,6 +18,8 @@ interface CreateHabitProps {
     triggerSuggestions: string[];
     scheduleTypes: ScheduleTypeOption[];
     measureUnits: MeasureUnitOption[];
+    chainCandidates: ChainCandidate[];
+    busySlots: BusySlot[];
     /** Der eigene Kreis, für den letzten Schritt. */
     friends: FriendshipPerson[];
     appointmentDays: AppointmentDay[];
@@ -26,6 +30,8 @@ export default function CreateHabit({
     triggerSuggestions,
     scheduleTypes,
     measureUnits,
+    chainCandidates,
+    busySlots,
     friends,
     appointmentDays,
 }: CreateHabitProps) {
@@ -64,6 +70,8 @@ export default function CreateHabit({
                         triggerSuggestions={triggerSuggestions}
                         scheduleTypes={scheduleTypes}
                         measureUnits={measureUnits}
+                        chainCandidates={chainCandidates}
+                        busySlots={busySlots}
                         action={store.url()}
                     />
                 )}
