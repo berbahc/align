@@ -378,17 +378,43 @@ class Habit extends Model
      */
     public function nextOccurrence(?Carbon $from = null): ?Carbon
     {
-        $from ??= Carbon::today();
+        return $this->nextOccurrences(1, self::WeekOverviewDays, $from)[0] ?? null;
+    }
 
-        foreach (range(0, 6) as $offset) {
+    /**
+     * Die nächsten Tage, an denen die Gewohnheit ansteht — heute eingeschlossen.
+     *
+     * Die Mehrzahl von {@see nextOccurrence()} und die Grundlage der
+     * Verabredungs-Tage: Gefragt wird nicht „welche drei Tage kommen als
+     * Nächstes", sondern „wann steht *diese* Gewohnheit als Nächstes an". Für
+     * eine Mo–Fr-Gewohnheit am Samstag sind das Montag, Dienstag, Mittwoch —
+     * und nicht heute, morgen, übermorgen, an denen sie gar nicht stattfindet.
+     *
+     * Was an keinem Tag vorgesehen ist, gibt eine leere Liste zurück: „Treppe
+     * statt Aufzug" hat keinen nächsten Termin, sondern nur Gelegenheiten.
+     *
+     * @param  int  $limit  Höchstzahl der Tage
+     * @param  int  $withinDays  Wie weit gesucht wird, `$from` eingeschlossen
+     * @return list<Carbon>
+     */
+    public function nextOccurrences(int $limit, int $withinDays, ?Carbon $from = null): array
+    {
+        $from ??= Carbon::today();
+        $days = [];
+
+        foreach (range(0, $withinDays - 1) as $offset) {
+            if (count($days) === $limit) {
+                break;
+            }
+
             $candidate = $from->copy()->addDays($offset);
 
             if ($this->isScheduledOn($candidate)) {
-                return $candidate;
+                $days[] = $candidate;
             }
         }
 
-        return null;
+        return $days;
     }
 
     /**

@@ -6,7 +6,6 @@ import type { ScheduleTypeOption } from '@/components/schedule-picker';
 import { dashboard } from '@/routes';
 import { store } from '@/routes/habits';
 import type {
-    AppointmentDay,
     BusySlot,
     ChainCandidate,
     FriendshipPerson,
@@ -22,7 +21,6 @@ interface CreateHabitProps {
     busySlots: BusySlot[];
     /** Der eigene Kreis, für den letzten Schritt. */
     friends: FriendshipPerson[];
-    appointmentDays: AppointmentDay[];
 }
 
 export default function CreateHabit({
@@ -33,7 +31,6 @@ export default function CreateHabit({
     chainCandidates,
     busySlots,
     friends,
-    appointmentDays,
 }: CreateHabitProps) {
     const { flash } = usePage();
     const created = flash.habitCreated;
@@ -62,7 +59,7 @@ export default function CreateHabit({
                         title={created.title}
                         anchor={created.anchor}
                         friends={friends}
-                        days={appointmentDays}
+                        days={created.days}
                     />
                 ) : (
                     <HabitWizard

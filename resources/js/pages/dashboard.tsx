@@ -18,7 +18,6 @@ import { destroy as dismissNotice } from '@/routes/appointment-notices';
 import { create, index as habitsIndex } from '@/routes/habits';
 import { destroy, store } from '@/routes/habits/completions';
 import type {
-    AppointmentDay,
     AppointmentNotice as Notice,
     AppointmentRequest,
     UpcomingAppointment,
@@ -47,8 +46,6 @@ interface DashboardProps {
     upcomingAppointments: UpcomingAppointment[];
     /** Der eigene Kreis, für die Auswahl in Screen A1. */
     friends: FriendshipPerson[];
-    /** Die drei Tage aus Screen A1. */
-    appointmentDays: AppointmentDay[];
     /** Screen A5: aus heißt, der Weg zur Verabredung wird nicht angeboten. */
     appointmentsEnabled: boolean;
     /** Für das Übernehmen einer fremden Gewohnheit — dieselbe Wahl wie beim Anlegen. */
@@ -77,7 +74,6 @@ export default function Dashboard({
     appointmentNotices,
     upcomingAppointments,
     friends,
-    appointmentDays,
     appointmentsEnabled,
     scheduleTypes,
     triggerSuggestions,
@@ -417,7 +413,7 @@ export default function Dashboard({
             <AppointmentSheet
                 habit={askingFor}
                 friends={friends}
-                days={appointmentDays}
+                days={askingFor?.appointmentDays ?? []}
                 onOpenChange={(open) => !open && setAskingFor(null)}
             />
         </>

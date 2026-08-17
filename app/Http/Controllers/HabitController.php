@@ -185,13 +185,14 @@ class HabitController extends Controller
             'measureUnits' => MeasureUnit::options(),
             'chainCandidates' => $this->chainCandidates($request->user()),
             'busySlots' => $this->busySlots($request->user()),
-            // Für den letzten, freiwilligen Schritt: mit wem und wann.
+            // Für den letzten, freiwilligen Schritt: mit wem. Das Wann steht
+            // in `habitCreated`, weil es an der eben angelegten Gewohnheit
+            // hängt und nicht am Aufruf dieser Seite.
             'friends' => $request->user()->friends()->map(fn (User $friend): array => [
                 'id' => $friend->id,
                 'name' => $friend->name,
                 'initial' => mb_strtoupper(mb_substr($friend->name, 0, 1)),
             ])->all(),
-            'appointmentDays' => Appointment::dayChoices(),
             'appointmentsEnabled' => $request->user()->appointments_enabled,
         ]);
     }
@@ -217,6 +218,11 @@ class HabitController extends Controller
             'anchor' => $habit->scheduleLabel(),
             'when' => $this->nextOccurrenceLabel($habit, $next),
             'scheduledToday' => $next?->isToday() ?? false,
+            // Die Tage der Verabredung hängen an dieser Gewohnheit und stehen
+            // deshalb hier statt neben dem Formular: Beim Aufruf der Seite gab
+            // es sie noch nicht, und ein Kalendertag ohne Termin wäre eine
+            // Verabredung für einen Tag, an dem nichts ansteht.
+            'days' => Appointment::dayChoicesFor($habit),
         ]);
 
         // Die Gewohnheit ist gespeichert. Wer jemanden im Kreis hat, bekommt

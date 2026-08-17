@@ -32,34 +32,89 @@ class Appointment extends Model
     use HasFactory;
 
     /**
-     * Wie weit im Voraus man sich verabreden kann, heute eingeschlossen.
+     * Wie viele Tage Screen A1 zur Wahl stellt.
      *
-     * Drei Tage, wie Screen A1 sie zeigt („heute · morgen · Do."). Weiter
-     * vorauszuplanen wäre der Anfang einer Terminfindung — und die gehört
-     * laut §9 ausdrücklich nicht in die App, sondern in WhatsApp.
+     * Drei, wie das Mockup sie zeigt („heute · morgen · Do."). Mehr wäre der
+     * Anfang einer Terminfindung — und die gehört laut §9 ausdrücklich nicht
+     * in die App, sondern in WhatsApp.
      */
     public const int DayChoices = 3;
 
     /**
-     * Die drei Tage, die Screen A1 zur Wahl stellt.
+     * Wie weit im Voraus die drei Tage liegen dürfen.
      *
-     * Steht hier und nicht im Controller, weil zwei Wege sie anbieten: die
-     * Übersicht und der letzte Schritt beim Anlegen.
+     * Die Tage kommen aus der Gewohnheit, nicht aus dem Kalender — und eine
+     * wöchentliche Gewohnheit hätte sonst ihren dritten Termin erst in drei
+     * Wochen. Eine Woche ist die Grenze, an der aus „das nächste Mal" ein
+     * Vorausplanen würde.
+     */
+    public const int DayHorizon = 7;
+
+    /**
+     * Die Tage, an denen sich diese Gewohnheit gemeinsam angehen lässt.
+     *
+     * Nicht die nächsten drei Kalendertage, sondern die nächsten drei
+     * **Termine der Gewohnheit**: Wer samstags eine Mo–Fr-Gewohnheit anlegt,
+     * bekommt Montag, Dienstag, Mittwoch angeboten statt drei Tage, an denen
+     * sie nicht stattfindet. Das ist dieselbe Logik, die §4 für die Uhrzeit
+     * festhält — die Verabredung erfindet keine Zeit, sie nutzt die
+     * vorhandene.
+     *
+     * Ist die Uhrzeit von heute schon vorbei, beginnt die Suche morgen: Ein
+     * 17:00-Block um 18:30 anzubieten wäre eine Verabredung für einen Moment,
+     * der vorüber ist.
      *
      * @return list<array{value: string, label: string}>
      */
-    public static function dayChoices(): array
+    public static function dayChoicesFor(Habit $habit): array
     {
-        return collect(range(0, self::DayChoices - 1))
-            ->map(function (int $offset): array {
-                $day = Carbon::today()->addDays($offset);
+        $from = self::slotHasPassedToday($habit) ? Carbon::tomorrow() : Carbon::today();
+        $days = $habit->nextOccurrences(self::DayChoices, self::DayHorizon, $from);
 
-                return [
-                    'value' => $day->toDateString(),
-                    'label' => self::dayLabel($day),
-                ];
-            })
-            ->all();
+        // Was an keinem Tag vorgesehen ist, kann an jedem vorkommen: „Treppe
+        // statt Aufzug" hat keinen nächsten Termin, aber jeden Tag eine
+        // Gelegenheit. Für sie bleibt es beim schlichten Blick in den Kalender.
+        if ($days === []) {
+            return self::dayChoices($from);
+        }
+
+        return array_map(fn (Carbon $day): array => [
+            'value' => $day->toDateString(),
+            'label' => self::dayLabel($day),
+        ], $days);
+    }
+
+    /**
+     * Die nächsten drei Kalendertage — für alles ohne eigenen Termin.
+     *
+     * @return list<array{value: string, label: string}>
+     */
+    public static function dayChoices(?Carbon $from = null): array
+    {
+        $from ??= Carbon::today();
+
+        return array_map(function (int $offset) use ($from): array {
+            $day = $from->copy()->addDays($offset);
+
+            return [
+                'value' => $day->toDateString(),
+                'label' => self::dayLabel($day),
+            ];
+        }, range(0, self::DayChoices - 1));
+    }
+
+    /**
+     * Ist der heutige Block dieser Gewohnheit schon vorbei?
+     *
+     * Nur feste Uhrzeiten können vorbei sein. Eine Situation ist kein
+     * Zeitpunkt — „nach dem Aufstehen" lässt sich um 18:30 noch verabreden,
+     * weil die Situation morgen wiederkommt und heute niemand widerlegen kann.
+     */
+    private static function slotHasPassedToday(Habit $habit): bool
+    {
+        $start = $habit->startsAt();
+
+        return $start !== null && Carbon::today()->setTimeFrom($start)->isPast();
     }
 
     /**
@@ -187,9 +242,10 @@ class Appointment extends Model
     /**
      * Alles, woran `$user` beteiligt ist und was noch bevorsteht.
      *
-     * Das Fenster ist dasselbe, das die Wahl anbietet: drei Tage, heute
+     * Das Fenster ist dasselbe, das die Wahl anbietet: eine Woche, heute
      * eingeschlossen. Weiter zu blicken wäre ein gemeinsamer Kalender
-     * (Top-2 46 %, §9).
+     * (Top-2 46 %, §9) — kürzer zu blicken hieße, dass eine zugesagte
+     * Verabredung an einer wöchentlichen Gewohnheit nirgends stünde.
      *
      * Gibt die Einträge unaufbereitet zurück, weil die beiden Seiten
      * unterschiedlich aussortieren: Die Übersicht lässt weg, was schon in der
@@ -202,7 +258,7 @@ class Appointment extends Model
         return self::query()
             ->involving($user)
             ->whereDate('scheduled_for', '>=', $today)
-            ->whereDate('scheduled_for', '<=', $today->copy()->addDays(self::DayChoices - 1))
+            ->whereDate('scheduled_for', '<=', $today->copy()->addDays(self::DayHorizon - 1))
             ->with(['requester', 'invitee', 'habit'])
             ->orderBy('scheduled_for')
             ->get();
