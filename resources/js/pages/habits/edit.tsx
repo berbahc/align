@@ -17,6 +17,8 @@ import { dashboard } from '@/routes';
 import { index, update } from '@/routes/habits';
 import type {
     BehaviorType,
+    BusySlot,
+    ChainCandidate,
     MeasureUnit,
     MeasureUnitOption,
     ScheduleType,
@@ -39,6 +41,7 @@ interface EditableHabit {
     triggerSituation: string | null;
     scheduledTime: string | null;
     scheduledDays: Weekday[] | null;
+    chainedToHabitId: number | null;
     smallestStep: string | null;
     motivation: string | null;
 }
@@ -49,6 +52,8 @@ interface EditHabitProps {
     triggerSuggestions: string[];
     scheduleTypes: ScheduleTypeOption[];
     measureUnits: MeasureUnitOption[];
+    chainCandidates: ChainCandidate[];
+    busySlots: BusySlot[];
 }
 
 /** Ein neutraler Nachmittagstermin, falls die Gewohnheit noch keinen hat. */
@@ -71,6 +76,8 @@ export default function EditHabit({
     triggerSuggestions,
     scheduleTypes,
     measureUnits,
+    chainCandidates,
+    busySlots,
 }: EditHabitProps) {
     const { data, setData, put, processing, errors } = useForm({
         behavior_type: habit.behaviorType,
@@ -81,6 +88,7 @@ export default function EditHabit({
         trigger_situation: habit.triggerSituation ?? '',
         scheduled_time: habit.scheduledTime ?? DEFAULT_TIME,
         scheduled_days: habit.scheduledDays ?? ([1, 2, 3, 4, 5] as Weekday[]),
+        chained_to_habit_id: habit.chainedToHabitId,
         motivation: habit.motivation ?? '',
         smallest_step: habit.smallestStep ?? '',
     });
@@ -207,6 +215,12 @@ export default function EditHabit({
                             onDaysChange={(days) =>
                                 setData('scheduled_days', days)
                             }
+                            chainCandidates={chainCandidates}
+                            chainedTo={data.chained_to_habit_id}
+                            onChainedToChange={(id) =>
+                                setData('chained_to_habit_id', id)
+                            }
+                            busySlots={busySlots}
                         >
                             <SituationPicker
                                 suggestions={triggerSuggestions}
@@ -220,6 +234,7 @@ export default function EditHabit({
                         <InputError message={errors.trigger_situation} />
                         <InputError message={errors.scheduled_time} />
                         <InputError message={errors.scheduled_days} />
+                        <InputError message={errors.chained_to_habit_id} />
 
                         {/* Beobachtend statt belehrend: der Satz erklärt die
                             Folge, bevor sie eintritt, statt sie hinterher zu

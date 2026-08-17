@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\ReleaseChainedHabits;
 use App\Models\Habit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,7 +22,7 @@ class HabitGraduationController extends Controller
      * so da wie vorher. Dass beendete Gewohnheiten nicht mehr erinnern,
      * erledigt der `active()`-Filter in HandleInertiaRequests von selbst.
      */
-    public function store(Habit $habit): RedirectResponse
+    public function store(Habit $habit, ReleaseChainedHabits $release): RedirectResponse
     {
         Gate::authorize('graduate', $habit);
 
@@ -29,6 +30,11 @@ class HabitGraduationController extends Controller
         // nicht in der Fillable-Liste — der Zustand gehört dem Ablauf, nicht
         // dem Formular.
         if ($habit->graduated_at === null) {
+            // Erst die Nachfolger versorgen, dann beenden: Was hinter dieser
+            // Gewohnheit hing, soll nicht mit ihr aus dem Tag verschwinden,
+            // sondern ihren Platz übernehmen.
+            $release->handle($habit);
+
             $habit->graduated_at = now();
             $habit->save();
         }

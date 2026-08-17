@@ -37,7 +37,12 @@ class CalendarController extends Controller
 
         $habits = $request->user()
             ->habits()
-            ->with(['completions' => fn (Relation $query) => $query->whereDate('completed_on', $date)])
+            ->with([
+                'completions' => fn (Relation $query) => $query->whereDate('completed_on', $date),
+                // Die Kette wird beim Sortieren und Benennen jedes Blocks
+                // gefragt — ohne Vorladen wäre das eine Abfrage pro Glied.
+                'chainedTo.chainedTo',
+            ])
             ->orderBy('position')
             ->get();
 
@@ -80,7 +85,7 @@ class CalendarController extends Controller
     /**
      * Eine Gewohnheit als Block — für die Achse wie für den Bereich darunter.
      *
-     * @return array{id: int, title: string, anchor: string, anchorHour: int, measureLabel: string|null, timeRange: string|null, behaviorType: string, smallestStep: string|null, completed: bool, graduated: bool, adjustable: bool}
+     * @return array{id: int, title: string, anchor: string, anchorHour: int, measureLabel: string|null, timeRange: string|null, behaviorType: string, smallestStep: string|null, completed: bool, graduated: bool, adjustable: bool, chainedToId: int|null}
      */
     private function block(Habit $habit): array
     {
@@ -103,6 +108,10 @@ class CalendarController extends Controller
             // Ohne Zeitpunkt gibt es keinen besseren Zeitpunkt: Der
             // `✦ Passt der Zeitpunkt?`-Chip hätte hier nichts anzubieten.
             'adjustable' => $habit->schedule_type->isPlanned(),
+            // Hängt der Block an dem darüber? Dann zieht die Oberfläche einen
+            // Steg dazwischen, statt zwei zusammenhängende Blöcke wie zwei
+            // unabhängige nebeneinanderzustellen.
+            'chainedToId' => $habit->chained_to_habit_id,
         ];
     }
 

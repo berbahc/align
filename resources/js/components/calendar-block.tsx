@@ -21,6 +21,7 @@ export function CalendarBlock({
     onAdjust,
     ghost = false,
     faded = false,
+    chained = false,
 }: {
     block: Block;
     canComplete: boolean;
@@ -30,6 +31,8 @@ export function CalendarBlock({
     ghost?: boolean;
     /** Der bisherige Platz, während der Ghost woanders liegt. */
     faded?: boolean;
+    /** Hängt dieser Block an dem direkt darüber? Dann trägt er einen Steg. */
+    chained?: boolean;
 }) {
     const Icon = BEHAVIOR_ICONS[block.behaviorType];
 
@@ -40,6 +43,11 @@ export function CalendarBlock({
                 ghost && 'border-2 border-dashed border-primary bg-sand/40',
                 faded && 'opacity-40',
                 !ghost && !faded && 'bg-card',
+                // Der Steg schließt die Lücke zum Block darüber: Was
+                // aneinanderhängt, soll auch zusammenhängend aussehen
+                // (ki-assistent-design3.md §Ketten).
+                chained &&
+                    'relative before:absolute before:-top-3 before:left-9 before:h-3 before:w-0.5 before:bg-sand',
             )}
         >
             {/* Wo eine Dauer auf eine feste Uhrzeit trifft, tritt die belegte

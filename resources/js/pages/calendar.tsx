@@ -170,21 +170,35 @@ export default function Calendar({
                             <>
                                 {blocks.length > 0 && (
                                     <ul className="flex flex-col gap-3">
-                                        {axis.map(({ block, ghost, faded }) => (
-                                            <CalendarBlock
-                                                key={
-                                                    ghost
-                                                        ? `${block.id}-ghost`
-                                                        : block.id
-                                                }
-                                                block={block}
-                                                canComplete={canComplete}
-                                                onToggle={toggle}
-                                                onAdjust={setAdjusting}
-                                                ghost={ghost}
-                                                faded={faded}
-                                            />
-                                        ))}
+                                        {axis.map(
+                                            ({ block, ghost, faded }, index) => (
+                                                <CalendarBlock
+                                                    key={
+                                                        ghost
+                                                            ? `${block.id}-ghost`
+                                                            : block.id
+                                                    }
+                                                    block={block}
+                                                    canComplete={canComplete}
+                                                    onToggle={toggle}
+                                                    onAdjust={setAdjusting}
+                                                    ghost={ghost}
+                                                    faded={faded}
+                                                    // Der Steg erscheint nur,
+                                                    // wenn der Vorgänger auch
+                                                    // wirklich direkt darüber
+                                                    // liegt — sonst zeigte er
+                                                    // auf den falschen Block.
+                                                    chained={
+                                                        block.chainedToId !==
+                                                            null &&
+                                                        axis[index - 1]?.block
+                                                            .id ===
+                                                            block.chainedToId
+                                                    }
+                                                />
+                                            ),
+                                        )}
                                     </ul>
                                 )}
 

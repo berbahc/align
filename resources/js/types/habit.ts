@@ -7,15 +7,49 @@ export type BehaviorType = 'nutrition' | 'movement' | 'learning' | 'other';
  * Tag. `fixed` hängt an einer Uhrzeit und gilt nur an den gewählten Wochentagen
  * — nur diese Form lässt sich erinnern.
  *
+ * `chained` hängt an einer anderen Gewohnheit und beginnt, wo die aufhört —
+ * das Domino-Prinzip aus time-blocking.md. Ihren Platz im Tag leiht sie sich.
+ *
  * `opportunistic` hat gar keinen Platz im Tag: „Treppe statt Aufzug" ergibt
  * sich, wo die Gelegenheit auftaucht. Solche Gewohnheiten stehen nicht auf der
  * Tagesachse und werden nicht als Quote gemessen — versäumt hat nichts, wer an
  * keinem Aufzug vorbeikam.
  */
-export type ScheduleType = 'dynamic' | 'fixed' | 'opportunistic';
+export type ScheduleType =
+    | 'dynamic'
+    | 'fixed'
+    | 'chained'
+    | 'opportunistic';
 
 /** ISO-Wochentag: 1 = Montag … 7 = Sonntag. */
 export type Weekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
+/**
+ * Eine Gewohnheit, an die sich eine andere anhängen lässt.
+ *
+ * `startsAt` ist die Uhrzeit, zu der der Anschluss anfinge — null, wenn die
+ * Kette an einer Situation hängt und niemand die Uhr kennt.
+ */
+export interface ChainCandidate {
+    id: number;
+    title: string;
+    anchor: string;
+    startsAt: string | null;
+}
+
+/**
+ * Ein belegtes Fenster im Tag — Grundlage des Überschneidungshinweises.
+ *
+ * `from === to` heißt: Zeitpunkt ohne bekannte Dauer. Er belegt nur seine eine
+ * Minute, weil niemand weiß, wie lange er wirklich dauert.
+ */
+export interface BusySlot {
+    id: number;
+    title: string;
+    days: Weekday[];
+    from: string;
+    to: string;
+}
 
 /** Die Einheit, in der der Umfang einer Gewohnheit gemessen wird. */
 export type MeasureUnit = 'minutes' | 'pages' | 'liters' | 'times';
@@ -184,6 +218,13 @@ export interface CalendarBlock {
      * `✦ Passt der Zeitpunkt?`-Chip hätte dort nichts anzubieten.
      */
     adjustable: boolean;
+    /**
+     * Die Gewohnheit, an der dieser Block hängt — sonst null.
+     *
+     * Liegt sie direkt darüber, zieht die Achse einen Steg dazwischen: Was
+     * zusammengehört, soll auch zusammenhängend aussehen.
+     */
+    chainedToId: number | null;
 }
 
 /**

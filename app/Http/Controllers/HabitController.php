@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Actions\CreateHabit;
+use App\Actions\ReleaseChainedHabits;
 use App\Enums\BehaviorType;
 use App\Enums\MeasureUnit;
 use App\Enums\ScheduleType;
@@ -20,6 +21,61 @@ use Inertia\Response;
 
 class HabitController extends Controller
 {
+    /**
+     * Die Gewohnheiten, an die sich etwas anhängen lässt.
+     *
+     * Nur eigene, laufende, mit Platz im Tag — und beim Bearbeiten nicht die
+     * bearbeitete selbst. Ihre belegte Spanne reist mit, damit die Oberfläche
+     * gleich sagen kann, wann der Anschluss anfinge.
+     *
+     * @return list<array{id: int, title: string, anchor: string, startsAt: string|null}>
+     */
+    private function chainCandidates(User $user, ?Habit $except = null): array
+    {
+        return array_values($user->habits()
+            ->active()
+            ->with('chainedTo')
+            ->orderBy('position')
+            ->get()
+            ->reject(fn (Habit $habit): bool => $except !== null && $habit->is($except))
+            ->filter(fn (Habit $habit): bool => $habit->schedule_type->isPlanned())
+            ->map(fn (Habit $habit): array => [
+                'id' => $habit->id,
+                'title' => $habit->titleWithMeasure(),
+                'anchor' => $habit->scheduleLabel(),
+                // Wo der Anschluss läge — null, wenn die Kette an einer
+                // Situation hängt und niemand die Uhrzeit kennt.
+                'startsAt' => $habit->endsAt()?->format('H:i'),
+            ])
+            ->all());
+    }
+
+    /**
+     * Die belegten Fenster des Tages — Grundlage des Überschneidungshinweises.
+     *
+     * Nur feste Uhrzeiten belegen etwas: Eine Situation hat keinen Zeitpunkt,
+     * mit dem sich kollidieren ließe. Ohne Dauer ist das Fenster ein Punkt und
+     * stößt nur mit einem Start zur selben Minute zusammen.
+     *
+     * @return list<array{id: int, title: string, days: list<int>, from: string, to: string}>
+     */
+    private function busySlots(User $user, ?Habit $except = null): array
+    {
+        return array_values($user->habits()
+            ->active()
+            ->get()
+            ->reject(fn (Habit $habit): bool => $except !== null && $habit->is($except))
+            ->filter(fn (Habit $habit): bool => $habit->startsAt() !== null)
+            ->map(fn (Habit $habit): array => [
+                'id' => $habit->id,
+                'title' => $habit->title,
+                'days' => $habit->scheduled_days ?? [1, 2, 3, 4, 5, 6, 7],
+                'from' => $habit->startsAt()?->format('H:i') ?? '',
+                'to' => ($habit->endsAt() ?? $habit->startsAt())?->format('H:i') ?? '',
+            ])
+            ->all());
+    }
+
     /**
      * Das Fenster, über das gezählt wird, was sich ergeben hat.
      *
@@ -127,6 +183,8 @@ class HabitController extends Controller
             'triggerSuggestions' => array_keys(Habit::TriggerSuggestions),
             'scheduleTypes' => ScheduleType::options(),
             'measureUnits' => MeasureUnit::options(),
+            'chainCandidates' => $this->chainCandidates($request->user()),
+            'busySlots' => $this->busySlots($request->user()),
             // Für den letzten, freiwilligen Schritt: mit wem und wann.
             'friends' => $request->user()->friends()->map(fn (User $friend): array => [
                 'id' => $friend->id,
@@ -183,7 +241,7 @@ class HabitController extends Controller
      * weiß, was er will. Wer etwas ändert, weiß es — für ihn wäre die Führung
      * ein Umweg.
      */
-    public function edit(Habit $habit): Response
+    public function edit(Request $request, Habit $habit): Response
     {
         Gate::authorize('update', $habit);
 
@@ -198,6 +256,7 @@ class HabitController extends Controller
                 'triggerSituation' => $habit->trigger_situation,
                 'scheduledTime' => $habit->scheduled_time?->format('H:i'),
                 'scheduledDays' => $habit->scheduled_days,
+                'chainedToHabitId' => $habit->chained_to_habit_id,
                 'smallestStep' => $habit->smallest_step,
                 'motivation' => $habit->motivation,
             ],
@@ -205,6 +264,10 @@ class HabitController extends Controller
             'triggerSuggestions' => array_keys(Habit::TriggerSuggestions),
             'scheduleTypes' => ScheduleType::options(),
             'measureUnits' => MeasureUnit::options(),
+            // Ohne `$habit` in der Liste: An sich selbst lässt sich nichts
+            // anhängen, und das eigene Fenster ist kein Konflikt.
+            'chainCandidates' => $this->chainCandidates($request->user(), $habit),
+            'busySlots' => $this->busySlots($request->user(), $habit),
         ]);
     }
 
@@ -277,9 +340,14 @@ class HabitController extends Controller
      * Oberfläche bietet ihn aber nur im Archiv an, nach dem Beenden und hinter
      * einer Rückfrage, die die Zahl der betroffenen Tage nennt.
      */
-    public function destroy(Habit $habit): RedirectResponse
+    public function destroy(Habit $habit, ReleaseChainedHabits $release): RedirectResponse
     {
         Gate::authorize('delete', $habit);
+
+        // Was hinter dieser Gewohnheit hing, erbt ihren Anker, bevor sie geht.
+        // Ohne diesen Schritt setzte `nullOnDelete` nur die Spalte zurück, und
+        // die Nachfolger stünden als „noch ohne Anschluss" da.
+        $release->handle($habit);
 
         $habit->delete();
 
