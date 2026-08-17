@@ -1,4 +1,5 @@
 import type { Auth } from '@/types/auth';
+import type { AppointmentDay } from '@/types/friendship';
 import type { HabitReminder } from '@/types/habit';
 
 declare module 'react' {
@@ -33,6 +34,8 @@ declare module '@inertiajs/core' {
                 /** Satzteil wie „ab heute" oder „am Montag um 17:00". */
                 when: string;
                 scheduledToday: boolean;
+                /** Die nächsten Termine dieser Gewohnheit, höchstens drei. */
+                days: AppointmentDay[];
             };
             /**
              * Bestätigung nach einer Anpassung. Trägt den vorherigen Anker mit,

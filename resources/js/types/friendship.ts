@@ -13,7 +13,13 @@ export type FriendshipPerson = {
     initial: string;
 };
 
-/** Einer der drei Tage, die Screen A1 zur Wahl stellt. */
+/**
+ * Einer der Tage, die Screen A1 zur Wahl stellt.
+ *
+ * Höchstens drei, und keine Kalendertage, sondern die nächsten Termine der
+ * Gewohnheit: Eine Mo–Fr-Gewohnheit bietet samstags Montag, Dienstag,
+ * Mittwoch an. Wer seltener übt, hat entsprechend weniger zur Wahl.
+ */
 export type AppointmentDay = {
     /** ISO-Datum, so wie der Server es zurückerwartet. */
     value: string;
@@ -72,7 +78,7 @@ export type AppointmentNotice = {
 /**
  * Was mit jemandem ansteht — zugesagt oder von einem selbst gefragt.
  *
- * Höchstens drei Tage weit und nach dem Tag spurlos weg: Das ist der
+ * Höchstens eine Woche weit und nach dem Tag spurlos weg: Das ist der
  * Unterschied zum gemeinsamen Kalender, der mit Top-2 46 % abgelehnt wurde.
  */
 export type UpcomingAppointment = {

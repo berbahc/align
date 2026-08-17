@@ -522,9 +522,11 @@ test('the dashboard offers three days and the own circle', function () {
     $this->actingAs($me)
         ->get(route('dashboard'))
         ->assertInertia(fn (AssertableInertia $page) => $page
-            ->has('appointmentDays', 3)
-            ->where('appointmentDays.0.label', 'heute')
-            ->where('appointmentDays.1.label', 'morgen')
+            // Die Tage hängen an der Gewohnheit, nicht an der Seite: Jede
+            // Zeile bringt die ihren mit.
+            ->has('habits.0.appointmentDays', 3)
+            ->where('habits.0.appointmentDays.0.label', 'heute')
+            ->where('habits.0.appointmentDays.1.label', 'morgen')
             ->has('friends', 1)
             ->where('appointmentsEnabled', true)
             ->etc());
@@ -543,7 +545,10 @@ test('creating a habit leads to the companion step when there is someone to ask'
         ->assertRedirect(route('habits.create'))
         // Die Kennung trägt den Schritt: die Verabredung hängt daran.
         ->assertInertiaFlash('habitCreated.title', 'Schwimmen')
-        ->assertInertiaFlash('habitCreated.anchor', 'nach dem Aufstehen');
+        ->assertInertiaFlash('habitCreated.anchor', 'nach dem Aufstehen')
+        // Die Tage reisen mit der angelegten Gewohnheit, nicht mit der Seite:
+        // Beim Aufruf des Formulars gab es sie noch gar nicht.
+        ->assertInertiaFlash('habitCreated.days.0.label', 'heute');
 
     $this->actingAs($me)
         ->get(route('habits.create'))
@@ -551,7 +556,6 @@ test('creating a habit leads to the companion step when there is someone to ask'
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->component('habits/create')
             ->has('friends', 1)
-            ->has('appointmentDays', 3)
             ->etc());
 });
 
@@ -606,4 +610,148 @@ test('guests are kept out of every appointment route', function () {
     $this->post(route('appointments.store', $habit))->assertRedirect(route('login'));
     $this->patch(route('appointments.update', $appointment))->assertRedirect(route('login'));
     $this->delete(route('appointments.destroy', $appointment))->assertRedirect(route('login'));
+});
+
+/**
+ * Die Tage der Verabredung kommen aus der Gewohnheit, nicht aus dem Kalender.
+ *
+ * §4 hält für die Uhrzeit fest, dass die Verabredung keine eigene Zeitlogik
+ * erfindet, sondern die vorhandene nutzt. Für die Tage galt das bis hierher
+ * nicht: Angeboten wurden immer heute, morgen und übermorgen — auch für eine
+ * Mo–Fr-Gewohnheit am Samstag, an drei Tagen also, an denen sie nicht stattfand.
+ */
+test('the offered days are the next occurrences of the habit, not the next calendar days', function () {
+    // Ein Samstag: Die Mo–Fr-Gewohnheit steht an diesem und am nächsten Tag
+    // nicht an, der nächste Termin ist Montag.
+    Carbon::setTestNow(Carbon::parse('2026-08-15 10:00'));
+
+    [$me, , $habit] = pair();
+    $habit->forceFill(['schedule_type' => 'fixed', 'scheduled_time' => '17:00', 'scheduled_days' => [1, 2, 3, 4, 5]])->save();
+
+    $days = Appointment::dayChoicesFor($habit);
+
+    expect(array_column($days, 'label'))->toBe(['Montag', 'Dienstag', 'Mittwoch'])
+        ->and($days[0]['value'])->toBe('2026-08-17');
+});
+
+test('a habit that comes around once a week offers the one day it has', function () {
+    // Montag; die Gewohnheit steht sonntags an, also in sechs Tagen — noch
+    // innerhalb der Woche, die der Horizont zulässt.
+    Carbon::setTestNow(Carbon::parse('2026-08-17 10:00'));
+
+    [$me, , $habit] = pair();
+    $habit->forceFill(['schedule_type' => 'fixed', 'scheduled_time' => '09:00', 'scheduled_days' => [7]])->save();
+
+    $days = Appointment::dayChoicesFor($habit);
+
+    // Lieber eine ehrliche Wahl als drei erfundene: Der zweite Termin läge in
+    // zwei Wochen und wäre Terminplanung, keine Verabredung.
+    expect($days)->toHaveCount(1)
+        ->and($days[0]['value'])->toBe('2026-08-23');
+});
+
+test('a slot that is over today is not offered for today', function () {
+    // 18:30 an einem Dienstag, die Gewohnheit läuft um 17:00 — heute ist
+    // vorbei, also fängt die Wahl morgen an.
+    Carbon::setTestNow(Carbon::parse('2026-08-18 18:30'));
+
+    [$me, , $habit] = pair();
+    $habit->forceFill(['schedule_type' => 'fixed', 'scheduled_time' => '17:00', 'scheduled_days' => [1, 2, 3, 4, 5]])->save();
+
+    expect(array_column(Appointment::dayChoicesFor($habit), 'label'))
+        ->toBe(['morgen', 'Donnerstag', 'Freitag']);
+});
+
+test('a situation has no time that could be over', function () {
+    // Dieselbe späte Stunde, aber „nach der Vorlesung" ist kein Zeitpunkt, den
+    // die Uhr widerlegen könnte.
+    Carbon::setTestNow(Carbon::parse('2026-08-18 23:30'));
+
+    [$me, , $habit] = pair();
+
+    expect(array_column(Appointment::dayChoicesFor($habit), 'label'))
+        ->toBe(['heute', 'morgen', 'Donnerstag']);
+});
+
+test('a habit without a day of its own falls back to the next three days', function () {
+    Carbon::setTestNow(Carbon::parse('2026-08-17 10:00'));
+
+    [$me, , $habit] = pair();
+    // „Treppe statt Aufzug" steht an keinem Tag an — und kann an jedem
+    // vorkommen. Ohne diesen Rückfall bliebe die Wahl leer.
+    $habit->forceFill([
+        'schedule_type' => 'opportunistic',
+        'trigger_situation' => null,
+        'scheduled_time' => null,
+        'scheduled_days' => null,
+    ])->save();
+
+    expect(array_column(Appointment::dayChoicesFor($habit), 'label'))
+        ->toBe(['heute', 'morgen', 'Mittwoch']);
+});
+
+test('a chained habit is offered on the days of the habit it hangs on', function () {
+    // Samstag; der Anker läuft Mo–Fr, die gekoppelte Gewohnheit also auch.
+    Carbon::setTestNow(Carbon::parse('2026-08-15 10:00'));
+
+    [$me, , $anchor] = pair();
+    $anchor->forceFill(['schedule_type' => 'fixed', 'scheduled_time' => '17:00', 'scheduled_days' => [1, 2, 3, 4, 5]])->save();
+
+    $chained = Habit::factory()->for($me)->create([
+        'title' => 'Dehnen',
+        'schedule_type' => 'chained',
+        'chained_to_habit_id' => $anchor->id,
+        'trigger_situation' => null,
+        'scheduled_time' => null,
+        'scheduled_days' => null,
+    ]);
+
+    expect(array_column(Appointment::dayChoicesFor($chained), 'label'))
+        ->toBe(['Montag', 'Dienstag', 'Mittwoch']);
+});
+
+test('a day the habit does not run on is refused even when it is tomorrow', function () {
+    // Freitag: Morgen ist Samstag, und samstags läuft die Gewohnheit nicht.
+    Carbon::setTestNow(Carbon::parse('2026-08-21 10:00'));
+
+    [$me, $friend, $habit] = pair();
+    $habit->forceFill(['schedule_type' => 'fixed', 'scheduled_time' => '17:00', 'scheduled_days' => [1, 2, 3, 4, 5]])->save();
+
+    // Die Prüfung liest dieselbe Liste, die die Oberfläche anbietet — ein Tag
+    // ohne Termin kommt auch dann nicht durch, wenn er nah genug läge.
+    $this->actingAs($me)
+        ->post(route('appointments.store', $habit), [
+            'friend_id' => $friend->id,
+            'scheduled_for' => Carbon::tomorrow()->toDateString(),
+        ])
+        ->assertSessionHasErrors('scheduled_for');
+
+    $this->actingAs($me)
+        ->post(route('appointments.store', $habit), [
+            'friend_id' => $friend->id,
+            'scheduled_for' => '2026-08-24',
+        ])
+        ->assertSessionHasNoErrors();
+});
+
+test('an appointment further out than three days still shows up as upcoming', function () {
+    // Montag, Verabredung am Sonntag: Ohne das größere Fenster stünde sie
+    // nirgends — weder auf der Übersicht noch im Community-Bereich.
+    Carbon::setTestNow(Carbon::parse('2026-08-17 10:00'));
+
+    [$me, $friend, $habit] = pair();
+
+    Appointment::factory()->accepted()->create([
+        'habit_id' => $habit->id,
+        'requester_id' => $me->id,
+        'invitee_id' => $friend->id,
+        'scheduled_for' => Carbon::parse('2026-08-23'),
+    ]);
+
+    $this->actingAs($me)
+        ->get(route('community'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('upcomingAppointments', 1)
+            ->where('upcomingAppointments.0.day', 'Sonntag')
+            ->etc());
 });

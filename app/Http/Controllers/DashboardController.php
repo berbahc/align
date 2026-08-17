@@ -79,7 +79,6 @@ class DashboardController extends Controller
                 'name' => $friend->name,
                 'initial' => mb_strtoupper(mb_substr($friend->name, 0, 1)),
             ])->all(),
-            'appointmentDays' => Appointment::dayChoices(),
             'appointmentsEnabled' => $request->user()->appointments_enabled,
             // Für das Übernehmen einer fremden Gewohnheit: Dieselbe Wahl wie
             // beim Anlegen, weil es dasselbe Anlegen ist — nur mit vorbelegten
@@ -114,6 +113,11 @@ class DashboardController extends Controller
                 // durch die Hintertür doch ein Dauerstatus.
                 'companion' => $habit->appointments->first()?->companion($request->user()),
                 'appointmentId' => $habit->appointments->first()?->id,
+                // Die Tage, an denen sich genau diese Gewohnheit zu zweit
+                // angehen lässt. Sie stehen an der Zeile und nicht einmal für
+                // die ganze Seite: Eine Mo–Fr-Gewohnheit lässt sich freitags
+                // nicht für morgen verabreden, eine tägliche schon.
+                'appointmentDays' => Appointment::dayChoicesFor($habit),
             ])->all(),
         ]);
     }

@@ -24,6 +24,10 @@ const EYEBROW =
  * Die Verabredung gilt für einen einzelnen Tag, nicht für die Gewohnheit. Eine
  * wiederkehrende wäre faktisch der gemeinsame Kalender, der mit Top-2 46 %
  * abgelehnt wurde (community_feature3.md §9).
+ *
+ * Zur Wahl stehen die nächsten Termine **dieser** Gewohnheit, nicht die
+ * nächsten drei Kalendertage: Eine Mo–Fr-Gewohnheit, samstags angelegt, ließe
+ * sich sonst nur für Tage verabreden, an denen sie gar nicht stattfindet.
  */
 export function CompanionStep({
     habitId,
@@ -109,6 +113,15 @@ export function CompanionStep({
 
             <section>
                 <h3 className={EYEBROW}>Wann?</h3>
+
+                {/* Die Tage kommen aus der Gewohnheit, nicht aus dem Kalender.
+                    Wer selten übt, hat entsprechend weniger zur Wahl — der
+                    Satz sagt, warum, statt eine leere Stelle zu lassen. */}
+                {days.length < 3 && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                        Öfter steht „{title}" in dieser Woche nicht an.
+                    </p>
+                )}
 
                 <div className="mt-3 flex flex-wrap gap-3">
                     {days.map((option) => (

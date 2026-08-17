@@ -41,7 +41,7 @@ interface CommunityProps {
     appointmentRequests: AppointmentRequest[];
     /** Absagen, die einmal erscheinen und beim Wegklicken verschwinden. */
     appointmentNotices: Notice[];
-    /** Was in den nächsten drei Tagen mit jemandem ansteht. */
+    /** Was in der kommenden Woche mit jemandem ansteht. */
     upcomingAppointments: UpcomingAppointment[];
     /** Für das Übernehmen einer fremden Gewohnheit — dieselbe Wahl wie beim Anlegen. */
     scheduleTypes: ScheduleTypeOption[];

@@ -24,6 +24,9 @@ import type { AppointmentDay, FriendshipPerson, Habit } from '@/types';
  * gemeinsamer Kalender (Top-2 46 %, die härteste Ablehnung nach den Bildern):
  * Es wird kein Zeitraum abgeglichen, sondern ein Anker geteilt.
  *
+ * Das gilt auch für die Tage: Angeboten werden die nächsten Termine dieser
+ * Gewohnheit, nicht die nächsten drei Kalendertage.
+ *
  * Die Auswahl folgt §5.5: 2 px Rahmen in `primary`, **Füllung unverändert**.
  * Kein Farbblock, kein Häkchen — dasselbe leise Muster wie beim Mood-Selector.
  */
@@ -120,6 +123,16 @@ export function AppointmentSheet({
                                 <h3 className="text-[11px] font-semibold tracking-[0.11em] text-muted-foreground uppercase">
                                     Wann?
                                 </h3>
+
+                                {/* Zur Wahl stehen die nächsten Termine dieser
+                                    Gewohnheit. Wer selten übt, hat weniger als
+                                    drei — der Satz sagt, warum. */}
+                                {days.length < 3 && (
+                                    <p className="mt-2 text-xs text-muted-foreground">
+                                        Öfter steht „{habit?.title}" in dieser
+                                        Woche nicht an.
+                                    </p>
+                                )}
 
                                 <div className="mt-3 flex flex-wrap gap-3">
                                     {days.map((option) => (

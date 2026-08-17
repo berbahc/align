@@ -1,3 +1,5 @@
+import type { AppointmentDay } from './friendship';
+
 export type BehaviorType = 'nutrition' | 'movement' | 'learning' | 'other';
 
 /**
@@ -15,11 +17,7 @@ export type BehaviorType = 'nutrition' | 'movement' | 'learning' | 'other';
  * Tagesachse und werden nicht als Quote gemessen — versäumt hat nichts, wer an
  * keinem Aufzug vorbeikam.
  */
-export type ScheduleType =
-    | 'dynamic'
-    | 'fixed'
-    | 'chained'
-    | 'opportunistic';
+export type ScheduleType = 'dynamic' | 'fixed' | 'chained' | 'opportunistic';
 
 /** ISO-Wochentag: 1 = Montag … 7 = Sonntag. */
 export type Weekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
@@ -98,6 +96,13 @@ export interface Habit {
     companion: { name: string; initial: string } | null;
     /** Die zugesagte Verabredung von heute, zum Auflösen. */
     appointmentId: number | null;
+    /**
+     * Die Tage, an denen sich diese Gewohnheit zu zweit angehen lässt.
+     *
+     * Steht an der Zeile, nicht an der Seite: Eine Mo–Fr-Gewohnheit lässt sich
+     * freitags nicht für morgen verabreden, eine tägliche schon.
+     */
+    appointmentDays: AppointmentDay[];
 }
 
 /** Eine Gewohnheit in der Verwaltungsansicht — dort zählt die Planung, nicht der heutige Tag. */
