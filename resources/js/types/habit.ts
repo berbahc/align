@@ -105,6 +105,15 @@ export interface Habit {
     appointmentDays: AppointmentDay[];
 }
 
+/**
+ * Der Block der Gewohnheiten-Liste.
+ *
+ * `whenever` ist keine dritte Zeitangabe, sondern ihr Gegenteil: Was sich
+ * ergibt, steht an keinem Tag an und kann an jedem vorkommen. Unter „später"
+ * stünde es falsch — später heißt, dass ein Termin bevorsteht.
+ */
+export type HabitGroup = 'today' | 'later' | 'whenever';
+
 /** Eine Gewohnheit in der Verwaltungsansicht — dort zählt die Planung, nicht der heutige Tag. */
 export interface ManagedHabit {
     id: number;
@@ -122,8 +131,8 @@ export interface ManagedHabit {
      * kein Wochentag gewählt ist.
      */
     nextOccurrence: string | null;
-    /** Trennt die beiden Blöcke der Liste: steht heute an oder später. */
-    dueToday: boolean;
+    /** Der Block der Liste, in dem die Zeile steht — vom Server bestimmt. */
+    group: HabitGroup;
     /**
      * Die laufende Serie als fertige Zeile („12× in Folge"), sonst null.
      *

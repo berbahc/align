@@ -136,11 +136,11 @@ class HabitController extends Controller
                 // diese Zeile sähe die Liste sortiert aus, ohne dass erkennbar
                 // wäre, wonach — „17:00 · Mo–Fr" sagt nicht, ob das heute ist.
                 'nextOccurrence' => $habit->nextOccurrenceLabel($today),
-                // Die Trennlinie der Liste: heute oder später. Serverseitig,
-                // weil dieselbe Frage schon die Sortierung entscheidet — sie im
+                // Der Block, in dem die Zeile steht. Serverseitig, weil
+                // dieselbe Frage schon die Sortierung entscheidet — sie im
                 // Browser ein zweites Mal zu beantworten hieße, zwei Antworten
                 // deckungsgleich halten zu müssen.
-                'dueToday' => $habit->isScheduledOn($today),
+                'group' => $this->listGroup($habit, $today),
                 // Die Serie steht hier für jede Gewohnheit einzeln — anders als
                 // auf der Übersicht, die nur die stärkste zeigt. Unterhalb der
                 // Mindestlänge bleibt die Zeile weg statt eine „1" zu behaupten.
@@ -162,6 +162,26 @@ class HabitController extends Controller
                 'completionCount' => (int) $habit->completions_count,
             ])->all(),
         ]);
+    }
+
+    /**
+     * In welchem Block der Liste die Gewohnheit steht.
+     *
+     * Zwei Blöcke reichten, solange jede Gewohnheit einen Tag hatte: Sie stand
+     * heute an oder später. „Treppe statt Aufzug" hat keinen — sie steht an
+     * keinem Tag an und kann an jedem vorkommen. Unter „später" wäre sie
+     * falsch einsortiert: Später heißt, dass ein Termin bevorsteht, und genau
+     * den gibt es hier nicht.
+     *
+     * @return 'today'|'later'|'whenever'
+     */
+    private function listGroup(Habit $habit, Carbon $today): string
+    {
+        if (! $habit->schedule_type->isPlanned()) {
+            return 'whenever';
+        }
+
+        return $habit->isScheduledOn($today) ? 'today' : 'later';
     }
 
     /**

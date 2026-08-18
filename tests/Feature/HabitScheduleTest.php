@@ -274,8 +274,65 @@ test('the habits page marks which habits belong in the today block', function ()
     $this->actingAs($user)
         ->get(route('habits.index'))
         ->assertInertia(fn (AssertableInertia $page) => $page
-            ->where('habits.0.dueToday', true)
-            ->where('habits.1.dueToday', false)
+            ->where('habits.0.group', 'today')
+            ->where('habits.1.group', 'later')
+        );
+});
+
+test('what comes up whenever it comes up stands in its own block', function () {
+    Carbon::setTestNow(Carbon::parse('2026-08-08'));
+
+    $user = User::factory()->create();
+    Habit::factory()->for($user)->create([
+        'title' => 'Wasser trinken',
+        'trigger_situation' => 'nach dem Aufstehen',
+        'position' => 0,
+    ]);
+    Habit::factory()->for($user)->create([
+        'title' => 'Treppe statt Aufzug',
+        'schedule_type' => ScheduleType::Opportunistic,
+        'trigger_situation' => null,
+        'scheduled_time' => null,
+        'scheduled_days' => null,
+        'position' => 1,
+    ]);
+
+    // „Später" hieße, dass ein Termin bevorsteht — und genau den gibt es hier
+    // nicht. Die Gewohnheit steht an keinem Tag an und kann an jedem
+    // vorkommen; im Kalender hat sie aus demselben Grund ihren eigenen Platz
+    // unter der Achse.
+    $this->actingAs($user)
+        ->get(route('habits.index'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('habits.0.group', 'today')
+            ->where('habits.1.group', 'whenever')
+        );
+});
+
+test('a chained habit shares the block of the habit it hangs on', function () {
+    // Samstag: Der Anker läuft Mo–Fr, also stehen beide erst später an.
+    Carbon::setTestNow(Carbon::parse('2026-08-08'));
+
+    $user = User::factory()->create();
+    $anchor = Habit::factory()->for($user)->fixedSchedule('17:00', [1, 2, 3, 4, 5])->create([
+        'title' => 'Spaziergang',
+        'position' => 0,
+    ]);
+    Habit::factory()->for($user)->create([
+        'title' => 'Dehnen',
+        'schedule_type' => ScheduleType::Chained,
+        'chained_to_habit_id' => $anchor->id,
+        'trigger_situation' => null,
+        'scheduled_time' => null,
+        'scheduled_days' => null,
+        'position' => 1,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('habits.index'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('habits.0.group', 'later')
+            ->where('habits.1.group', 'later')
         );
 });
 

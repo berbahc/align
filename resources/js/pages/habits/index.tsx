@@ -11,7 +11,7 @@ import { create } from '@/routes/habits';
 import { store as graduate } from '@/routes/habits/graduation';
 import { update } from '@/routes/habits/reminder';
 import { updateAll } from '@/routes/habits/reminders';
-import type { GraduatedHabit, ManagedHabit } from '@/types';
+import type { GraduatedHabit, HabitGroup, ManagedHabit } from '@/types';
 
 const EYEBROW = 'text-[11px] font-semibold tracking-[0.11em] uppercase';
 
@@ -41,18 +41,30 @@ export default function HabitsIndex({
         remindable.length > 0 &&
         remindable.every((habit) => habit.reminderEnabled);
 
-    const dueToday = habits.filter((habit) => habit.dueToday);
-    const dueLater = habits.filter((habit) => !habit.dueToday);
+    const groups = (
+        [
+            { key: 'heute', heading: 'Steht heute an', group: 'today' },
+            { key: 'spaeter', heading: 'Steht später an', group: 'later' },
+            // Dieselbe Überschrift wie im Kalender, weil es dieselbe Sache ist:
+            // Gewohnheiten ohne Platz im Tag stehen dort unter der Achse statt
+            // darin.
+            {
+                key: 'ergibt',
+                heading: 'Wenn es sich ergibt',
+                group: 'whenever',
+            },
+        ] satisfies { key: string; heading: string; group: HabitGroup }[]
+    )
+        .map((block) => ({
+            ...block,
+            entries: habits.filter((habit) => habit.group === block.group),
+        }))
+        .filter((block) => block.entries.length > 0);
 
-    // Zwei Blöcke lohnen nur, wenn beide besetzt sind. Wer ausschließlich
-    // situative Gewohnheiten hat, sieht sonst eine Überschrift, die nichts
-    // abgrenzt — und am Wochenende stünde „Steht später an" über allem.
-    const splitIntoBlocks = dueToday.length > 0 && dueLater.length > 0;
-
-    const groups = [
-        { key: 'heute', heading: 'Steht heute an', entries: dueToday },
-        { key: 'spaeter', heading: 'Steht später an', entries: dueLater },
-    ].filter((group) => group.entries.length > 0);
+    // Überschriften lohnen nur, wenn sie etwas voneinander abgrenzen. Wer nur
+    // Gewohnheiten einer Art hat, sähe sonst einen Titel über einer Liste ohne
+    // Gegenstück — und am Wochenende stünde „Steht später an" über allem.
+    const splitIntoBlocks = groups.length > 1;
 
     /**
      * Die Berechtigung wird erst beim Einschalten erfragt, nie beim Aufruf der
@@ -161,11 +173,11 @@ export default function HabitsIndex({
                         </CardContent>
                     </Card>
                 ) : (
-                    /* Zwei Blöcke statt einer pro Tag: Bei höchstens fünf
+                    /* Drei Blöcke statt einer pro Tag: Bei höchstens fünf
                        Gewohnheiten wären fünf Überschriften mehr Gliederung als
-                       Inhalt. Was hier zählt, ist die eine Unterscheidung —
-                       betrifft mich heute oder später; der genaue Tag steht
-                       ohnehin in der Zeile. */
+                       Inhalt. Was hier zählt, ist die Unterscheidung — betrifft
+                       mich heute, später, oder wann immer sich die Gelegenheit
+                       ergibt; der genaue Tag steht ohnehin in der Zeile. */
                     <div className="flex flex-col gap-6">
                         {groups.map(({ key, heading, entries }) => (
                             <section key={key} aria-labelledby={key}>
