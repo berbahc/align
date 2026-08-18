@@ -62,7 +62,7 @@ export function ManagedHabitRow({
                             sagt das über seinen Block und schweigt hier, sonst
                             stünde „heute" in jeder zweiten Zeile. */}
                         <span className="mt-0.5 flex min-w-0 items-baseline gap-1.5 text-xs text-muted-foreground">
-                            {!habit.dueToday &&
+                            {habit.group !== 'today' &&
                                 habit.nextOccurrence !== null && (
                                     <>
                                         <span className="shrink-0 font-semibold text-foreground">
@@ -121,7 +121,10 @@ export function ManagedHabitRow({
                             {/* Der einzige Weg zum Bearbeiten in der App: Hier
                                 geht es um die Gewohnheit an sich, auf der
                                 Übersicht um den heutigen Tag. */}
-                            <DropdownMenuItem asChild className="cursor-pointer">
+                            <DropdownMenuItem
+                                asChild
+                                className="cursor-pointer"
+                            >
                                 <Link href={edit(habit.id)}>
                                     <Pencil aria-hidden="true" />
                                     Bearbeiten
