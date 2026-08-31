@@ -13,6 +13,7 @@ import { StreakCard } from '@/components/streak-card';
 import type { Streak } from '@/components/streak-card';
 import { Card, CardContent } from '@/components/ui/card';
 import { UpcomingAppointments } from '@/components/upcoming-appointments';
+import { useCountedNumber } from '@/hooks/use-counted-number';
 import { dashboard } from '@/routes';
 import { destroy as dismissNotice } from '@/routes/appointment-notices';
 import { create, index as habitsIndex } from '@/routes/habits';
@@ -87,6 +88,8 @@ export default function Dashboard({
     const { auth } = usePage().props;
     const firstName = auth.user?.name.split(' ')[0] ?? '';
     const selfInitial = (auth.user?.name.charAt(0) ?? '').toUpperCase();
+
+    const countedPercentage = useCountedNumber(todayProgress.percentage);
 
     // Welche Gewohnheit gerade im Starthilfe-Sheet steht; null heißt zu.
     const [stuckOn, setStuckOn] = useState<Habit | null>(null);
@@ -208,8 +211,11 @@ export default function Dashboard({
             <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 sm:p-6">
                 <header className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
                     <div>
-                        {/* §10 — auf Desktop trägt die Überschrift die Farbe. */}
-                        <h1 className="text-[clamp(1.75rem,4vw,2rem)] leading-tight font-bold text-primary">
+                        {/* §10 — auf Desktop trägt die Überschrift die Farbe.
+                            Negative Laufweite, weil Buchstaben mit wachsendem
+                            Grad optisch auseinanderfallen (Apple, „The Details
+                            of UI Typography"): groß enger, klein weiter. */}
+                        <h1 className="text-[clamp(2rem,7vw,2.75rem)] leading-[1.05] font-bold tracking-[-0.025em] text-primary">
                             {greeting}, {firstName}.
                         </h1>
                         <p className="mt-1 text-sm text-muted-foreground">
@@ -245,17 +251,25 @@ export default function Dashboard({
                 />
 
                 {todayProgress.total > 0 && (
-                    <Card className="gap-0 py-5">
-                        <CardContent className="px-5">
+                    /* §12/§16 — auf dieser Seite trägt genau eine Fläche: die
+                       des Tages. Sie liegt höher (warmer Schatten), ist innen
+                       großzügiger und stellt die Zahl größer. Alles andere
+                       ordnet sich flach darunter. Ohne diesen Unterschied
+                       lesen drei gleich schwere weiße Karten als Liste, nicht
+                       als Hierarchie. */
+                    <Card className="gap-0 border-transparent py-7 shadow-[var(--shadow-lift)]">
+                        <CardContent className="px-6">
                             <p className={`${EYEBROW} text-muted-foreground`}>
                                 Heute
                             </p>
 
                             {/* §3.3 — gemischte Gewichte in einer Zeile:
-                                Zahl 700/primary, Wort 400/muted. */}
+                                Zahl 700/primary, Wort 400/muted. Die Zahl
+                                läuft mit dem Balken hoch statt zu springen;
+                                `tabular-nums` hält die Breite dabei ruhig. */}
                             <p className="mt-2 flex items-baseline gap-2">
-                                <span className="text-[clamp(2rem,6vw,2.25rem)] leading-none font-bold text-primary tabular-nums">
-                                    {todayProgress.percentage} %
+                                <span className="text-[clamp(2.75rem,10vw,3.5rem)] leading-none font-bold tracking-[-0.03em] text-primary tabular-nums">
+                                    {countedPercentage} %
                                 </span>
                                 <span className="text-base text-muted-foreground">
                                     Erledigt
@@ -263,14 +277,19 @@ export default function Dashboard({
                             </p>
 
                             {/* §5.3 — voll gerundet, Füllung primary, Spur sand,
-                                nie ein Prozentwert im Balken. */}
+                                nie ein Prozentwert im Balken.
+
+                                Die Breite läuft auf der kritisch gedämpften
+                                Grundkurve: schnell weg vom alten Wert, ruhig
+                                in den neuen hinein, ohne Überschwingen. Der
+                                Balken misst, er feiert nicht. */}
                             <div
                                 role="img"
                                 aria-label={`${todayProgress.completed} von ${todayProgress.total} Gewohnheiten heute erledigt`}
-                                className="mt-4 h-2 w-full overflow-hidden rounded-full bg-sand"
+                                className="mt-5 h-2.5 w-full overflow-hidden rounded-full bg-sand"
                             >
                                 <div
-                                    className="h-full rounded-full bg-primary transition-[width] duration-200 ease-out"
+                                    className="h-full rounded-full bg-primary transition-[width] duration-[var(--duration-fluid)] ease-[var(--ease-fluid)] motion-reduce:transition-none"
                                     style={{
                                         width: `${todayProgress.percentage}%`,
                                     }}
@@ -302,7 +321,7 @@ export default function Dashboard({
                     <div className="flex flex-wrap items-center justify-between gap-3">
                         <h2
                             id="heutige-gewohnheiten"
-                            className="text-xl leading-tight font-bold"
+                            className="text-xl leading-tight font-bold tracking-[-0.012em]"
                         >
                             Heutige Gewohnheiten
                         </h2>
@@ -316,7 +335,7 @@ export default function Dashboard({
                         {activeCount > 0 && activeCount < maxActive && (
                             <Link
                                 href={create()}
-                                className="inline-flex h-11 cursor-pointer items-center gap-1.5 rounded-full border border-primary px-4 text-sm font-semibold text-primary transition-colors duration-200 hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                                className="inline-flex h-11 cursor-pointer items-center gap-1.5 rounded-full border border-primary px-4 text-sm font-semibold text-primary transition-[background-color,scale] duration-[var(--duration-press)] ease-out hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-safe:active:scale-[0.97]"
                             >
                                 <Plus className="size-4" aria-hidden="true" />
                                 Neu hinzufügen
@@ -324,7 +343,10 @@ export default function Dashboard({
                         )}
                     </div>
 
-                    <Card className="mt-3 gap-0 py-5">
+                    {/* Flach: die Arbeitsfläche des Tages, nicht seine
+                        Kopfzeile. Der Unterschied zur Tageskarte ist die
+                        Höhe, nicht die Farbe. */}
+                    <Card className="mt-3 gap-0 py-5 shadow-none">
                         <CardContent className="px-5">
                             {habits.length > 0 ? (
                                 // §5.1 — keine Trennlinien, Struktur über Abstand.
@@ -356,7 +378,7 @@ export default function Dashboard({
                                     </p>
                                     <Link
                                         href={create()}
-                                        className="inline-flex h-12 cursor-pointer items-center gap-2 rounded-xl bg-primary px-6 text-[15px] font-semibold text-primary-foreground transition-colors duration-200 hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                                        className="inline-flex h-12 cursor-pointer items-center gap-2 rounded-xl bg-primary px-6 text-[15px] font-semibold text-primary-foreground transition-[background-color,scale] duration-[var(--duration-press)] ease-out hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-safe:active:scale-[0.97]"
                                     >
                                         <Plus
                                             className="size-4"
@@ -377,7 +399,7 @@ export default function Dashboard({
                                     — unter{' '}
                                     <Link
                                         href={habitsIndex()}
-                                        className="cursor-pointer font-semibold text-primary underline underline-offset-4 transition-colors duration-200 hover:text-primary/80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                                        className="cursor-pointer font-semibold text-primary underline underline-offset-4 transition-colors duration-[var(--duration-press)] ease-out hover:text-primary/80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring active:text-primary/60"
                                     >
                                         Gewohnheiten
                                     </Link>{' '}
