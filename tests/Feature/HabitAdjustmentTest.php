@@ -219,6 +219,65 @@ test('a malformed time from the model never reaches the interface', function () 
         ->assertJsonPath('alternatives.0.time', '08:00');
 });
 
+test('a suggestion outside the sleep frame never reaches the interface', function () {
+    // Ein Vorschlag um sechs, wenn der Tag um sieben beginnt, würde beim
+    // Übernehmen abgewiesen — er wird deshalb schon hier verworfen, genau wie
+    // eine ungültige Uhrzeit.
+    SuggestBetterAnchor::fake([[
+        'alternatives' => [
+            ['time' => '06:00', 'days' => [1, 2], 'reason' => 'Vor der Aufstehzeit.'],
+            ['time' => '23:45', 'days' => [1], 'reason' => 'Nach der Schlafenszeit.'],
+            ['time' => '08:00', 'days' => [1, 2], 'reason' => 'Brauchbar.'],
+        ],
+    ]]);
+
+    $user = User::factory()->create();
+    $habit = Habit::factory()->for($user)->fixedSchedule('17:00')->create([
+        'created_at' => Carbon::today()->subDays(20),
+    ]);
+
+    $this->actingAs($user)
+        ->postJson(route('habits.adjustment.suggestions', $habit))
+        ->assertOk()
+        ->assertJsonCount(1, 'alternatives')
+        ->assertJsonPath('alternatives.0.time', '08:00');
+});
+
+test('the frame travels into the prompt so the AI knows the day', function () {
+    SuggestBetterAnchor::fake([[
+        'alternatives' => [['time' => '08:00', 'days' => [1], 'reason' => 'Passt.']],
+    ]]);
+
+    $user = User::factory()->create();
+    $habit = Habit::factory()->for($user)->fixedSchedule('17:00')->create([
+        'created_at' => Carbon::today()->subDays(20),
+    ]);
+
+    $this->actingAs($user)
+        ->postJson(route('habits.adjustment.suggestions', $habit))
+        ->assertOk();
+
+    SuggestBetterAnchor::assertPrompted(
+        fn (AgentPrompt $prompt): bool => $prompt->contains('07:00 bis 23:00'),
+    );
+});
+
+test('taking over a time outside the frame is refused', function () {
+    $user = User::factory()->create();
+    $habit = Habit::factory()->for($user)->fixedSchedule('17:00', [1, 2])->create();
+
+    // Die Route lässt sich auch von Hand ansprechen — die Grenze gehört an
+    // die Stelle, an der geschrieben wird.
+    $this->actingAs($user)
+        ->post(route('habits.adjustment.store', $habit), [
+            'scheduled_time' => '05:00',
+            'scheduled_days' => [1, 2],
+        ])
+        ->assertSessionHasErrors('scheduled_time');
+
+    expect($habit->fresh()->scheduled_time->format('H:i'))->toBe('17:00');
+});
+
 test('an answer without a usable alternative counts as a failure', function () {
     SuggestBetterAnchor::fake([['alternatives' => [['situation' => '  ', 'reason' => 'Leer.']]]]);
 

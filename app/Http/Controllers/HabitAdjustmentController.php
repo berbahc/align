@@ -47,17 +47,16 @@ class HabitAdjustmentController extends Controller
     {
         Gate::authorize('update', $habit);
 
-        // Ohne Platz im Tag gibt es keinen besseren Platz im Tag. Die Frage
-        // stellt die Oberfläche für solche Gewohnheiten gar nicht erst; kommt
-        // sie trotzdem an, wird sie hier beantwortet statt an die KI gereicht.
-        abort_unless($habit->schedule_type->isPlanned(), 404);
-
         $misses = $this->misses($habit);
 
         try {
             $alternatives = (new SuggestBetterAnchor(
                 habit: $habit,
                 misses: $misses,
+                // Der Rahmen des Tages: Ein Vorschlag außerhalb würde beim
+                // Übernehmen abgewiesen — die KI soll ihn deshalb gar nicht
+                // erst machen.
+                sleepWindows: $request->user()->sleepWindows(),
                 // Was Align über die Person weiß: ihr Warum, ihr Tagesablauf,
                 // ihr Rhythmus — und welche Zeitpunkte sie schon einmal
                 // angeboten bekam, ohne sie zu nehmen.
@@ -105,8 +104,6 @@ class HabitAdjustmentController extends Controller
     public function store(AdjustHabitRequest $request, Habit $habit): RedirectResponse
     {
         Gate::authorize('update', $habit);
-
-        abort_unless($habit->schedule_type->isPlanned(), 404);
 
         $previousLabel = $habit->scheduleLabel();
         $previous = [

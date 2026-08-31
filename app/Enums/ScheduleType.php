@@ -8,19 +8,14 @@ namespace App\Enums;
  * time-blocking.md setzt situative Cues als Standard: eine Situation löst
  * Verhalten von selbst aus, eine Uhrzeit muss aktiv erinnert werden. Das
  * bleibt die Empfehlung — `Fixed` ist die Ausnahme für Gewohnheiten, die
- * ohnehin an einem festen Zeitpunkt hängen (Kurs, Termin, Schlafenszeit).
+ * ohnehin an einem festen Zeitpunkt hängen (Kurs, Termin), `Chained` das
+ * Domino-Prinzip: eine Gewohnheit hängt an einer anderen.
  *
- * `Opportunistic` ist die dritte Form und die einzige **ohne** Platz im Tag.
- * „Treppe statt Aufzug" oder „eine Station früher aussteigen" haben weder
- * Uhrzeit noch Tagesanker: Sie ergeben sich, wo die Gelegenheit auftaucht, und
- * das kann mehrmals am Tag oder an manchen Tagen gar nicht sein. Felix in der
- * Interviewauswertung beschreibt genau das — „an der Uni bewegt er sich
- * automatisch mehr, weil der Kontext (Wege, Treppen, Campus) das Verhalten
- * auslöst". Der Kontext löst aus, nicht die Uhr.
- *
- * Ihnen eine Stunde zuzuweisen wäre eine erfundene Position, und sie wie
- * geplante Gewohnheiten zu messen ein Vorwurf: Wer nicht an jedem Tag vor einem
- * Aufzug steht, hat nichts versäumt.
+ * Eine vierte Form — `Opportunistic`, „wenn es sich ergibt" — gab es, und sie
+ * ist bewusst wieder weg. „Treppe statt Aufzug" hat weder Uhrzeit noch Dauer
+ * und ließ sich in kein Time-Blocking einbetten; der feste Katalog
+ * ({@see HabitTemplate}) enthält nur noch planbare Aktivitäten. Jede
+ * Gewohnheit hat damit wieder eine Stelle im Tag.
  *
  * Nur `Fixed` kann erinnert werden: ohne Zeitpunkt gibt es kein „10 Minuten
  * vorher".
@@ -30,7 +25,6 @@ enum ScheduleType: string
     case Dynamic = 'dynamic';
     case Fixed = 'fixed';
     case Chained = 'chained';
-    case Opportunistic = 'opportunistic';
 
     /**
      * @return list<array{value: string, label: string, description: string}>
@@ -50,7 +44,6 @@ enum ScheduleType: string
             self::Dynamic => 'Situation',
             self::Fixed => 'Feste Uhrzeit',
             self::Chained => 'Nach einer Gewohnheit',
-            self::Opportunistic => 'Wenn es sich ergibt',
         };
     }
 
@@ -63,31 +56,13 @@ enum ScheduleType: string
             self::Dynamic => 'Hängt an einem Moment im Tag.',
             self::Fixed => 'Steht ohnehin im Kalender.',
             self::Chained => 'Hängt an einer, die schon läuft.',
-            self::Opportunistic => 'Taucht auf, wann sie will.',
         };
-    }
-
-    /**
-     * Hat die Gewohnheit überhaupt eine Stelle im Tag?
-     *
-     * Das ist die Trennlinie, an der fast alles hängt: Was nicht geplant ist,
-     * steht nicht auf der Tagesachse, wird nicht erinnert, hat keine
-     * Konsistenzrate und kann nichts versäumen.
-     *
-     * Der Code war bis hierher als `=== Fixed` gegen **alles andere**
-     * geschrieben. Eine dritte Form würde darin stillschweigend als „dynamisch"
-     * gelten — kein Fehler, nur falsches Verhalten. Deshalb fragen die
-     * Verzweigungen ab jetzt diese Prädikate, nicht mehr den Fall.
-     */
-    public function isPlanned(): bool
-    {
-        return $this !== self::Opportunistic;
     }
 
     /**
      * Trägt die Gewohnheit ihren Anker selbst?
      *
-     * `Chained` ist geplant, aber leiht sich die Stelle im Tag von der
+     * `Chained` ist geplant, leiht sich die Stelle im Tag aber von der
      * Gewohnheit, an der sie hängt: „nach dem Spaziergang" ist nur so genau,
      * wie der Spaziergang es ist. Deshalb hat sie weder Situation noch Uhrzeit
      * — und deshalb muss überall dort, wo eine der beiden Spalten gelesen wird,

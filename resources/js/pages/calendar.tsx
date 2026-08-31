@@ -1,5 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Moon, Sun } from 'lucide-react';
 import { useState } from 'react';
 import {
     AdjustmentSheet,
@@ -9,6 +9,7 @@ import { CalendarBlock } from '@/components/calendar-block';
 import { Card, CardContent } from '@/components/ui/card';
 import { calendar } from '@/routes';
 import { destroy, store } from '@/routes/habits/completions';
+import { show as sleepShow } from '@/routes/sleep';
 import type { AnchorAlternative, CalendarBlock as Block } from '@/types';
 
 interface CalendarProps {
@@ -23,19 +24,45 @@ interface CalendarProps {
     previousDate: string | null;
     nextDate: string;
     blocks: Block[];
-    /**
-     * Gewohnheiten ohne Platz im Tag.
-     *
-     * Sie stehen unter der Achse statt darin: „Treppe statt Aufzug" hat keine
-     * Stelle im Tag, und ihr eine zu geben hieße, sie zu erfinden.
-     */
-    whenever: Block[];
+    /** Der Rahmen des gezeigten Tages: wann er anfängt … */
+    wakeTime: string;
+    /** … und wann er endet. Beide Marker führen zum Schlafplan. */
+    bedtime: string;
 }
 
-const EYEBROW = 'text-[11px] font-semibold tracking-[0.11em] uppercase';
-
 const NAV_BUTTON =
-    'flex size-11 shrink-0 items-center justify-center rounded-full text-primary transition-colors duration-200 hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
+    'flex size-11 shrink-0 items-center justify-center rounded-full text-primary transition-colors duration-[var(--duration-press)] ease-out hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
+
+/**
+ * Ein Rand des Tages auf der Achse — Aufstehen oben, Schlafenszeit unten.
+ *
+ * Kein Block, sondern eine Grenze: Der Marker hat keinen Haken und keine
+ * Dauer, er sagt nur, wo der Tag anfängt und aufhört. Er führt zum
+ * Schlafplan, weil er dort herkommt.
+ */
+function FrameMarker({
+    icon: Icon,
+    label,
+    time,
+}: {
+    icon: typeof Sun;
+    label: string;
+    time: string;
+}) {
+    return (
+        <Link
+            href={sleepShow()}
+            className="flex items-center gap-3 rounded-xl px-1 py-1 text-muted-foreground transition-colors duration-[var(--duration-press)] ease-out hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
+            <span className="flex size-8 shrink-0 items-center justify-center">
+                <Icon className="size-4" strokeWidth={1.5} aria-hidden="true" />
+            </span>
+            <span className="text-xs font-semibold tabular-nums">{time}</span>
+            <span className="text-xs">{label}</span>
+            <span className="ml-1 h-px flex-1 bg-border" aria-hidden="true" />
+        </Link>
+    );
+}
 
 export default function Calendar({
     date,
@@ -45,7 +72,8 @@ export default function Calendar({
     previousDate,
     nextDate,
     blocks,
-    whenever,
+    wakeTime,
+    bedtime,
 }: CalendarProps) {
     /** Welcher Block gerade im Anpassungs-Sheet steht; null heißt zu. */
     const [adjusting, setAdjusting] = useState<Block | null>(null);
@@ -157,7 +185,7 @@ export default function Calendar({
                     <div className="flex justify-center">
                         <Link
                             href={calendar()}
-                            className="cursor-pointer text-sm font-semibold text-primary underline underline-offset-4 transition-colors duration-200 hover:text-primary/80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                            className="cursor-pointer text-sm font-semibold text-primary underline underline-offset-4 transition-colors duration-[var(--duration-press)] ease-out hover:text-primary/80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                         >
                             Zurück zu heute
                         </Link>
@@ -166,89 +194,62 @@ export default function Calendar({
 
                 <Card className="gap-0 py-5">
                     <CardContent className="px-5">
-                        {blocks.length > 0 || whenever.length > 0 ? (
-                            <>
-                                {blocks.length > 0 && (
-                                    <ul className="flex flex-col gap-3">
-                                        {axis.map(
-                                            ({ block, ghost, faded }, index) => (
-                                                <CalendarBlock
-                                                    key={
-                                                        ghost
-                                                            ? `${block.id}-ghost`
-                                                            : block.id
-                                                    }
-                                                    block={block}
-                                                    canComplete={canComplete}
-                                                    onToggle={toggle}
-                                                    onAdjust={setAdjusting}
-                                                    ghost={ghost}
-                                                    faded={faded}
-                                                    // Der Steg erscheint nur,
-                                                    // wenn der Vorgänger auch
-                                                    // wirklich direkt darüber
-                                                    // liegt — sonst zeigte er
-                                                    // auf den falschen Block.
-                                                    chained={
-                                                        block.chainedToId !==
-                                                            null &&
-                                                        axis[index - 1]?.block
-                                                            .id ===
-                                                            block.chainedToId
-                                                    }
-                                                />
-                                            ),
-                                        )}
-                                    </ul>
-                                )}
+                        {/* Der Rahmen umschließt die Achse: Der Tag beginnt
+                            beim Aufstehen und endet bei der Schlafenszeit —
+                            beides kommt aus dem Schlafplan und führt dorthin. */}
+                        <FrameMarker
+                            icon={Sun}
+                            label="Aufstehen"
+                            time={wakeTime}
+                        />
 
-                                {/* Unter der Achse, nicht darin: Diese
-                                    Gewohnheiten haben keine Stelle im Tag, und
-                                    eine erfundene Uhrzeit hätte den ganzen Tag
-                                    um sie herum verschoben. Sie gelten den
-                                    ganzen Tag, deshalb steht keine Zeit dabei. */}
-                                {whenever.length > 0 && (
-                                    <section
-                                        className={
-                                            blocks.length > 0
-                                                ? 'mt-5 border-t border-border pt-5'
-                                                : undefined
+                        {blocks.length > 0 ? (
+                            <ul className="my-3 flex flex-col gap-3">
+                                {axis.map(({ block, ghost, faded }, index) => (
+                                    <CalendarBlock
+                                        key={
+                                            ghost
+                                                ? `${block.id}-ghost`
+                                                : block.id
                                         }
-                                    >
-                                        <h2
-                                            className={`${EYEBROW} mb-2 text-muted-foreground`}
-                                        >
-                                            Wenn es sich ergibt
-                                        </h2>
-                                        <ul className="flex flex-col gap-3">
-                                            {whenever.map((block) => (
-                                                <CalendarBlock
-                                                    key={block.id}
-                                                    block={block}
-                                                    canComplete={canComplete}
-                                                    onToggle={toggle}
-                                                    onAdjust={setAdjusting}
-                                                />
-                                            ))}
-                                        </ul>
-                                    </section>
-                                )}
-
-                                {/* Kein Fehler, sondern eine Grenze: Was der
-                                    Wochenstreifen nicht mehr zeigt, lässt sich
-                                    auch nicht mehr nachtragen. */}
-                                {!canComplete && (
-                                    <p className="mt-5 border-t border-border pt-4 text-sm leading-relaxed text-muted-foreground">
-                                        Dieser Tag lässt sich nur noch ansehen.
-                                        Nachtragen geht für die letzten sieben
-                                        Tage.
-                                    </p>
-                                )}
-                            </>
+                                        block={block}
+                                        canComplete={canComplete}
+                                        onToggle={toggle}
+                                        onAdjust={setAdjusting}
+                                        ghost={ghost}
+                                        faded={faded}
+                                        // Der Steg erscheint nur, wenn der
+                                        // Vorgänger auch wirklich direkt
+                                        // darüber liegt — sonst zeigte er auf
+                                        // den falschen Block.
+                                        chained={
+                                            block.chainedToId !== null &&
+                                            axis[index - 1]?.block.id ===
+                                                block.chainedToId
+                                        }
+                                    />
+                                ))}
+                            </ul>
                         ) : (
                             /* §1.5 — benannt wird, was gilt, nicht was fehlt. */
-                            <p className="text-sm leading-relaxed text-muted-foreground">
+                            <p className="my-3 px-1 text-sm leading-relaxed text-muted-foreground">
                                 Für diesen Tag war nichts vorgesehen.
+                            </p>
+                        )}
+
+                        <FrameMarker
+                            icon={Moon}
+                            label="Schlafenszeit"
+                            time={bedtime}
+                        />
+
+                        {/* Kein Fehler, sondern eine Grenze: Was der
+                            Wochenstreifen nicht mehr zeigt, lässt sich auch
+                            nicht mehr nachtragen. */}
+                        {!canComplete && (
+                            <p className="mt-5 border-t border-border pt-4 text-sm leading-relaxed text-muted-foreground">
+                                Dieser Tag lässt sich nur noch ansehen.
+                                Nachtragen geht für die letzten sieben Tage.
                             </p>
                         )}
                     </CardContent>

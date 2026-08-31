@@ -13,6 +13,7 @@ use App\Http\Controllers\HabitController;
 use App\Http\Controllers\HabitGraduationController;
 use App\Http\Controllers\HabitReminderController;
 use App\Http\Controllers\OnboardingController;
+use App\Http\Controllers\SleepScheduleController;
 use App\Http\Controllers\SmallestStepController;
 use App\Http\Middleware\EnsureOnboarded;
 use Illuminate\Support\Facades\Route;
@@ -23,12 +24,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Bewusst außerhalb von EnsureOnboarded — sonst leitet die Weiche auf sich selbst.
     Route::get('onboarding', [OnboardingController::class, 'show'])->name('onboarding.show');
     Route::post('onboarding', [OnboardingController::class, 'store'])->name('onboarding.store');
+    // Der Rahmen kommt vor der ersten Gewohnheit: Erst wenn der Tag Anfang
+    // und Ende hat, gibt es etwas, worin sich planen lässt.
+    Route::post('onboarding/sleep', [OnboardingController::class, 'storeSleep'])->name('onboarding.sleep');
     Route::post('onboarding/skip', [OnboardingController::class, 'skip'])->name('onboarding.skip');
 
     Route::middleware(EnsureOnboarded::class)->group(function () {
         Route::get('dashboard', DashboardController::class)->name('dashboard');
 
         Route::get('calendar', CalendarController::class)->name('calendar');
+
+        // Der Schlafplan ist der Rahmen des Tages: Aufsteh- und Schlafenszeit
+        // je Wochentag, Wecker und die Erinnerung vor der Schlafenszeit.
+        Route::get('sleep', [SleepScheduleController::class, 'show'])->name('sleep.show');
+        Route::put('sleep', [SleepScheduleController::class, 'update'])->name('sleep.update');
 
         // Der Freundeskreis ist der Unterbau der Verabredung: Screen 1 aus
         // community_feature3.md wählt aus Personen, die es vorher geben muss.

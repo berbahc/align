@@ -5,6 +5,7 @@ namespace App\Ai\Agents;
 use App\Ai\Agents\Concerns\SpeaksForAlign;
 use App\Ai\UserContext;
 use App\Models\Habit;
+use App\Models\SleepSchedule;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
 use Laravel\Ai\Attributes\Temperature;
@@ -48,10 +49,12 @@ class SuggestBetterAnchor implements Agent, HasStructuredOutput
 
     /**
      * @param  list<array{date: string, label: string}>  $misses  Tage, an denen die Gewohnheit anstand und nichts geschah
+     * @param  array<int, array{weekday: int, wakeTime: string, bedtime: string, alarmEnabled: bool}>  $sleepWindows  Der Rahmen je Wochentag
      */
     public function __construct(
         private readonly Habit $habit,
         private readonly array $misses,
+        private readonly array $sleepWindows = [],
         private readonly ?UserContext $context = null,
     ) {}
 
@@ -236,6 +239,18 @@ class SuggestBetterAnchor implements Agent, HasStructuredOutput
             return null;
         }
 
+        // Was außerhalb des Schlafrahmens läge, weist die Validierung beim
+        // Übernehmen ab — ein Vorschlag, der in eine Fehlermeldung führt, ist
+        // schlechter als einer weniger. Dieselbe Begründung wie oben bei der
+        // ungültigen Uhrzeit.
+        foreach ($days as $day) {
+            $window = $this->sleepWindows[$day] ?? null;
+
+            if ($window !== null && ! SleepSchedule::containsTime($window['wakeTime'], $window['bedtime'], $time)) {
+                return null;
+            }
+        }
+
         return ['time' => $time, 'days' => $days, 'reason' => $this->reason($candidate)];
     }
 
@@ -250,6 +265,39 @@ class SuggestBetterAnchor implements Agent, HasStructuredOutput
     }
 
     /**
+     * Der Schlafrahmen als eine Zeile für den Prompt — oder nichts.
+     *
+     * Gleiche Zeiten an allen Tagen werden zu einem Satz zusammengezogen; wo
+     * sie sich unterscheiden, steht jeder Tag einzeln. Bei einer situativen
+     * Gewohnheit bleibt die Zeile weg: „nach dem Aufstehen" hat keine Uhrzeit,
+     * die im Rahmen liegen müsste.
+     */
+    private function frameLine(): ?string
+    {
+        if ($this->sleepWindows === [] || ! $this->habit->schedule_type->hasClockTime()) {
+            return null;
+        }
+
+        $spans = collect($this->sleepWindows)
+            ->map(fn (array $window): string => $window['wakeTime'].' bis '.$window['bedtime']);
+
+        if ($spans->unique()->count() === 1) {
+            return 'Der Tag dieser Person geht von '.$spans->first().' Uhr. Schlage nichts außerhalb vor.';
+        }
+
+        $perDay = collect($this->sleepWindows)
+            ->map(fn (array $window): string => sprintf(
+                '%s %s bis %s',
+                Habit::WeekdayAbbreviations[$window['weekday']],
+                $window['wakeTime'],
+                $window['bedtime'],
+            ))
+            ->implode(', ');
+
+        return 'Der Tag dieser Person geht je Wochentag verschieden lang ('.$perDay.'). Schlage nichts außerhalb vor.';
+    }
+
+    /**
      * Was der Agent über diese Gewohnheit erfährt.
      */
     private function question(): string
@@ -259,6 +307,16 @@ class SuggestBetterAnchor implements Agent, HasStructuredOutput
             'Bereich: '.$this->habit->behavior_type->label(),
             'Bisheriger Zeitpunkt: '.$this->habit->scheduleLabel(),
         ];
+
+        // Der Rahmen gehört in den Prompt, nicht nur in die Nachprüfung: Ein
+        // Vorschlag um sechs, wenn der Tag um sieben beginnt, ist keine
+        // Alternative — er wird verworfen, und die Person bekommt eine
+        // Auswahl weniger, ohne zu erfahren, warum.
+        $frame = $this->frameLine();
+
+        if ($frame !== null) {
+            $lines[] = $frame;
+        }
 
         if ($this->misses !== []) {
             $weekdays = collect($this->misses)

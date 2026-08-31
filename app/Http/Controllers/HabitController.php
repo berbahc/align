@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\CreateHabit;
 use App\Actions\ReleaseChainedHabits;
-use App\Enums\BehaviorType;
+use App\Enums\HabitCategory;
 use App\Enums\MeasureUnit;
 use App\Enums\ScheduleType;
 use App\Http\Requests\StoreHabitRequest;
@@ -38,7 +38,6 @@ class HabitController extends Controller
             ->orderBy('position')
             ->get()
             ->reject(fn (Habit $habit): bool => $except !== null && $habit->is($except))
-            ->filter(fn (Habit $habit): bool => $habit->schedule_type->isPlanned())
             ->map(fn (Habit $habit): array => [
                 'id' => $habit->id,
                 'title' => $habit->titleWithMeasure(),
@@ -75,14 +74,6 @@ class HabitController extends Controller
             ])
             ->all());
     }
-
-    /**
-     * Das Fenster, über das gezählt wird, was sich ergeben hat.
-     *
-     * Dieselben dreißig Tage wie bei der Konsistenzrate — damit die beiden
-     * Zahlen nebeneinander dasselbe meinen, auch wenn sie verschieden rechnen.
-     */
-    private const int RecentCountDays = 30;
 
     /**
      * Die Verwaltungsansicht: alle aktiven Gewohnheiten mit ihrer Planung.
@@ -145,13 +136,9 @@ class HabitController extends Controller
                 // auf der Übersicht, die nur die stärkste zeigt. Unterhalb der
                 // Mindestlänge bleibt die Zeile weg statt eine „1" zu behaupten.
                 'streak' => $this->streakLabel($habit),
-                // Was sich ergibt, kennt keine Serie: Zwei Tage ohne Gelegenheit
-                // würden den Kulanztag aufbrauchen und die Kette reißen lassen,
-                // obwohl nichts versäumt wurde. Gezählt wird stattdessen, was
-                // war — ohne Soll, gegen das es sich messen ließe.
-                'recentCount' => $habit->schedule_type->isPlanned()
-                    ? null
-                    : $habit->completionsSince(self::RecentCountDays).'× in '.self::RecentCountDays.' Tagen',
+                // Der Bereich aus dem Katalog — `null` bei Gewohnheiten aus
+                // der Zeit der freien Eingabe.
+                'categoryLabel' => $habit->category()?->label(),
             ])->all(),
             'graduatedHabits' => $graduated->map(fn (Habit $habit): array => [
                 'id' => $habit->id,
@@ -165,22 +152,12 @@ class HabitController extends Controller
     }
 
     /**
-     * In welchem Block der Liste die Gewohnheit steht.
+     * In welchem Block der Liste die Gewohnheit steht: heute oder später.
      *
-     * Zwei Blöcke reichten, solange jede Gewohnheit einen Tag hatte: Sie stand
-     * heute an oder später. „Treppe statt Aufzug" hat keinen — sie steht an
-     * keinem Tag an und kann an jedem vorkommen. Unter „später" wäre sie
-     * falsch einsortiert: Später heißt, dass ein Termin bevorsteht, und genau
-     * den gibt es hier nicht.
-     *
-     * @return 'today'|'later'|'whenever'
+     * @return 'today'|'later'
      */
     private function listGroup(Habit $habit, Carbon $today): string
     {
-        if (! $habit->schedule_type->isPlanned()) {
-            return 'whenever';
-        }
-
         return $habit->isScheduledOn($today) ? 'today' : 'later';
     }
 
@@ -199,10 +176,14 @@ class HabitController extends Controller
     public function create(Request $request): Response
     {
         return Inertia::render('habits/create', [
-            'directions' => BehaviorType::options(),
+            'categories' => HabitCategory::options(),
             'triggerSuggestions' => array_keys(Habit::TriggerSuggestions),
             'scheduleTypes' => ScheduleType::options(),
-            'measureUnits' => MeasureUnit::options(),
+            'durationLimits' => MeasureUnit::minutesLimits(),
+            // Der Rahmen des Tages, für den Hinweis am Uhrzeit-Stepper: Was
+            // außerhalb liegt, weist der Server ohnehin ab — die Oberfläche
+            // soll es vorher sagen können.
+            'sleepWindows' => array_values($request->user()->sleepWindows()),
             'chainCandidates' => $this->chainCandidates($request->user()),
             'busySlots' => $this->busySlots($request->user()),
             // Für den letzten, freiwilligen Schritt: mit wem. Das Wann steht
@@ -275,9 +256,14 @@ class HabitController extends Controller
             'habit' => [
                 'id' => $habit->id,
                 'title' => $habit->title,
+                // Die Identität steht fest — sie wird angezeigt, nicht
+                // bearbeitet. Der Bereich sagt, wo im Katalog sie herkommt.
+                'categoryLabel' => $habit->category()?->label(),
                 'behaviorType' => $habit->behavior_type->value,
-                'targetAmount' => $habit->target_amount,
-                'targetUnit' => $habit->target_unit?->value,
+                // Die Dauer, in Minuten. Alte Gewohnheiten konnten einen
+                // Umfang in Seiten oder Litern haben — der lässt sich nicht
+                // als Dauer vorbelegen und beginnt beim Startwert des Steppers.
+                'durationMinutes' => $habit->durationMinutes(),
                 'scheduleType' => $habit->schedule_type->value,
                 'triggerSituation' => $habit->trigger_situation,
                 'scheduledTime' => $habit->scheduled_time?->format('H:i'),
@@ -286,10 +272,10 @@ class HabitController extends Controller
                 'smallestStep' => $habit->smallest_step,
                 'motivation' => $habit->motivation,
             ],
-            'directions' => BehaviorType::options(),
             'triggerSuggestions' => array_keys(Habit::TriggerSuggestions),
             'scheduleTypes' => ScheduleType::options(),
-            'measureUnits' => MeasureUnit::options(),
+            'durationLimits' => MeasureUnit::minutesLimits(),
+            'sleepWindows' => array_values($request->user()->sleepWindows()),
             // Ohne `$habit` in der Liste: An sich selbst lässt sich nichts
             // anhängen, und das eigene Fenster ist kein Konflikt.
             'chainCandidates' => $this->chainCandidates($request->user(), $habit),
@@ -334,10 +320,6 @@ class HabitController extends Controller
      */
     private function nextOccurrenceLabel(Habit $habit, ?Carbon $next): string
     {
-        if (! $habit->schedule_type->isPlanned()) {
-            return 'sobald es sich ergibt';
-        }
-
         if (! $habit->schedule_type->hasClockTime()) {
             return 'ab heute';
         }

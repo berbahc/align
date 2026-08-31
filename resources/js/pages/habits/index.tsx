@@ -6,14 +6,13 @@ import { ManagedHabitRow } from '@/components/managed-habit-row';
 import { Card, CardContent } from '@/components/ui/card';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { requestReminderPermission } from '@/hooks/use-habit-reminders';
+import { OUTLINE_BUTTON } from '@/lib/interaction';
 import { dashboard } from '@/routes';
 import { create } from '@/routes/habits';
 import { store as graduate } from '@/routes/habits/graduation';
 import { update } from '@/routes/habits/reminder';
 import { updateAll } from '@/routes/habits/reminders';
 import type { GraduatedHabit, HabitGroup, ManagedHabit } from '@/types';
-
-const EYEBROW = 'text-[11px] font-semibold tracking-[0.11em] uppercase';
 
 interface HabitsIndexProps {
     habits: ManagedHabit[];
@@ -45,14 +44,6 @@ export default function HabitsIndex({
         [
             { key: 'heute', heading: 'Steht heute an', group: 'today' },
             { key: 'spaeter', heading: 'Steht später an', group: 'later' },
-            // Dieselbe Überschrift wie im Kalender, weil es dieselbe Sache ist:
-            // Gewohnheiten ohne Platz im Tag stehen dort unter der Achse statt
-            // darin.
-            {
-                key: 'ergibt',
-                heading: 'Wenn es sich ergibt',
-                group: 'whenever',
-            },
         ] satisfies { key: string; heading: string; group: HabitGroup }[]
     )
         .map((block) => ({
@@ -111,7 +102,7 @@ export default function HabitsIndex({
             <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-4 sm:p-6">
                 <header className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
                     <div>
-                        <h1 className="text-[clamp(1.75rem,4vw,2rem)] leading-tight font-bold text-primary">
+                        <h1 className="type-title text-primary">
                             Gewohnheiten
                         </h1>
 
@@ -131,26 +122,27 @@ export default function HabitsIndex({
                     </div>
 
                     {!isAtLimit && (
-                        <Link
-                            href={create()}
-                            className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-full border border-primary px-4 text-sm font-semibold text-primary transition-colors duration-200 hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                        >
+                        <Link href={create()} className={OUTLINE_BUTTON}>
                             <Plus className="size-4" aria-hidden="true" />
                             Neu hinzufügen
                         </Link>
                     )}
                 </header>
 
-                {remindable.length > 0 && (
+                {/* Ein Sammelschalter über genau einem Schalter ist derselbe
+                    Schalter zweimal — er lohnt erst, wenn er etwas
+                    zusammenfasst (§16 Simplicity). */}
+                {remindable.length > 1 && (
                     <Card>
                         <CardContent className="flex items-center justify-between gap-4">
                             <div className="min-w-0">
                                 <p className="text-[15px] font-semibold">
-                                    Erinnerung 10 Min vorher
+                                    Alle Erinnerungen
                                 </p>
                                 <p className="mt-0.5 text-xs text-muted-foreground">
-                                    Erscheint in der App. Als Systemhinweis nur,
-                                    wenn du gerade in einem anderen Tab bist.
+                                    Schaltet die Erinnerung für alle{' '}
+                                    {remindable.length} Gewohnheiten mit fester
+                                    Uhrzeit auf einmal.
                                 </p>
                             </div>
                             <ToggleSwitch
@@ -173,11 +165,11 @@ export default function HabitsIndex({
                         </CardContent>
                     </Card>
                 ) : (
-                    /* Drei Blöcke statt einer pro Tag: Bei höchstens fünf
+                    /* Zwei Blöcke statt einer pro Tag: Bei höchstens fünf
                        Gewohnheiten wären fünf Überschriften mehr Gliederung als
                        Inhalt. Was hier zählt, ist die Unterscheidung — betrifft
-                       mich heute, später, oder wann immer sich die Gelegenheit
-                       ergibt; der genaue Tag steht ohnehin in der Zeile. */
+                       mich heute oder später; der genaue Tag steht ohnehin in
+                       der Zeile. */
                     <div className="flex flex-col gap-6">
                         {groups.map(({ key, heading, entries }) => (
                             <section key={key} aria-labelledby={key}>
@@ -188,7 +180,9 @@ export default function HabitsIndex({
                                 {splitIntoBlocks ? (
                                     <h2
                                         id={key}
-                                        className={`${EYEBROW} mb-2 text-muted-foreground`}
+                                        className={
+                                            'type-eyebrow mb-2 text-muted-foreground'
+                                        }
                                     >
                                         {heading}
                                     </h2>
@@ -216,7 +210,9 @@ export default function HabitsIndex({
                 {graduatedHabits.length > 0 && (
                     <section className="flex flex-col gap-3">
                         <div>
-                            <h2 className={`${EYEBROW} text-muted-foreground`}>
+                            <h2
+                                className={'type-eyebrow text-muted-foreground'}
+                            >
                                 Beendet
                             </h2>
                             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">

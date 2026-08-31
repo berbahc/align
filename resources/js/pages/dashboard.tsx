@@ -8,12 +8,15 @@ import { FriendRequestNotice } from '@/components/friend-request-notice';
 import { HabitAdoptionSheet } from '@/components/habit-adoption-sheet';
 import { HabitRow } from '@/components/habit-row';
 import type { ScheduleTypeOption } from '@/components/schedule-picker';
+import { SleepCard } from '@/components/sleep-card';
+import type { SleepCardData } from '@/components/sleep-card';
 import { StartingHelpSheet } from '@/components/starting-help-sheet';
 import { StreakCard } from '@/components/streak-card';
 import type { Streak } from '@/components/streak-card';
 import { Card, CardContent } from '@/components/ui/card';
 import { UpcomingAppointments } from '@/components/upcoming-appointments';
 import { useCountedNumber } from '@/hooks/use-counted-number';
+import { OUTLINE_BUTTON, PRIMARY_BUTTON, QUIET_LINK } from '@/lib/interaction';
 import { dashboard } from '@/routes';
 import { destroy as dismissNotice } from '@/routes/appointment-notices';
 import { create, index as habitsIndex } from '@/routes/habits';
@@ -25,6 +28,7 @@ import type {
     FriendshipPerson,
     Habit,
     HabitBlueprint,
+    SleepWindow,
 } from '@/types';
 
 interface TodayProgress {
@@ -52,6 +56,10 @@ interface DashboardProps {
     /** Für das Übernehmen einer fremden Gewohnheit — dieselbe Wahl wie beim Anlegen. */
     scheduleTypes: ScheduleTypeOption[];
     triggerSuggestions: string[];
+    /** Der Rahmen des heutigen Tages: Schlafen heute, Aufstehen morgen. */
+    sleepCard: SleepCardData;
+    /** Der eigene Schlafrahmen je Wochentag — fürs Übernahme-Sheet. */
+    sleepWindows: SleepWindow[];
     todayProgress: TodayProgress;
     /** Anteil erfüllter Tage der letzten 30 Tage; null, solange es keine Gewohnheiten gibt. */
     consistency: number | null;
@@ -65,8 +73,6 @@ interface DashboardProps {
     maxActive: number;
 }
 
-const EYEBROW = 'text-[11px] font-semibold tracking-[0.11em] uppercase';
-
 export default function Dashboard({
     greeting,
     today,
@@ -78,6 +84,8 @@ export default function Dashboard({
     appointmentsEnabled,
     scheduleTypes,
     triggerSuggestions,
+    sleepCard,
+    sleepWindows,
     todayProgress,
     consistency,
     streak,
@@ -215,7 +223,7 @@ export default function Dashboard({
                             Negative Laufweite, weil Buchstaben mit wachsendem
                             Grad optisch auseinanderfallen (Apple, „The Details
                             of UI Typography"): groß enger, klein weiter. */}
-                        <h1 className="text-[clamp(2rem,7vw,2.75rem)] leading-[1.05] font-bold tracking-[-0.025em] text-primary">
+                        <h1 className="type-display text-primary">
                             {greeting}, {firstName}.
                         </h1>
                         <p className="mt-1 text-sm text-muted-foreground">
@@ -259,7 +267,7 @@ export default function Dashboard({
                        als Hierarchie. */
                     <Card className="gap-0 border-transparent py-7 shadow-[var(--shadow-lift)]">
                         <CardContent className="px-6">
-                            <p className={`${EYEBROW} text-muted-foreground`}>
+                            <p className={'type-eyebrow text-muted-foreground'}>
                                 Heute
                             </p>
 
@@ -321,7 +329,7 @@ export default function Dashboard({
                     <div className="flex flex-wrap items-center justify-between gap-3">
                         <h2
                             id="heutige-gewohnheiten"
-                            className="text-xl leading-tight font-bold tracking-[-0.012em]"
+                            className="type-subheading"
                         >
                             Heutige Gewohnheiten
                         </h2>
@@ -333,10 +341,7 @@ export default function Dashboard({
                             gibt. Ab fünf Gewohnheiten entfällt er ebenfalls,
                             weil das Anlegen dann ohnehin abgewiesen würde. */}
                         {activeCount > 0 && activeCount < maxActive && (
-                            <Link
-                                href={create()}
-                                className="inline-flex h-11 cursor-pointer items-center gap-1.5 rounded-full border border-primary px-4 text-sm font-semibold text-primary transition-[background-color,scale] duration-[var(--duration-press)] ease-out hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-safe:active:scale-[0.97]"
-                            >
+                            <Link href={create()} className={OUTLINE_BUTTON}>
                                 <Plus className="size-4" aria-hidden="true" />
                                 Neu hinzufügen
                             </Link>
@@ -378,7 +383,7 @@ export default function Dashboard({
                                     </p>
                                     <Link
                                         href={create()}
-                                        className="inline-flex h-12 cursor-pointer items-center gap-2 rounded-xl bg-primary px-6 text-[15px] font-semibold text-primary-foreground transition-[background-color,scale] duration-[var(--duration-press)] ease-out hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-safe:active:scale-[0.97]"
+                                        className={`${PRIMARY_BUTTON} w-auto`}
                                     >
                                         <Plus
                                             className="size-4"
@@ -399,7 +404,7 @@ export default function Dashboard({
                                     — unter{' '}
                                     <Link
                                         href={habitsIndex()}
-                                        className="cursor-pointer font-semibold text-primary underline underline-offset-4 transition-colors duration-[var(--duration-press)] ease-out hover:text-primary/80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring active:text-primary/60"
+                                        className={QUIET_LINK}
                                     >
                                         Gewohnheiten
                                     </Link>{' '}
@@ -417,6 +422,11 @@ export default function Dashboard({
                     appointments={upcomingAppointments}
                     selfInitial={selfInitial}
                 />
+
+                {/* Ganz unten, wo der Tag endet: Der Rahmen ist der ruhigste
+                    Teil der Übersicht — er will nichts, er sagt nur, wann
+                    Schluss ist und wann es weitergeht. */}
+                <SleepCard sleep={sleepCard} />
             </div>
 
             <StartingHelpSheet
@@ -429,6 +439,7 @@ export default function Dashboard({
                 noticeId={adopting?.noticeId}
                 scheduleTypes={scheduleTypes}
                 triggerSuggestions={triggerSuggestions}
+                sleepWindows={sleepWindows}
                 onOpenChange={(open) => !open && setAdopting(null)}
             />
 

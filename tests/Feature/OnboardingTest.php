@@ -1,6 +1,7 @@
 <?php
 
-use App\Enums\BehaviorType;
+use App\Enums\HabitCategory;
+use App\Enums\HabitTemplate;
 use App\Models\Habit;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia;
@@ -13,7 +14,7 @@ test('a freshly registered user is sent to onboarding instead of an empty dashbo
         ->assertRedirect(route('onboarding.show'));
 });
 
-test('onboarding offers directions, each with its own student habit suggestions', function () {
+test('onboarding starts with the frame, then offers the catalog', function () {
     $user = User::factory()->notOnboarded()->create();
 
     $this->actingAs($user)
@@ -21,17 +22,41 @@ test('onboarding offers directions, each with its own student habit suggestions'
         ->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->component('onboarding')
-            ->has('directions', 4)
-            ->has('directions.0.suggestions')
+            // Ohne gespeicherten Rahmen zeigt die Seite zuerst die Frage nach
+            // Aufsteh- und Schlafenszeit.
+            ->where('hasSleepSchedule', false)
+            ->has('categories', 4)
+            ->has('categories.0.templates')
             ->has('triggerSuggestions', count(Habit::TriggerSuggestions))
         );
 });
 
-test('every direction carries suggestions so the second step is never empty', function () {
-    foreach (BehaviorType::cases() as $direction) {
-        expect($direction->suggestions())->not->toBeEmpty()
-            ->and($direction->label())->not->toBeEmpty()
-            ->and($direction->description())->not->toBeEmpty();
+test('the onboarding frame is stored for all seven weekdays', function () {
+    $user = User::factory()->notOnboarded()->create();
+
+    $this->actingAs($user)
+        ->post(route('onboarding.sleep'), [
+            'wake_time' => '06:30',
+            'bedtime' => '22:30',
+        ])
+        ->assertRedirect(route('onboarding.show'));
+
+    expect($user->sleepSchedules()->count())->toBe(7)
+        ->and($user->sleepWindowFor(3)['wakeTime'])->toBe('06:30')
+        ->and($user->sleepWindowFor(7)['bedtime'])->toBe('22:30');
+
+    // Beim nächsten Aufruf steht die zweite Stufe an: die erste Gewohnheit.
+    $this->get(route('onboarding.show'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('hasSleepSchedule', true)
+        );
+});
+
+test('every category carries templates so the second step is never empty', function () {
+    foreach (HabitCategory::cases() as $category) {
+        expect($category->templates())->not->toBeEmpty()
+            ->and($category->label())->not->toBeEmpty()
+            ->and($category->description())->not->toBeEmpty();
     }
 });
 
@@ -40,8 +65,8 @@ test('completing onboarding creates a committed habit and releases the dashboard
 
     $this->actingAs($user)
         ->post(route('onboarding.store'), [
-            'title' => '10 Seiten lesen',
-            'behavior_type' => BehaviorType::Learning->value,
+            'template_key' => HabitTemplate::Lesen->value,
+            'target_amount' => 20,
             'trigger_situation' => 'vor dem Schlafengehen',
             'motivation' => 'damit ich abends runterkomme',
         ])
@@ -49,10 +74,11 @@ test('completing onboarding creates a committed habit and releases the dashboard
 
     $habit = $user->habits()->sole();
 
-    expect($habit->title)->toBe('10 Seiten lesen')
+    expect($habit->title)->toBe('Lesen')
+        ->and($habit->template())->toBe(HabitTemplate::Lesen)
         ->and($habit->trigger_situation)->toBe('vor dem Schlafengehen')
         ->and($habit->motivation)->toBe('damit ich abends runterkomme')
-        ->and($habit->behavior_type)->toBe(BehaviorType::Learning)
+        ->and($habit->behavior_type)->toBe(HabitTemplate::Lesen->behaviorType())
         // Der letzte Schritt ist das ausdrückliche „Ich nehme mir das vor".
         ->and($habit->committed_at)->not->toBeNull()
         ->and($user->refresh()->onboarded_at)->not->toBeNull();
@@ -79,11 +105,10 @@ test('onboarding rejects an empty habit', function () {
 
     $this->actingAs($user)
         ->post(route('onboarding.store'), [
-            'behavior_type' => '',
-            'title' => '',
+            'template_key' => '',
             'trigger_situation' => '',
         ])
-        ->assertSessionHasErrors(['behavior_type', 'title', 'trigger_situation']);
+        ->assertSessionHasErrors(['template_key', 'trigger_situation', 'target_amount']);
 
     expect($user->refresh()->onboarded_at)->toBeNull();
 });
@@ -95,41 +120,43 @@ test('a habit can be created from the dashboard later', function () {
 
     $this->actingAs($user)
         ->post(route('habits.store'), [
-            'title' => 'Morgentraining',
-            'behavior_type' => BehaviorType::Movement->value,
+            'template_key' => HabitTemplate::Krafttraining->value,
+            'target_amount' => 45,
             'trigger_situation' => 'nach dem Aufstehen',
         ])
         ->assertRedirect(route('dashboard'));
 
-    expect($user->habits()->sole()->title)->toBe('Morgentraining');
+    expect($user->habits()->sole()->title)->toBe('Krafttraining');
 });
 
 test('new habits are appended to the end of the list', function () {
     $user = User::factory()->create();
-    // Titel explizit setzen: die Factory würfelt aus einer festen Liste, in
-    // der auch der hier gesuchte Titel vorkommt — sonst ist der Test flaky.
-    Habit::factory()->for($user)->create(['title' => 'Erste', 'position' => 0]);
-    Habit::factory()->for($user)->create(['title' => 'Zweite', 'position' => 1]);
+    // Vorlagen explizit setzen: die Factory würfelt aus dem Katalog, in dem
+    // auch die hier gesuchte Vorlage vorkommt — sonst ist der Test flaky.
+    Habit::factory()->for($user)->fromTemplate(HabitTemplate::Joggen)->create(['position' => 0]);
+    Habit::factory()->for($user)->fromTemplate(HabitTemplate::Lesen)->create(['position' => 1]);
 
     $this->actingAs($user)->post(route('habits.store'), [
-        'title' => 'Trinken',
-        'behavior_type' => BehaviorType::Nutrition->value,
+        'template_key' => HabitTemplate::Meditieren->value,
+        'target_amount' => 10,
         'trigger_situation' => 'nach dem Mittagessen',
     ]);
 
-    expect($user->habits()->where('title', 'Trinken')->sole()->position)->toBe(2);
+    expect($user->habits()->where('title', 'Meditieren')->sole()->position)->toBe(2);
 });
 
-test('an unknown direction is refused', function () {
+test('a habit outside the catalog is refused', function () {
     $user = User::factory()->create();
 
+    // Die freie Eingabe ist bewusst weg: Ein Titel im Request ist kein Feld
+    // mehr, und ein erfundener Vorlagen-Schlüssel trifft nichts.
     $this->actingAs($user)
         ->post(route('habits.store'), [
-            'behavior_type' => 'astrologie',
-            'title' => 'Sterne deuten',
+            'template_key' => 'sterne-deuten',
+            'target_amount' => 10,
             'trigger_situation' => 'nach dem Aufstehen',
         ])
-        ->assertSessionHasErrors('behavior_type');
+        ->assertSessionHasErrors('template_key');
 
     expect($user->habits()->count())->toBe(0);
 });
@@ -140,11 +167,11 @@ test('the sixth active habit is refused by the server, not only by the interface
 
     $this->actingAs($user)
         ->post(route('habits.store'), [
-            'title' => 'Eine zu viel',
-            'behavior_type' => BehaviorType::Other->value,
+            'template_key' => HabitTemplate::Meditieren->value,
+            'target_amount' => 10,
             'trigger_situation' => 'nach dem Aufstehen',
         ])
-        ->assertSessionHasErrors('title');
+        ->assertSessionHasErrors('template_key');
 
     expect($user->habits()->count())->toBe(Habit::MaxActivePerUser);
 });
@@ -156,8 +183,8 @@ test('a graduated habit frees a slot', function () {
 
     $this->actingAs($user)
         ->post(route('habits.store'), [
-            'title' => 'Passt noch rein',
-            'behavior_type' => BehaviorType::Other->value,
+            'template_key' => HabitTemplate::Meditieren->value,
+            'target_amount' => 10,
             'trigger_situation' => 'nach dem Aufstehen',
         ])
         ->assertSessionHasNoErrors();

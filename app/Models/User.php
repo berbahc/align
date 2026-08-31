@@ -26,6 +26,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property Carbon|null $email_verified_at
  * @property Carbon|null $onboarded_at
  * @property bool $appointments_enabled
+ * @property bool $bedtime_reminder_enabled
  * @property string $password
  * @property string|null $two_factor_secret
  * @property string|null $two_factor_recovery_codes
@@ -53,6 +54,7 @@ class User extends Authenticatable implements PasskeyUser
      */
     protected $attributes = [
         'appointments_enabled' => true,
+        'bedtime_reminder_enabled' => true,
     ];
 
     /**
@@ -61,6 +63,64 @@ class User extends Authenticatable implements PasskeyUser
     public function habits(): HasMany
     {
         return $this->hasMany(Habit::class);
+    }
+
+    /**
+     * Der Schlafrhythmus — höchstens eine Zeile je Wochentag.
+     *
+     * @return HasMany<SleepSchedule, $this>
+     */
+    public function sleepSchedules(): HasMany
+    {
+        return $this->hasMany(SleepSchedule::class);
+    }
+
+    /**
+     * Der Rahmen aller sieben Wochentage, Lücken mit der Voreinstellung gefüllt.
+     *
+     * Der Rahmen existiert immer — auch wer nie etwas eingestellt hat, hat
+     * einen Tag mit Anfang und Ende. Gespeichert ist nur die Abweichung;
+     * hier wird beides zu einer vollständigen Woche zusammengelegt, damit
+     * kein Aufrufer die Voreinstellung selbst kennen muss.
+     *
+     * @return array<int, array{weekday: int, wakeTime: string, bedtime: string, alarmEnabled: bool}>
+     */
+    public function sleepWindows(): array
+    {
+        $custom = $this->sleepSchedules->keyBy('weekday');
+
+        $windows = [];
+
+        foreach (range(1, 7) as $weekday) {
+            $schedule = $custom->get($weekday);
+
+            $windows[$weekday] = $schedule instanceof SleepSchedule
+                ? [
+                    'weekday' => $weekday,
+                    'wakeTime' => $schedule->wake_time->format('H:i'),
+                    'bedtime' => $schedule->bedtime->format('H:i'),
+                    'alarmEnabled' => $schedule->alarm_enabled,
+                ]
+                : [
+                    'weekday' => $weekday,
+                    'wakeTime' => SleepSchedule::DefaultWakeTime,
+                    'bedtime' => SleepSchedule::DefaultBedtime,
+                    // Ein Wecker, den niemand gestellt hat, klingelt nicht.
+                    'alarmEnabled' => false,
+                ];
+        }
+
+        return $windows;
+    }
+
+    /**
+     * Der Rahmen eines einzelnen Wochentags (ISO, 1 = Montag).
+     *
+     * @return array{weekday: int, wakeTime: string, bedtime: string, alarmEnabled: bool}
+     */
+    public function sleepWindowFor(int $weekday): array
+    {
+        return $this->sleepWindows()[$weekday];
     }
 
     /**
@@ -176,6 +236,7 @@ class User extends Authenticatable implements PasskeyUser
             'email_verified_at' => 'datetime',
             'onboarded_at' => 'datetime',
             'appointments_enabled' => 'boolean',
+            'bedtime_reminder_enabled' => 'boolean',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
         ];

@@ -1,6 +1,6 @@
 <?php
 
-use App\Enums\BehaviorType;
+use App\Enums\HabitTemplate;
 use App\Enums\MeasureUnit;
 use App\Enums\ScheduleType;
 use App\Models\Habit;
@@ -81,9 +81,8 @@ test('a habit cannot hang on itself, not even around a corner', function () {
     $second = chainedTo($first);
 
     $form = [
-        'behavior_type' => BehaviorType::Movement->value,
-        'title' => $first->title,
         'schedule_type' => ScheduleType::Chained->value,
+        'target_amount' => 20,
     ];
 
     // Direkt auf sich selbst.
@@ -99,29 +98,13 @@ test('a habit cannot hang on itself, not even around a corner', function () {
     expect($first->refresh()->schedule_type)->toBe(ScheduleType::Dynamic);
 });
 
-test('nothing can hang on a habit that has no place in the day itself', function () {
-    $user = User::factory()->create();
-    $whenever = Habit::factory()->for($user)->create([
-        'title' => 'Treppe statt Aufzug',
-        'schedule_type' => ScheduleType::Opportunistic,
-        'trigger_situation' => null,
-    ]);
-
-    $this->actingAs($user)->post(route('habits.store'), [
-        'behavior_type' => BehaviorType::Movement->value,
-        'title' => 'Danach etwas trinken',
-        'schedule_type' => ScheduleType::Chained->value,
-        'chained_to_habit_id' => $whenever->id,
-    ])->assertSessionHasErrors('chained_to_habit_id');
-});
-
 test('a stranger habit is no anchor', function () {
     $user = User::factory()->create();
     $strangers = Habit::factory()->create();
 
     $this->actingAs($user)->post(route('habits.store'), [
-        'behavior_type' => BehaviorType::Movement->value,
-        'title' => 'Etwas',
+        'template_key' => HabitTemplate::Lesen->value,
+        'target_amount' => 20,
         'schedule_type' => ScheduleType::Chained->value,
         'chained_to_habit_id' => $strangers->id,
     ])->assertSessionHasErrors('chained_to_habit_id');
@@ -200,11 +183,6 @@ test('the wizard is offered only habits that can carry a chain', function () {
     $user = User::factory()->create();
 
     Habit::factory()->for($user)->create(['title' => 'Aufstehen']);
-    Habit::factory()->for($user)->create([
-        'title' => 'Treppe statt Aufzug',
-        'schedule_type' => ScheduleType::Opportunistic,
-        'trigger_situation' => null,
-    ]);
     Habit::factory()->for($user)->graduated()->create(['title' => 'Beendetes']);
 
     $candidates = collect(

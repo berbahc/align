@@ -42,6 +42,25 @@ enum MeasureUnit: string
     }
 
     /**
+     * Schrittweite und Grenzen der Dauer — für den Dauer-Stepper.
+     *
+     * Der Katalog kennt nur noch Minuten: Seiten und Liter waren ein Umfang,
+     * aber keine Zeit, und mit ihnen konnte das Time-Blocking nicht rechnen.
+     * Die übrigen Einheiten bleiben im Enum, weil alte Gewohnheiten sie noch
+     * tragen — neu vergeben werden sie nicht mehr.
+     *
+     * @return array{step: float, min: float, max: float}
+     */
+    public static function minutesLimits(): array
+    {
+        return [
+            'step' => self::Minutes->step(),
+            'min' => self::Minutes->min(),
+            'max' => self::Minutes->max(),
+        ];
+    }
+
+    /**
      * Die ausgeschriebene Einheit — sie steht am Stepper, wo Platz ist.
      */
     public function label(): string

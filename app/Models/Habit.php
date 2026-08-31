@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Enums\BehaviorType;
+use App\Enums\HabitCategory;
+use App\Enums\HabitTemplate;
 use App\Enums\MeasureUnit;
 use App\Enums\ScheduleType;
 use Carbon\CarbonInterface;
@@ -20,6 +22,7 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property int $user_id
  * @property string $title
+ * @property string|null $template_key
  * @property ScheduleType $schedule_type
  * @property string|null $trigger_situation
  * @property Carbon|null $scheduled_time
@@ -38,7 +41,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['title', 'schedule_type', 'trigger_situation', 'scheduled_time', 'scheduled_days', 'chained_to_habit_id', 'reminder_enabled', 'motivation', 'smallest_step', 'behavior_type', 'target_amount', 'target_unit', 'position', 'committed_at'])]
+#[Fillable(['title', 'template_key', 'schedule_type', 'trigger_situation', 'scheduled_time', 'scheduled_days', 'chained_to_habit_id', 'reminder_enabled', 'motivation', 'smallest_step', 'behavior_type', 'target_amount', 'target_unit', 'position', 'committed_at'])]
 class Habit extends Model
 {
     /** @use HasFactory<HabitFactory> */
@@ -172,6 +175,28 @@ class Habit extends Model
     }
 
     /**
+     * Die Vorlage, aus der die Gewohnheit entstanden ist — falls es sie gibt.
+     *
+     * `null` bei Gewohnheiten aus der Zeit der freien Eingabe und bei einem
+     * Schlüssel, den der Katalog nicht mehr kennt. Beides ist derselbe Fall:
+     * eine Gewohnheit ohne Vorlage, die trotzdem weiterläuft.
+     */
+    public function template(): ?HabitTemplate
+    {
+        return $this->template_key === null
+            ? null
+            : HabitTemplate::tryFrom($this->template_key);
+    }
+
+    /**
+     * Die Katalog-Kategorie — der Bereich, unter dem die Gewohnheit steht.
+     */
+    public function category(): ?HabitCategory
+    {
+        return $this->template()?->category();
+    }
+
+    /**
      * Die Gewohnheit, an der diese hängt — der Vorgänger in der Kette.
      *
      * @return BelongsTo<Habit, $this>
@@ -235,20 +260,9 @@ class Habit extends Model
      * nur an ihren Wochentagen; an allen anderen Tagen sind sie nicht offen,
      * sondern schlicht nicht vorgesehen. Der Unterschied entscheidet darüber,
      * ob ein Tag in die Konsistenzrate zählt.
-     *
-     * Für Gewohnheiten ohne Platz im Tag lautet die Antwort **nie**: „Treppe
-     * statt Aufzug" war an keinem Tag vorgesehen. Das ist keine Herabstufung,
-     * sondern der Schutz vor einer Rechnung, die sie nur verlieren kann — wer
-     * an keinem Aufzug vorbeikam, hat nichts ausgelassen. Abhaken lässt sie
-     * sich trotzdem an jedem Tag; dafür fragt die Oberfläche
-     * {@see isAvailableOn()}.
      */
     public function isScheduledOn(Carbon $date): bool
     {
-        if (! $this->schedule_type->isPlanned()) {
-            return false;
-        }
-
         // Eine gekoppelte Gewohnheit findet statt, wenn die stattfindet, an der
         // sie hängt — nicht öfter und nicht seltener. Ist der Vorgänger
         // verschwunden, steht sie an keinem Tag an.
@@ -261,39 +275,6 @@ class Habit extends Model
         }
 
         return in_array($date->dayOfWeekIso, $this->scheduled_days ?? [], strict: true);
-    }
-
-    /**
-     * Lässt sich die Gewohnheit an diesem Tag abhaken?
-     *
-     * Das Gegenstück zu {@see isScheduledOn()} und der Filter der Oberfläche.
-     * Was sich ergibt, war nie vorgesehen — kann aber jeden Tag vorkommen und
-     * muss deshalb jeden Tag anzutippen sein.
-     */
-    public function isAvailableOn(Carbon $date): bool
-    {
-        return $this->schedule_type->isPlanned()
-            ? $this->isScheduledOn($date)
-            : true;
-    }
-
-    /**
-     * Wie oft die Gewohnheit im Rückblickfenster erfüllt wurde.
-     *
-     * Die ehrliche Zahl für alles, was sich ergibt: Eine Quote braucht einen
-     * Nenner, und den gibt es hier nicht. „7× in 30 Tagen" behauptet nichts
-     * über ein Soll — es zählt nur, was war.
-     */
-    public function completionsSince(int $days = 30, ?Carbon $until = null): int
-    {
-        $until ??= Carbon::today();
-
-        return $this->completions()
-            ->whereBetween('completed_on', [
-                $until->copy()->subDays($days - 1)->startOfDay(),
-                $until->copy()->endOfDay(),
-            ])
-            ->count();
     }
 
     /**
@@ -390,9 +371,6 @@ class Habit extends Model
      * eine Mo–Fr-Gewohnheit am Samstag sind das Montag, Dienstag, Mittwoch —
      * und nicht heute, morgen, übermorgen, an denen sie gar nicht stattfindet.
      *
-     * Was an keinem Tag vorgesehen ist, gibt eine leere Liste zurück: „Treppe
-     * statt Aufzug" hat keinen nächsten Termin, sondern nur Gelegenheiten.
-     *
      * @param  int  $limit  Höchstzahl der Tage
      * @param  int  $withinDays  Wie weit gesucht wird, `$from` eingeschlossen
      * @return list<Carbon>
@@ -431,7 +409,12 @@ class Habit extends Model
      * Minuten" beschreibt, was gemacht wird, nicht warum. Wem das zu viel ist,
      * stellt ihn nach dem Übernehmen um.
      *
-     * @return array{title: string, behaviorType: string, targetAmount: float|null, targetUnit: string|null, measureLabel: string|null, scheduleType: string, triggerSituation: string|null, scheduledTime: string|null, scheduledDays: list<int>|null}
+     * Der Vorlagen-Schlüssel reist mit: Eine Übernahme soll dieselbe
+     * Katalog-Vorlage treffen, nicht nur denselben Text. Bei Gewohnheiten aus
+     * der Zeit der freien Eingabe ist er `null` — sie lassen sich nicht mehr
+     * übernehmen, weil es außerhalb des Katalogs kein Anlegen mehr gibt.
+     *
+     * @return array{title: string, templateKey: string|null, behaviorType: string, durationMinutes: int, measureLabel: string|null, scheduleType: string, triggerSituation: string|null, scheduledTime: string|null, scheduledDays: list<int>|null}
      */
     public function blueprint(): array
     {
@@ -450,9 +433,15 @@ class Habit extends Model
 
         return [
             'title' => $this->title,
+            'templateKey' => $this->template()?->value,
             'behaviorType' => $this->behavior_type->value,
-            'targetAmount' => $this->target_amount,
-            'targetUnit' => $this->target_unit?->value,
+            // Die Dauer, mit der die Übernahme startet. Eine alte Gewohnheit
+            // kann statt einer Dauer einen Umfang tragen („10 Seiten") — dann
+            // beginnt die Übernahme beim Startwert ihrer Vorlage, notfalls
+            // beim kleinsten erlaubten Wert.
+            'durationMinutes' => $this->durationMinutes()
+                ?? $this->template()?->defaultMinutes()
+                ?? (int) MeasureUnit::Minutes->min(),
             // Fertig formatiert, damit das Übernahme-Sheet die Zeile zeigen
             // kann, ohne die Einheiten-Metadaten mitgereicht zu bekommen.
             'measureLabel' => $this->measureLabel(),
@@ -514,13 +503,16 @@ class Habit extends Model
      * sie aus der Vorschlagsliste, und alles Selbstgetippte landet mittags.
      * Eine Näherung, die nur eine Aufgabe hat: den Tag von oben nach unten
      * lesbar zu machen.
+     *
+     * Die beiden Situationen am Tagesrand fragen den Schlafplan: „nach dem
+     * Aufstehen" sitzt zur eigenen Aufstehzeit, „vor dem Schlafengehen" eine
+     * Stunde vor der eigenen Schlafenszeit — der gemittelte Wert aus der
+     * Vorschlagsliste wäre für Frühaufsteher wie Nachteulen gleich falsch.
+     * Dafür muss die `user`-Beziehung geladen sein; ohne sie gilt weiter der
+     * Mittelwert, statt je Gewohnheit eine eigene Abfrage loszutreten.
      */
     public function dayAnchorHour(): ?int
     {
-        if (! $this->schedule_type->isPlanned()) {
-            return null;
-        }
-
         // Die gekoppelte Gewohnheit sortiert sich zur Stunde ihres Vorgängers
         // und landet damit direkt unter ihm — die Reihenfolge innerhalb der
         // Stunde entscheidet dann `position`.
@@ -528,9 +520,34 @@ class Habit extends Model
             return $this->anchorHabit()?->dayAnchorHour();
         }
 
-        return $this->schedule_type->hasClockTime()
-            ? self::anchorHourFor(time: $this->scheduled_time?->format('H:i'))
-            : self::anchorHourFor(situation: $this->trigger_situation);
+        if ($this->schedule_type->hasClockTime()) {
+            return self::anchorHourFor(time: $this->scheduled_time?->format('H:i'));
+        }
+
+        return $this->sleepBoundAnchorHour()
+            ?? self::anchorHourFor(situation: $this->trigger_situation);
+    }
+
+    /**
+     * Die Stunde aus dem Schlafplan — für die Situationen am Tagesrand.
+     *
+     * `null`, wenn die Situation nicht am Rahmen hängt oder der Nutzer nicht
+     * geladen ist. Gerechnet wird mit dem heutigen Wochentag: Die Achse zeigt
+     * einen konkreten Tag, und der hat einen konkreten Rahmen.
+     */
+    private function sleepBoundAnchorHour(): ?int
+    {
+        if (! $this->relationLoaded('user')) {
+            return null;
+        }
+
+        $window = $this->user->sleepWindowFor(Carbon::today()->dayOfWeekIso);
+
+        return match ($this->trigger_situation) {
+            'nach dem Aufstehen' => (int) substr($window['wakeTime'], 0, 2),
+            'vor dem Schlafengehen' => max(0, (int) substr($window['bedtime'], 0, 2) - 1),
+            default => null,
+        };
     }
 
     /**
@@ -560,10 +577,11 @@ class Habit extends Model
     }
 
     /**
-     * Der Umfang als fertige Zeile: „20 Min", „1,5 L" — oder nichts.
+     * Der Umfang als fertige Zeile: „20 Min" — oder nichts.
      *
-     * Ein Umfang ist immer freiwillig. „Treppe statt Aufzug" hat keinen, und
-     * eine erfundene Zahl wäre dort schlechter als gar keine.
+     * Neue Gewohnheiten haben immer eine Dauer; `null` gibt es nur noch bei
+     * Einträgen aus der Zeit der freien Eingabe, und „1,5 L" nur bei alten
+     * Zeilen mit einer Einheit, die der Katalog nicht mehr vergibt.
      */
     public function measureLabel(): ?string
     {
@@ -701,17 +719,9 @@ class Habit extends Model
      * Der Wann-Teil als fertige Zeile für die Oberfläche.
      *
      * Beispiele: „nach dem Aufstehen", „17:00 · Mo–Fr", „08:30 · täglich".
-     *
-     * Was sich ergibt, benennt sich selbst. Ohne diesen Zweig fiele es durch
-     * {@see anchorLabel()} auf den **leeren String** — und der stünde dann
-     * wortlos im Kalender, im Verzeichnis, im Bauplan und im Prompt der KI.
      */
     public function scheduleLabel(): string
     {
-        if (! $this->schedule_type->isPlanned()) {
-            return mb_lcfirst($this->schedule_type->label());
-        }
-
         // Der Vorgänger ist der Auslöser, also heißt er auch so: „nach dem
         // Spaziergang". Genau die Form, die time-blocking.md für Ketten
         // vorsieht — eine bestehende Gewohnheit ist der zuverlässigste Auslöser,
@@ -985,18 +995,9 @@ class Habit extends Model
      *
      * Beide Grenzen zählen mit. Für dynamische Gewohnheiten ist das schlicht
      * die Länge des Zeitraums.
-     *
-     * Für Gewohnheiten ohne Platz im Tag ist es **null** — und damit gibt es
-     * keinen Nenner und keine Quote. Genau die Begründung, mit der unten schon
-     * die nicht gewählten Wochentage herausfallen: eine Rate darf nicht Tage
-     * mitzählen, an denen nichts vorgesehen war.
      */
     public function scheduledDaysBetween(Carbon $start, Carbon $until): int
     {
-        if (! $this->schedule_type->isPlanned()) {
-            return 0;
-        }
-
         // Die gekoppelte Gewohnheit steht an denselben Tagen an wie die, an der
         // sie hängt — sonst rechnete sie mit einem Soll, das ihr Vorgänger gar
         // nicht hat.

@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\BehaviorType;
+use App\Enums\HabitTemplate;
 use App\Enums\ScheduleType;
 use App\Models\Appointment;
 use App\Models\AppointmentNotice;
@@ -29,12 +30,13 @@ function invitation(bool $accepted = false): array
         'addressee_id' => $guest->id,
     ]);
 
-    $habit = Habit::factory()->for($owner)->fixedSchedule('06:00', [1, 3, 5])->create([
-        'title' => 'Laufen gehen',
-        'behavior_type' => BehaviorType::Movement,
-        'motivation' => 'damit ich den Kopf freikriege',
-        'smallest_step' => 'Zieh die Laufschuhe an.',
-    ]);
+    $habit = Habit::factory()->for($owner)
+        ->fromTemplate(HabitTemplate::Joggen)
+        ->fixedSchedule('07:30', [1, 3, 5])
+        ->create([
+            'motivation' => 'damit ich den Kopf freikriege',
+            'smallest_step' => 'Zieh die Laufschuhe an.',
+        ]);
 
     $appointment = Appointment::factory()->create([
         'habit_id' => $habit->id,
@@ -53,9 +55,10 @@ test('the open request carries the habit as a template to adopt', function () {
     $this->actingAs($guest)
         ->get(route('dashboard'))
         ->assertInertia(fn (AssertableInertia $page) => $page
-            ->where('appointmentRequests.0.blueprint.title', 'Laufen gehen')
+            ->where('appointmentRequests.0.blueprint.title', 'Joggen gehen')
             ->where('appointmentRequests.0.blueprint.scheduleType', ScheduleType::Fixed->value)
-            ->where('appointmentRequests.0.blueprint.scheduledTime', '06:00')
+            ->where('appointmentRequests.0.blueprint.templateKey', HabitTemplate::Joggen->value)
+            ->where('appointmentRequests.0.blueprint.scheduledTime', '07:30')
             ->where('appointmentRequests.0.blueprint.scheduledDays', [1, 3, 5])
         );
 });
@@ -65,10 +68,10 @@ test('adopting a habit creates an own one with the chosen days', function () {
 
     $this->actingAs($guest)
         ->post(route('habits.adoptions.store'), [
-            'title' => $habit->title,
-            'behavior_type' => $habit->behavior_type->value,
+            'template_key' => $habit->template()?->value,
+            'target_amount' => 30,
             'schedule_type' => ScheduleType::Fixed->value,
-            // Sechs Uhr an drei Tagen ist der fremde Tagesablauf, nicht der
+            // Halb acht an drei Tagen ist der fremde Tagesablauf, nicht der
             // eigene — genau dafür ist der Zeitpunkt beim Übernehmen offen.
             'scheduled_time' => '18:30',
             'scheduled_days' => [2, 4],
@@ -77,7 +80,7 @@ test('adopting a habit creates an own one with the chosen days', function () {
 
     $adopted = $guest->habits()->sole();
 
-    expect($adopted->title)->toBe('Laufen gehen')
+    expect($adopted->title)->toBe('Joggen gehen')
         ->and($adopted->behavior_type)->toBe(BehaviorType::Movement)
         ->and($adopted->scheduled_time->format('H:i'))->toBe('18:30')
         ->and($adopted->scheduled_days)->toBe([2, 4])
@@ -91,8 +94,8 @@ test('the reason and the first step stay with the person who wrote them', functi
     [, $guest, $habit] = invitation();
 
     $this->actingAs($guest)->post(route('habits.adoptions.store'), [
-        'title' => $habit->title,
-        'behavior_type' => $habit->behavior_type->value,
+        'template_key' => $habit->template()?->value,
+        'target_amount' => 30,
         'schedule_type' => ScheduleType::Dynamic->value,
         'trigger_situation' => 'nach dem Aufstehen',
     ]);
@@ -110,12 +113,12 @@ test('adopting cannot push someone past the five active habits', function () {
 
     $this->actingAs($guest)
         ->post(route('habits.adoptions.store'), [
-            'title' => $habit->title,
-            'behavior_type' => $habit->behavior_type->value,
+            'template_key' => $habit->template()?->value,
+            'target_amount' => 30,
             'schedule_type' => ScheduleType::Dynamic->value,
             'trigger_situation' => 'nach dem Aufstehen',
         ])
-        ->assertSessionHasErrors('title');
+        ->assertSessionHasErrors('template_key');
 
     expect($guest->habits()->count())->toBe(Habit::MaxActivePerUser);
 });
@@ -148,9 +151,10 @@ test('the guest left behind keeps a template instead of a pointer', function () 
     expect($notice->user_id)->toBe($guest->id)
         ->and($notice->habit_id)->toBeNull()
         ->and($notice->habit_blueprint)->toMatchArray([
-            'title' => 'Laufen gehen',
+            'title' => 'Joggen gehen',
+            'templateKey' => HabitTemplate::Joggen->value,
             'scheduleType' => ScheduleType::Fixed->value,
-            'scheduledTime' => '06:00',
+            'scheduledTime' => '07:30',
             'scheduledDays' => [1, 3, 5],
         ]);
 });
@@ -166,7 +170,7 @@ test('the template survives the original habit being deleted', function () {
     // Die Notiz stünde sonst ohne ihren einzigen Inhalt da — deshalb eine
     // Kopie und kein Verweis.
     expect(AppointmentNotice::query()->sole()->habit_blueprint)
-        ->toHaveKey('title', 'Laufen gehen');
+        ->toHaveKey('title', 'Joggen gehen');
 });
 
 test('adopting out of a notice answers it and makes it disappear', function () {
@@ -178,8 +182,8 @@ test('adopting out of a notice answers it and makes it disappear', function () {
     $notice = AppointmentNotice::query()->sole();
 
     $this->actingAs($guest)->post(route('habits.adoptions.store'), [
-        'title' => 'Laufen gehen',
-        'behavior_type' => BehaviorType::Movement->value,
+        'template_key' => HabitTemplate::Joggen->value,
+        'target_amount' => 30,
         'schedule_type' => ScheduleType::Dynamic->value,
         'trigger_situation' => 'nach dem Aufstehen',
         'notice_id' => $notice->id,
@@ -196,8 +200,8 @@ test('a notice of someone else cannot be dismissed by adopting', function () {
 
     $this->actingAs(User::factory()->create())
         ->post(route('habits.adoptions.store'), [
-            'title' => 'Laufen gehen',
-            'behavior_type' => BehaviorType::Movement->value,
+            'template_key' => HabitTemplate::Joggen->value,
+            'target_amount' => 30,
             'schedule_type' => ScheduleType::Dynamic->value,
             'trigger_situation' => 'nach dem Aufstehen',
             'notice_id' => $notice->id,
@@ -218,7 +222,7 @@ test('the notice reaches both pages with everything the next step needs', functi
             ->get(route($route))
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->where('appointmentNotices.0.habitId', null)
-                ->where('appointmentNotices.0.blueprint.title', 'Laufen gehen')
+                ->where('appointmentNotices.0.blueprint.title', 'Joggen gehen')
             );
     }
 });
