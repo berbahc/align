@@ -3,7 +3,7 @@
 use App\Ai\Agents\SuggestBetterAnchor;
 use App\Ai\Agents\SuggestSmallestStep;
 use App\Ai\UserContext;
-use App\Enums\BehaviorType;
+use App\Enums\HabitTemplate;
 use App\Enums\SuggestionKind;
 use App\Models\AiSuggestion;
 use App\Models\Habit;
@@ -234,13 +234,12 @@ test('a step adopted word for word counts as taken', function () {
     $user = User::factory()->create(['onboarded_at' => now()]);
 
     $this->actingAs($user)->postJson(route('habits.smallest-step.suggestions'), [
-        'title' => 'Laufen gehen',
-        'behavior_type' => BehaviorType::Movement->value,
+        'template_key' => HabitTemplate::Joggen->value,
     ])->assertOk();
 
     $this->actingAs($user)->post(route('habits.store'), [
-        'title' => 'Laufen gehen',
-        'behavior_type' => BehaviorType::Movement->value,
+        'template_key' => HabitTemplate::Joggen->value,
+        'target_amount' => 30,
         'trigger_situation' => 'wenn ich nach Hause komme',
         'smallest_step' => 'Zieh die Laufschuhe an.',
     ])->assertRedirect();
@@ -261,13 +260,12 @@ test('a step the user rewrote does not count as taken', function () {
     $user = User::factory()->create(['onboarded_at' => now()]);
 
     $this->actingAs($user)->postJson(route('habits.smallest-step.suggestions'), [
-        'title' => 'Laufen gehen',
-        'behavior_type' => BehaviorType::Movement->value,
+        'template_key' => HabitTemplate::Joggen->value,
     ])->assertOk();
 
     $this->actingAs($user)->post(route('habits.store'), [
-        'title' => 'Laufen gehen',
-        'behavior_type' => BehaviorType::Movement->value,
+        'template_key' => HabitTemplate::Joggen->value,
+        'target_amount' => 30,
         'trigger_situation' => 'wenn ich nach Hause komme',
         'smallest_step' => 'Laufschuhe raussuchen und anziehen.',
     ])->assertRedirect();

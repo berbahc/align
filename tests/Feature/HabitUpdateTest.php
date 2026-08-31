@@ -1,6 +1,6 @@
 <?php
 
-use App\Enums\BehaviorType;
+use App\Enums\HabitTemplate;
 use App\Enums\MeasureUnit;
 use App\Enums\ScheduleType;
 use App\Models\Habit;
@@ -12,27 +12,22 @@ use Inertia\Testing\AssertableInertia as Assert;
 /**
  * Ein vollständiger, gültiger Satz Formularwerte — einzelne Felder überschreibbar.
  *
- * Der Wann-Teil hat zwei sich ausschließende Formen; die Vorgabe ist die
- * situative, weil sie in der App die Voreinstellung ist.
+ * Bearbeitet wird nur die Planung: Der Wann-Teil, die Dauer, der erste
+ * Schritt, der Warum-Satz. Was die Gewohnheit ist, steht im Katalog fest.
  */
 function habitFormData(array $overrides = []): array
 {
     return [
-        'behavior_type' => BehaviorType::Movement->value,
-        'title' => 'Spazieren gehen',
         'schedule_type' => ScheduleType::Dynamic->value,
         'trigger_situation' => 'nach dem Mittagessen',
+        'target_amount' => 20,
         ...$overrides,
     ];
 }
 
 test('the edit form opens prefilled with what the habit already is', function () {
     $user = User::factory()->create();
-    $habit = Habit::factory()->for($user)->create([
-        'title' => 'Spazieren gehen',
-        'behavior_type' => BehaviorType::Movement,
-        'target_amount' => 20,
-        'target_unit' => MeasureUnit::Minutes,
+    $habit = Habit::factory()->for($user)->fromTemplate(HabitTemplate::Spazieren)->create([
         'trigger_situation' => 'nach dem Mittagessen',
         'motivation' => 'damit ich rauskomme',
     ]);
@@ -43,23 +38,22 @@ test('the edit form opens prefilled with what the habit already is', function ()
         ->assertInertia(fn (Assert $page) => $page
             ->component('habits/edit')
             ->where('habit.title', 'Spazieren gehen')
-            ->where('habit.behaviorType', BehaviorType::Movement->value)
+            ->where('habit.categoryLabel', 'Sport & Bewegung')
             // Über JSON wird aus 20.0 wieder eine 20 — der Stepper rechnet in
             // beiden Fällen dasselbe.
-            ->where('habit.targetAmount', 20)
-            ->where('habit.targetUnit', MeasureUnit::Minutes->value)
+            ->where('habit.durationMinutes', 20)
             ->where('habit.triggerSituation', 'nach dem Mittagessen')
             ->where('habit.motivation', 'damit ich rauskomme')
             // Ohne die Auswahllisten stünde das Formular ohne seine Kacheln da.
-            ->has('directions', 4)
             ->has('triggerSuggestions')
-            ->has('scheduleTypes')
-            ->has('measureUnits', 4)
+            ->has('scheduleTypes', 3)
+            ->has('durationLimits')
+            ->has('sleepWindows', 7)
         );
 });
 
 test('a habit of another user cannot be opened or changed', function () {
-    $habit = Habit::factory()->create();
+    $habit = Habit::factory()->create(['motivation' => null]);
     $stranger = User::factory()->create();
 
     $this->actingAs($stranger)
@@ -67,19 +61,15 @@ test('a habit of another user cannot be opened or changed', function () {
         ->assertForbidden();
 
     $this->actingAs($stranger)
-        ->put(route('habits.update', $habit), habitFormData(['title' => 'Fremd']))
+        ->put(route('habits.update', $habit), habitFormData(['motivation' => 'Fremd']))
         ->assertForbidden();
 
-    expect($habit->refresh()->title)->not->toBe('Fremd');
+    expect($habit->refresh()->motivation)->not->toBe('Fremd');
 });
 
-test('every attribute of a habit can be changed', function () {
+test('the planning of a habit can be changed', function () {
     $user = User::factory()->create();
-    $habit = Habit::factory()->for($user)->create([
-        'title' => 'Spazieren gehen',
-        'behavior_type' => BehaviorType::Movement,
-        'target_amount' => 20,
-        'target_unit' => MeasureUnit::Minutes,
+    $habit = Habit::factory()->for($user)->fromTemplate(HabitTemplate::Spazieren)->create([
         'trigger_situation' => 'nach dem Mittagessen',
         'smallest_step' => 'Schuhe an die Tür',
         'motivation' => 'damit ich rauskomme',
@@ -87,25 +77,43 @@ test('every attribute of a habit can be changed', function () {
 
     $this->actingAs($user)
         ->put(route('habits.update', $habit), habitFormData([
-            'behavior_type' => BehaviorType::Learning->value,
-            'title' => 'Lesen',
-            'target_amount' => 15,
-            'target_unit' => MeasureUnit::Pages->value,
+            'target_amount' => 35,
             'trigger_situation' => 'vor dem Schlafengehen',
-            'smallest_step' => 'Leg das Buch aufs Kissen',
+            'smallest_step' => 'Leg die Jacke bereit',
             'motivation' => 'damit ich abends runterkomme',
         ]))
         ->assertRedirect(route('habits.index'));
 
     $habit->refresh();
 
-    expect($habit->title)->toBe('Lesen')
-        ->and($habit->behavior_type)->toBe(BehaviorType::Learning)
-        ->and($habit->target_amount)->toBe(15.0)
-        ->and($habit->target_unit)->toBe(MeasureUnit::Pages)
+    expect($habit->target_amount)->toBe(35.0)
+        ->and($habit->target_unit)->toBe(MeasureUnit::Minutes)
         ->and($habit->trigger_situation)->toBe('vor dem Schlafengehen')
-        ->and($habit->smallest_step)->toBe('Leg das Buch aufs Kissen')
+        ->and($habit->smallest_step)->toBe('Leg die Jacke bereit')
         ->and($habit->motivation)->toBe('damit ich abends runterkomme');
+});
+
+/**
+ * Die Identität kommt aus dem Katalog und wechselt beim Bearbeiten nicht:
+ * Eine Gewohnheit ändert ihren Zeitpunkt, nicht ihren Namen.
+ */
+test('title and template survive a change untouched', function () {
+    $user = User::factory()->create();
+    $habit = Habit::factory()->for($user)->fromTemplate(HabitTemplate::Joggen)->create();
+
+    $this->actingAs($user)
+        ->put(route('habits.update', $habit), habitFormData([
+            // Auch wer die Felder von Hand mitschickt, ändert nichts daran.
+            'title' => 'Etwas ganz anderes',
+            'template_key' => HabitTemplate::Meditieren->value,
+        ]))
+        ->assertSessionHasNoErrors();
+
+    $habit->refresh();
+
+    expect($habit->title)->toBe('Joggen gehen')
+        ->and($habit->template())->toBe(HabitTemplate::Joggen)
+        ->and($habit->behavior_type)->toBe(HabitTemplate::Joggen->behaviorType());
 });
 
 /**
@@ -128,7 +136,7 @@ test('the history survives a change', function () {
     $committed = $habit->committed_at;
 
     $this->actingAs($user)
-        ->put(route('habits.update', $habit), habitFormData(['title' => 'Anders']));
+        ->put(route('habits.update', $habit), habitFormData(['motivation' => 'Anders']));
 
     $habit->refresh();
 
@@ -190,12 +198,12 @@ test('the limit of five does not block a change', function () {
 
     $this->actingAs($user)
         ->put(route('habits.update', $habits->first()), habitFormData([
-            'title' => 'Trotzdem geändert',
+            'motivation' => 'Trotzdem geändert',
         ]))
         ->assertRedirect(route('habits.index'))
         ->assertSessionHasNoErrors();
 
-    expect($habits->first()->refresh()->title)->toBe('Trotzdem geändert');
+    expect($habits->first()->refresh()->motivation)->toBe('Trotzdem geändert');
 });
 
 test('a situational habit needs a situation', function () {

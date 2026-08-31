@@ -3,11 +3,13 @@
 namespace App\Http\Requests;
 
 use App\Enums\SuggestionKind;
+use App\Http\Requests\Concerns\ChecksSleepWindow;
 use App\Models\AiSuggestion;
 use App\Models\Habit;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 /**
  * Der neue Zeitpunkt einer Gewohnheit — von der KI vorgeschlagen, vom Nutzer
@@ -24,9 +26,31 @@ use Illuminate\Validation\Rule;
  */
 class AdjustHabitRequest extends FormRequest
 {
+    use ChecksSleepWindow;
+
     public function authorize(): bool
     {
         return true;
+    }
+
+    /**
+     * Auch ein Vorschlag der KI bleibt im Rahmen des Tages.
+     *
+     * Der Agent kennt ihn und bietet nichts außerhalb an — aber diese Route
+     * lässt sich auch von Hand ansprechen, und die Grenze gehört an die
+     * Stelle, an der geschrieben wird.
+     *
+     * @return list<callable(Validator): void>
+     */
+    public function after(): array
+    {
+        return [
+            function (Validator $validator): void {
+                if ($this->habit()->schedule_type->hasClockTime()) {
+                    $this->validateSleepWindow($validator);
+                }
+            },
+        ];
     }
 
     /**

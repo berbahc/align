@@ -1,10 +1,24 @@
-import { ChevronDown, ChevronUp, Sparkles, TriangleAlert } from 'lucide-react';
+import { Sparkles, TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
+import { TimeStepper } from '@/components/time-stepper';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+    CHOICE_TILE,
+    CHOICE_TILE_OFF,
+    CHOICE_TILE_ON,
+    QUIET_LINK,
+} from '@/lib/interaction';
+import { formatWindow, outsideSleepWindow } from '@/lib/sleep';
 import { findConflict, nextFreeTime } from '@/lib/slots';
 import { cn } from '@/lib/utils';
-import type { BusySlot, ChainCandidate, ScheduleType, Weekday } from '@/types';
+import type {
+    BusySlot,
+    ChainCandidate,
+    ScheduleType,
+    SleepWindow,
+    Weekday,
+} from '@/types';
 
 export interface ScheduleTypeOption {
     value: ScheduleType;
@@ -12,13 +26,6 @@ export interface ScheduleTypeOption {
     /** Ein Satz unter der Kachel — die Wahl ist ohne ihn nicht zu treffen. */
     description: string;
 }
-
-/**
- * §5.5 — Auswahlkachel: Selektion ist ein 2px-Rahmen, die Füllung ändert sich
- * nicht. Ein bewusst leises Muster, das für alle Einfachauswahlen gilt.
- */
-export const CHOICE_TILE =
-    'cursor-pointer rounded-[14px] border-2 bg-card text-left transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
 
 const WEEKDAYS: { value: Weekday; label: string; full: string }[] = [
     { value: 1, label: 'Mo', full: 'Montag' },
@@ -29,9 +36,6 @@ const WEEKDAYS: { value: Weekday; label: string; full: string }[] = [
     { value: 6, label: 'Sa', full: 'Samstag' },
     { value: 7, label: 'So', full: 'Sonntag' },
 ];
-
-/** Minuten springen in Fünferschritten — Gewohnheiten brauchen keine Minutengenauigkeit. */
-const MINUTE_STEP = 5;
 
 /**
  * Wochentage als lesbare Aufzählung, zusammenhängende Läufe gerafft.
@@ -116,9 +120,7 @@ export function SituationPicker({
                         className={cn(
                             CHOICE_TILE,
                             'px-4 py-3 text-[15px]',
-                            isSelected
-                                ? 'border-primary'
-                                : 'border-border hover:border-secondary',
+                            isSelected ? CHOICE_TILE_ON : CHOICE_TILE_OFF,
                         )}
                     >
                         {situation}
@@ -136,9 +138,7 @@ export function SituationPicker({
                 className={cn(
                     CHOICE_TILE,
                     'border-dashed px-4 py-3 text-[15px] text-muted-foreground',
-                    ownSituation
-                        ? 'border-primary'
-                        : 'border-border hover:border-secondary',
+                    ownSituation ? CHOICE_TILE_ON : CHOICE_TILE_OFF,
                 )}
             >
                 Eigene Situation
@@ -164,23 +164,6 @@ export function SituationPicker({
     );
 }
 
-/** Auch der Umfang-Stepper greift darauf zu — dieselbe Geste, dieselbe Form. */
-export const STEPPER_BUTTON =
-    'flex size-8 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors duration-200 hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-30';
-
-function shift(value: string, unit: 'hour' | 'minute', direction: 1 | -1) {
-    const [hours = 0, minutes = 0] = value.split(':').map(Number);
-
-    if (unit === 'hour') {
-        // Modulo zweimal, weil JavaScript bei negativen Zahlen negativ bleibt.
-        return `${String((((hours + direction) % 24) + 24) % 24).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-    }
-
-    const stepped = minutes + direction * MINUTE_STEP;
-
-    return `${String(hours).padStart(2, '0')}:${String(((stepped % 60) + 60) % 60).padStart(2, '0')}`;
-}
-
 /**
  * Der Wann-Teil der Wenn-Dann-Planung, in zwei Formen.
  *
@@ -201,6 +184,7 @@ export function SchedulePicker({
     chainedTo = null,
     onChainedToChange,
     busySlots = [],
+    sleepWindows = [],
     children,
 }: {
     scheduleTypes: ScheduleTypeOption[];
@@ -216,13 +200,17 @@ export function SchedulePicker({
     onChainedToChange?: (id: number) => void;
     /** Was im Tag schon belegt ist, für den Überschneidungshinweis. */
     busySlots?: BusySlot[];
+    /** Der Schlafrahmen je Wochentag — für den Hinweis, wenn die Uhrzeit außerhalb läge. */
+    sleepWindows?: SleepWindow[];
     /** Die Situationsauswahl — sie bleibt im Wizard, wo ihre Vorschläge herkommen. */
     children: React.ReactNode;
 }) {
-    const [hours = '00', minutes = '00'] = time.split(':');
-
     const conflict = findConflict(time, days, busySlots);
     const free = conflict === null ? null : nextFreeTime(time, days, busySlots);
+
+    // Der Rahmen aus dem Schlafplan: Der Server weist eine Uhrzeit außerhalb
+    // ohnehin ab — die Oberfläche sagt es vorher, mit demselben Ergebnis.
+    const asleep = outsideSleepWindow(time, days, sleepWindows);
 
     function toggleDay(day: Weekday) {
         onDaysChange(
@@ -246,10 +234,6 @@ export function SchedulePicker({
             >
                 {scheduleTypes.map((option) => {
                     const isSelected = scheduleType === option.value;
-                    // Was sich ergibt, ist keine dritte Art zu planen, sondern
-                    // der Verzicht darauf — die gestrichelte Kante sagt das,
-                    // wie schon bei „Etwas anderes" im Schritt davor.
-                    const unplanned = option.value === 'opportunistic';
 
                     return (
                         <button
@@ -260,10 +244,7 @@ export function SchedulePicker({
                             className={cn(
                                 CHOICE_TILE,
                                 'flex flex-col gap-1 px-4 py-3',
-                                unplanned && 'border-dashed',
-                                isSelected
-                                    ? 'border-primary'
-                                    : 'border-border hover:border-secondary',
+                                isSelected ? CHOICE_TILE_ON : CHOICE_TILE_OFF,
                             )}
                         >
                             <span className="flex items-center gap-1.5 text-[15px] font-semibold">
@@ -285,17 +266,7 @@ export function SchedulePicker({
                 })}
             </div>
 
-            {scheduleType === 'opportunistic' ? (
-                /* Kein Picker, sondern die Begründung: Hier ist nichts
-                   einzustellen, und ein leerer Bereich sähe aus, als fehle
-                   etwas. §1.5 — benannt wird, was gilt. */
-                <p className="rounded-2xl bg-card p-4 text-sm leading-relaxed text-muted-foreground">
-                    Diese Gewohnheit bekommt keinen festen Platz im Tag. Sie
-                    steht im Kalender unter der Achse und lässt sich an jedem Tag
-                    abhaken, an dem sich die Gelegenheit ergibt — ohne Uhrzeit,
-                    ohne Erinnerung und ohne Quote, die sie verlieren könnte.
-                </p>
-            ) : scheduleType === 'chained' ? (
+            {scheduleType === 'chained' ? (
                 /* Das Domino-Prinzip: Eine bestehende Gewohnheit ist der
                    zuverlässigste Auslöser, den es gibt (time-blocking.md).
                    Alissa beschreibt es im Interview von selbst — „wenn ich dann
@@ -323,8 +294,8 @@ export function SchedulePicker({
                                         CHOICE_TILE,
                                         'flex flex-col gap-0.5 px-4 py-3',
                                         isSelected
-                                            ? 'border-primary'
-                                            : 'border-border hover:border-secondary',
+                                            ? CHOICE_TILE_ON
+                                            : CHOICE_TILE_OFF,
                                     )}
                                 >
                                     <span className="text-[15px] font-semibold">
@@ -349,69 +320,11 @@ export function SchedulePicker({
             ) : (
                 <div className="flex flex-col gap-5">
                     <div className="flex flex-col items-center gap-2 rounded-2xl bg-card p-6">
-                        <div className="flex items-start gap-4">
-                            {(
-                                [
-                                    ['hour', hours, 'Stunde', 'Std'],
-                                    ['minute', minutes, 'Minute', 'Min'],
-                                ] as const
-                            ).map(([unit, value, full, short], index) => (
-                                <div
-                                    key={unit}
-                                    className="flex items-center gap-4"
-                                >
-                                    {index === 1 && (
-                                        <span
-                                            className="pt-1 text-4xl font-bold"
-                                            aria-hidden="true"
-                                        >
-                                            :
-                                        </span>
-                                    )}
-                                    <div className="flex flex-col items-center gap-1">
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                onTimeChange(
-                                                    shift(time, unit, 1),
-                                                )
-                                            }
-                                            aria-label={`${full} erhöhen`}
-                                            className={STEPPER_BUTTON}
-                                        >
-                                            <ChevronUp
-                                                className="size-4"
-                                                aria-hidden="true"
-                                            />
-                                        </button>
-                                        <span
-                                            className="text-5xl leading-none font-bold tabular-nums"
-                                            aria-label={`${full}: ${value}`}
-                                        >
-                                            {value}
-                                        </span>
-                                        <span className="text-xs text-muted-foreground">
-                                            {short}
-                                        </span>
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                onTimeChange(
-                                                    shift(time, unit, -1),
-                                                )
-                                            }
-                                            aria-label={`${full} verringern`}
-                                            className={STEPPER_BUTTON}
-                                        >
-                                            <ChevronDown
-                                                className="size-4"
-                                                aria-hidden="true"
-                                            />
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                        <TimeStepper
+                            value={time}
+                            onChange={onTimeChange}
+                            label="Uhrzeit"
+                        />
                     </div>
 
                     {/* Ein Hinweis, keine Sperre: Wer zwei Dinge bewusst
@@ -437,7 +350,7 @@ export function SchedulePicker({
                                         <button
                                             type="button"
                                             onClick={() => onTimeChange(free)}
-                                            className="cursor-pointer font-semibold text-primary underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                                            className={QUIET_LINK}
                                         >
                                             {free}
                                         </button>
@@ -448,8 +361,31 @@ export function SchedulePicker({
                         </p>
                     )}
 
+                    {/* Derselbe Ton wie beim Überschneidungshinweis, aber hier
+                        wird der Server die Uhrzeit wirklich abweisen: Der
+                        Schlafplan ist der Rahmen, kein Vorschlag. */}
+                    {asleep !== null && (
+                        <p className="flex items-start gap-2 rounded-2xl bg-sand/50 p-3 text-xs leading-relaxed text-muted-foreground">
+                            <TriangleAlert
+                                className="mt-0.5 size-4 shrink-0 text-primary"
+                                strokeWidth={1.5}
+                                aria-hidden="true"
+                            />
+                            <span>
+                                Um {time} Uhr schläfst du laut deinem Schlafplan
+                                —{' '}
+                                {
+                                    WEEKDAYS.find(
+                                        (day) => day.value === asleep.weekday,
+                                    )?.full
+                                }{' '}
+                                geht dein Tag von {formatWindow(asleep)} Uhr.
+                            </span>
+                        </p>
+                    )}
+
                     <div className="flex flex-col gap-3">
-                        <p className="text-[11px] font-semibold tracking-[0.11em] text-muted-foreground uppercase">
+                        <p className="type-eyebrow text-muted-foreground">
                             An diesen Tagen
                         </p>
                         <div
@@ -468,8 +404,9 @@ export function SchedulePicker({
                                         aria-label={day.full}
                                         onClick={() => toggleDay(day.value)}
                                         className={cn(
-                                            'flex size-12 cursor-pointer items-center justify-center rounded-full border text-[15px] font-semibold transition-colors duration-200',
-                                            'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+                                            'flex size-12 cursor-pointer items-center justify-center rounded-full border text-[15px] font-semibold',
+                                            'transition-[background-color,border-color,color,scale] duration-[var(--duration-press)] ease-out',
+                                            'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-safe:active:scale-[0.92]',
                                             isSelected
                                                 ? 'border-primary bg-primary text-primary-foreground'
                                                 : 'border-border bg-card text-foreground hover:border-secondary',

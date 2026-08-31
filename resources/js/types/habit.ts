@@ -3,6 +3,44 @@ import type { AppointmentDay } from './friendship';
 export type BehaviorType = 'nutrition' | 'movement' | 'learning' | 'other';
 
 /**
+ * Die Kategorie des Gewohnheitskatalogs — der Bereich des Studienalltags.
+ *
+ * Spiegelt `HabitCategory` im Backend. Die Kategorie ist die Einstiegsfrage
+ * des Wizards; die fachliche Einordnung für die Plateau-Schätzung bleibt
+ * `BehaviorType` und hängt an der einzelnen Vorlage.
+ */
+export type HabitCategory = 'sport' | 'uni' | 'alltag' | 'erholung';
+
+/** Eine Vorlage aus dem Katalog — mehr braucht die Kachel nicht. */
+export interface HabitTemplateOption {
+    key: string;
+    title: string;
+    /** Startwert des Dauer-Steppers, in Minuten. */
+    defaultMinutes: number;
+}
+
+/** Eine Kategorie samt ihrer Vorlagen — kommt aus `HabitCategory::options()`. */
+export interface HabitCategoryOption {
+    value: HabitCategory;
+    label: string;
+    description: string;
+    templates: HabitTemplateOption[];
+}
+
+/**
+ * Schrittweite und Grenzen der Dauer — kommt aus `MeasureUnit::minutesLimits()`.
+ *
+ * Bewusst nicht als TS-Konstanten hier: Der Stepper im Browser und die
+ * Validierung auf dem Server müssen dieselben Werte benutzen, und dafür darf
+ * es nur eine Quelle geben.
+ */
+export interface DurationLimits {
+    step: number;
+    min: number;
+    max: number;
+}
+
+/**
  * Wie eine Gewohnheit im Tag verankert ist.
  *
  * `dynamic` hängt an einer Situation („nach dem Aufstehen") und gilt an jedem
@@ -11,16 +49,45 @@ export type BehaviorType = 'nutrition' | 'movement' | 'learning' | 'other';
  *
  * `chained` hängt an einer anderen Gewohnheit und beginnt, wo die aufhört —
  * das Domino-Prinzip aus time-blocking.md. Ihren Platz im Tag leiht sie sich.
- *
- * `opportunistic` hat gar keinen Platz im Tag: „Treppe statt Aufzug" ergibt
- * sich, wo die Gelegenheit auftaucht. Solche Gewohnheiten stehen nicht auf der
- * Tagesachse und werden nicht als Quote gemessen — versäumt hat nichts, wer an
- * keinem Aufzug vorbeikam.
  */
-export type ScheduleType = 'dynamic' | 'fixed' | 'chained' | 'opportunistic';
+export type ScheduleType = 'dynamic' | 'fixed' | 'chained';
 
 /** ISO-Wochentag: 1 = Montag … 7 = Sonntag. */
 export type Weekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
+/**
+ * Der Rahmen eines Wochentags: wann der Tag anfängt und wann er endet.
+ *
+ * Spiegelt `User::sleepWindows()`. Gewohnheiten lassen sich nur innerhalb
+ * dieses Rahmens auf eine Uhrzeit legen — der Server weist alles andere ab,
+ * die Oberfläche sagt es vorher.
+ */
+export interface SleepWindow {
+    weekday: Weekday;
+    /** „07:00" — ab hier ist der Tag wach. */
+    wakeTime: string;
+    /** „23:00" — ab hier ist er es nicht mehr. Vor `wakeTime` heißt: nach Mitternacht. */
+    bedtime: string;
+    /** Klingelt der Wecker an diesem Morgen? */
+    alarmEnabled: boolean;
+}
+
+/**
+ * Der geteilte Schlaf-Zustand für Hinweis und Wecker — auf jeder Seite.
+ *
+ * Drei Tage, nicht einer: Eine Schlafenszeit nach Mitternacht gehört zum
+ * gestrigen Wochentag, und der Wecker von morgen kann klingeln, während der
+ * Tab noch offen ist.
+ */
+export interface SleepShared {
+    yesterday: SleepWindow;
+    today: SleepWindow;
+    tomorrow: SleepWindow;
+    /** Die Erinnerung vor der Schlafenszeit — ein Schalter für die ganze Woche. */
+    reminderEnabled: boolean;
+    /** Vorlauf der Erinnerung in Minuten, aus `SleepSchedule::BedtimeReminderLeadMinutes`. */
+    leadMinutes: number;
+}
 
 /**
  * Eine Gewohnheit, an die sich eine andere anhängen lässt.
@@ -49,26 +116,13 @@ export interface BusySlot {
     to: string;
 }
 
-/** Die Einheit, in der der Umfang einer Gewohnheit gemessen wird. */
-export type MeasureUnit = 'minutes' | 'pages' | 'liters' | 'times';
-
 /**
- * Eine Einheit mit ihren Grenzen — kommt als Prop aus `MeasureUnit::options()`.
+ * Die Einheit, in der der Umfang einer Gewohnheit gemessen wird.
  *
- * Schrittweite und Grenzen stehen bewusst nicht als TS-Konstanten hier: Der
- * Stepper im Browser und die Validierung auf dem Server müssen dieselben Werte
- * benutzen, und dafür darf es nur eine Quelle geben.
+ * Neu vergeben wird nur noch `minutes` — der Katalog kennt nur Aktivitäten
+ * mit Dauer. Die übrigen Werte existieren in alten Gewohnheiten weiter.
  */
-export interface MeasureUnitOption {
-    value: MeasureUnit;
-    /** Ausgeschrieben, für den Stepper: „Minuten". */
-    label: string;
-    /** Kurzform, für die Zeile in der Liste: „Min". */
-    short: string;
-    step: number;
-    min: number;
-    max: number;
-}
+export type MeasureUnit = 'minutes' | 'pages' | 'liters' | 'times';
 
 export interface Habit {
     id: number;
@@ -76,7 +130,7 @@ export interface Habit {
     /** Der Wann-Teil, fertig formatiert: „nach dem Aufstehen" oder „17:00 · Mo–Fr". */
     scheduleLabel: string;
     behaviorType: BehaviorType;
-    /** Der Umfang als fertige Zeile („20 Min", „1,5 L"), sonst null. */
+    /** Die Dauer als fertige Zeile („20 Min"), sonst null. */
     measureLabel: string | null;
     /**
      * Der vorbereitete erste Handgriff („Stell das Glas ans Bett").
@@ -105,14 +159,8 @@ export interface Habit {
     appointmentDays: AppointmentDay[];
 }
 
-/**
- * Der Block der Gewohnheiten-Liste.
- *
- * `whenever` ist keine dritte Zeitangabe, sondern ihr Gegenteil: Was sich
- * ergibt, steht an keinem Tag an und kann an jedem vorkommen. Unter „später"
- * stünde es falsch — später heißt, dass ein Termin bevorsteht.
- */
-export type HabitGroup = 'today' | 'later' | 'whenever';
+/** Der Block der Gewohnheiten-Liste: steht heute an oder später. */
+export type HabitGroup = 'today' | 'later';
 
 /** Eine Gewohnheit in der Verwaltungsansicht — dort zählt die Planung, nicht der heutige Tag. */
 export interface ManagedHabit {
@@ -120,7 +168,7 @@ export interface ManagedHabit {
     title: string;
     scheduleLabel: string;
     behaviorType: BehaviorType;
-    /** Der Umfang als fertige Zeile („20 Min", „1,5 L"), sonst null. */
+    /** Die Dauer als fertige Zeile („20 Min"), sonst null. */
     measureLabel: string | null;
     /** Nur bei fester Uhrzeit lässt sich eine Erinnerung setzen. */
     canRemind: boolean;
@@ -141,12 +189,12 @@ export interface ManagedHabit {
      */
     streak: string | null;
     /**
-     * Die blanke Zahl statt einer Serie („7× in 30 Tagen"), sonst null.
+     * Der Katalog-Bereich („Sport & Bewegung"), sonst null.
      *
-     * Nur für Gewohnheiten, die sich ergeben: Zwei Tage ohne Gelegenheit würden
-     * jede Serie reißen lassen, obwohl nichts versäumt wurde.
+     * Null bei Gewohnheiten aus der Zeit der freien Eingabe — sie laufen
+     * weiter, gehören aber zu keinem Bereich.
      */
-    recentCount: string | null;
+    categoryLabel: string | null;
 }
 
 /**
@@ -155,16 +203,20 @@ export interface ManagedHabit {
  * Nur der Bauplan, nicht die Gewohnheit: Der Warum-Satz und der kleinste
  * Schritt reisen nicht mit, weil sie zu einer Person gehören und nicht zu einer
  * Gewohnheit. Der Verlauf ohnehin nicht — beim Übernehmen beginnt Tag eins.
- *
- * Der Umfang reist mit: Er beschreibt, was gemacht wird, nicht warum — und
- * lässt sich nach dem Übernehmen umstellen.
  */
 export interface HabitBlueprint {
     title: string;
+    /**
+     * Die Katalog-Vorlage hinter der Gewohnheit.
+     *
+     * Null bei Gewohnheiten aus der Zeit der freien Eingabe — die lassen sich
+     * nicht mehr übernehmen, weil es außerhalb des Katalogs kein Anlegen gibt.
+     */
+    templateKey: string | null;
     behaviorType: BehaviorType;
-    targetAmount: number | null;
-    targetUnit: MeasureUnit | null;
-    /** Der Umfang als fertige Zeile, für die Vorschau im Übernahme-Sheet. */
+    /** Die Dauer in Minuten, mit der die Übernahme startet. */
+    durationMinutes: number;
+    /** Die Dauer als fertige Zeile, für die Vorschau im Übernahme-Sheet. */
     measureLabel: string | null;
     scheduleType: ScheduleType;
     triggerSituation: string | null;
@@ -211,13 +263,12 @@ export interface CalendarBlock {
     anchor: string;
     /** Die Stelle im Tag als Stunde — sortiert die Achse. */
     anchorHour: number;
-    /** Der Umfang als fertige Zeile („20 Min", „10 Seiten"), sonst null. */
+    /** Die Dauer als fertige Zeile („20 Min"), sonst null. */
     measureLabel: string | null;
     /**
      * Die belegte Spanne („17:00 – 17:20"), sonst null.
      *
-     * Gibt es nur, wo eine feste Uhrzeit auf eine Dauer trifft — nur Minuten
-     * sind eine Dauer, „10 Seiten" belegt keinen Platz im Tag.
+     * Gibt es nur, wo eine feste Uhrzeit auf eine Dauer trifft.
      */
     timeRange: string | null;
     behaviorType: BehaviorType;
@@ -225,13 +276,6 @@ export interface CalendarBlock {
     completed: boolean;
     /** Beendete Gewohnheiten bleiben in ihrer Vergangenheit sichtbar. */
     graduated: boolean;
-    /**
-     * Lässt sich der Zeitpunkt überhaupt verbessern?
-     *
-     * Nur wo es einen gibt. Was sich ergibt, hat keinen — der
-     * `✦ Passt der Zeitpunkt?`-Chip hätte dort nichts anzubieten.
-     */
-    adjustable: boolean;
     /**
      * Die Gewohnheit, an der dieser Block hängt — sonst null.
      *

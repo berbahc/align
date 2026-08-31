@@ -1,7 +1,7 @@
 <?php
 
 use App\Ai\Agents\SuggestSmallestStep;
-use App\Enums\BehaviorType;
+use App\Enums\HabitTemplate;
 use App\Models\Habit;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia;
@@ -16,8 +16,7 @@ test('the wizard receives the steps Claude proposed', function () {
 
     $this->actingAs($user)
         ->postJson(route('habits.smallest-step.suggestions'), [
-            'title' => 'Laufen gehen',
-            'behavior_type' => BehaviorType::Movement->value,
+            'template_key' => HabitTemplate::Joggen->value,
             'trigger_situation' => 'wenn ich nach Hause komme',
         ])
         ->assertOk()
@@ -32,14 +31,13 @@ test('the situation travels with the prompt so the step fits the moment', functi
     $user = User::factory()->create(['onboarded_at' => now()]);
 
     $this->actingAs($user)->postJson(route('habits.smallest-step.suggestions'), [
-        'title' => 'Wasser trinken',
-        'behavior_type' => BehaviorType::Nutrition->value,
+        'template_key' => HabitTemplate::Meditieren->value,
         'trigger_situation' => 'nach dem Aufstehen',
     ])->assertOk();
 
     SuggestSmallestStep::assertPrompted(
         fn (AgentPrompt $prompt): bool => $prompt->contains('nach dem Aufstehen')
-            && $prompt->contains('Wasser trinken'),
+            && $prompt->contains('Meditieren'),
     );
 });
 
@@ -60,8 +58,7 @@ test('a failing call answers with a plain refusal instead of invented steps', fu
 
     $this->actingAs($user)
         ->postJson(route('habits.smallest-step.suggestions'), [
-            'title' => 'Laufen gehen',
-            'behavior_type' => BehaviorType::Movement->value,
+            'template_key' => HabitTemplate::Joggen->value,
         ])
         ->assertStatus(503)
         ->assertJsonMissingPath('steps')
@@ -75,8 +72,7 @@ test('an answer without a usable step counts as a failure', function () {
 
     $this->actingAs($user)
         ->postJson(route('habits.smallest-step.suggestions'), [
-            'title' => 'Laufen gehen',
-            'behavior_type' => BehaviorType::Movement->value,
+            'template_key' => HabitTemplate::Joggen->value,
         ])
         ->assertStatus(503);
 });
@@ -90,27 +86,25 @@ test('a step longer than the column allows is dropped', function () {
 
     $this->actingAs($user)
         ->postJson(route('habits.smallest-step.suggestions'), [
-            'title' => 'Laufen gehen',
-            'behavior_type' => BehaviorType::Movement->value,
+            'template_key' => HabitTemplate::Joggen->value,
         ])
         ->assertOk()
         ->assertExactJson(['steps' => ['Zieh die Schuhe an.']]);
 });
 
-test('suggestions need a title and a direction to work with', function () {
+test('suggestions need a template to work with', function () {
     SuggestSmallestStep::fake();
 
     $user = User::factory()->create(['onboarded_at' => now()]);
 
     $this->actingAs($user)
         ->postJson(route('habits.smallest-step.suggestions'), [])
-        ->assertJsonValidationErrors(['title', 'behavior_type']);
+        ->assertJsonValidationErrors(['template_key']);
 });
 
 test('guests get no suggestions', function () {
     $this->postJson(route('habits.smallest-step.suggestions'), [
-        'title' => 'Laufen gehen',
-        'behavior_type' => BehaviorType::Movement->value,
+        'template_key' => HabitTemplate::Joggen->value,
     ])->assertUnauthorized();
 });
 
@@ -180,8 +174,8 @@ test('the step is stored with the habit', function () {
     $user = User::factory()->create(['onboarded_at' => now()]);
 
     $this->actingAs($user)->post(route('habits.store'), [
-        'title' => 'Laufen gehen',
-        'behavior_type' => BehaviorType::Movement->value,
+        'template_key' => HabitTemplate::Joggen->value,
+        'target_amount' => 30,
         'trigger_situation' => 'wenn ich nach Hause komme',
         'smallest_step' => 'Zieh die Laufschuhe an.',
     ])->assertRedirect(route('dashboard'));
@@ -193,8 +187,8 @@ test('the step stays optional', function () {
     $user = User::factory()->create(['onboarded_at' => now()]);
 
     $this->actingAs($user)->post(route('habits.store'), [
-        'title' => 'Laufen gehen',
-        'behavior_type' => BehaviorType::Movement->value,
+        'template_key' => HabitTemplate::Joggen->value,
+        'target_amount' => 30,
         'trigger_situation' => 'wenn ich nach Hause komme',
     ])->assertRedirect(route('dashboard'));
 
@@ -206,8 +200,8 @@ test('an overlong step is rejected on creation', function () {
 
     $this->actingAs($user)
         ->post(route('habits.store'), [
-            'title' => 'Laufen gehen',
-            'behavior_type' => BehaviorType::Movement->value,
+            'template_key' => HabitTemplate::Joggen->value,
+            'target_amount' => 30,
             'trigger_situation' => 'wenn ich nach Hause komme',
             'smallest_step' => str_repeat('a', 161),
         ])
@@ -238,8 +232,7 @@ test('the suggestion endpoint is rate limited', function () {
     $this->actingAs($user);
 
     $payload = [
-        'title' => 'Laufen gehen',
-        'behavior_type' => BehaviorType::Movement->value,
+        'template_key' => HabitTemplate::Joggen->value,
     ];
 
     foreach (range(1, 20) as $ignored) {

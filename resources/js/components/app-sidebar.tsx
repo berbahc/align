@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { CalendarDays, LayoutGrid, Repeat, Users } from 'lucide-react';
+import { CalendarDays, LayoutGrid, Moon, Repeat, Users } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -15,13 +15,19 @@ import {
 } from '@/components/ui/sidebar';
 import { calendar, community, dashboard } from '@/routes';
 import { index as habitsIndex } from '@/routes/habits';
+import { show as sleepShow } from '@/routes/sleep';
 import type { NavItem } from '@/types';
 
-// Vier Einträge, wie das Figma-Design sie vorgibt. Der dritte hieß „Verlauf"
-// und stand für habit-journey.md — das einzige Feature ganz ohne Umfragedaten
-// (Auswertung §9: die Skala wurde nie erhoben). Der Kalender löst dasselbe
-// Versprechen ein, mit Belegen: 20 von 25 Befragten planen ohnehin mit einem
-// Kalender oder Planer.
+// Der dritte Eintrag hieß im Figma-Design „Verlauf" und stand für
+// habit-journey.md — das einzige Feature ganz ohne Umfragedaten (Auswertung
+// §9: die Skala wurde nie erhoben). Der Kalender löst dasselbe Versprechen
+// ein, mit Belegen: 20 von 25 Befragten planen ohnehin mit einem Kalender
+// oder Planer.
+//
+// „Schlaf" ist der fünfte und kommt aus dem Rahmen-Feature: Aufstehen und
+// Schlafenszeit begrenzen, wann Gewohnheiten überhaupt Platz haben. Er steht
+// hinter dem Kalender, weil er dieselbe Frage von der anderen Seite stellt —
+// nicht „was steht an", sondern „wie lang ist der Tag".
 const mainNavItems: NavItem[] = [
     {
         title: 'Übersicht',
@@ -37,6 +43,11 @@ const mainNavItems: NavItem[] = [
         title: 'Kalender',
         href: calendar(),
         icon: CalendarDays,
+    },
+    {
+        title: 'Schlaf',
+        href: sleepShow(),
+        icon: Moon,
     },
     {
         title: 'Community',

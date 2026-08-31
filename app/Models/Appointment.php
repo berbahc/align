@@ -214,7 +214,7 @@ class Appointment extends Model
      * Vergangenes verfällt still: Eine Anfrage für gestern ist keine Frage
      * mehr, und ein Hinweis darauf wäre ein Vorwurf.
      *
-     * @return list<array{id: int, name: string, initial: string, title: string, anchor: string, day: string, blueprint: array{title: string, behaviorType: string, targetAmount: float|null, targetUnit: string|null, measureLabel: string|null, scheduleType: string, triggerSituation: string|null, scheduledTime: string|null, scheduledDays: list<int>|null}}>
+     * @return list<array{id: int, name: string, initial: string, title: string, anchor: string, day: string, blueprint: array{title: string, templateKey: string|null, behaviorType: string, durationMinutes: int, measureLabel: string|null, scheduleType: string, triggerSituation: string|null, scheduledTime: string|null, scheduledDays: list<int>|null}}>
      */
     public static function pendingFor(User $user): array
     {

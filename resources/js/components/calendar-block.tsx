@@ -39,7 +39,7 @@ export function CalendarBlock({
     return (
         <li
             className={cn(
-                'flex flex-col gap-2 rounded-[14px] p-4 transition-opacity duration-200',
+                'flex flex-col gap-2 rounded-[14px] p-4 transition-opacity duration-[var(--duration-fluid)] ease-[var(--ease-fluid)]',
                 ghost && 'border-2 border-dashed border-primary bg-sand/40',
                 faded && 'opacity-40',
                 !ghost && !faded && 'bg-card',
@@ -55,14 +55,14 @@ export function CalendarBlock({
                 der Platz wieder frei ist. Das bleibt eine Zeile Text — eine nach
                 Dauer skalierte Blockhöhe wäre das Stundenraster, das oben aus
                 gutem Grund ausgeschlossen ist. */}
-            <p className="text-[11px] font-semibold tracking-[0.11em] text-muted-foreground uppercase">
+            <p className="type-eyebrow text-muted-foreground">
                 {block.timeRange ?? block.anchor}
             </p>
 
             <div className="flex items-center gap-3">
                 <span
                     className={cn(
-                        'flex size-11 shrink-0 items-center justify-center transition-colors duration-200',
+                        'flex size-11 shrink-0 items-center justify-center transition-colors duration-[var(--duration-fluid)] ease-[var(--ease-fluid)]',
                         block.completed
                             ? 'rounded-full bg-primary text-primary-foreground'
                             : 'rounded-xl bg-sand text-primary',
@@ -76,26 +76,31 @@ export function CalendarBlock({
                 </span>
 
                 <span className="min-w-0 flex-1">
+                    {/* Der Titel darf zwei Zeilen brauchen, statt sich mit der
+                        Dauer eine zu teilen und dabei abgeschnitten zu werden:
+                        „Vorlesung nachbereiten …" nennt die Gewohnheit nur
+                        halb, und die halbe Auskunft ist die schlechtere
+                        (§16 Craft). Die Dauer steht deshalb darunter. */}
                     <span
                         className={cn(
-                            'block truncate text-[15px] leading-snug font-semibold',
+                            'block text-[15px] leading-snug font-semibold text-balance',
                             block.completed
                                 ? 'text-olive-mid'
                                 : 'text-foreground',
                         )}
                     >
                         {block.title}
-                        {/* Steht die Spanne schon oben, wäre „20 Min" hier ihre
-                            Wiederholung — der Umfang erscheint dann nur, wo er
-                            sonst nirgends abzulesen ist. */}
-                        {block.measureLabel !== null &&
-                            block.timeRange === null && (
-                                <span className="font-normal text-muted-foreground">
-                                    {' · '}
-                                    {block.measureLabel}
-                                </span>
-                            )}
                     </span>
+
+                    {/* Steht die Spanne schon oben, wäre „20 Min" hier ihre
+                        Wiederholung — die Dauer erscheint nur, wo sie sonst
+                        nirgends abzulesen ist. */}
+                    {block.measureLabel !== null &&
+                        block.timeRange === null && (
+                            <span className="mt-0.5 block text-xs text-muted-foreground">
+                                {block.measureLabel}
+                            </span>
+                        )}
                     {block.smallestStep && !block.completed && (
                         <span className="mt-0.5 block truncate text-xs text-muted-foreground">
                             → {block.smallestStep}
@@ -116,11 +121,11 @@ export function CalendarBlock({
                                 ? `${block.title} als noch offen markieren`
                                 : `${block.title} als erledigt markieren`
                         }
-                        className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors duration-200 hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                        className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors duration-[var(--duration-press)] ease-out hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                     >
                         <span
                             className={cn(
-                                'flex size-7 items-center justify-center rounded-full transition-colors duration-200',
+                                'flex size-7 items-center justify-center rounded-full transition-colors duration-[var(--duration-fluid)] ease-[var(--ease-fluid)]',
                                 block.completed
                                     ? 'bg-primary'
                                     : 'border-2 border-dashed border-sand',
@@ -156,14 +161,12 @@ export function CalendarBlock({
             </div>
 
             {/* Der Weg zur KI steht nur an lebenden Gewohnheiten: eine beendete
-                verschiebt man nicht mehr, und einen Ghost erst recht nicht.
-                Ohne Zeitpunkt gibt es auch keinen besseren — für „Treppe statt
-                Aufzug" hätte die Frage nichts anzubieten. */}
-            {onAdjust && !ghost && !block.graduated && block.adjustable && (
+                verschiebt man nicht mehr, und einen Ghost erst recht nicht. */}
+            {onAdjust && !ghost && !block.graduated && (
                 <button
                     type="button"
                     onClick={() => onAdjust(block)}
-                    className="cursor-pointer self-start text-xs font-semibold text-primary underline underline-offset-4 transition-colors duration-200 hover:text-primary/80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    className="cursor-pointer self-start text-xs font-semibold text-primary underline underline-offset-4 transition-colors duration-[var(--duration-press)] ease-out hover:text-primary/80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                 >
                     ✦ Passt der Zeitpunkt?
                 </button>

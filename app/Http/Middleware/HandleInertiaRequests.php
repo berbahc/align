@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Enums\ScheduleType;
 use App\Models\Habit;
+use App\Models\SleepSchedule;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -46,7 +47,41 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
             ],
             'habitReminders' => $this->habitReminders($request),
+            'sleep' => $this->sleep($request),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+        ];
+    }
+
+    /**
+     * Der Schlafrahmen der umliegenden Tage — für Hinweis und Wecker.
+     *
+     * Geteilt statt seitengebunden, aus demselben Grund wie die
+     * Gewohnheits-Erinnerungen: Die Schlafenszeit hängt an der Uhr, nicht an
+     * der Seite. Drei Tage, nicht einer: Eine Schlafenszeit nach Mitternacht
+     * gehört zum gestrigen Wochentag, und der Wecker von morgen kann
+     * klingeln, während der Tab noch offen ist.
+     *
+     * @return array{yesterday: array{weekday: int, wakeTime: string, bedtime: string, alarmEnabled: bool}, today: array{weekday: int, wakeTime: string, bedtime: string, alarmEnabled: bool}, tomorrow: array{weekday: int, wakeTime: string, bedtime: string, alarmEnabled: bool}, reminderEnabled: bool, leadMinutes: int}|null
+     */
+    private function sleep(Request $request): ?array
+    {
+        $user = $request->user();
+
+        if ($user === null) {
+            return null;
+        }
+
+        $windows = $user->sleepWindows();
+        $today = Carbon::today()->dayOfWeekIso;
+
+        $weekday = fn (int $offset): int => (($today - 1 + $offset + 7) % 7) + 1;
+
+        return [
+            'yesterday' => $windows[$weekday(-1)],
+            'today' => $windows[$weekday(0)],
+            'tomorrow' => $windows[$weekday(1)],
+            'reminderEnabled' => $user->bedtime_reminder_enabled,
+            'leadMinutes' => SleepSchedule::BedtimeReminderLeadMinutes,
         ];
     }
 

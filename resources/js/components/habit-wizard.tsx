@@ -2,10 +2,9 @@ import { useForm } from '@inertiajs/react';
 import { ArrowRight } from 'lucide-react';
 import { useState } from 'react';
 import { AiSuggestion, AiSuggestionFailure } from '@/components/ai-suggestion';
+import { DurationPicker } from '@/components/duration-picker';
 import InputError from '@/components/input-error';
-import { MeasurePicker } from '@/components/measure-picker';
 import {
-    CHOICE_TILE,
     formatWeekdays,
     SchedulePicker,
     SituationPicker,
@@ -16,86 +15,71 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
 import { useSmallestStep } from '@/hooks/use-smallest-step';
-import { BEHAVIOR_ICONS } from '@/lib/behavior-icons';
-import { formatMeasure } from '@/lib/measure';
+import { CATEGORY_ICONS } from '@/lib/behavior-icons';
+import {
+    CHOICE_TILE,
+    CHOICE_TILE_OFF,
+    CHOICE_TILE_ON,
+    PRIMARY_BUTTON,
+    QUIET_BUTTON,
+} from '@/lib/interaction';
+import { outsideSleepWindow } from '@/lib/sleep';
 import { cn } from '@/lib/utils';
 import { suggestions } from '@/routes/habits/smallest-step';
 import type {
-    BehaviorType,
     BusySlot,
     ChainCandidate,
-    MeasureUnit,
-    MeasureUnitOption,
+    DurationLimits,
+    HabitCategory,
+    HabitCategoryOption,
+    HabitTemplateOption,
     ScheduleType,
+    SleepWindow,
     Weekday,
 } from '@/types';
 
-/**
- * Ein Vorschlag aus dem Studienalltag — Handlung und Umfang getrennt.
- *
- * Spiegelt `BehaviorType::suggestions()`. Die Kachel zeigt beides und bleibt
- * damit so konkret wie vorher, nur ist die Zahl jetzt verstellbar. Wo kein
- * Umfang passt, steht `null`.
- */
-export interface DirectionSuggestion {
-    title: string;
-    amount: number | null;
-    unit: MeasureUnit | null;
-    /**
-     * Kann die Gewohnheit überhaupt eine Stelle im Tag haben?
-     *
-     * „Treppe statt Aufzug" kann es nicht — für sie steht Schritt 3 auf „Wenn
-     * es sich ergibt", statt eine Uhrzeit zu erfinden. Vorgewählt, nicht
-     * erzwungen.
-     */
-    plannable: boolean;
-}
-
-export interface Direction {
-    value: BehaviorType;
-    label: string;
-    description: string;
-    suggestions: DirectionSuggestion[];
-}
-
 const STEP_COUNT = 5;
-
-const EYEBROW = 'text-[11px] font-semibold tracking-[0.11em] uppercase';
-
-const PRIMARY_BUTTON =
-    'inline-flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary px-6 text-[15px] font-semibold text-primary-foreground transition-colors duration-200 hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50';
 
 /** Ein neutraler Nachmittagstermin, von dem aus sich in beide Richtungen steppen lässt. */
 const DEFAULT_TIME = '17:00';
 
+/**
+ * Der Assistent zum Anlegen — jede Gewohnheit kommt aus dem Katalog.
+ *
+ * Die freie Eingabe ist bewusst weg: Gewohnheiten unterscheiden sich zu
+ * stark, als dass ein Formular allen gerecht würde — was sich ergibt, hat
+ * keine Uhrzeit, was sich über den Tag verteilt, keine Dauer. Der Katalog
+ * enthält nur planbare Aktivitäten, und deshalb hat hier jede Wahl eine
+ * Dauer und einen Platz im Tag.
+ */
 export function HabitWizard({
-    directions,
+    categories,
     triggerSuggestions,
     scheduleTypes,
-    measureUnits,
+    durationLimits,
+    sleepWindows = [],
     chainCandidates = [],
     busySlots = [],
     action,
 }: {
-    directions: Direction[];
+    categories: HabitCategoryOption[];
     triggerSuggestions: string[];
     scheduleTypes: ScheduleTypeOption[];
-    measureUnits: MeasureUnitOption[];
+    durationLimits: DurationLimits;
+    sleepWindows?: SleepWindow[];
     chainCandidates?: ChainCandidate[];
     busySlots?: BusySlot[];
     action: string;
 }) {
     const [step, setStep] = useState(1);
-    const [ownTitle, setOwnTitle] = useState(false);
+    const [category, setCategory] = useState<HabitCategory | ''>('');
     const [ownStep, setOwnStep] = useState(false);
 
     const suggestion = useSmallestStep();
 
     const { data, setData, post, processing, errors } = useForm({
-        behavior_type: '' as BehaviorType | '',
-        title: '',
-        target_amount: null as number | null,
-        target_unit: '' as MeasureUnit | '',
+        template_key: '',
+        target_amount: durationLimits.min,
         schedule_type: 'dynamic' as ScheduleType,
         trigger_situation: '',
         scheduled_time: DEFAULT_TIME,
@@ -105,30 +89,35 @@ export function HabitWizard({
         smallest_step: '',
     });
 
-    const direction = directions.find(
-        (candidate) => candidate.value === data.behavior_type,
+    const chosenCategory = categories.find(
+        (candidate) => candidate.value === category,
     );
+
+    const template = categories
+        .flatMap((candidate) => candidate.templates)
+        .find((candidate) => candidate.key === data.template_key);
 
     const isFixed = data.schedule_type === 'fixed';
-    const isUnplanned = data.schedule_type === 'opportunistic';
 
-    const measureLabel = formatMeasure(
-        data.target_amount,
-        data.target_unit === '' ? null : data.target_unit,
-        measureUnits,
-    );
+    // Der Rahmen aus dem Schlafplan: Was außerhalb läge, weist der Server ab
+    // — dann darf der Schritt auch nicht weitergehen, der Hinweis steht schon
+    // im Picker.
+    const asleep = isFixed
+        ? outsideSleepWindow(
+              data.scheduled_time,
+              data.scheduled_days,
+              sleepWindows,
+          )
+        : null;
 
     const canContinue = [
-        data.behavior_type !== '',
-        data.title.trim().length > 0,
-        // Was sich ergibt, verlangt nichts: keine Situation, keine Uhrzeit.
-        isUnplanned
-            ? true
-            : data.schedule_type === 'chained'
-              ? data.chained_to_habit_id !== null
-              : isFixed
-                ? data.scheduled_days.length > 0
-                : data.trigger_situation.trim().length > 0,
+        category !== '',
+        data.template_key !== '',
+        data.schedule_type === 'chained'
+            ? data.chained_to_habit_id !== null
+            : isFixed
+              ? data.scheduled_days.length > 0 && asleep === null
+              : data.trigger_situation.trim().length > 0,
         // Der kleinste Schritt ist überspringbar — bei ø 3,92 Schuldgefühl
         // darf hier kein weiteres Pflichtfeld entstehen.
         true,
@@ -137,20 +126,15 @@ export function HabitWizard({
     /**
      * Holt die Vorschläge der KI für den kleinsten Schritt.
      *
-     * Die Situation reist mit, weil ein Schritt an ihr hängt: „Leg die Schuhe
-     * an die Tür" passt zu „wenn ich nach Hause komme", nicht zu „nach dem
-     * Aufstehen". Bei fester Uhrzeit gibt es keine — dann entscheidet der Titel.
-     *
-     * Der Umfang reist im Titel mit: Ob jemand 10 oder 45 Minuten vorhat, ändert,
-     * was ein sinnvoller erster Handgriff ist.
+     * Die Vorlage und die Dauer reisen mit, weil ein Schritt an ihnen hängt:
+     * Ob jemand 10 oder 45 Minuten vorhat, ändert den sinnvollen ersten
+     * Handgriff. Die Situation ebenso — „Leg die Schuhe an die Tür" passt zu
+     * „wenn ich nach Hause komme", nicht zu „nach dem Aufstehen".
      */
     function loadSuggestions() {
         void suggestion.load(suggestions.url(), {
-            title:
-                measureLabel === null
-                    ? data.title
-                    : `${data.title} · ${measureLabel}`,
-            behavior_type: data.behavior_type,
+            template_key: data.template_key,
+            target_amount: data.target_amount,
             trigger_situation: isFixed ? undefined : data.trigger_situation,
         });
     }
@@ -164,36 +148,23 @@ export function HabitWizard({
         setStep(step + 1);
     }
 
-    function chooseDirection(value: BehaviorType) {
+    function chooseCategory(value: HabitCategory) {
+        setCategory(value);
+        // Ein Kategoriewechsel macht die gewählte Vorlage ungültig — sonst
+        // stünde eine Sport-Gewohnheit still unter „Uni & Lernen".
         setData((current) => ({
             ...current,
-            behavior_type: value,
-            // Ein Richtungswechsel macht einen Vorschlag aus der alten
-            // Richtung ungültig — sonst bleibt er still stehen. Der Umfang
-            // gehörte zu ihm und geht mit: „2 Liter" hat nach dem Wechsel auf
-            // „Bewegung" niemand mehr gemeint.
-            title: '',
-            target_amount: null,
-            target_unit: '',
+            template_key: '',
+            target_amount: durationLimits.min,
         }));
-        setOwnTitle(false);
     }
 
-    /**
-     * Ein Vorschlag setzt Titel, Umfang und die Art der Planung in einem Zug.
-     *
-     * Für „Treppe statt Aufzug" steht danach „Wenn es sich ergibt" — der
-     * Katalog weiß, dass diese Gewohnheit keinen Platz im Tag haben kann. Wer
-     * widerspricht, stellt in Schritt 3 um; die Wahl bleibt offen.
-     */
-    function chooseSuggestion(candidate: DirectionSuggestion) {
-        setOwnTitle(false);
+    /** Eine Vorlage setzt Titel und Dauer in einem Zug. */
+    function chooseTemplate(candidate: HabitTemplateOption) {
         setData((current) => ({
             ...current,
-            title: candidate.title,
-            target_amount: candidate.amount,
-            target_unit: candidate.unit ?? '',
-            schedule_type: candidate.plannable ? 'dynamic' : 'opportunistic',
+            template_key: candidate.key,
+            target_amount: candidate.defaultMinutes,
         }));
     }
 
@@ -209,7 +180,7 @@ export function HabitWizard({
                     <span
                         key={index}
                         className={cn(
-                            'h-1 flex-1 rounded-full transition-colors duration-200',
+                            'h-1 flex-1 rounded-full transition-colors duration-[var(--duration-fluid)] ease-[var(--ease-fluid)]',
                             index < step ? 'bg-primary' : 'bg-sand',
                         )}
                     />
@@ -219,20 +190,19 @@ export function HabitWizard({
             {step === 1 && (
                 <fieldset className="flex flex-col gap-4">
                     <legend className="sr-only">
-                        Schritt 1 von {STEP_COUNT}: Richtung
+                        Schritt 1 von {STEP_COUNT}: Bereich
                     </legend>
-                    <p className={`${EYEBROW} text-muted-foreground`}>
+                    <p className={'type-eyebrow text-muted-foreground'}>
                         Schritt 1 von {STEP_COUNT}
                     </p>
-                    <h2 className="text-2xl leading-tight font-bold">
+                    <h2 className="type-heading">
                         Woran möchtest du arbeiten?
                     </h2>
 
                     <div className="grid gap-3 sm:grid-cols-2">
-                        {directions.map((candidate) => {
-                            const Icon = BEHAVIOR_ICONS[candidate.value];
-                            const isSelected =
-                                data.behavior_type === candidate.value;
+                        {categories.map((candidate) => {
+                            const Icon = CATEGORY_ICONS[candidate.value];
+                            const isSelected = category === candidate.value;
 
                             return (
                                 <button
@@ -240,14 +210,14 @@ export function HabitWizard({
                                     type="button"
                                     aria-pressed={isSelected}
                                     onClick={() =>
-                                        chooseDirection(candidate.value)
+                                        chooseCategory(candidate.value)
                                     }
                                     className={cn(
                                         CHOICE_TILE,
                                         'flex flex-col gap-2 px-4 py-4',
                                         isSelected
-                                            ? 'border-primary'
-                                            : 'border-border hover:border-secondary',
+                                            ? CHOICE_TILE_ON
+                                            : CHOICE_TILE_OFF,
                                     )}
                                 >
                                     <Icon
@@ -265,133 +235,65 @@ export function HabitWizard({
                             );
                         })}
                     </div>
-                    <InputError message={errors.behavior_type} />
                 </fieldset>
             )}
 
-            {step === 2 && direction && (
+            {step === 2 && chosenCategory && (
                 <fieldset className="flex flex-col gap-4">
                     <legend className="sr-only">
                         Schritt 2 von {STEP_COUNT}: Gewohnheit
                     </legend>
-                    <p className={`${EYEBROW} text-muted-foreground`}>
-                        Schritt 2 von {STEP_COUNT} · {direction.label}
+                    <p className={'type-eyebrow text-muted-foreground'}>
+                        Schritt 2 von {STEP_COUNT} · {chosenCategory.label}
                     </p>
-                    <h2 className="text-2xl leading-tight font-bold">
-                        Womit fängst du an?
-                    </h2>
+                    <h2 className="type-heading">Womit fängst du an?</h2>
                     <p className="text-sm leading-relaxed text-muted-foreground">
-                        Klein anfangen wirkt besser als groß planen. Du kannst
-                        später jederzeit mehr daraus machen.
+                        Alles hier lässt sich fest im Tag einplanen. Klein
+                        anfangen wirkt besser als groß planen — die Dauer
+                        stellst du gleich darunter ein.
                     </p>
 
                     <div className="flex flex-col gap-2">
-                        {direction.suggestions.map((candidate) => {
+                        {chosenCategory.templates.map((candidate) => {
                             const isSelected =
-                                !ownTitle && data.title === candidate.title;
-                            const suggested = formatMeasure(
-                                candidate.amount,
-                                candidate.unit,
-                                measureUnits,
-                            );
+                                data.template_key === candidate.key;
 
                             return (
                                 <button
-                                    key={candidate.title}
+                                    key={candidate.key}
                                     type="button"
                                     aria-pressed={isSelected}
-                                    onClick={() => chooseSuggestion(candidate)}
+                                    onClick={() => chooseTemplate(candidate)}
                                     className={cn(
                                         CHOICE_TILE,
                                         'flex items-baseline justify-between gap-3 px-4 py-3 text-[15px]',
                                         isSelected
-                                            ? 'border-primary'
-                                            : 'border-border hover:border-secondary',
+                                            ? CHOICE_TILE_ON
+                                            : CHOICE_TILE_OFF,
                                     )}
                                 >
                                     <span>{candidate.title}</span>
-                                    {/* Der Umfang steht leiser als die Handlung:
-                                        er ist ein Startwert, keine Vorgabe. */}
-                                    {suggested !== null && (
-                                        <span className="shrink-0 text-xs text-muted-foreground">
-                                            {suggested}
-                                        </span>
-                                    )}
+                                    {/* Die Dauer steht leiser als die
+                                        Handlung: ein Startwert, keine Vorgabe. */}
+                                    <span className="shrink-0 text-xs text-muted-foreground">
+                                        {candidate.defaultMinutes} Min
+                                    </span>
                                 </button>
                             );
                         })}
-
-                        <button
-                            type="button"
-                            aria-pressed={ownTitle}
-                            onClick={() => {
-                                setOwnTitle(true);
-                                setData((current) => ({
-                                    ...current,
-                                    title: '',
-                                    target_amount: null,
-                                    target_unit: '',
-                                    // Die Planbarkeit gehörte zum Vorschlag,
-                                    // nicht zur eigenen Gewohnheit — für die
-                                    // entscheidet Schritt 3 wieder von vorn.
-                                    schedule_type: 'dynamic',
-                                }));
-                            }}
-                            className={cn(
-                                CHOICE_TILE,
-                                'border-dashed px-4 py-3 text-[15px] text-muted-foreground',
-                                ownTitle
-                                    ? 'border-primary'
-                                    : 'border-border hover:border-secondary',
-                            )}
-                        >
-                            Etwas anderes
-                        </button>
-
-                        {ownTitle && (
-                            <div className="grid gap-2 pt-1">
-                                <Label htmlFor="title" className="sr-only">
-                                    Eigene Gewohnheit
-                                </Label>
-                                <Input
-                                    id="title"
-                                    name="title"
-                                    autoFocus
-                                    maxLength={80}
-                                    placeholder="z. B. Wäsche sortieren"
-                                    value={data.title}
-                                    onChange={(event) =>
-                                        setData('title', event.target.value)
-                                    }
-                                />
-                            </div>
-                        )}
                     </div>
-                    <InputError message={errors.title} />
+                    <InputError message={errors.template_key} />
 
-                    {/* Der Umfang steht hier und nicht in einem eigenen Schritt:
-                        „Klein anfangen wirkt besser als groß planen" steht
-                        oben auf dieser Seite — hier wird es entschieden.
-                        Sichtbar erst, wenn es eine Gewohnheit gibt, an der ein
-                        Umfang hängen könnte. */}
-                    {data.title.trim().length > 0 && (
+                    {template !== undefined && (
                         <div className="flex flex-col gap-2">
-                            <p className={`${EYEBROW} text-muted-foreground`}>
-                                Umfang{' '}
-                                <span className="font-normal normal-case">
-                                    (optional)
-                                </span>
+                            <p className={'type-eyebrow text-muted-foreground'}>
+                                Dauer
                             </p>
-                            <MeasurePicker
-                                units={measureUnits}
-                                amount={data.target_amount}
-                                unit={data.target_unit}
-                                onChange={(amount, unit) =>
-                                    setData((current) => ({
-                                        ...current,
-                                        target_amount: amount,
-                                        target_unit: unit,
-                                    }))
+                            <DurationPicker
+                                minutes={data.target_amount}
+                                limits={durationLimits}
+                                onChange={(minutes) =>
+                                    setData('target_amount', minutes)
                                 }
                             />
                             <InputError message={errors.target_amount} />
@@ -405,12 +307,10 @@ export function HabitWizard({
                     <legend className="sr-only">
                         Schritt 3 von {STEP_COUNT}: Auslöser
                     </legend>
-                    <p className={`${EYEBROW} text-muted-foreground`}>
+                    <p className={'type-eyebrow text-muted-foreground'}>
                         Schritt 3 von {STEP_COUNT}
                     </p>
-                    <h2 className="text-2xl leading-tight font-bold">
-                        Wann machst du das?
-                    </h2>
+                    <h2 className="type-heading">Wann machst du das?</h2>
                     <p className="text-sm leading-relaxed text-muted-foreground">
                         Ein Moment im Tag trägt besser als eine Uhrzeit — eine
                         Situation löst das Verhalten von selbst aus. Für alles,
@@ -435,6 +335,7 @@ export function HabitWizard({
                             setData('chained_to_habit_id', id)
                         }
                         busySlots={busySlots}
+                        sleepWindows={sleepWindows}
                     >
                         <SituationPicker
                             suggestions={triggerSuggestions}
@@ -456,12 +357,10 @@ export function HabitWizard({
                     <legend className="sr-only">
                         Schritt 4 von {STEP_COUNT}: Erster Schritt
                     </legend>
-                    <p className={`${EYEBROW} text-muted-foreground`}>
+                    <p className={'type-eyebrow text-muted-foreground'}>
                         Schritt 4 von {STEP_COUNT}
                     </p>
-                    <h2 className="text-2xl leading-tight font-bold">
-                        Womit fängt das an?
-                    </h2>
+                    <h2 className="type-heading">Womit fängt das an?</h2>
                     <p className="text-sm leading-relaxed text-muted-foreground">
                         Ein einziger Handgriff, der in einer Minute getan ist.
                         Er steht später unter deiner Gewohnheit — für die Tage,
@@ -548,7 +447,7 @@ export function HabitWizard({
                                     name="smallest_step"
                                     autoFocus
                                     maxLength={160}
-                                    placeholder="z. B. Stell das Glas ans Bett"
+                                    placeholder="z. B. Leg die Laufschuhe an die Tür"
                                     value={data.smallest_step}
                                     onChange={(event) =>
                                         setData(
@@ -575,45 +474,35 @@ export function HabitWizard({
                     <legend className="sr-only">
                         Schritt 5 von {STEP_COUNT}: Vorsatz bestätigen
                     </legend>
-                    <p className={`${EYEBROW} text-muted-foreground`}>
+                    <p className={'type-eyebrow text-muted-foreground'}>
                         Schritt 5 von {STEP_COUNT}
                     </p>
-                    <h2 className="text-2xl leading-tight font-bold">
-                        Dein Vorsatz
-                    </h2>
+                    <h2 className="type-heading">Dein Vorsatz</h2>
 
                     <div className="flex flex-col gap-3 rounded-2xl bg-card p-5">
                         <div>
-                            <p className={`${EYEBROW} text-muted-foreground`}>
-                                {isUnplanned
-                                    ? 'Gelegenheit'
-                                    : isFixed
-                                      ? 'Zeitpunkt'
-                                      : 'Auslöser'}
+                            <p className={'type-eyebrow text-muted-foreground'}>
+                                {isFixed ? 'Zeitpunkt' : 'Auslöser'}
                             </p>
                             <p className="mt-1 text-lg leading-snug font-semibold">
-                                {isUnplanned
-                                    ? 'wenn es sich ergibt'
-                                    : data.schedule_type === 'chained'
-                                      ? `nach „${chainCandidates.find((candidate) => candidate.id === data.chained_to_habit_id)?.title ?? ''}"`
-                                      : isFixed
-                                        ? `${data.scheduled_time} Uhr · ${formatWeekdays(data.scheduled_days)}`
-                                        : data.trigger_situation}
+                                {data.schedule_type === 'chained'
+                                    ? `nach „${chainCandidates.find((candidate) => candidate.id === data.chained_to_habit_id)?.title ?? ''}"`
+                                    : isFixed
+                                      ? `${data.scheduled_time} Uhr · ${formatWeekdays(data.scheduled_days)}`
+                                      : data.trigger_situation}
                             </p>
                         </div>
                         <div className="h-4 w-px self-center bg-sand" />
                         <div>
-                            <p className={`${EYEBROW} text-muted-foreground`}>
+                            <p className={'type-eyebrow text-muted-foreground'}>
                                 Gewohnheit
                             </p>
                             <p className="mt-1 text-lg leading-snug font-semibold text-primary">
-                                {data.title}
-                                {measureLabel !== null && (
-                                    <span className="font-normal text-muted-foreground">
-                                        {' · '}
-                                        {measureLabel}
-                                    </span>
-                                )}
+                                {template?.title}
+                                <span className="font-normal text-muted-foreground">
+                                    {' · '}
+                                    {data.target_amount} Min
+                                </span>
                             </p>
                         </div>
 
@@ -622,7 +511,9 @@ export function HabitWizard({
                                 <div className="h-4 w-px self-center bg-sand" />
                                 <div>
                                     <p
-                                        className={`${EYEBROW} text-muted-foreground`}
+                                        className={
+                                            'type-eyebrow text-muted-foreground'
+                                        }
                                     >
                                         Erster Schritt
                                     </p>
@@ -681,7 +572,9 @@ export function HabitWizard({
                             Ich nehme mir das vor
                         </button>
                         <p
-                            className={`${EYEBROW} text-center text-muted-foreground`}
+                            className={
+                                'type-eyebrow text-center text-muted-foreground'
+                            }
                         >
                             Du kannst das jederzeit ändern
                         </p>
@@ -692,7 +585,7 @@ export function HabitWizard({
                     <button
                         type="button"
                         onClick={() => setStep(step - 1)}
-                        className="cursor-pointer text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                        className={QUIET_BUTTON}
                     >
                         Zurück
                     </button>

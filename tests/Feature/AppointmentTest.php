@@ -537,14 +537,14 @@ test('creating a habit leads to the companion step when there is someone to ask'
 
     $this->actingAs($me)
         ->post(route('habits.store'), [
-            'behavior_type' => 'movement',
-            'title' => 'Schwimmen',
+            'template_key' => 'krafttraining',
+            'target_amount' => 45,
             'trigger_situation' => 'nach dem Aufstehen',
         ])
         // Zurück in den Assistenten — dort steht jetzt der letzte Schritt.
         ->assertRedirect(route('habits.create'))
         // Die Kennung trägt den Schritt: die Verabredung hängt daran.
-        ->assertInertiaFlash('habitCreated.title', 'Schwimmen')
+        ->assertInertiaFlash('habitCreated.title', 'Krafttraining')
         ->assertInertiaFlash('habitCreated.anchor', 'nach dem Aufstehen')
         // Die Tage reisen mit der angelegten Gewohnheit, nicht mit der Seite:
         // Beim Aufruf des Formulars gab es sie noch gar nicht.
@@ -575,8 +575,8 @@ test('without anyone to ask the way leads straight to the overview', function (s
     // Ein leerer Schritt wäre eine Seite, die nichts anbietet.
     $this->actingAs($me)
         ->post(route('habits.store'), [
-            'behavior_type' => 'movement',
-            'title' => 'Schwimmen',
+            'template_key' => 'krafttraining',
+            'target_amount' => 45,
             'trigger_situation' => 'nach dem Aufstehen',
         ])
         ->assertRedirect(route('dashboard'));
@@ -586,12 +586,12 @@ test('the companion step can create the appointment right away', function () {
     [$me, $friend] = pair();
 
     $this->actingAs($me)->post(route('habits.store'), [
-        'behavior_type' => 'movement',
-        'title' => 'Schwimmen',
+        'template_key' => 'krafttraining',
+        'target_amount' => 45,
         'trigger_situation' => 'nach dem Aufstehen',
     ]);
 
-    $habit = $me->habits()->where('title', 'Schwimmen')->sole();
+    $habit = $me->habits()->where('title', 'Krafttraining')->sole();
 
     $this->actingAs($me)
         ->post(route('appointments.store', $habit), [
@@ -677,13 +677,14 @@ test('a habit without a day of its own falls back to the next three days', funct
     Carbon::setTestNow(Carbon::parse('2026-08-17 10:00'));
 
     [$me, , $habit] = pair();
-    // „Treppe statt Aufzug" steht an keinem Tag an — und kann an jedem
-    // vorkommen. Ohne diesen Rückfall bliebe die Wahl leer.
+    // Über die Validierung ginge das nicht — im Bestand kann eine feste
+    // Gewohnheit ohne gewählte Wochentage existieren. Ohne diesen Rückfall
+    // bliebe die Wahl leer.
     $habit->forceFill([
-        'schedule_type' => 'opportunistic',
+        'schedule_type' => 'fixed',
         'trigger_situation' => null,
-        'scheduled_time' => null,
-        'scheduled_days' => null,
+        'scheduled_time' => '17:00',
+        'scheduled_days' => [],
     ])->save();
 
     expect(array_column(Appointment::dayChoicesFor($habit), 'label'))

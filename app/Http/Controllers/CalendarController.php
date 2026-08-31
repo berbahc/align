@@ -46,26 +46,24 @@ class CalendarController extends Controller
             ->orderBy('position')
             ->get();
 
-        $present = $habits
-            ->filter(fn (Habit $habit): bool => $this->existedOn($habit, $date))
-            ->filter(fn (Habit $habit): bool => $habit->isAvailableOn($date));
+        // Für die Anker-Stunden am Tagesrand („nach dem Aufstehen") fragt die
+        // Gewohnheit den Schlafplan ihres Nutzers — die Beziehung wird hier
+        // gesetzt, damit alle denselben geladenen Nutzer teilen.
+        $habits->each(fn (Habit $habit) => $habit->setRelation('user', $request->user()));
 
-        $blocks = $present
-            ->filter(fn (Habit $habit): bool => $habit->schedule_type->isPlanned())
+        $blocks = $habits
+            ->filter(fn (Habit $habit): bool => $this->existedOn($habit, $date))
+            ->filter(fn (Habit $habit): bool => $habit->isScheduledOn($date))
             // Der Tag wird von oben nach unten gelesen: Morgen zuerst, Abend
             // zuletzt. Bei gleicher Stunde entscheidet die eigene Reihenfolge
             // aus der Gewohnheitsliste.
             ->sortBy(fn (Habit $habit): array => [$habit->dayAnchorHour() ?? PHP_INT_MAX, $habit->position])
             ->values();
 
-        // Was sich ergibt, hat keine Stelle im Tag und bekommt deshalb auch
-        // keine. Bis hierher landete „Treppe statt Aufzug" über
-        // `UnknownAnchorHour` mittags auf der Achse, als wäre es für 12 Uhr
-        // geplant — eine erfundene Position, die den ganzen Tag verschob.
-        $whenever = $present
-            ->reject(fn (Habit $habit): bool => $habit->schedule_type->isPlanned())
-            ->sortBy('position')
-            ->values();
+        // Der Rahmen des gezeigten Tages: Die Achse beginnt beim Aufstehen
+        // und endet bei der Schlafenszeit — der Tag hat einen Anfang und ein
+        // Ende, und beide stehen sichtbar an der Achse.
+        $window = $request->user()->sleepWindowFor($date->dayOfWeekIso);
 
         return Inertia::render('calendar', [
             'date' => $date->toDateString(),
@@ -78,14 +76,15 @@ class CalendarController extends Controller
             'previousDate' => $this->previousDate($habits, $date),
             'nextDate' => $date->copy()->addDay()->toDateString(),
             'blocks' => $blocks->map($this->block(...))->all(),
-            'whenever' => $whenever->map($this->block(...))->all(),
+            'wakeTime' => $window['wakeTime'],
+            'bedtime' => $window['bedtime'],
         ]);
     }
 
     /**
      * Eine Gewohnheit als Block — für die Achse wie für den Bereich darunter.
      *
-     * @return array{id: int, title: string, anchor: string, anchorHour: int, measureLabel: string|null, timeRange: string|null, behaviorType: string, smallestStep: string|null, completed: bool, graduated: bool, adjustable: bool, chainedToId: int|null}
+     * @return array{id: int, title: string, anchor: string, anchorHour: int, measureLabel: string|null, timeRange: string|null, behaviorType: string, smallestStep: string|null, completed: bool, graduated: bool, chainedToId: int|null}
      */
     private function block(Habit $habit): array
     {
@@ -105,9 +104,6 @@ class CalendarController extends Controller
             'smallestStep' => $habit->smallest_step,
             'completed' => $habit->completions->isNotEmpty(),
             'graduated' => $habit->graduated_at !== null,
-            // Ohne Zeitpunkt gibt es keinen besseren Zeitpunkt: Der
-            // `✦ Passt der Zeitpunkt?`-Chip hätte hier nichts anzubieten.
-            'adjustable' => $habit->schedule_type->isPlanned(),
             // Hängt der Block an dem darüber? Dann zieht die Oberfläche einen
             // Steg dazwischen, statt zwei zusammenhängende Blöcke wie zwei
             // unabhängige nebeneinanderzustellen.

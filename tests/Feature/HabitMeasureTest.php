@@ -1,101 +1,74 @@
 <?php
 
-use App\Enums\BehaviorType;
+use App\Enums\HabitTemplate;
 use App\Enums\MeasureUnit;
 use App\Models\Habit;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
 /**
- * Der Umfang einer Gewohnheit — Menge und Einheit statt einer Zahl im Titel.
+ * Die Dauer einer Gewohnheit — Pflicht, in Minuten, verstellbar.
  *
- * Bis hierher trugen die Vorschläge ihre Menge im Namen („20 Minuten
- * spazieren") und niemand konnte sie verstellen. Diese Tests halten fest, dass
- * die Zahl jetzt ein eigenes, veränderliches Feld ist — und ein freiwilliges.
+ * Der Katalog enthält nur planbare Aktivitäten, und planbar heißt: Sie
+ * belegen eine Spanne im Tag. Diese Tests halten fest, dass jede neue
+ * Gewohnheit eine Dauer trägt — und dass alte Zeilen ohne Dauer weiterlaufen,
+ * statt zu brechen.
  */
-test('a habit can be created with a measure', function () {
+test('a habit is created with a duration in minutes', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user)->post(route('habits.store'), [
-        'behavior_type' => BehaviorType::Nutrition->value,
-        'title' => 'Wasser trinken',
-        'trigger_situation' => 'nach dem Aufstehen',
-        'target_amount' => 1.5,
-        'target_unit' => MeasureUnit::Liters->value,
-    ])->assertSessionHasNoErrors();
-
-    $habit = $user->habits()->sole();
-
-    expect($habit->title)->toBe('Wasser trinken')
-        ->and($habit->target_amount)->toBe(1.5)
-        ->and($habit->target_unit)->toBe(MeasureUnit::Liters)
-        ->and($habit->measureLabel())->toBe('1,5 L');
-});
-
-test('a habit without a measure keeps both fields empty', function () {
-    $user = User::factory()->create();
-
-    $this->actingAs($user)->post(route('habits.store'), [
-        'behavior_type' => BehaviorType::Movement->value,
-        'title' => 'Treppe statt Aufzug',
-        'trigger_situation' => 'nach dem Mittagessen',
-    ])->assertSessionHasNoErrors();
-
-    $habit = $user->habits()->sole();
-
-    expect($habit->target_amount)->toBeNull()
-        ->and($habit->target_unit)->toBeNull()
-        ->and($habit->measureLabel())->toBeNull()
-        ->and($habit->titleWithMeasure())->toBe('Treppe statt Aufzug');
-});
-
-test('an amount without a unit is refused, and the other way round', function () {
-    $user = User::factory()->create();
-
-    $this->actingAs($user)->post(route('habits.store'), [
-        'behavior_type' => BehaviorType::Movement->value,
-        'title' => 'Spazieren gehen',
+        'template_key' => HabitTemplate::Spazieren->value,
         'trigger_situation' => 'nach dem Mittagessen',
         'target_amount' => 20,
-    ])->assertSessionHasErrors('target_unit');
+    ])->assertSessionHasNoErrors();
+
+    $habit = $user->habits()->sole();
+
+    expect($habit->target_amount)->toBe(20.0)
+        ->and($habit->target_unit)->toBe(MeasureUnit::Minutes)
+        ->and($habit->durationMinutes())->toBe(20)
+        ->and($habit->measureLabel())->toBe('20 Min');
+});
+
+test('a habit without a duration is refused', function () {
+    $user = User::factory()->create();
 
     $this->actingAs($user)->post(route('habits.store'), [
-        'behavior_type' => BehaviorType::Movement->value,
-        'title' => 'Spazieren gehen',
+        'template_key' => HabitTemplate::Spazieren->value,
         'trigger_situation' => 'nach dem Mittagessen',
-        'target_unit' => MeasureUnit::Minutes->value,
     ])->assertSessionHasErrors('target_amount');
+
+    expect($user->habits()->count())->toBe(0);
 });
 
 /**
- * Die Grenzen hängen an der Einheit, nicht am Feld: 240 Minuten sind ein langer
- * Lerntag, 240 Liter ein Vertipper.
+ * Die Grenzen stehen in {@see MeasureUnit::Minutes} und nicht in der Regel:
+ * 240 Minuten sind ein langer Lerntag, 300 ein Vertipper.
  */
-test('the bounds of a measure follow its unit', function (string $unit, float $amount, bool $valid) {
+test('the duration has bounds', function (float $amount, bool $valid) {
     $user = User::factory()->create();
 
     $response = $this->actingAs($user)->post(route('habits.store'), [
-        'behavior_type' => BehaviorType::Movement->value,
-        'title' => 'Etwas tun',
+        'template_key' => HabitTemplate::Spazieren->value,
         'trigger_situation' => 'nach dem Mittagessen',
         'target_amount' => $amount,
-        'target_unit' => $unit,
     ]);
 
     $valid
         ? $response->assertSessionHasNoErrors()
         : $response->assertSessionHasErrors('target_amount');
 })->with([
-    'zwanzig Minuten' => [MeasureUnit::Minutes->value, 20.0, true],
-    'vier Stunden' => [MeasureUnit::Minutes->value, 240.0, true],
-    'fünf Stunden' => [MeasureUnit::Minutes->value, 300.0, false],
-    'anderthalb Liter' => [MeasureUnit::Liters->value, 1.5, true],
-    'zweihundertvierzig Liter' => [MeasureUnit::Liters->value, 240.0, false],
-    'zehn Seiten' => [MeasureUnit::Pages->value, 10.0, true],
+    'zwanzig Minuten' => [20.0, true],
+    'vier Stunden' => [240.0, true],
+    'fünf Stunden' => [300.0, false],
+    'unter dem Minimum' => [2.0, false],
 ]);
 
 test('a measure reads as a line, whole numbers without a decimal', function () {
     expect(MeasureUnit::Minutes->format(20))->toBe('20 Min')
+        // Die übrigen Einheiten existieren nur noch in alten Zeilen — lesbar
+        // bleiben müssen sie trotzdem.
         ->and(MeasureUnit::Liters->format(1.5))->toBe('1,5 L')
         ->and(MeasureUnit::Liters->format(2))->toBe('2 L')
         ->and(MeasureUnit::Pages->format(10))->toBe('10 Seiten')
@@ -113,30 +86,19 @@ test('a habit carries its measure into the line that names it', function () {
         ->and($habit->titleWithMeasure())->toBe('Spazieren gehen · 20 Min');
 });
 
-/**
- * Die Vorschläge dürfen ihre Menge nicht mehr im Titel tragen — genau daran
- * scheiterte bisher jede Anpassung.
- */
-test('the suggestions carry their measure beside the title, not inside it', function () {
-    foreach (BehaviorType::cases() as $type) {
-        foreach ($type->suggestions() as $suggestion) {
-            expect($suggestion['title'])->not->toMatch('/\d/');
+test('a legacy habit without a duration keeps working', function () {
+    $habit = Habit::factory()->legacy()->withoutMeasure()->make();
 
-            // Menge und Einheit treten immer gemeinsam auf oder gar nicht.
-            expect($suggestion['amount'] === null)
-                ->toBe($suggestion['unit'] === null);
-
-            if ($suggestion['unit'] !== null) {
-                expect(MeasureUnit::tryFrom($suggestion['unit']))->not->toBeNull();
-            }
-        }
-    }
+    expect($habit->measureLabel())->toBeNull()
+        ->and($habit->durationMinutes())->toBeNull()
+        ->and($habit->titleWithMeasure())->toBe($habit->title);
 });
 
 /**
- * Was der Wizard tatsächlich bekommt — die Kachel baut sich aus diesen Feldern.
+ * Was der Wizard tatsächlich bekommt — die Kacheln bauen sich aus diesen
+ * Feldern.
  */
-test('the create page ships the suggestions and the units the stepper needs', function () {
+test('the create page ships the catalog and the duration limits', function () {
     $user = User::factory()->create(['onboarded_at' => now()]);
 
     $this->actingAs($user)
@@ -144,53 +106,47 @@ test('the create page ships the suggestions and the units the stepper needs', fu
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('habits/create')
-            ->has('directions.0.suggestions.0', fn (Assert $suggestion) => $suggestion
+            // Vier Bereiche, jeder mit Vorlagen — der zweite Schritt darf nie
+            // leer sein.
+            ->has('categories', 4)
+            ->has('categories.0.templates.0', fn (Assert $template) => $template
+                ->has('key')
                 ->has('title')
-                ->has('amount')
-                ->has('unit')
-                // Sagt Schritt 3 vor, ob die Gewohnheit überhaupt eine Stelle
-                // im Tag haben kann.
-                ->has('plannable')
+                ->has('defaultMinutes')
             )
-            // Schrittweite und Grenzen kommen vom Server, damit der Stepper mit
-            // der Validierung deckungsgleich bleibt.
-            ->has('measureUnits.0', fn (Assert $unit) => $unit
-                ->has('value')
-                ->has('label')
-                ->has('short')
+            // Schrittweite und Grenzen kommen vom Server, damit der Stepper
+            // mit der Validierung deckungsgleich bleibt.
+            ->has('durationLimits', fn (Assert $limits) => $limits
                 ->has('step')
                 ->has('min')
                 ->has('max')
             )
+            // Der Rahmen reist mit, damit der Uhrzeit-Stepper vorher sagen
+            // kann, was der Server abweisen würde.
+            ->has('sleepWindows', 7)
         );
 });
 
-test('a measure can be changed and removed later', function () {
-    $user = User::factory()->create();
-    $habit = Habit::factory()->for($user)->create([
-        'title' => 'Spazieren gehen',
-        'target_amount' => 20,
-        'target_unit' => MeasureUnit::Minutes,
-    ]);
+test('no template in the catalog carries a number in its title', function () {
+    foreach (HabitTemplate::cases() as $template) {
+        // Die Menge steckte früher im Titel („20 Minuten spazieren") und war
+        // damit unverstellbar — genau daran scheiterte jede Anpassung.
+        expect($template->title())->not->toMatch('/\d/');
+        expect($template->defaultMinutes())->toBeGreaterThanOrEqual((int) MeasureUnit::Minutes->min())
+            ->toBeLessThanOrEqual((int) MeasureUnit::Minutes->max());
+    }
+});
 
-    $form = [
-        'behavior_type' => BehaviorType::Movement->value,
-        'title' => 'Spazieren gehen',
-        'trigger_situation' => 'nach dem Mittagessen',
-    ];
+test('the duration can be changed later', function () {
+    $user = User::factory()->create();
+    $habit = Habit::factory()->for($user)->fromTemplate(HabitTemplate::Spazieren)->create();
 
     $this->actingAs($user)
-        ->put(route('habits.update', $habit), [...$form, 'target_amount' => 35, 'target_unit' => MeasureUnit::Minutes->value])
+        ->put(route('habits.update', $habit), [
+            'trigger_situation' => 'nach dem Mittagessen',
+            'target_amount' => 35,
+        ])
         ->assertSessionHasNoErrors();
 
     expect($habit->refresh()->measureLabel())->toBe('35 Min');
-
-    $this->actingAs($user)
-        ->put(route('habits.update', $habit), $form)
-        ->assertSessionHasNoErrors();
-
-    $habit->refresh();
-
-    expect($habit->target_amount)->toBeNull()
-        ->and($habit->target_unit)->toBeNull();
 });

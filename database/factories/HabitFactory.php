@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Enums\BehaviorType;
+use App\Enums\HabitTemplate;
 use App\Enums\MeasureUnit;
 use App\Enums\ScheduleType;
 use App\Models\Habit;
@@ -19,19 +19,13 @@ class HabitFactory extends Factory
      */
     public function definition(): array
     {
-        // Menge und Einheit gehören zusammen: eine Einheit ohne Zahl beschriebe
-        // einen Zustand, den kein Formular erzeugen kann.
-        $amount = fake()->optional()->randomElement([10, 15, 30, 45]);
+        /** @var HabitTemplate $template */
+        $template = fake()->randomElement(HabitTemplate::cases());
 
         return [
             'user_id' => User::factory(),
-            'title' => fake()->randomElement([
-                'Lesen',
-                'Morgentraining',
-                'Trinken',
-                'Meditation',
-                'Spaziergang',
-            ]),
+            'title' => $template->title(),
+            'template_key' => $template->value,
             'trigger_situation' => fake()->randomElement([
                 'nach dem Aufstehen',
                 'nach der Morgenvorlesung',
@@ -39,12 +33,26 @@ class HabitFactory extends Factory
                 'wenn ich nach Hause komme',
                 'vor dem Schlafengehen',
             ]),
-            'behavior_type' => fake()->randomElement(BehaviorType::cases()),
-            'target_amount' => $amount,
-            'target_unit' => $amount === null ? null : MeasureUnit::Minutes,
+            'behavior_type' => $template->behaviorType(),
+            'target_amount' => $template->defaultMinutes(),
+            'target_unit' => MeasureUnit::Minutes,
             'position' => 0,
             'committed_at' => now(),
         ];
+    }
+
+    /**
+     * Gewohnheit aus einer bestimmten Vorlage des Katalogs.
+     */
+    public function fromTemplate(HabitTemplate $template): static
+    {
+        return $this->state(fn (): array => [
+            'title' => $template->title(),
+            'template_key' => $template->value,
+            'behavior_type' => $template->behaviorType(),
+            'target_amount' => $template->defaultMinutes(),
+            'target_unit' => MeasureUnit::Minutes,
+        ]);
     }
 
     /**
@@ -59,13 +67,27 @@ class HabitFactory extends Factory
     }
 
     /**
-     * Gewohnheit ohne Umfang — „Treppe statt Aufzug" misst sich nicht.
+     * Gewohnheit ohne Umfang — wie sie die freie Eingabe hinterlassen hat.
+     *
+     * Neu anlegen lässt sich so etwas nicht mehr; der Zustand existiert aber
+     * in alten Daten und muss weiter funktionieren.
      */
     public function withoutMeasure(): static
     {
         return $this->state(fn (): array => [
             'target_amount' => null,
             'target_unit' => null,
+        ]);
+    }
+
+    /**
+     * Gewohnheit aus der Zeit der freien Eingabe — ohne Vorlage im Katalog.
+     */
+    public function legacy(string $title = 'Wäsche sortieren'): static
+    {
+        return $this->state(fn (): array => [
+            'title' => $title,
+            'template_key' => null,
         ]);
     }
 

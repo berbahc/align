@@ -9,13 +9,13 @@ interface SuggestionResponse {
 /**
  * Die Angaben, aus denen ein Vorschlag entsteht.
  *
- * Beim Anlegen kennt die App die Gewohnheit noch nicht — deshalb reisen Titel,
- * Richtung und Situation mit. Im Alltag steht sie in der Datenbank, dann reicht
- * der Schritt, der sich gerade zu groß anfühlt.
+ * Beim Anlegen kennt die App die Gewohnheit noch nicht — deshalb reisen die
+ * Katalog-Vorlage, die Dauer und die Situation mit. Im Alltag steht sie in
+ * der Datenbank, dann reicht der Schritt, der sich gerade zu groß anfühlt.
  */
 interface SmallestStepPayload {
-    title?: string;
-    behavior_type?: string;
+    template_key?: string;
+    target_amount?: number;
     trigger_situation?: string;
     current?: string;
 }

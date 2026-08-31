@@ -1,22 +1,24 @@
 import { Head, usePage } from '@inertiajs/react';
 import { CompanionStep } from '@/components/companion-step';
 import { HabitWizard } from '@/components/habit-wizard';
-import type { Direction } from '@/components/habit-wizard';
 import type { ScheduleTypeOption } from '@/components/schedule-picker';
 import { dashboard } from '@/routes';
 import { store } from '@/routes/habits';
 import type {
     BusySlot,
     ChainCandidate,
+    DurationLimits,
     FriendshipPerson,
-    MeasureUnitOption,
+    HabitCategoryOption,
+    SleepWindow,
 } from '@/types';
 
 interface CreateHabitProps {
-    directions: Direction[];
+    categories: HabitCategoryOption[];
     triggerSuggestions: string[];
     scheduleTypes: ScheduleTypeOption[];
-    measureUnits: MeasureUnitOption[];
+    durationLimits: DurationLimits;
+    sleepWindows: SleepWindow[];
     chainCandidates: ChainCandidate[];
     busySlots: BusySlot[];
     /** Der eigene Kreis, für den letzten Schritt. */
@@ -24,10 +26,11 @@ interface CreateHabitProps {
 }
 
 export default function CreateHabit({
-    directions,
+    categories,
     triggerSuggestions,
     scheduleTypes,
-    measureUnits,
+    durationLimits,
+    sleepWindows,
     chainCandidates,
     busySlots,
     friends,
@@ -49,7 +52,7 @@ export default function CreateHabit({
             <Head title={asking ? 'Zusammen angehen?' : 'Neue Gewohnheit'} />
 
             <div className="mx-auto w-full max-w-md p-4 sm:p-6">
-                <h1 className="mb-8 text-2xl leading-tight font-bold text-primary">
+                <h1 className="type-heading mb-8 text-primary">
                     {asking ? 'Fast fertig' : 'Neue Gewohnheit'}
                 </h1>
 
@@ -63,10 +66,11 @@ export default function CreateHabit({
                     />
                 ) : (
                     <HabitWizard
-                        directions={directions}
+                        categories={categories}
                         triggerSuggestions={triggerSuggestions}
                         scheduleTypes={scheduleTypes}
-                        measureUnits={measureUnits}
+                        durationLimits={durationLimits}
+                        sleepWindows={sleepWindows}
                         chainCandidates={chainCandidates}
                         busySlots={busySlots}
                         action={store.url()}

@@ -43,6 +43,12 @@ class DashboardController extends Controller
             ->orderBy('position')
             ->get();
 
+        // Für die Anker-Stunden am Tagesrand („nach dem Aufstehen") fragt die
+        // Gewohnheit den Schlafplan ihres Nutzers — die Beziehung wird hier
+        // gesetzt, damit alle denselben geladenen Nutzer teilen, statt ihn je
+        // einzeln nachzuladen.
+        $habits->each(fn (Habit $habit) => $habit->setRelation('user', $request->user()));
+
         // Die Tagesliste zeigt nur, was heute ansteht. Eine Mo–Fr-Gewohnheit
         // ist am Samstag nicht offen, sondern nicht vorgesehen — sie dennoch
         // als unerledigt zu zeigen wäre eine Forderung, die niemand erhoben hat.
@@ -50,11 +56,8 @@ class DashboardController extends Controller
         // zuletzt — dieselbe Achse wie im Kalender. Die Anlege-Reihenfolge
         // entscheidet nur noch bei gleicher Stunde; als alleinige Sortierung
         // stellte sie das Abendritual über die Gewohnheit nach dem Aufstehen.
-        // Was sich ergibt, war an keinem Tag vorgesehen, steht aber jeden Tag
-        // zur Verfügung — es gehört in die Liste, nur ohne Stelle darin und
-        // deshalb ans Ende.
         $todaysHabits = $habits
-            ->filter(fn (Habit $habit): bool => $habit->isAvailableOn($today))
+            ->filter(fn (Habit $habit): bool => $habit->isScheduledOn($today))
             ->sortBy(fn (Habit $habit): array => [
                 $habit->dayAnchorHour() ?? PHP_INT_MAX,
                 $habit->position,
@@ -64,6 +67,17 @@ class DashboardController extends Controller
         return Inertia::render('dashboard', [
             'greeting' => $this->greeting($today),
             'today' => $localisedToday->isoFormat('dddd, D. MMMM'),
+            // Der Rahmen des heutigen Tages: Schlafenszeit heute Abend,
+            // Aufstehen morgen früh, Weckerstand für morgen. Die Karte führt
+            // zum Schlafplan — sie ist sein Ort auf der Übersicht.
+            //
+            // `sleepCard`, nicht `sleep`: Den Namen trägt schon die geteilte
+            // Eigenschaft mit dem Rahmen der umliegenden Tage — dieselbe
+            // Bezeichnung würde sie auf dieser Seite überdecken.
+            'sleepCard' => $this->sleepCard($request->user(), $today),
+            // Für das Übernahme-Sheet: Auch eine übernommene Gewohnheit muss
+            // in den eigenen Tag passen.
+            'sleepWindows' => array_values($request->user()->sleepWindows()),
             // Mockup A2 setzt die offene Anfrage über die Gewohnheiten. Es ist
             // der einzige Weg, auf dem jemand von ihr erfährt — es gibt keine
             // Mail und kein Nachfassen (community_feature3.md §5).
@@ -152,6 +166,29 @@ class DashboardController extends Controller
             ->map(fn (Appointment $appointment): array => $appointment->present($user))
             ->values()
             ->all();
+    }
+
+    /**
+     * Der Rahmen, wie er von heute aus aussieht.
+     *
+     * Die Schlafenszeit gehört zum heutigen Abend, die Aufstehzeit zum
+     * morgigen Morgen — zwei verschiedene Wochentage, wenn der Plan je Tag
+     * verschieden ist. Der Wecker gilt für morgen früh: Das ist der nächste
+     * Moment, in dem er klingeln könnte.
+     *
+     * @return array{bedtime: string, wakeTime: string, alarmEnabled: bool}
+     */
+    private function sleepCard(User $user, Carbon $today): array
+    {
+        $windows = $user->sleepWindows();
+        $tonight = $windows[$today->dayOfWeekIso];
+        $tomorrow = $windows[$today->copy()->addDay()->dayOfWeekIso];
+
+        return [
+            'bedtime' => $tonight['bedtime'],
+            'wakeTime' => $tomorrow['wakeTime'],
+            'alarmEnabled' => $tomorrow['alarmEnabled'],
+        ];
     }
 
     private function greeting(Carbon $now): string

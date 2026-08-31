@@ -77,11 +77,9 @@ class HabitCompletionController extends Controller
 
         $date = Carbon::parse($validated['completed_on'])->startOfDay();
 
-        // `isAvailableOn` statt `isScheduledOn`: Eine Mo–Fr-Gewohnheit war
-        // samstags nicht vorgesehen und lässt sich dort nicht nachtragen — was
-        // sich ergibt, war an keinem Tag vorgesehen, kann aber an jedem
-        // vorgekommen sein.
-        if (! $habit->isAvailableOn($date)) {
+        // Eine Mo–Fr-Gewohnheit war samstags nicht vorgesehen und lässt sich
+        // dort auch nicht nachtragen.
+        if (! $habit->isScheduledOn($date)) {
             throw ValidationException::withMessages([
                 'completed_on' => 'An diesem Tag war die Gewohnheit nicht vorgesehen.',
             ]);

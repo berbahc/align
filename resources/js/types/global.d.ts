@@ -1,6 +1,6 @@
 import type { Auth } from '@/types/auth';
 import type { AppointmentDay } from '@/types/friendship';
-import type { HabitReminder } from '@/types/habit';
+import type { HabitReminder, SleepShared } from '@/types/habit';
 
 declare module 'react' {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -16,6 +16,8 @@ declare module '@inertiajs/core' {
             auth: Auth;
             /** Gewohnheiten mit fester Uhrzeit, für die heute eine Erinnerung ansteht. */
             habitReminders: HabitReminder[];
+            /** Der Schlafrahmen der umliegenden Tage — für Hinweis und Wecker. */
+            sleep: SleepShared | null;
             sidebarOpen: boolean;
             [key: string]: unknown;
         };

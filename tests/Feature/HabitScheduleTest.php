@@ -1,6 +1,6 @@
 <?php
 
-use App\Enums\BehaviorType;
+use App\Enums\HabitTemplate;
 use App\Enums\ScheduleType;
 use App\Models\Habit;
 use App\Models\User;
@@ -12,8 +12,8 @@ test('a habit can be anchored to a fixed time on chosen weekdays', function () {
 
     $this->actingAs($user)
         ->post(route('habits.store'), [
-            'title' => '10 Seiten lesen',
-            'behavior_type' => BehaviorType::Learning->value,
+            'template_key' => HabitTemplate::Lesen->value,
+            'target_amount' => 20,
             'schedule_type' => ScheduleType::Fixed->value,
             'scheduled_time' => '17:00',
             'scheduled_days' => [1, 2, 3, 4, 5],
@@ -33,8 +33,8 @@ test('the situation stays the default when no schedule type is sent', function (
     $user = User::factory()->create();
 
     $this->actingAs($user)->post(route('habits.store'), [
-        'title' => '10 Seiten lesen',
-        'behavior_type' => BehaviorType::Learning->value,
+        'template_key' => HabitTemplate::Lesen->value,
+        'target_amount' => 20,
         'trigger_situation' => 'vor dem Schlafengehen',
     ])->assertRedirect(route('dashboard'));
 
@@ -49,8 +49,8 @@ test('a fixed habit without weekdays is rejected', function () {
 
     $this->actingAs($user)
         ->post(route('habits.store'), [
-            'title' => '10 Seiten lesen',
-            'behavior_type' => BehaviorType::Learning->value,
+            'template_key' => HabitTemplate::Lesen->value,
+            'target_amount' => 20,
             'schedule_type' => ScheduleType::Fixed->value,
             'scheduled_time' => '17:00',
         ])
@@ -64,8 +64,8 @@ test('a dynamic habit without a situation is rejected', function () {
 
     $this->actingAs($user)
         ->post(route('habits.store'), [
-            'title' => '10 Seiten lesen',
-            'behavior_type' => BehaviorType::Learning->value,
+            'template_key' => HabitTemplate::Lesen->value,
+            'target_amount' => 20,
             'schedule_type' => ScheduleType::Dynamic->value,
         ])
         ->assertSessionHasErrors('trigger_situation');
@@ -117,13 +117,13 @@ test('the wizard receives every way of anchoring a habit', function () {
         ->get(route('habits.create'))
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->component('habits/create')
-            // Situation, feste Uhrzeit, Anschluss an eine andere — und die
-            // vierte Form, die gar keinen Platz im Tag hat.
-            ->has('scheduleTypes', 4)
+            // Situation, feste Uhrzeit, Anschluss an eine andere. Die vierte
+            // Form — „wenn es sich ergibt" — ist bewusst weg: Der Katalog
+            // kennt nur noch planbare Aktivitäten.
+            ->has('scheduleTypes', 3)
             // Die Situation steht vorn: sie ist die Empfehlung, nicht nur eine
-            // von vier gleichrangigen Optionen (time-blocking.md).
+            // von drei gleichrangigen Optionen (time-blocking.md).
             ->where('scheduleTypes.0.value', ScheduleType::Dynamic->value)
-            ->where('scheduleTypes.3.value', ScheduleType::Opportunistic->value)
             ->has('scheduleTypes.0.description')
         );
 });
@@ -134,8 +134,8 @@ test('creating a habit that is not due today says when it will be', function () 
 
     $this->actingAs(User::factory()->create())
         ->post(route('habits.store'), [
-            'title' => 'Vorlesung nachbereiten',
-            'behavior_type' => BehaviorType::Learning->value,
+            'template_key' => HabitTemplate::VorlesungNachbereiten->value,
+            'target_amount' => 30,
             'schedule_type' => ScheduleType::Fixed->value,
             'scheduled_time' => '17:00',
             'scheduled_days' => [1, 2, 3, 4, 5],
@@ -152,8 +152,8 @@ test('a habit due today is confirmed as due today', function () {
 
     $this->actingAs(User::factory()->create())
         ->post(route('habits.store'), [
-            'title' => 'Vorlesung nachbereiten',
-            'behavior_type' => BehaviorType::Learning->value,
+            'template_key' => HabitTemplate::VorlesungNachbereiten->value,
+            'target_amount' => 30,
             'schedule_type' => ScheduleType::Fixed->value,
             'scheduled_time' => '17:00',
             'scheduled_days' => [1, 2, 3, 4, 5],
@@ -168,8 +168,8 @@ test('the day after today is named as tomorrow', function () {
 
     $this->actingAs(User::factory()->create())
         ->post(route('habits.store'), [
-            'title' => 'Vorlesung nachbereiten',
-            'behavior_type' => BehaviorType::Learning->value,
+            'template_key' => HabitTemplate::VorlesungNachbereiten->value,
+            'target_amount' => 30,
             'schedule_type' => ScheduleType::Fixed->value,
             'scheduled_time' => '17:00',
             'scheduled_days' => [1, 2, 3, 4, 5],
@@ -180,8 +180,8 @@ test('the day after today is named as tomorrow', function () {
 test('a situational habit counts from today', function () {
     $this->actingAs(User::factory()->create())
         ->post(route('habits.store'), [
-            'title' => '10 Minuten meditieren',
-            'behavior_type' => BehaviorType::Other->value,
+            'template_key' => HabitTemplate::Meditieren->value,
+            'target_amount' => 10,
             'schedule_type' => ScheduleType::Dynamic->value,
             'trigger_situation' => 'nach dem Aufstehen',
         ])
@@ -276,36 +276,6 @@ test('the habits page marks which habits belong in the today block', function ()
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->where('habits.0.group', 'today')
             ->where('habits.1.group', 'later')
-        );
-});
-
-test('what comes up whenever it comes up stands in its own block', function () {
-    Carbon::setTestNow(Carbon::parse('2026-08-08'));
-
-    $user = User::factory()->create();
-    Habit::factory()->for($user)->create([
-        'title' => 'Wasser trinken',
-        'trigger_situation' => 'nach dem Aufstehen',
-        'position' => 0,
-    ]);
-    Habit::factory()->for($user)->create([
-        'title' => 'Treppe statt Aufzug',
-        'schedule_type' => ScheduleType::Opportunistic,
-        'trigger_situation' => null,
-        'scheduled_time' => null,
-        'scheduled_days' => null,
-        'position' => 1,
-    ]);
-
-    // „Später" hieße, dass ein Termin bevorsteht — und genau den gibt es hier
-    // nicht. Die Gewohnheit steht an keinem Tag an und kann an jedem
-    // vorkommen; im Kalender hat sie aus demselben Grund ihren eigenen Platz
-    // unter der Achse.
-    $this->actingAs($user)
-        ->get(route('habits.index'))
-        ->assertInertia(fn (AssertableInertia $page) => $page
-            ->where('habits.0.group', 'today')
-            ->where('habits.1.group', 'whenever')
         );
 });
 

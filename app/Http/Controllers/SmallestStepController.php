@@ -6,7 +6,8 @@ use App\Actions\CreateHabit;
 use App\Actions\RememberSuggestions;
 use App\Ai\Agents\SuggestSmallestStep;
 use App\Ai\UserContext;
-use App\Enums\BehaviorType;
+use App\Enums\HabitTemplate;
+use App\Enums\MeasureUnit;
 use App\Enums\SuggestionKind;
 use App\Models\Habit;
 use App\Models\User;
@@ -39,26 +40,35 @@ class SmallestStepController extends Controller
     /**
      * Vorschläge für eine Gewohnheit, die es noch nicht gibt.
      *
-     * Deshalb kommen Titel, Richtung und Situation aus dem Request und nicht
-     * aus der Datenbank — im Wizard ist noch nichts gespeichert. Aus demselben
-     * Grund werden die Vorschläge ohne `habit_id` gemerkt:
-     * {@see CreateHabit} holt die Verknüpfung nach, wenn einer
-     * davon unverändert übernommen wird.
+     * Deshalb kommen Vorlage, Dauer und Situation aus dem Request und nicht
+     * aus der Datenbank — im Wizard ist noch nichts gespeichert. Titel und
+     * Richtung leitet der Server aus der Vorlage ab: Der Katalog ist die
+     * einzige Quelle dafür, auch hier. Aus demselben Grund werden die
+     * Vorschläge ohne `habit_id` gemerkt: {@see CreateHabit} holt die
+     * Verknüpfung nach, wenn einer davon unverändert übernommen wird.
      */
     public function suggestions(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'title' => ['required', 'string', 'max:80'],
-            'behavior_type' => ['required', Rule::enum(BehaviorType::class)],
+            'template_key' => ['required', Rule::enum(HabitTemplate::class)],
+            'target_amount' => ['nullable', 'numeric'],
             'trigger_situation' => ['nullable', 'string', 'max:120'],
         ]);
+
+        $template = HabitTemplate::from($validated['template_key']);
+
+        // Die Dauer reist im Titel mit: Ob jemand 10 oder 45 Minuten vorhat,
+        // ändert, was ein sinnvoller erster Handgriff ist.
+        $title = isset($validated['target_amount'])
+            ? $template->title().' · '.MeasureUnit::Minutes->format((float) $validated['target_amount'])
+            : $template->title();
 
         $user = $request->user();
 
         return $this->answer(
             new SuggestSmallestStep(
-                title: $validated['title'],
-                behaviorType: BehaviorType::from($validated['behavior_type']),
+                title: $title,
+                behaviorType: $template->behaviorType(),
                 situation: $validated['trigger_situation'] ?? null,
                 context: UserContext::for($user, SuggestionKind::SmallestStep),
             ),

@@ -1,42 +1,34 @@
 import { Head, Link, useForm } from '@inertiajs/react';
-import type { Direction } from '@/components/habit-wizard';
+import { DurationPicker } from '@/components/duration-picker';
 import InputError from '@/components/input-error';
-import { MeasurePicker } from '@/components/measure-picker';
-import {
-    CHOICE_TILE,
-    SchedulePicker,
-    SituationPicker,
-} from '@/components/schedule-picker';
+import { SchedulePicker, SituationPicker } from '@/components/schedule-picker';
 import type { ScheduleTypeOption } from '@/components/schedule-picker';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { BEHAVIOR_ICONS } from '@/lib/behavior-icons';
-import { cn } from '@/lib/utils';
+import { PRIMARY_BUTTON, QUIET_BUTTON } from '@/lib/interaction';
 import { dashboard } from '@/routes';
 import { index, update } from '@/routes/habits';
 import type {
     BehaviorType,
     BusySlot,
     ChainCandidate,
-    MeasureUnit,
-    MeasureUnitOption,
+    DurationLimits,
     ScheduleType,
+    SleepWindow,
     Weekday,
 } from '@/types';
-
-const EYEBROW = 'text-[11px] font-semibold tracking-[0.11em] uppercase';
-
-const PRIMARY_BUTTON =
-    'inline-flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary px-6 text-[15px] font-semibold text-primary-foreground transition-colors duration-200 hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50';
 
 /** Die Gewohnheit, wie der Server sie zum Vorbelegen schickt. */
 interface EditableHabit {
     id: number;
     title: string;
+    /** Der Katalog-Bereich; null bei Gewohnheiten aus der Zeit der freien Eingabe. */
+    categoryLabel: string | null;
     behaviorType: BehaviorType;
-    targetAmount: number | null;
-    targetUnit: MeasureUnit | null;
+    /** Die Dauer in Minuten; null, wenn die alte Zeile keinen Minuten-Umfang trug. */
+    durationMinutes: number | null;
     scheduleType: ScheduleType;
     triggerSituation: string | null;
     scheduledTime: string | null;
@@ -48,10 +40,10 @@ interface EditableHabit {
 
 interface EditHabitProps {
     habit: EditableHabit;
-    directions: Direction[];
     triggerSuggestions: string[];
     scheduleTypes: ScheduleTypeOption[];
-    measureUnits: MeasureUnitOption[];
+    durationLimits: DurationLimits;
+    sleepWindows: SleepWindow[];
     chainCandidates: ChainCandidate[];
     busySlots: BusySlot[];
 }
@@ -62,28 +54,25 @@ const DEFAULT_TIME = '17:00';
 /**
  * Eine bestehende Gewohnheit ändern — alles auf einer Seite.
  *
- * Flach statt in fünf Schritten: Der Wizard führt jemanden, der noch nicht
- * weiß, was er will. Wer etwas ändert, weiß es — für ihn wäre die Führung ein
- * Umweg, und er müsste sich durch vier Schritte klicken, um im fünften ein Wort
- * zu ändern.
+ * Bearbeitet wird die Planung, nicht die Identität: Was die Gewohnheit ist,
+ * steht im Katalog fest — sie wechselt ihren Zeitpunkt, ihre Dauer, ihren
+ * ersten Schritt, aber nicht ihren Namen. Wer etwas anderes will, legt etwas
+ * anderes an.
  *
  * Der Verlauf bleibt unberührt. Genau darin liegt der Sinn: Bis hierher blieb
  * nur Beenden und Neuanlegen, und das kostete jedes Mal die Serie.
  */
 export default function EditHabit({
     habit,
-    directions,
     triggerSuggestions,
     scheduleTypes,
-    measureUnits,
+    durationLimits,
+    sleepWindows,
     chainCandidates,
     busySlots,
 }: EditHabitProps) {
     const { data, setData, put, processing, errors } = useForm({
-        behavior_type: habit.behaviorType,
-        title: habit.title,
-        target_amount: habit.targetAmount,
-        target_unit: (habit.targetUnit ?? '') as MeasureUnit | '',
+        target_amount: habit.durationMinutes ?? durationLimits.min,
         schedule_type: habit.scheduleType,
         trigger_situation: habit.triggerSituation ?? '',
         scheduled_time: habit.scheduledTime ?? DEFAULT_TIME,
@@ -94,6 +83,7 @@ export default function EditHabit({
     });
 
     const isFixed = data.schedule_type === 'fixed';
+    const Icon = BEHAVIOR_ICONS[habit.behaviorType];
 
     function submit(event: React.FormEvent) {
         event.preventDefault();
@@ -105,99 +95,52 @@ export default function EditHabit({
             <Head title="Gewohnheit bearbeiten" />
 
             <div className="mx-auto w-full max-w-md p-4 sm:p-6">
-                <h1 className="mb-8 text-2xl leading-tight font-bold text-primary">
+                <h1 className="type-heading mb-8 text-primary">
                     Gewohnheit bearbeiten
                 </h1>
 
                 <form onSubmit={submit} className="flex flex-col gap-8">
-                    <fieldset className="flex flex-col gap-3">
-                        <legend className={`${EYEBROW} text-muted-foreground`}>
-                            Richtung
-                        </legend>
-
-                        <div className="grid gap-3 sm:grid-cols-2">
-                            {directions.map((candidate) => {
-                                const Icon = BEHAVIOR_ICONS[candidate.value];
-                                const isSelected =
-                                    data.behavior_type === candidate.value;
-
-                                return (
-                                    <button
-                                        key={candidate.value}
-                                        type="button"
-                                        aria-pressed={isSelected}
-                                        onClick={() =>
-                                            setData(
-                                                'behavior_type',
-                                                candidate.value,
-                                            )
-                                        }
-                                        className={cn(
-                                            CHOICE_TILE,
-                                            'flex flex-col gap-2 px-4 py-4',
-                                            isSelected
-                                                ? 'border-primary'
-                                                : 'border-border hover:border-secondary',
-                                        )}
-                                    >
-                                        <Icon
-                                            className="size-6 text-primary"
-                                            strokeWidth={1.5}
-                                            aria-hidden="true"
-                                        />
-                                        <span className="text-[15px] font-semibold">
-                                            {candidate.label}
-                                        </span>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                        <InputError message={errors.behavior_type} />
-                    </fieldset>
-
-                    {/* Freies Feld statt der Vorschlagskacheln aus dem Wizard:
-                        Wer seinen Titel schon hat, soll ihn nicht versehentlich
-                        gegen einen fremden tauschen. */}
-                    <div className="flex flex-col gap-2">
-                        <Label htmlFor="title" className={EYEBROW}>
-                            Gewohnheit
-                        </Label>
-                        <Input
-                            id="title"
-                            name="title"
-                            maxLength={80}
-                            value={data.title}
-                            onChange={(event) =>
-                                setData('title', event.target.value)
-                            }
-                        />
-                        <InputError message={errors.title} />
+                    {/* Die Identität wird gezeigt, nicht bearbeitet: Titel und
+                        Bereich kommen aus dem Katalog und bleiben, was sie
+                        sind. */}
+                    <div className="flex items-center gap-3 rounded-2xl bg-card p-4">
+                        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-sand text-primary">
+                            <Icon
+                                className="size-5"
+                                strokeWidth={1.5}
+                                aria-hidden="true"
+                            />
+                        </span>
+                        <span className="min-w-0">
+                            <span className="block truncate text-[15px] leading-snug font-semibold">
+                                {habit.title}
+                            </span>
+                            {habit.categoryLabel !== null && (
+                                <span className="mt-0.5 block text-xs text-muted-foreground">
+                                    {habit.categoryLabel}
+                                </span>
+                            )}
+                        </span>
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <p className={`${EYEBROW} text-muted-foreground`}>
-                            Umfang{' '}
-                            <span className="font-normal normal-case">
-                                (optional)
-                            </span>
+                        <p className={'type-eyebrow text-muted-foreground'}>
+                            Dauer
                         </p>
-                        <MeasurePicker
-                            units={measureUnits}
-                            amount={data.target_amount}
-                            unit={data.target_unit}
-                            onChange={(amount, unit) =>
-                                setData((current) => ({
-                                    ...current,
-                                    target_amount: amount,
-                                    target_unit: unit,
-                                }))
+                        <DurationPicker
+                            minutes={data.target_amount}
+                            limits={durationLimits}
+                            onChange={(minutes) =>
+                                setData('target_amount', minutes)
                             }
                         />
                         <InputError message={errors.target_amount} />
                     </div>
 
                     <fieldset className="flex flex-col gap-3">
-                        <legend className={`${EYEBROW} text-muted-foreground`}>
+                        <legend
+                            className={'type-eyebrow text-muted-foreground'}
+                        >
                             Wann
                         </legend>
 
@@ -221,6 +164,7 @@ export default function EditHabit({
                                 setData('chained_to_habit_id', id)
                             }
                             busySlots={busySlots}
+                            sleepWindows={sleepWindows}
                         >
                             <SituationPicker
                                 suggestions={triggerSuggestions}
@@ -238,10 +182,8 @@ export default function EditHabit({
 
                         {/* Beobachtend statt belehrend: der Satz erklärt die
                             Folge, bevor sie eintritt, statt sie hinterher zu
-                            melden. Bei „Wenn es sich ergibt" steht dieselbe
-                            Auskunft schon im Picker — zweimal wäre sie eine
-                            Ermahnung. */}
-                        {!isFixed && data.schedule_type !== 'opportunistic' && (
+                            melden. */}
+                        {!isFixed && (
                             <p className="text-xs leading-relaxed text-muted-foreground">
                                 Ohne feste Uhrzeit gibt es nichts zu erinnern —
                                 eine gesetzte Erinnerung wird beim Speichern
@@ -251,9 +193,9 @@ export default function EditHabit({
                     </fieldset>
 
                     <div className="flex flex-col gap-2">
-                        <Label htmlFor="smallest_step" className={EYEBROW}>
+                        <Label htmlFor="smallest_step" className="type-eyebrow">
                             Erster Schritt{' '}
-                            <span className="font-normal text-muted-foreground normal-case">
+                            <span className="font-normal tracking-normal text-muted-foreground normal-case">
                                 (optional)
                             </span>
                         </Label>
@@ -261,7 +203,7 @@ export default function EditHabit({
                             id="smallest_step"
                             name="smallest_step"
                             maxLength={160}
-                            placeholder="z. B. Stell das Glas ans Bett"
+                            placeholder="z. B. Leg die Laufschuhe an die Tür"
                             value={data.smallest_step}
                             onChange={(event) =>
                                 setData('smallest_step', event.target.value)
@@ -271,9 +213,9 @@ export default function EditHabit({
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <Label htmlFor="motivation" className={EYEBROW}>
+                        <Label htmlFor="motivation" className="type-eyebrow">
                             Warum dir das wichtig ist{' '}
-                            <span className="font-normal text-muted-foreground normal-case">
+                            <span className="font-normal tracking-normal text-muted-foreground normal-case">
                                 (optional)
                             </span>
                         </Label>
@@ -302,7 +244,7 @@ export default function EditHabit({
 
                         <Link
                             href={index()}
-                            className="text-center text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                            className={`${QUIET_BUTTON} text-center`}
                         >
                             Abbrechen
                         </Link>
@@ -310,7 +252,9 @@ export default function EditHabit({
                         {/* Die Sorge, die diesen Weg bisher verstellt hat: Was
                             schon geschafft ist, bleibt. */}
                         <p
-                            className={`${EYEBROW} text-center text-muted-foreground`}
+                            className={
+                                'type-eyebrow text-center text-muted-foreground'
+                            }
                         >
                             Dein Verlauf bleibt erhalten
                         </p>

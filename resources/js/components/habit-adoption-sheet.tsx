@@ -15,19 +15,17 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { BEHAVIOR_ICONS } from '@/lib/behavior-icons';
+import { PRIMARY_BUTTON } from '@/lib/interaction';
 import { store } from '@/routes/habits/adoptions';
 import type {
-    BehaviorType,
     HabitBlueprint,
-    MeasureUnit,
     ScheduleType,
+    SleepWindow,
     Weekday,
 } from '@/types';
 
 /** Ein neutraler Nachmittagstermin, von dem aus sich in beide Richtungen steppen lässt. */
 const DEFAULT_TIME = '17:00';
-
-const EYEBROW = 'text-[11px] font-semibold tracking-[0.11em] uppercase';
 
 /**
  * Eine fremde Gewohnheit für sich selbst übernehmen.
@@ -41,17 +39,18 @@ const EYEBROW = 'text-[11px] font-semibold tracking-[0.11em] uppercase';
  * den zwei Menschen teilen, wäre der Dauerstatus, den community_feature3.md §6
  * ausschließt — man sähe fortan, ob die andere Person heute abgehakt hat.
  *
- * Deshalb ist der Zeitpunkt hier auch änderbar und nicht bloß eine Anzeige:
- * Silas' Lauf um sechs ist selten der eigene, und eine Übernahme, die den
- * fremden Tagesablauf mitzwingt, wird nach drei Tagen wieder gelöscht. Der
- * Warum-Satz und der kleinste Schritt kommen dagegen gar nicht erst mit — sie
- * gehören zu einer Person, nicht zu einer Gewohnheit.
+ * Übernommen wird die **Katalog-Vorlage**, nicht der Text: Beide Gewohnheiten
+ * meinen dieselbe Sache aus demselben Katalog. Der Zeitpunkt ist deshalb hier
+ * änderbar und nicht bloß eine Anzeige — Silas' Lauf um sechs ist selten der
+ * eigene. Der Warum-Satz und der kleinste Schritt kommen gar nicht erst mit;
+ * sie gehören zu einer Person, nicht zu einer Gewohnheit.
  */
 export function HabitAdoptionSheet({
     blueprint,
     noticeId,
     scheduleTypes,
     triggerSuggestions,
+    sleepWindows = [],
     onOpenChange,
 }: {
     /** Die Vorlage; null heißt zu. */
@@ -60,17 +59,17 @@ export function HabitAdoptionSheet({
     noticeId?: number;
     scheduleTypes: ScheduleTypeOption[];
     triggerSuggestions: string[];
+    /** Der eigene Schlafrahmen — auch eine Übernahme muss in den Tag passen. */
+    sleepWindows?: SleepWindow[];
     onOpenChange: (open: boolean) => void;
 }) {
     const { data, setData, post, processing, errors, reset, clearErrors } =
         useForm({
-            title: '',
-            behavior_type: 'other' as BehaviorType,
-            // Der Umfang reist mit der Vorlage: Er beschreibt, was gemacht
+            template_key: '',
+            // Die Dauer reist mit der Vorlage: Sie beschreibt, was gemacht
             // wird, nicht warum — und lässt sich danach im Verzeichnis
             // umstellen.
-            target_amount: null as number | null,
-            target_unit: '' as MeasureUnit | '',
+            target_amount: 0,
             schedule_type: 'dynamic' as ScheduleType,
             trigger_situation: '',
             scheduled_time: DEFAULT_TIME,
@@ -88,10 +87,8 @@ export function HabitAdoptionSheet({
 
         clearErrors();
         setData({
-            title: blueprint.title,
-            behavior_type: blueprint.behaviorType,
-            target_amount: blueprint.targetAmount,
-            target_unit: blueprint.targetUnit ?? '',
+            template_key: blueprint.templateKey ?? '',
+            target_amount: blueprint.durationMinutes,
             schedule_type: blueprint.scheduleType,
             trigger_situation: blueprint.triggerSituation ?? '',
             scheduled_time: blueprint.scheduledTime ?? DEFAULT_TIME,
@@ -102,17 +99,18 @@ export function HabitAdoptionSheet({
     }, [blueprint, noticeId]);
 
     const isFixed = data.schedule_type === 'fixed';
-    // Was sich ergibt, verlangt nichts — sonst ließe sich die übernommene
-    // Gewohnheit nie abschicken, weil auf eine Situation gewartet wird, die es
-    // für sie gar nicht gibt.
-    const ready =
-        data.schedule_type === 'opportunistic'
-            ? true
-            : isFixed
-              ? data.scheduled_days.length > 0
-              : data.trigger_situation.trim().length > 0;
 
-    const Icon = BEHAVIOR_ICONS[data.behavior_type];
+    // Ohne Vorlage keine Übernahme: Außerhalb des Katalogs gibt es kein
+    // Anlegen mehr, und die andere Gewohnheit stammt aus der Zeit davor.
+    const adoptable = blueprint?.templateKey != null;
+
+    const ready =
+        adoptable &&
+        (isFixed
+            ? data.scheduled_days.length > 0
+            : data.trigger_situation.trim().length > 0);
+
+    const Icon = BEHAVIOR_ICONS[blueprint?.behaviorType ?? 'other'];
 
     function adopt() {
         post(store.url(), {
@@ -147,7 +145,7 @@ export function HabitAdoptionSheet({
                         </span>
                         <span className="min-w-0">
                             <span className="block truncate text-[15px] leading-snug font-semibold">
-                                {data.title}
+                                {blueprint?.title}
                                 {blueprint?.measureLabel != null && (
                                     <span className="font-normal text-muted-foreground">
                                         {' · '}
@@ -156,63 +154,80 @@ export function HabitAdoptionSheet({
                                 )}
                             </span>
                             <span className="mt-0.5 block text-xs text-muted-foreground">
-                                {data.schedule_type === 'opportunistic'
-                                    ? 'wenn es sich ergibt'
-                                    : isFixed
-                                      ? `${data.scheduled_time} · ${formatWeekdays(data.scheduled_days)}`
-                                      : data.trigger_situation ||
-                                        'noch kein Auslöser'}
+                                {isFixed
+                                    ? `${data.scheduled_time} · ${formatWeekdays(data.scheduled_days)}`
+                                    : data.trigger_situation ||
+                                      'noch kein Auslöser'}
                             </span>
                         </span>
                     </div>
 
-                    {/* Die Grenze von fünf Gewohnheiten meldet sich am Titel,
-                        der hier nicht änderbar ist — der Satz muss trotzdem
-                        ankommen, sonst bliebe der Knopf grundlos wirkungslos. */}
-                    <InputError message={errors.title} />
+                    {/* Die Grenze von fünf Gewohnheiten meldet sich an der
+                        Vorlage, die hier nicht änderbar ist — der Satz muss
+                        trotzdem ankommen, sonst bliebe der Knopf grundlos
+                        wirkungslos. */}
+                    <InputError message={errors.template_key} />
 
-                    <div className="flex flex-col gap-3">
-                        <p className={`${EYEBROW} text-muted-foreground`}>
-                            Wann machst du das?
-                        </p>
+                    {adoptable ? (
+                        <div className="flex flex-col gap-3">
+                            <p className={'type-eyebrow text-muted-foreground'}>
+                                Wann machst du das?
+                            </p>
 
-                        <SchedulePicker
-                            scheduleTypes={scheduleTypes}
-                            scheduleType={data.schedule_type}
-                            onScheduleTypeChange={(value) =>
-                                setData('schedule_type', value)
-                            }
-                            time={data.scheduled_time}
-                            onTimeChange={(value) =>
-                                setData('scheduled_time', value)
-                            }
-                            days={data.scheduled_days}
-                            onDaysChange={(days) =>
-                                setData('scheduled_days', days)
-                            }
-                        >
-                            <SituationPicker
-                                suggestions={triggerSuggestions}
-                                value={data.trigger_situation}
-                                onChange={(value) =>
-                                    setData('trigger_situation', value)
+                            <SchedulePicker
+                                scheduleTypes={scheduleTypes.filter(
+                                    // Ketten hängen am eigenen Tag — an einem
+                                    // fremden gibt es nichts, woran.
+                                    (option) => option.value !== 'chained',
+                                )}
+                                scheduleType={data.schedule_type}
+                                onScheduleTypeChange={(value) =>
+                                    setData('schedule_type', value)
                                 }
-                            />
-                        </SchedulePicker>
+                                time={data.scheduled_time}
+                                onTimeChange={(value) =>
+                                    setData('scheduled_time', value)
+                                }
+                                days={data.scheduled_days}
+                                onDaysChange={(days) =>
+                                    setData('scheduled_days', days)
+                                }
+                                sleepWindows={sleepWindows}
+                            >
+                                <SituationPicker
+                                    suggestions={triggerSuggestions}
+                                    value={data.trigger_situation}
+                                    onChange={(value) =>
+                                        setData('trigger_situation', value)
+                                    }
+                                />
+                            </SchedulePicker>
 
-                        <InputError message={errors.trigger_situation} />
-                        <InputError message={errors.scheduled_time} />
-                        <InputError message={errors.scheduled_days} />
-                    </div>
+                            <InputError message={errors.trigger_situation} />
+                            <InputError message={errors.scheduled_time} />
+                            <InputError message={errors.scheduled_days} />
+                        </div>
+                    ) : (
+                        /* §1.5 — benannt wird, was gilt: Die Gewohnheit stammt
+                           aus der Zeit der freien Eingabe und hat keine
+                           Vorlage im Katalog. */
+                        <p className="rounded-2xl bg-card p-4 text-sm leading-relaxed text-muted-foreground">
+                            Diese Gewohnheit stammt aus einer älteren Version
+                            der App und hat keine Vorlage im Katalog — sie lässt
+                            sich nicht übernehmen.
+                        </p>
+                    )}
 
-                    <button
-                        type="button"
-                        disabled={!ready || processing}
-                        onClick={adopt}
-                        className="inline-flex h-12 w-full cursor-pointer items-center justify-center rounded-xl bg-primary px-6 text-[15px] font-semibold text-primary-foreground transition-colors duration-200 hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                        Nehme ich mir vor
-                    </button>
+                    {adoptable && (
+                        <button
+                            type="button"
+                            disabled={!ready || processing}
+                            onClick={adopt}
+                            className={PRIMARY_BUTTON}
+                        >
+                            Nehme ich mir vor
+                        </button>
+                    )}
                 </div>
             </SheetContent>
         </Sheet>
