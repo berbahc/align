@@ -42,7 +42,7 @@ export function AppointmentRequestNotice({
 
     return (
         <section role="status" className="flex flex-col gap-3">
-            <h2 className="text-[11px] font-semibold tracking-[0.11em] text-muted-foreground uppercase">
+            <h2 className="type-eyebrow text-muted-foreground">
                 {requests.length === 1
                     ? 'Eine Verabredung'
                     : `${requests.length} Verabredungen`}
@@ -97,7 +97,7 @@ export function AppointmentRequestNotice({
                     <button
                         type="button"
                         onClick={() => onAdopt(request)}
-                        className="mt-3 cursor-pointer rounded-lg px-1 py-1 text-xs text-muted-foreground underline underline-offset-4 transition-colors duration-200 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                        className="mt-3 cursor-pointer rounded-lg px-1 py-1 text-xs text-muted-foreground underline underline-offset-4 transition-colors duration-[var(--duration-press)] ease-out hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                     >
                         Selbst übernehmen
                     </button>

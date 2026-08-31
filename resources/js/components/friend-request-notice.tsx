@@ -46,7 +46,7 @@ export function FriendRequestNotice({
 
     return (
         <section role="status" className={cn('flex flex-col gap-3', className)}>
-            <h2 className="text-[11px] font-semibold tracking-[0.11em] text-muted-foreground uppercase">
+            <h2 className="type-eyebrow text-muted-foreground">
                 {requests.length === 1
                     ? 'Eine Anfrage'
                     : `${requests.length} Anfragen`}

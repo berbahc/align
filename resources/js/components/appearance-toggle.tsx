@@ -44,7 +44,7 @@ export function AppearanceToggle({ className }: { className?: string }) {
             title={isDark ? 'Heller Modus' : 'Dunkler Modus'}
             className={cn(
                 'relative inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md',
-                'text-muted-foreground transition-colors duration-200',
+                'text-muted-foreground transition-colors duration-[var(--duration-fluid)] ease-[var(--ease-fluid)]',
                 'hover:bg-accent hover:text-accent-foreground',
                 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
                 // Sichtbar bleiben 36 px, damit der Knopf neben dem
@@ -70,7 +70,7 @@ export function AppearanceToggle({ className }: { className?: string }) {
                         r="6"
                         fill="black"
                         className={cn(
-                            'transition-transform duration-200 ease-out',
+                            'transition-transform duration-[var(--duration-fluid)] ease-[var(--ease-fluid)] ease-out',
                             isDark
                                 ? 'translate-x-[7px] translate-y-[-6px]'
                                 : 'translate-x-[24px] translate-y-[-24px]',
@@ -85,7 +85,7 @@ export function AppearanceToggle({ className }: { className?: string }) {
                     fill="currentColor"
                     mask={`url(#${maskId})`}
                     className={cn(
-                        'origin-center transition-transform duration-200 ease-out',
+                        'origin-center transition-transform duration-[var(--duration-fluid)] ease-[var(--ease-fluid)] ease-out',
                         isDark && 'scale-[1.35]',
                     )}
                 />
@@ -95,7 +95,7 @@ export function AppearanceToggle({ className }: { className?: string }) {
                     strokeWidth="2"
                     strokeLinecap="round"
                     className={cn(
-                        'origin-center transition-[opacity,transform] duration-200 ease-out',
+                        'origin-center transition-[opacity,transform] duration-[var(--duration-fluid)] ease-[var(--ease-fluid)]',
                         isDark && 'scale-50 opacity-0',
                     )}
                 >

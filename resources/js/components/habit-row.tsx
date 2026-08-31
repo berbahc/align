@@ -206,7 +206,7 @@ export function HabitRow({
                                     ? `${habit.title} als noch offen markieren`
                                     : `${habit.title} als erledigt markieren`
                             }
-                            className="group/check flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors duration-200 hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                            className="group/check flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors duration-[var(--duration-press)] ease-out hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                         >
                             {/* §1 — der Druckpunkt sitzt auf `:active`, also auf dem
                         Drücken, nicht auf dem Loslassen. Eigene Ebene, weil

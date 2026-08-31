@@ -43,7 +43,7 @@ export function StreakCard({ streak }: { streak: Streak }) {
                     {streak.count}
                 </p>
 
-                <p className="mt-2 text-[11px] font-semibold tracking-[0.11em] text-primary-foreground/70 uppercase">
+                <p className="type-eyebrow mt-2 text-primary-foreground/70">
                     {streak.unit} in Folge
                 </p>
 

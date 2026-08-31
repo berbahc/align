@@ -9,7 +9,7 @@ import type { AppointmentNotice as Notice } from '@/types';
  * weitermachen ist ein Angebot, keine Aufforderung.
  */
 const ACTION =
-    'h-10 shrink-0 cursor-pointer rounded-full border border-primary px-4 text-xs font-semibold text-primary transition-colors duration-200 hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
+    'h-10 shrink-0 cursor-pointer rounded-full border border-primary px-4 text-xs font-semibold text-primary transition-colors duration-[var(--duration-press)] ease-out hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
 
 /**
  * Eine Absage, die einmal ankommt — Übersicht wie Community-Bereich.
@@ -94,7 +94,7 @@ export function AppointmentNotice({
                                         preserveScroll: true,
                                     })
                                 }
-                                className="ml-auto shrink-0 cursor-pointer rounded-lg px-3 py-2 text-xs text-muted-foreground transition-colors duration-200 hover:bg-accent hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                                className="ml-auto shrink-0 cursor-pointer rounded-lg px-3 py-2 text-xs text-muted-foreground transition-colors duration-[var(--duration-press)] ease-out hover:bg-accent hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                             >
                                 Alles gut
                             </button>

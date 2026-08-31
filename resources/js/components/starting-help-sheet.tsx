@@ -16,7 +16,7 @@ import { smaller } from '@/routes/habits/smallest-step';
 import type { Habit } from '@/types';
 
 const ACTION_BUTTON =
-    'inline-flex h-12 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl px-4 text-[15px] font-semibold transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50';
+    'inline-flex h-12 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl px-4 text-[15px] font-semibold transition-colors duration-[var(--duration-fluid)] ease-[var(--ease-fluid)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50';
 
 /**
  * Das Starthilfe-Sheet — der Moment, in dem jemand feststeckt.
@@ -100,7 +100,7 @@ export function StartingHelpSheet({
                 className="mx-auto max-w-lg gap-0 rounded-t-2xl px-5 pt-6 pb-8"
             >
                 <SheetHeader className="gap-2 p-0">
-                    <SheetTitle className="flex items-center gap-2 text-[11px] font-semibold tracking-[0.11em] text-primary uppercase">
+                    <SheetTitle className="type-eyebrow flex items-center gap-2 text-primary">
                         <Sparkles
                             className="size-3.5"
                             strokeWidth={2}

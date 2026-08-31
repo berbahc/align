@@ -78,7 +78,7 @@ export function FlashNotice() {
                                     { preserveScroll: true },
                                 )
                             }
-                            className="cursor-pointer font-semibold text-primary underline underline-offset-4 transition-colors duration-200 hover:text-primary/80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                            className="cursor-pointer font-semibold text-primary underline underline-offset-4 transition-colors duration-[var(--duration-press)] ease-out hover:text-primary/80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                         >
                             Zurück zu „{adjusted.previousLabel}"
                         </button>
@@ -89,7 +89,7 @@ export function FlashNotice() {
             <button
                 type="button"
                 onClick={() => setDismissed(key)}
-                className="-m-2 flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors duration-200 hover:bg-sand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                className="-m-2 flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors duration-[var(--duration-press)] ease-out hover:bg-sand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
                 <X className="size-4" aria-hidden="true" />
                 <span className="sr-only">Hinweis schließen</span>
