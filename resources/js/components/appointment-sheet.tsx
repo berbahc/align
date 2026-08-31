@@ -85,7 +85,7 @@ export function AppointmentSheet({
                     ) : (
                         <>
                             <section>
-                                <h3 className="text-[11px] font-semibold tracking-[0.11em] text-muted-foreground uppercase">
+                                <h3 className="type-eyebrow text-muted-foreground">
                                     Wen fragst du?
                                 </h3>
 
@@ -101,7 +101,7 @@ export function AppointmentSheet({
                                                 friendId === friend.id
                                             }
                                             className={cn(
-                                                'flex w-24 cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 bg-card px-2 py-3 transition-colors duration-200',
+                                                'flex w-24 cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 bg-card px-2 py-3 transition-colors duration-[var(--duration-fluid)] ease-[var(--ease-fluid)]',
                                                 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
                                                 friendId === friend.id
                                                     ? 'border-primary'
@@ -120,7 +120,7 @@ export function AppointmentSheet({
                             </section>
 
                             <section>
-                                <h3 className="text-[11px] font-semibold tracking-[0.11em] text-muted-foreground uppercase">
+                                <h3 className="type-eyebrow text-muted-foreground">
                                     Wann?
                                 </h3>
 
@@ -142,7 +142,7 @@ export function AppointmentSheet({
                                             onClick={() => setDay(option.value)}
                                             aria-pressed={day === option.value}
                                             className={cn(
-                                                'h-11 min-w-24 cursor-pointer rounded-xl border-2 bg-card px-4 text-sm transition-colors duration-200',
+                                                'h-11 min-w-24 cursor-pointer rounded-xl border-2 bg-card px-4 text-sm transition-colors duration-[var(--duration-fluid)] ease-[var(--ease-fluid)]',
                                                 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
                                                 day === option.value
                                                     ? 'border-primary'
@@ -174,12 +174,12 @@ export function AppointmentSheet({
                                     type="button"
                                     onClick={ask}
                                     disabled={!ready}
-                                    className="h-12 w-full cursor-pointer rounded-xl bg-primary text-[15px] font-semibold text-primary-foreground transition-colors duration-200 hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="h-12 w-full cursor-pointer rounded-xl bg-primary text-[15px] font-semibold text-primary-foreground transition-colors duration-[var(--duration-press)] ease-out hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     Fragen
                                 </button>
 
-                                <p className="mt-3 text-center text-[11px] font-semibold tracking-[0.11em] text-muted-foreground uppercase">
+                                <p className="type-eyebrow mt-3 text-center text-muted-foreground">
                                     Nur für diesen einen Tag
                                 </p>
 

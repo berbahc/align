@@ -263,3 +263,78 @@
         @apply bg-background text-foreground;
     }
 }
+
+/*
+ * Typografie als Sets — Apple, „The Details of UI Typography" (WWDC 2020).
+ *
+ * §15: Tracking ist größenabhängig, nie ein Wert für alle Größen. Große Schrift
+ * braucht negative Laufweite (Buchstaben fallen mit wachsendem Grad optisch
+ * auseinander), kleine braucht leicht positive. Und: Hierarchie entsteht aus
+ * Größe, Gewicht und Zeilenabstand **zusammen** — deshalb steht hier jede Stufe
+ * als ein Satz Regeln und nicht als drei Klassen, die man einzeln vergessen
+ * kann.
+ *
+ * Die Stufen entsprechen den Textgrößen, die die App tatsächlich benutzt.
+ */
+@layer components {
+    /* Die Begrüßung auf der Übersicht — die einzige Stelle mit diesem Grad. */
+    .type-display {
+        font-size: clamp(2rem, 7vw, 2.75rem);
+        line-height: 1.05;
+        letter-spacing: -0.025em;
+        font-weight: 700;
+    }
+
+    /* Seitentitel: „Gewohnheiten", „Schlaf & Rhythmus". */
+    .type-title {
+        font-size: clamp(1.75rem, 4vw, 2rem);
+        line-height: 1.12;
+        letter-spacing: -0.02em;
+        font-weight: 700;
+    }
+
+    /* Abschnittstitel und die Fragen im Assistenten. */
+    .type-heading {
+        font-size: 1.5rem;
+        line-height: 1.2;
+        letter-spacing: -0.015em;
+        font-weight: 700;
+    }
+
+    /* Der kleinere Bruder, für Überschriften über einer Liste. */
+    .type-subheading {
+        font-size: 1.25rem;
+        line-height: 1.25;
+        letter-spacing: -0.012em;
+        font-weight: 700;
+    }
+
+    /*
+     * Große Zahlen: Prozentwert, Uhrzeit-Stepper, Wecker.
+     *
+     * Tabellenziffern halten die Breite ruhig, während der Wert läuft; die
+     * Laufweite ist am stärksten negativ, weil Ziffern in dieser Größe am
+     * weitesten auseinanderfallen. Die Schriftgröße bleibt außen — dieselbe
+     * Ziffernbehandlung gilt für 24px wie für 60px.
+     */
+    .type-numeral {
+        line-height: 1;
+        letter-spacing: -0.03em;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+    }
+
+    /*
+     * Die Kleinversalien-Zeile über einem Block („HEUTE", „DEIN RAHMEN").
+     *
+     * Der Gegenpol zur Regel oben: klein und in Versalien gesetzt, braucht sie
+     * **positive** Laufweite, sonst kleben die Buchstaben aneinander.
+     */
+    .type-eyebrow {
+        font-size: 0.6875rem;
+        line-height: 1.4;
+        letter-spacing: 0.11em;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+}

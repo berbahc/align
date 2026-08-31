@@ -6,9 +6,6 @@ import { dashboard } from '@/routes';
 import { store } from '@/routes/appointments';
 import type { AppointmentDay, FriendshipPerson } from '@/types';
 
-const EYEBROW =
-    'text-[11px] font-semibold tracking-[0.11em] text-muted-foreground uppercase';
-
 /**
  * Der letzte, freiwillige Schritt beim Anlegen: zu zweit angehen?
  *
@@ -70,8 +67,8 @@ export function CompanionStep({
     return (
         <div className="flex flex-col gap-6">
             <div>
-                <p className={EYEBROW}>Noch eine Möglichkeit</p>
-                <h2 className="mt-2 text-xl leading-tight font-bold">
+                <p className="type-eyebrow">Noch eine Möglichkeit</p>
+                <h2 className="type-subheading mt-2">
                     Willst du „{title}" mit jemandem zusammen angehen?
                 </h2>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
@@ -81,7 +78,7 @@ export function CompanionStep({
             </div>
 
             <section>
-                <h3 className={EYEBROW}>Wen fragst du?</h3>
+                <h3 className="type-eyebrow">Wen fragst du?</h3>
 
                 <div className="mt-3 flex flex-wrap gap-3">
                     {friends.map((friend) => (
@@ -95,7 +92,7 @@ export function CompanionStep({
                             }
                             aria-pressed={friendId === friend.id}
                             className={cn(
-                                'flex w-24 cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 bg-card px-2 py-3 transition-colors duration-200',
+                                'flex w-24 cursor-pointer flex-col items-center gap-2 rounded-2xl border-2 bg-card px-2 py-3 transition-colors duration-[var(--duration-fluid)] ease-[var(--ease-fluid)]',
                                 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
                                 friendId === friend.id
                                     ? 'border-primary'
@@ -112,7 +109,7 @@ export function CompanionStep({
             </section>
 
             <section>
-                <h3 className={EYEBROW}>Wann?</h3>
+                <h3 className="type-eyebrow">Wann?</h3>
 
                 {/* Die Tage kommen aus der Gewohnheit, nicht aus dem Kalender.
                     Wer selten übt, hat entsprechend weniger zur Wahl — der
@@ -135,7 +132,7 @@ export function CompanionStep({
                             }
                             aria-pressed={day === option.value}
                             className={cn(
-                                'h-11 min-w-24 cursor-pointer rounded-xl border-2 bg-card px-4 text-sm transition-colors duration-200',
+                                'h-11 min-w-24 cursor-pointer rounded-xl border-2 bg-card px-4 text-sm transition-colors duration-[var(--duration-fluid)] ease-[var(--ease-fluid)]',
                                 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
                                 day === option.value
                                     ? 'border-primary'
@@ -166,14 +163,14 @@ export function CompanionStep({
                     type="button"
                     onClick={ask}
                     disabled={!ready || sending}
-                    className="h-12 flex-1 cursor-pointer rounded-xl bg-primary text-[15px] font-semibold text-primary-foreground transition-colors duration-200 hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    className="h-12 flex-1 cursor-pointer rounded-xl bg-primary text-[15px] font-semibold text-primary-foreground transition-colors duration-[var(--duration-press)] ease-out hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50"
                 >
                     Fragen
                 </button>
                 <button
                     type="button"
                     onClick={() => router.visit(dashboard.url())}
-                    className="h-12 flex-1 cursor-pointer rounded-xl border border-primary text-[15px] font-semibold text-primary transition-colors duration-200 hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    className="h-12 flex-1 cursor-pointer rounded-xl border border-primary text-[15px] font-semibold text-primary transition-colors duration-[var(--duration-press)] ease-out hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                 >
                     Später
                 </button>

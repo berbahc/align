@@ -17,7 +17,7 @@ import { store, suggestions } from '@/routes/habits/adjustment';
 import type { AnchorAlternative, CalendarBlock } from '@/types';
 
 const ACTION_BUTTON =
-    'inline-flex h-12 flex-1 cursor-pointer items-center justify-center rounded-xl px-4 text-[15px] font-semibold transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50';
+    'inline-flex h-12 flex-1 cursor-pointer items-center justify-center rounded-xl px-4 text-[15px] font-semibold transition-colors duration-[var(--duration-fluid)] ease-[var(--ease-fluid)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50';
 
 /** Wie eine Alternative auf der Achse heißt — dasselbe Format wie `scheduleLabel()`. */
 export function alternativeLabel(alternative: AnchorAlternative): string {
@@ -126,7 +126,7 @@ export function AdjustmentSheet({
                 className="mx-auto max-h-[85vh] max-w-lg gap-0 overflow-y-auto rounded-t-2xl px-5 pt-6 pb-8"
             >
                 <SheetHeader className="gap-2 p-0">
-                    <SheetTitle className="flex items-center gap-2 text-[11px] font-semibold tracking-[0.11em] text-primary uppercase">
+                    <SheetTitle className="type-eyebrow flex items-center gap-2 text-primary">
                         <Sparkles
                             className="size-3.5"
                             strokeWidth={2}
@@ -168,7 +168,7 @@ export function AdjustmentSheet({
                                 aria-pressed={chosenIndex === index}
                                 onClick={() => choose(index)}
                                 className={cn(
-                                    'cursor-pointer rounded-[14px] border-2 bg-card px-4 py-3 text-left transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+                                    'cursor-pointer rounded-[14px] border-2 bg-card px-4 py-3 text-left transition-colors duration-[var(--duration-fluid)] ease-[var(--ease-fluid)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
                                     chosenIndex === index
                                         ? 'border-primary'
                                         : 'border-border hover:border-secondary',

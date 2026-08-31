@@ -31,9 +31,7 @@ export function UpcomingAppointments({
 
     return (
         <section className="flex flex-col gap-3">
-            <h2 className="text-[11px] font-semibold tracking-[0.11em] text-muted-foreground uppercase">
-                Zusammen
-            </h2>
+            <h2 className="type-eyebrow text-muted-foreground">Zusammen</h2>
 
             {appointments.map((appointment) => {
                 const pair = (
@@ -74,7 +72,7 @@ export function UpcomingAppointments({
                                     preserveScroll: true,
                                 })
                             }
-                            className="shrink-0 cursor-pointer rounded-lg px-3 py-2 text-xs text-muted-foreground transition-colors duration-200 hover:bg-accent hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                            className="shrink-0 cursor-pointer rounded-lg px-3 py-2 text-xs text-muted-foreground transition-colors duration-[var(--duration-press)] ease-out hover:bg-accent hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                         >
                             {appointment.iAsked && !appointment.accepted
                                 ? 'Zurückziehen'

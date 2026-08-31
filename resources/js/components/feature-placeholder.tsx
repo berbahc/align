@@ -21,12 +21,8 @@ export function FeaturePlaceholder({
     return (
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-4 sm:p-6">
             <header>
-                <p className="text-[11px] font-semibold tracking-[0.11em] text-muted-foreground uppercase">
-                    In Arbeit
-                </p>
-                <h1 className="mt-2 text-[clamp(1.75rem,4vw,2rem)] leading-tight font-bold text-primary">
-                    {title}
-                </h1>
+                <p className="type-eyebrow text-muted-foreground">In Arbeit</p>
+                <h1 className="type-title mt-2 text-primary">{title}</h1>
                 <p className="mt-2 max-w-xl text-[15px] leading-relaxed text-muted-foreground">
                     {description}
                 </p>
@@ -34,7 +30,7 @@ export function FeaturePlaceholder({
 
             <Card className="gap-0 py-5">
                 <CardContent className="px-5">
-                    <p className="text-[11px] font-semibold tracking-[0.11em] text-muted-foreground uppercase">
+                    <p className="type-eyebrow text-muted-foreground">
                         Geplant
                     </p>
 

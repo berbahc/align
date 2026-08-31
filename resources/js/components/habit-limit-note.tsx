@@ -30,7 +30,7 @@ export function HabitLimitNote({
         <Collapsible open={open} onOpenChange={setOpen}>
             <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
                 {label}
-                <CollapsibleTrigger className="inline-flex size-6 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors duration-200 hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+                <CollapsibleTrigger className="inline-flex size-6 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors duration-[var(--duration-press)] ease-out hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
                     <Info className="size-4" aria-hidden="true" />
                     <span className="sr-only">
                         {open ? 'Erklärung ausblenden' : `Warum nur ${max}?`}

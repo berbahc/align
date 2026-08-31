@@ -23,7 +23,7 @@ export function AiSuggestion({
 }) {
     return (
         <div className={cn('rounded-[14px] bg-sand/60 p-4', className)}>
-            <p className="flex items-center gap-1.5 text-[11px] font-semibold tracking-[0.11em] text-primary uppercase">
+            <p className="type-eyebrow flex items-center gap-1.5 text-primary">
                 <Sparkles
                     className="size-3.5"
                     strokeWidth={2}
@@ -53,7 +53,7 @@ export function AiSuggestionFailure({ onRetry }: { onRetry: () => void }) {
             <button
                 type="button"
                 onClick={onRetry}
-                className="mt-2 cursor-pointer text-sm font-semibold text-primary underline underline-offset-4 transition-colors duration-200 hover:text-primary/80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                className="mt-2 cursor-pointer text-sm font-semibold text-primary underline underline-offset-4 transition-colors duration-[var(--duration-press)] ease-out hover:text-primary/80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
                 Nochmal versuchen
             </button>

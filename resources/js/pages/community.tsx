@@ -25,8 +25,6 @@ import type {
     UpcomingAppointment,
 } from '@/types';
 
-const EYEBROW = 'text-[11px] font-semibold tracking-[0.11em] uppercase';
-
 interface CommunityProps {
     /** Verabredungen zugelassen — Screen A5 der Mockups. */
     appointmentsEnabled: boolean;
@@ -103,9 +101,7 @@ export default function Community({
 
             <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-4 sm:p-6">
                 <header>
-                    <h1 className="text-[clamp(1.75rem,4vw,2rem)] leading-tight font-bold text-primary">
-                        Community
-                    </h1>
+                    <h1 className="type-title text-primary">Community</h1>
                     <p className="mt-1 text-sm text-muted-foreground">
                         Hier steht, mit wem du dich verabreden kannst und was
                         gerade ausgemacht ist. Was ihr tut, sieht niemand — nur,
@@ -156,7 +152,7 @@ export default function Community({
                 />
 
                 <section className="flex flex-col gap-3">
-                    <h2 className={`${EYEBROW} text-muted-foreground`}>
+                    <h2 className={'type-eyebrow text-muted-foreground'}>
                         Dein Kreis
                     </h2>
 
@@ -189,7 +185,7 @@ export default function Community({
                                         <button
                                             type="button"
                                             onClick={() => remove(friend.id)}
-                                            className="cursor-pointer rounded-lg px-3 py-2 text-xs text-muted-foreground transition-colors duration-200 hover:bg-accent hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                                            className="cursor-pointer rounded-lg px-3 py-2 text-xs text-muted-foreground transition-colors duration-[var(--duration-press)] ease-out hover:bg-accent hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                                         >
                                             Entfernen
                                         </button>
@@ -202,7 +198,7 @@ export default function Community({
 
                 {appointmentsEnabled && (
                     <section className="flex flex-col gap-3">
-                        <h2 className={`${EYEBROW} text-muted-foreground`}>
+                        <h2 className={'type-eyebrow text-muted-foreground'}>
                             Jemanden fragen
                         </h2>
 
@@ -271,7 +267,7 @@ export default function Community({
 
                 {outgoing.length > 0 && (
                     <section className="flex flex-col gap-3">
-                        <h2 className={`${EYEBROW} text-muted-foreground`}>
+                        <h2 className={'type-eyebrow text-muted-foreground'}>
                             Gefragt
                         </h2>
 
@@ -294,7 +290,7 @@ export default function Community({
                                         <button
                                             type="button"
                                             onClick={() => remove(person.id)}
-                                            className="cursor-pointer rounded-lg px-3 py-2 text-xs text-muted-foreground transition-colors duration-200 hover:bg-accent hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                                            className="cursor-pointer rounded-lg px-3 py-2 text-xs text-muted-foreground transition-colors duration-[var(--duration-press)] ease-out hover:bg-accent hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                                         >
                                             Zurückziehen
                                         </button>
@@ -306,7 +302,7 @@ export default function Community({
                 )}
 
                 <section className="flex flex-col gap-3">
-                    <h2 className={`${EYEBROW} text-muted-foreground`}>
+                    <h2 className={'type-eyebrow text-muted-foreground'}>
                         Einstellungen
                     </h2>
 

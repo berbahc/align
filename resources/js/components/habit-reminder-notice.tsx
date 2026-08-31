@@ -80,7 +80,7 @@ export function HabitReminderNotice() {
                                 { preserveScroll: true },
                             )
                         }
-                        className="inline-flex h-11 shrink-0 cursor-pointer items-center gap-2 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors duration-200 hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                        className="inline-flex h-11 shrink-0 cursor-pointer items-center gap-2 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground transition-[background-color,scale] duration-[var(--duration-press)] ease-out hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-safe:active:scale-[0.97]"
                     >
                         <Check className="size-4" aria-hidden="true" />
                         Abhaken
@@ -91,7 +91,7 @@ export function HabitReminderNotice() {
                         onClick={() =>
                             setHidden((ids) => [...ids, item.reminder.id])
                         }
-                        className="-mr-2 flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors duration-200 hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                        className="-mr-2 flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors duration-[var(--duration-press)] ease-out hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                     >
                         <X className="size-4" aria-hidden="true" />
                         <span className="sr-only">
