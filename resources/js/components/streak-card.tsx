@@ -31,7 +31,7 @@ export interface Streak {
  */
 export function StreakCard({ streak }: { streak: Streak }) {
     return (
-        <Card className="gap-0 border-transparent bg-primary py-6">
+        <Card className="gap-0 border-transparent bg-primary py-6 shadow-[var(--shadow-lift)]">
             <CardContent className="flex flex-col items-center px-5 text-center">
                 <Repeat
                     className="size-6 text-primary-foreground"
@@ -39,7 +39,7 @@ export function StreakCard({ streak }: { streak: Streak }) {
                     aria-hidden="true"
                 />
 
-                <p className="mt-3 text-[clamp(2rem,6vw,2.25rem)] leading-none font-bold text-primary-foreground tabular-nums">
+                <p className="mt-3 text-[clamp(2rem,6vw,2.25rem)] leading-none font-bold tracking-[-0.02em] text-primary-foreground tabular-nums">
                     {streak.count}
                 </p>
 

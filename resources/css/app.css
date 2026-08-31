@@ -73,6 +73,57 @@
     --color-faintest: var(--faintest);
     --color-ai-fill: var(--ai-fill);
     --color-ai-line: var(--ai-line);
+
+    /*
+     * Bewegung — Apple, „Designing Fluid Interfaces" (WWDC 2018).
+     *
+     * Apple beschreibt Bewegung nicht über Dauer, sondern über zwei Größen:
+     * Dämpfung (wie stark es überschwingt) und Response (wie schnell der Wert
+     * beim Ziel ist). Ohne Federbibliothek bilden wir beides als Kurve ab.
+     *
+     * `--ease-fluid` ist die kritisch gedämpfte Grundbewegung: kein
+     * Überschwingen, ruhiges Auslaufen. Sie gilt für alles, was nur den
+     * Zustand wechselt.
+     *
+     * `--ease-pop` ist eine Feder mit Dämpfung 0.8 / Response 0.35s, exakt
+     * ausgerechnet und als `linear()` abgetastet. Überschwingen ist laut §4
+     * nur erlaubt, wenn der Geste Schwung vorausging oder etwas einrastet —
+     * hier ausschließlich für das Abhaken einer Gewohnheit.
+     *
+     * `--duration-press` ist der Druckpunkt: Rückmeldung beim Drücken, nicht
+     * beim Loslassen (§1).
+     */
+    --ease-fluid: cubic-bezier(0.32, 0.72, 0, 1);
+    --ease-pop: linear(
+        0,
+        0.0635,
+        0.2048,
+        0.371,
+        0.5314,
+        0.6703,
+        0.7819,
+        0.8661,
+        0.9261,
+        0.9664,
+        0.9917,
+        1.006,
+        1.0129,
+        1.0151,
+        1.0145,
+        1.0126,
+        1.0101,
+        1.0076,
+        1.0054,
+        1.0036,
+        1.0023,
+        1.0013,
+        1.0006,
+        1.0002,
+        1
+    );
+    --duration-fluid: 420ms;
+    --duration-pop: 530ms;
+    --duration-press: 110ms;
 }
 
 /*
@@ -118,6 +169,15 @@
        Ergänzung von mir und in der Designsprache nicht belegt — Team prüfen. */
     --input: #8e8a82;
     --ring: var(--olive);
+    /*
+     * Höhe als Mittel der Hierarchie (Apple §12: „Material weight encodes
+     * hierarchy"). Genau zwei Stufen, damit sie etwas bedeuten: `lift` trägt,
+     * alles andere liegt flach auf. Der Schatten ist warm getönt statt
+     * neutral schwarz — auf `canvas` läge ein grauer Schatten wie Schmutz.
+     */
+    --shadow-lift:
+        0 1px 2px rgba(61, 47, 20, 0.05),
+        0 10px 28px -12px rgba(61, 47, 20, 0.16);
     /* §10 — Balken: aktiver Tag olive, Vergleichswert gold, leer track. */
     --chart-1: var(--olive);
     --chart-2: var(--gold);
@@ -175,6 +235,10 @@
     --border: #2c251e;
     --input: #3a3128;
     --ring: var(--olive);
+    /* Im Dunkeln trägt nicht der Schatten, sondern die hellere Fläche —
+       der Schatten stützt nur noch die Kante. */
+    --shadow-lift:
+        0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 28px -12px rgba(0, 0, 0, 0.7);
     --chart-1: var(--olive);
     --chart-2: var(--gold);
     --chart-3: var(--olive-mid);
