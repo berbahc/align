@@ -6,6 +6,7 @@ use App\Ai\Agents\Concerns\SpeaksForAlign;
 use App\Ai\UserContext;
 use App\Models\Habit;
 use App\Models\SleepSchedule;
+use App\Support\DayPlan;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
 use Laravel\Ai\Attributes\MaxTokens;
@@ -55,13 +56,15 @@ class SuggestBetterAnchor implements Agent, HasStructuredOutput
     /**
      * @param  list<array{date: string, label: string}>  $misses  Tage, an denen die Gewohnheit anstand und nichts geschah
      * @param  array<int, array{weekday: int, wakeTime: string, bedtime: string, alarmEnabled: bool}>  $sleepWindows  Der Rahmen je Wochentag
-     * @param  list<string>  $takenSituations  Momente, die schon eine andere Gewohnheit tragen
+     * @param  list<string>  $availableSituations  Die Momente, die noch frei sind — mehr gibt es nicht
+     * @param  list<string>  $freeWindows  Die Zeitfenster, in die die Dauer wirklich passt
      */
     public function __construct(
         private readonly Habit $habit,
         private readonly array $misses,
         private readonly array $sleepWindows = [],
-        private readonly array $takenSituations = [],
+        private readonly array $availableSituations = [],
+        private readonly array $freeWindows = [],
         private readonly ?UserContext $context = null,
     ) {}
 
@@ -96,20 +99,21 @@ class SuggestBetterAnchor implements Agent, HasStructuredOutput
               Tage sind eine zulässige Alternative.
             - Die Begründung muss zu den Tagen passen, die du einträgst. Nenne
               keine Tage, die nicht in `days` stehen.
+            - **Die Uhrzeit muss in eines der unten genannten freien Fenster
+              fallen, und zwar so, dass die ganze Dauer hineinpasst.** Alles
+              andere überschneidet sich mit etwas, das dort schon steht.
             PROMPT;
         }
 
         return $shared."\n\n".<<<'PROMPT'
         Diese Gewohnheit hängt an einer Situation im Tagesablauf, nicht an einer
-        Uhr. Schlage andere Situationen vor.
+        Uhr.
 
-        - Eine Situation ist ein wiederkehrender Moment des Alltags, der von
-          selbst eintritt: „nach dem Aufstehen", „wenn ich nach Hause komme".
-        - Formuliere sie kleingeschrieben, ohne Punkt am Ende, so dass sie sich
-          in den Satz „Wenn …, dann …" einsetzen lässt.
-        - Wenn andere Gewohnheiten der Person genannt sind, darf eine
-          Alternative daran koppeln („nach dem Zähneputzen"). Eine bestehende
-          Gewohnheit ist der zuverlässigste Auslöser, den es gibt.
+        **Wähle ausschließlich aus den unten aufgezählten freien Momenten.**
+        Erfinde keine eigenen: Der Tag dieser Person besteht aus ihren
+        Gewohnheiten und ihrem Schlafrhythmus, und ein Moment, den es dort
+        nicht gibt, lässt sich nicht einplanen. Gib den Moment wortgleich
+        zurück, wie er in der Liste steht.
         PROMPT;
     }
 
@@ -211,21 +215,22 @@ class SuggestBetterAnchor implements Agent, HasStructuredOutput
         $reason = $this->reason($candidate);
 
         // Ein Vorschlag, der dem aktuellen Anker entspricht, ist keiner.
-        if ($situation === '' || mb_strlen($situation) > 120 || $situation === $this->habit->trigger_situation) {
+        if ($situation === '' || $situation === $this->habit->trigger_situation) {
             return null;
         }
 
-        // Ein Moment, der schon eine andere Gewohnheit trägt, würde beim
-        // Übernehmen abgewiesen — dieselbe Begründung wie beim Schlafrahmen:
-        // ein Vorschlag, der in eine Fehlermeldung führt, ist schlechter als
-        // einer weniger.
-        foreach ($this->takenSituations as $taken) {
-            if (mb_strtolower($taken) === mb_strtolower($situation)) {
-                return null;
+        // Nur Momente, die es wirklich gibt und die frei sind. Bis hierher
+        // durfte die KI welche erfinden — „nachdem ich die Laufschuhe
+        // ausgezogen habe" klingt plausibel, steht aber in keinem Tag und in
+        // keiner Auswahl. Der Vergleich ist unempfindlich gegen Schreibweise,
+        // zurückgegeben wird der Wortlaut aus der Liste.
+        foreach ($this->availableSituations as $available) {
+            if (mb_strtolower($available) === mb_strtolower($situation)) {
+                return ['situation' => $available, 'reason' => $reason];
             }
         }
 
-        return ['situation' => $situation, 'reason' => $reason];
+        return null;
     }
 
     /**
@@ -268,7 +273,41 @@ class SuggestBetterAnchor implements Agent, HasStructuredOutput
             }
         }
 
+        // Und was sich mit etwas überschneidet, das dort schon steht, ist kein
+        // Time-Blocking, sondern eine Doppelbuchung. Geprüft wird die ganze
+        // Dauer, nicht nur der Beginn: Eine Stunde, die um 16:50 anfängt,
+        // passt nicht in ein Fenster, das um 17:00 endet.
+        if (! $this->fitsInFreeWindow($time)) {
+            return null;
+        }
+
         return ['time' => $time, 'days' => $days, 'reason' => $this->reason($candidate)];
+    }
+
+    /**
+     * Passt die Gewohnheit mit ihrer ganzen Dauer in eines der freien Fenster?
+     *
+     * Ohne bekannte Fenster wird nicht geprüft — dann trägt allein der
+     * Schlafrahmen die Grenze, wie vor dieser Rechnung auch.
+     */
+    private function fitsInFreeWindow(string $time): bool
+    {
+        if ($this->freeWindows === []) {
+            return true;
+        }
+
+        $start = DayPlan::toMinutes($time);
+        $end = $start + ($this->habit->durationMinutes() ?? 0);
+
+        foreach ($this->freeWindows as $window) {
+            [$from, $to] = array_map(DayPlan::toMinutes(...), explode(' bis ', $window));
+
+            if ($start >= $from && $end <= $to) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -335,11 +374,20 @@ class SuggestBetterAnchor implements Agent, HasStructuredOutput
             $lines[] = $frame;
         }
 
-        // Aus demselben Grund die belegten Momente: Jede Gewohnheit hat ihren
-        // eigenen, und ein Vorschlag auf einen vergebenen wäre verworfen.
-        if ($this->takenSituations !== []) {
-            $lines[] = 'Diese Momente tragen schon eine andere Gewohnheit und kommen nicht infrage: '
-                .implode(', ', $this->takenSituations).'.';
+        // Die Auswahl selbst, nicht nur ihre Grenzen: Der Tag besteht aus dem
+        // Rahmen und den Gewohnheiten, die schon darin stehen — was es dort
+        // nicht gibt, lässt sich nicht einplanen.
+        if (! $this->habit->schedule_type->hasClockTime() && $this->availableSituations !== []) {
+            $lines[] = 'Freie Momente, aus denen du wählen musst: '
+                .implode(', ', $this->availableSituations).'.';
+        }
+
+        if ($this->habit->schedule_type->hasClockTime() && $this->freeWindows !== []) {
+            $lines[] = sprintf(
+                'Freie Fenster im Tag (die Gewohnheit dauert %d Minuten und muss ganz hineinpassen): %s.',
+                $this->habit->durationMinutes() ?? 0,
+                implode(', ', $this->freeWindows),
+            );
         }
 
         if ($this->misses !== []) {

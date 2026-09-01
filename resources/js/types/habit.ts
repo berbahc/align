@@ -285,6 +285,8 @@ export interface CalendarBlock {
     timeRange: string | null;
     behaviorType: BehaviorType;
     smallestStep: string | null;
+    /** Der eigene Warum-Satz — erscheint nur im Starthilfe-Sheet. */
+    motivation: string | null;
     completed: boolean;
     /** Beendete Gewohnheiten bleiben in ihrer Vergangenheit sichtbar. */
     graduated: boolean;

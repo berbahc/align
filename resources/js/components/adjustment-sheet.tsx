@@ -136,7 +136,10 @@ export function AdjustmentSheet({
                     </SheetTitle>
                     <SheetDescription className="text-left text-[15px] leading-relaxed text-foreground">
                         {suggestion.observation ?? (
-                            <Skeleton className="inline-block h-5 w-3/4 align-middle" />
+                            <Skeleton
+                                as="span"
+                                className="inline-block h-5 w-3/4 align-middle"
+                            />
                         )}
                     </SheetDescription>
                 </SheetHeader>

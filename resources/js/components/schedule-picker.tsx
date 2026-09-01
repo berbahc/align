@@ -1,4 +1,4 @@
-import { Sparkles, TriangleAlert } from 'lucide-react';
+import { TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
 import { TimeStepper } from '@/components/time-stepper';
 import { Input } from '@/components/ui/input';
@@ -271,15 +271,11 @@ export function SchedulePicker({
                                 isSelected ? CHOICE_TILE_ON : CHOICE_TILE_OFF,
                             )}
                         >
-                            <span className="flex items-center gap-1.5 text-[15px] font-semibold">
-                                {/* ✦ ist für Momente reserviert, in denen die App mitdenkt (§8). */}
-                                {option.value === 'dynamic' && (
-                                    <Sparkles
-                                        className="size-4 text-primary"
-                                        strokeWidth={1.5}
-                                        aria-hidden="true"
-                                    />
-                                )}
+                            {/* Kein ✦: Das Zeichen ist den Momenten
+                                vorbehalten, in denen die App mitdenkt (§8) —
+                                eine Situation zu wählen ist eine eigene
+                                Entscheidung, keine KI-Funktion. */}
+                            <span className="text-[15px] font-semibold">
                                 {option.label}
                             </span>
                             <span className="text-xs leading-relaxed text-muted-foreground">

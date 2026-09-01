@@ -1,7 +1,11 @@
 import { Check } from 'lucide-react';
 import { BEHAVIOR_ICONS } from '@/lib/behavior-icons';
+import { QUIET_LINK } from '@/lib/interaction';
 import { cn } from '@/lib/utils';
 import type { CalendarBlock as Block } from '@/types';
+
+/** Der Weg zu einer KI-Funktion — ✦ steht nur hier (§8). */
+const AI_LINK = `${QUIET_LINK} self-start text-xs`;
 
 /**
  * Ein Block auf der Tagesachse.
@@ -19,6 +23,7 @@ export function CalendarBlock({
     canComplete,
     onToggle,
     onAdjust,
+    onStuck,
     ghost = false,
     faded = false,
     chained = false,
@@ -27,6 +32,8 @@ export function CalendarBlock({
     canComplete: boolean;
     onToggle: (block: Block) => void;
     onAdjust?: (block: Block) => void;
+    /** Der Weg zur Starthilfe — die Gewohnheit fühlt sich gerade zu groß an. */
+    onStuck?: (block: Block) => void;
     /** Der Vorschlag der KI an seiner neuen Stelle — gestrichelt, noch nicht wahr. */
     ghost?: boolean;
     /** Der bisherige Platz, während der Ghost woanders liegt. */
@@ -160,16 +167,32 @@ export function CalendarBlock({
                 )}
             </div>
 
-            {/* Der Weg zur KI steht nur an lebenden Gewohnheiten: eine beendete
-                verschiebt man nicht mehr, und einen Ghost erst recht nicht. */}
-            {onAdjust && !ghost && !block.graduated && (
-                <button
-                    type="button"
-                    onClick={() => onAdjust(block)}
-                    className="cursor-pointer self-start text-xs font-semibold text-primary underline underline-offset-4 transition-colors duration-[var(--duration-press)] ease-out hover:text-primary/80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                >
-                    ✦ Passt der Zeitpunkt?
-                </button>
+            {/* Zwei Wege, zwei Fragen — sie waren nicht zu trennen, solange
+                nur einer dastand: „Wann" verschiebt den Block im Tag, „zu
+                groß" zerlegt die Gewohnheit selbst. Beide stehen nur an
+                lebenden Gewohnheiten: eine beendete verschiebt man nicht mehr,
+                und einen Ghost erst recht nicht. */}
+            {!ghost && !block.graduated && (onAdjust || onStuck) && (
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                    {onAdjust && (
+                        <button
+                            type="button"
+                            onClick={() => onAdjust(block)}
+                            className={AI_LINK}
+                        >
+                            ✦ Anderer Zeitpunkt?
+                        </button>
+                    )}
+                    {onStuck && !block.completed && (
+                        <button
+                            type="button"
+                            onClick={() => onStuck(block)}
+                            className={AI_LINK}
+                        >
+                            ✦ Zu groß?
+                        </button>
+                    )}
+                </div>
             )}
         </li>
     );

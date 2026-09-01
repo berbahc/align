@@ -1,6 +1,7 @@
 <?php
 
 use App\Ai\Agents\SuggestBetterAnchor;
+use App\Ai\Agents\SuggestDayOrder;
 use App\Ai\Agents\SuggestSmallestStep;
 use Database\Factories\HabitFactory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -25,6 +26,7 @@ pest()->extend(TestCase::class)
         // hinge am Netz statt an der eigenen Logik.
         SuggestSmallestStep::fake()->preventStrayPrompts();
         SuggestBetterAnchor::fake()->preventStrayPrompts();
+        SuggestDayOrder::fake()->preventStrayPrompts();
 
         // Die Factory vergibt Situationen reihum; ohne diesen Reset hinge es
         // von der Zahl der vorherigen Tests ab, welchen Moment eine

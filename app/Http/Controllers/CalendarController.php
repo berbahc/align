@@ -84,7 +84,7 @@ class CalendarController extends Controller
     /**
      * Eine Gewohnheit als Block — für die Achse wie für den Bereich darunter.
      *
-     * @return array{id: int, title: string, anchor: string, anchorHour: int, measureLabel: string|null, timeRange: string|null, behaviorType: string, smallestStep: string|null, completed: bool, graduated: bool, chainedToId: int|null}
+     * @return array{id: int, title: string, anchor: string, anchorHour: int, measureLabel: string|null, timeRange: string|null, behaviorType: string, smallestStep: string|null, motivation: string|null, completed: bool, graduated: bool, chainedToId: int|null}
      */
     private function block(Habit $habit): array
     {
@@ -102,6 +102,8 @@ class CalendarController extends Controller
             'timeRange' => $habit->timeRangeLabel(),
             'behaviorType' => $habit->behavior_type->value,
             'smallestStep' => $habit->smallest_step,
+            // Für die Starthilfe, die es jetzt auch im Kalender gibt.
+            'motivation' => $habit->motivation,
             'completed' => $habit->completions->isNotEmpty(),
             'graduated' => $habit->graduated_at !== null,
             // Hängt der Block an dem darüber? Dann zieht die Oberfläche einen

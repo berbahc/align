@@ -9,6 +9,8 @@ use App\Enums\SuggestionKind;
 use App\Http\Requests\AdjustHabitRequest;
 use App\Models\AiSuggestion;
 use App\Models\Habit;
+use App\Models\User;
+use App\Support\DayPlan;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -57,13 +59,15 @@ class HabitAdjustmentController extends Controller
                 // Übernehmen abgewiesen — die KI soll ihn deshalb gar nicht
                 // erst machen.
                 sleepWindows: $request->user()->sleepWindows(),
-                // Belegte Momente: Jede Situation trägt genau eine Gewohnheit,
-                // und ein Vorschlag auf einen vergebenen würde beim Übernehmen
-                // abgewiesen.
-                takenSituations: array_column(array_filter(
+                // Die freien Momente: Jede Situation trägt genau eine
+                // Gewohnheit, und die KI wählt aus dem, was übrig ist — statt
+                // sich einen Moment auszudenken, den es im Tag nicht gibt.
+                availableSituations: array_column(array_filter(
                     Habit::situationChoicesFor($request->user(), $habit),
-                    fn (array $choice): bool => $choice['takenBy'] !== null,
+                    fn (array $choice): bool => $choice['takenBy'] === null,
                 ), 'situation'),
+                // Und die Fenster, in die die Dauer wirklich passt.
+                freeWindows: $this->freeWindows($request->user(), $habit),
                 // Was Align über die Person weiß: ihr Warum, ihr Tagesablauf,
                 // ihr Rhythmus — und welche Zeitpunkte sie schon einmal
                 // angeboten bekam, ohne sie zu nehmen.
@@ -138,6 +142,31 @@ class HabitAdjustmentController extends Controller
         ]);
 
         return back();
+    }
+
+    /**
+     * Wo im Tag noch Platz für genau diese Gewohnheit ist.
+     *
+     * Gerechnet für den nächsten Tag, an dem sie ansteht — und ohne sie
+     * selbst: Ihr eigener bisheriger Platz ist kein Hindernis, sie soll ja
+     * gerade von dort weg.
+     *
+     * @return list<string>
+     */
+    private function freeWindows(User $user, Habit $habit): array
+    {
+        $day = $habit->nextOccurrence() ?? Carbon::today();
+
+        $habits = $user->habits()->active()->get();
+        $habits->each(fn (Habit $other) => $other->setRelation('user', $user));
+
+        $plan = DayPlan::for(
+            $habits->filter(fn (Habit $other): bool => $other->isScheduledOn($day)),
+            $day->dayOfWeekIso,
+            $user->sleepWindows(),
+        );
+
+        return $plan->freeWindowLabels($habit->durationMinutes() ?? 0, $habit);
     }
 
     /**

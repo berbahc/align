@@ -13,7 +13,20 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useSmallestStep } from '@/hooks/use-smallest-step';
 import { store } from '@/routes/habits/completions';
 import { smaller } from '@/routes/habits/smallest-step';
-import type { Habit } from '@/types';
+
+/**
+ * Was das Sheet über eine Gewohnheit wissen muss — mehr nicht.
+ *
+ * Bewusst schmaler als `Habit`: Dieselbe Hilfe steht auf der Übersicht und im
+ * Kalender, und ein Kalenderblock ist keine Tagesliste-Zeile. Ein gemeinsamer
+ * kleiner Nenner ist ehrlicher als zwei Sheets, die dasselbe tun.
+ */
+export interface StuckHabit {
+    id: number;
+    title: string;
+    smallestStep: string | null;
+    motivation: string | null;
+}
 
 const ACTION_BUTTON =
     'inline-flex h-12 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl px-4 text-[15px] font-semibold transition-colors duration-[var(--duration-fluid)] ease-[var(--ease-fluid)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50';
@@ -33,7 +46,7 @@ export function StartingHelpSheet({
     habit,
     onOpenChange,
 }: {
-    habit: Habit | null;
+    habit: StuckHabit | null;
     onOpenChange: (open: boolean) => void;
 }) {
     const suggestion = useSmallestStep();

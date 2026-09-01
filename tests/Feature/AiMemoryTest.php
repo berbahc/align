@@ -29,16 +29,24 @@ function rememberedHabit(User $user, array $attributes = []): Habit
     ]);
 }
 
-/** Drei Zeitpunkte, wie sie der Agent liefert. */
-function threeAnchors(): array
+/**
+ * Drei Zeitpunkte, wie sie der Agent liefert — auf Wunsch mehrfach.
+ *
+ * Der Fake gibt jede hinterlegte Antwort genau einmal; danach erfindet er
+ * Zufallsdaten nach Schema. Ein Test, der zweimal fragt, braucht deshalb zwei
+ * Antworten — sonst prüft der zweite Durchgang Zufall statt Absicht.
+ */
+function threeAnchors(int $times = 1): array
 {
-    return [[
+    $response = [
         'alternatives' => [
             ['situation' => 'nach dem Aufstehen', 'reason' => 'Morgens ist der Tag noch ruhig.'],
             ['situation' => 'nach dem Mittagessen', 'reason' => 'Danach ist ohnehin eine Pause.'],
             ['situation' => 'vor dem Schlafengehen', 'reason' => 'Der Abend ist verlässlich.'],
         ],
-    ]];
+    ];
+
+    return array_fill(0, $times, $response);
 }
 
 test('every offered anchor is remembered, none of them as taken', function () {
@@ -102,7 +110,7 @@ test('taking one anchor marks exactly that one and leaves the others open', func
 });
 
 test('the anchor an adjustment offered before travels into the next prompt', function () {
-    SuggestBetterAnchor::fake(threeAnchors());
+    SuggestBetterAnchor::fake(threeAnchors(times: 2));
 
     $user = User::factory()->create();
     $habit = rememberedHabit($user, ['trigger_situation' => 'wenn ich nach Hause komme']);
@@ -119,7 +127,7 @@ test('the anchor an adjustment offered before travels into the next prompt', fun
 });
 
 test('an anchor taken on advice is named as taken, not as refused', function () {
-    SuggestBetterAnchor::fake(threeAnchors());
+    SuggestBetterAnchor::fake(threeAnchors(times: 2));
 
     $user = User::factory()->create();
     $habit = rememberedHabit($user, ['trigger_situation' => 'wenn ich nach Hause komme']);

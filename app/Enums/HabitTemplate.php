@@ -50,6 +50,8 @@ enum HabitTemplate: string
     case EssenVorkochen = 'essen-vorkochen';
     case Aufraeumen = 'aufraeumen';
     case Fruehstuecken = 'fruehstuecken';
+    case Mittagessen = 'mittagessen';
+    case Abendessen = 'abendessen';
     case WochePlanen = 'woche-planen';
 
     // Erholung & Achtsamkeit
@@ -72,7 +74,9 @@ enum HabitTemplate: string
             self::UniTagPlanen => 'Uni-Tag planen',
             self::EssenVorkochen => 'Essen vorkochen',
             self::Aufraeumen => 'Aufräumen',
-            self::Fruehstuecken => 'In Ruhe frühstücken',
+            self::Fruehstuecken => 'Frühstücken',
+            self::Mittagessen => 'Mittagessen',
+            self::Abendessen => 'Abendessen',
             self::WochePlanen => 'Woche planen',
             self::Meditieren => 'Meditieren',
             self::Tagebuch => 'Tagebuch schreiben',
@@ -98,6 +102,8 @@ enum HabitTemplate: string
             self::EssenVorkochen,
             self::Aufraeumen,
             self::Fruehstuecken,
+            self::Mittagessen,
+            self::Abendessen,
             self::WochePlanen => HabitCategory::Alltag,
 
             self::Meditieren,
@@ -131,7 +137,9 @@ enum HabitTemplate: string
             self::Lesen => BehaviorType::Learning,
 
             self::EssenVorkochen,
-            self::Fruehstuecken => BehaviorType::Nutrition,
+            self::Fruehstuecken,
+            self::Mittagessen,
+            self::Abendessen => BehaviorType::Nutrition,
 
             self::Aufraeumen,
             self::WochePlanen,
@@ -163,6 +171,8 @@ enum HabitTemplate: string
             self::EssenVorkochen => 40,
             self::Aufraeumen => 15,
             self::Fruehstuecken => 15,
+            self::Mittagessen => 30,
+            self::Abendessen => 30,
             self::WochePlanen => 15,
             self::Meditieren => 10,
             self::Tagebuch => 10,
