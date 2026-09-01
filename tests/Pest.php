@@ -2,6 +2,7 @@
 
 use App\Ai\Agents\SuggestBetterAnchor;
 use App\Ai\Agents\SuggestSmallestStep;
+use Database\Factories\HabitFactory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -24,6 +25,11 @@ pest()->extend(TestCase::class)
         // hinge am Netz statt an der eigenen Logik.
         SuggestSmallestStep::fake()->preventStrayPrompts();
         SuggestBetterAnchor::fake()->preventStrayPrompts();
+
+        // Die Factory vergibt Situationen reihum; ohne diesen Reset hinge es
+        // von der Zahl der vorherigen Tests ab, welchen Moment eine
+        // Gewohnheit bekommt.
+        HabitFactory::resetSituations();
     })
     ->in('Feature');
 

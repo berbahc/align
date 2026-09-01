@@ -7,6 +7,7 @@ use App\Ai\UserContext;
 use App\Enums\BehaviorType;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
+use Laravel\Ai\Attributes\MaxTokens;
 use Laravel\Ai\Attributes\Temperature;
 use Laravel\Ai\Attributes\Timeout;
 use Laravel\Ai\Contracts\Agent;
@@ -34,7 +35,15 @@ use RuntimeException;
  * Anbieter und Modell stehen bewusst nicht hier, sondern in `config/ai.php`:
  * ob der Weg zu Claude über OpenRouter oder direkt über Anthropic führt, ist
  * eine Frage des Schlüssels, nicht des Verhaltens.
+ *
+ * Der Token-Deckel ist keine Sparmaßnahme, sondern eine Bedingung: Ohne ihn
+ * nimmt OpenRouter das Modell-Maximum an (65536) und verlangt Deckung dafür,
+ * bevor die Anfrage überhaupt läuft — bei knappem Guthaben antwortet der
+ * Anbieter dann mit 402, obwohl real drei kurze Sätze zurückkommen. Der Wert
+ * liegt großzügig über dem, was {@see SuggestionCount} × {@see MaxStepLength}
+ * je brauchen kann.
  */
+#[MaxTokens(1024)]
 #[Temperature(1.0)]
 #[Timeout(20)]
 class SuggestSmallestStep implements Agent, HasStructuredOutput

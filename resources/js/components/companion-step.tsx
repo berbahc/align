@@ -72,8 +72,7 @@ export function CompanionStep({
                     Willst du „{title}" mit jemandem zusammen angehen?
                 </h2>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                    Für einen einzelnen Tag, {anchor}. Das ist keine Verabredung
-                    auf Dauer — und du kannst es jederzeit später noch tun.
+                    Für einen einzelnen Tag, {anchor}.
                 </p>
             </div>
 

@@ -135,16 +135,9 @@ export default function HabitsIndex({
                 {remindable.length > 1 && (
                     <Card>
                         <CardContent className="flex items-center justify-between gap-4">
-                            <div className="min-w-0">
-                                <p className="text-[15px] font-semibold">
-                                    Alle Erinnerungen
-                                </p>
-                                <p className="mt-0.5 text-xs text-muted-foreground">
-                                    Schaltet die Erinnerung für alle{' '}
-                                    {remindable.length} Gewohnheiten mit fester
-                                    Uhrzeit auf einmal.
-                                </p>
-                            </div>
+                            <p className="min-w-0 text-[15px] font-semibold">
+                                Alle {remindable.length} Erinnerungen
+                            </p>
                             <ToggleSwitch
                                 checked={allRemindersOn}
                                 onChange={toggleAll}
@@ -158,9 +151,7 @@ export default function HabitsIndex({
                     <Card>
                         <CardContent>
                             <p className="text-sm leading-relaxed text-muted-foreground">
-                                Sobald du eine Gewohnheit angelegt hast,
-                                erscheint sie hier — mit ihrem Auslöser und der
-                                Möglichkeit, eine Erinnerung zu setzen.
+                                Noch keine Gewohnheit angelegt.
                             </p>
                         </CardContent>
                     </Card>
@@ -216,9 +207,7 @@ export default function HabitsIndex({
                                 Beendet
                             </h2>
                             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                                Zählt nicht mehr gegen die fünf Plätze und
-                                erinnert nicht mehr. Der Verlauf bleibt — bis du
-                                die Gewohnheit endgültig löschst.
+                                Der Verlauf bleibt erhalten.
                             </p>
                         </div>
 
@@ -240,14 +229,11 @@ export default function HabitsIndex({
                     </section>
                 )}
 
-                {/* Beobachtend statt belehrend (§8): der Satz erklärt, warum
-                    manche Schalter nicht greifen, ohne es zum Mangel zu machen. */}
+                {/* Erklärt die fehlenden Schalter in einigen Zeilen — ohne
+                    diesen Satz sähe es nach einem Fehler aus. */}
                 {habits.some((habit) => !habit.canRemind) && (
                     <p className="text-xs leading-relaxed text-muted-foreground">
-                        Erinnerungen gibt es für Gewohnheiten mit fester
-                        Uhrzeit. Gewohnheiten, die an einer Situation hängen,
-                        melden sich nicht von selbst — die Situation ist ihr
-                        Auslöser.
+                        Erinnern lässt sich nur, was eine feste Uhrzeit hat.
                     </p>
                 )}
             </div>

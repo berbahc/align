@@ -22,6 +22,7 @@ import type {
     AppointmentRequest,
     FriendshipPerson,
     HabitBlueprint,
+    SituationChoice,
     UpcomingAppointment,
 } from '@/types';
 
@@ -43,7 +44,7 @@ interface CommunityProps {
     upcomingAppointments: UpcomingAppointment[];
     /** Für das Übernehmen einer fremden Gewohnheit — dieselbe Wahl wie beim Anlegen. */
     scheduleTypes: ScheduleTypeOption[];
-    triggerSuggestions: string[];
+    triggerSuggestions: SituationChoice[];
 }
 
 export default function Community({
@@ -103,9 +104,7 @@ export default function Community({
                 <header>
                     <h1 className="type-title text-primary">Community</h1>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        Hier steht, mit wem du dich verabreden kannst und was
-                        gerade ausgemacht ist. Was ihr tut, sieht niemand — nur,
-                        dass ihr euch kennt.
+                        Was ihr tut, sieht niemand — nur, dass ihr euch kennt.
                     </p>
 
                     {/* Den eigenen Handle sieht man sonst nirgends, muss ihn
@@ -161,10 +160,6 @@ export default function Community({
                             <CardContent>
                                 <p className="text-[15px] font-semibold">
                                     Noch niemand.
-                                </p>
-                                <p className="mt-1 text-sm text-muted-foreground">
-                                    Verabredungen wirken mit Menschen, die dich
-                                    kennen — nicht mit möglichst vielen.
                                 </p>
                             </CardContent>
                         </Card>
@@ -253,9 +248,7 @@ export default function Community({
                                             <p className="text-xs text-muted-foreground">
                                                 Der Name muss genau stimmen —
                                                 Align sucht nicht nach
-                                                Ähnlichem. Bei einer Absage
-                                                siehst du nur das, ohne Grund
-                                                und ohne Zähler.
+                                                Ähnlichem.
                                             </p>
                                         </>
                                     )}

@@ -248,7 +248,6 @@ export default function Calendar({
                             nicht mehr nachtragen. */}
                         {!canComplete && (
                             <p className="mt-5 border-t border-border pt-4 text-sm leading-relaxed text-muted-foreground">
-                                Dieser Tag lässt sich nur noch ansehen.
                                 Nachtragen geht für die letzten sieben Tage.
                             </p>
                         )}

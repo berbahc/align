@@ -8,7 +8,12 @@ import { TimeStepper } from '@/components/time-stepper';
 import { Spinner } from '@/components/ui/spinner';
 import { PRIMARY_BUTTON, QUIET_BUTTON } from '@/lib/interaction';
 import { skip, sleep, store } from '@/routes/onboarding';
-import type { DurationLimits, HabitCategoryOption, SleepWindow } from '@/types';
+import type {
+    DurationLimits,
+    HabitCategoryOption,
+    SituationChoice,
+    SleepWindow,
+} from '@/types';
 
 interface OnboardingProps {
     /** Gibt es schon einen gespeicherten Rahmen? Dann beginnt die Gewohnheit. */
@@ -16,7 +21,7 @@ interface OnboardingProps {
     defaultWakeTime: string;
     defaultBedtime: string;
     categories: HabitCategoryOption[];
-    triggerSuggestions: string[];
+    triggerSuggestions: SituationChoice[];
     scheduleTypes: ScheduleTypeOption[];
     durationLimits: DurationLimits;
     sleepWindows: SleepWindow[];
@@ -81,11 +86,6 @@ export default function Onboarding({
                                 <h1 className="type-title text-primary">
                                     Fangen wir klein an.
                                 </h1>
-                                <p className="mt-2 text-[15px] leading-relaxed text-muted-foreground">
-                                    Eine einzige Gewohnheit reicht für den
-                                    Anfang. Du kannst später bis zu fünf
-                                    gleichzeitig verfolgen.
-                                </p>
                             </div>
 
                             <HabitWizard
@@ -104,10 +104,8 @@ export default function Onboarding({
                                     Wann beginnt dein Tag?
                                 </h1>
                                 <p className="mt-2 text-[15px] leading-relaxed text-muted-foreground">
-                                    Aufstehen und Schlafen sind der Rahmen, in
-                                    dem deine Gewohnheiten Platz finden. Du
-                                    kannst später jedem Wochentag eigene Zeiten
-                                    geben.
+                                    Gilt zunächst für alle Tage — je Wochentag
+                                    einstellbar ist es später.
                                 </p>
                             </div>
 

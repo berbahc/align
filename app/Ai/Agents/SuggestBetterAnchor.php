@@ -8,6 +8,7 @@ use App\Models\Habit;
 use App\Models\SleepSchedule;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
+use Laravel\Ai\Attributes\MaxTokens;
 use Laravel\Ai\Attributes\Temperature;
 use Laravel\Ai\Attributes\Timeout;
 use Laravel\Ai\Contracts\Agent;
@@ -32,7 +33,11 @@ use RuntimeException;
  *
  * Der Vorschlag ist nie eine Setzung: Er wird angeboten, begründet und kann in
  * einem Tap abgelehnt werden (ki-assistent-design.md §2).
+ *
+ * Zum Token-Deckel siehe {@see SuggestSmallestStep}: Ohne ihn reserviert
+ * OpenRouter das Modell-Maximum und lehnt bei knappem Guthaben mit 402 ab.
  */
+#[MaxTokens(1024)]
 #[Temperature(1.0)]
 #[Timeout(20)]
 class SuggestBetterAnchor implements Agent, HasStructuredOutput
@@ -50,11 +55,13 @@ class SuggestBetterAnchor implements Agent, HasStructuredOutput
     /**
      * @param  list<array{date: string, label: string}>  $misses  Tage, an denen die Gewohnheit anstand und nichts geschah
      * @param  array<int, array{weekday: int, wakeTime: string, bedtime: string, alarmEnabled: bool}>  $sleepWindows  Der Rahmen je Wochentag
+     * @param  list<string>  $takenSituations  Momente, die schon eine andere Gewohnheit tragen
      */
     public function __construct(
         private readonly Habit $habit,
         private readonly array $misses,
         private readonly array $sleepWindows = [],
+        private readonly array $takenSituations = [],
         private readonly ?UserContext $context = null,
     ) {}
 
@@ -208,6 +215,16 @@ class SuggestBetterAnchor implements Agent, HasStructuredOutput
             return null;
         }
 
+        // Ein Moment, der schon eine andere Gewohnheit trägt, würde beim
+        // Übernehmen abgewiesen — dieselbe Begründung wie beim Schlafrahmen:
+        // ein Vorschlag, der in eine Fehlermeldung führt, ist schlechter als
+        // einer weniger.
+        foreach ($this->takenSituations as $taken) {
+            if (mb_strtolower($taken) === mb_strtolower($situation)) {
+                return null;
+            }
+        }
+
         return ['situation' => $situation, 'reason' => $reason];
     }
 
@@ -316,6 +333,13 @@ class SuggestBetterAnchor implements Agent, HasStructuredOutput
 
         if ($frame !== null) {
             $lines[] = $frame;
+        }
+
+        // Aus demselben Grund die belegten Momente: Jede Gewohnheit hat ihren
+        // eigenen, und ein Vorschlag auf einen vergebenen wäre verworfen.
+        if ($this->takenSituations !== []) {
+            $lines[] = 'Diese Momente tragen schon eine andere Gewohnheit und kommen nicht infrage: '
+                .implode(', ', $this->takenSituations).'.';
         }
 
         if ($this->misses !== []) {

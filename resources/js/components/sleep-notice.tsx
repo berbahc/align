@@ -57,9 +57,6 @@ export function SleepNotice() {
                     <span className="block text-[15px] leading-snug font-semibold">
                         {timing(bedtime.minutesUntil, bedtime.bedtime)}
                     </span>
-                    <span className="mt-0.5 block text-xs text-muted-foreground">
-                        Zeit, den Tag loszulassen.
-                    </span>
                 </span>
 
                 <button

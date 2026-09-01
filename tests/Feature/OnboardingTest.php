@@ -55,8 +55,7 @@ test('the onboarding frame is stored for all seven weekdays', function () {
 test('every category carries templates so the second step is never empty', function () {
     foreach (HabitCategory::cases() as $category) {
         expect($category->templates())->not->toBeEmpty()
-            ->and($category->label())->not->toBeEmpty()
-            ->and($category->description())->not->toBeEmpty();
+            ->and($category->label())->not->toBeEmpty();
     }
 });
 
@@ -131,10 +130,13 @@ test('a habit can be created from the dashboard later', function () {
 
 test('new habits are appended to the end of the list', function () {
     $user = User::factory()->create();
-    // Vorlagen explizit setzen: die Factory würfelt aus dem Katalog, in dem
-    // auch die hier gesuchte Vorlage vorkommt — sonst ist der Test flaky.
-    Habit::factory()->for($user)->fromTemplate(HabitTemplate::Joggen)->create(['position' => 0]);
-    Habit::factory()->for($user)->fromTemplate(HabitTemplate::Lesen)->create(['position' => 1]);
+    // Vorlagen und Momente explizit setzen: die Factory würfelt aus dem
+    // Katalog, in dem auch die hier gesuchte Vorlage vorkommt — und jeder
+    // Moment trägt genau eine Gewohnheit, der dritte muss also frei sein.
+    Habit::factory()->for($user)->fromTemplate(HabitTemplate::Joggen)
+        ->create(['position' => 0, 'trigger_situation' => 'nach dem Aufstehen']);
+    Habit::factory()->for($user)->fromTemplate(HabitTemplate::Lesen)
+        ->create(['position' => 1, 'trigger_situation' => 'vor dem Schlafengehen']);
 
     $this->actingAs($user)->post(route('habits.store'), [
         'template_key' => HabitTemplate::Meditieren->value,
@@ -179,13 +181,16 @@ test('the sixth active habit is refused by the server, not only by the interface
 test('a graduated habit frees a slot', function () {
     $user = User::factory()->create();
     Habit::factory()->for($user)->count(Habit::MaxActivePerUser - 1)->create();
-    Habit::factory()->for($user)->graduated()->create();
+    // Die beendete Gewohnheit gibt ihren Moment mit frei — sie zählt weder
+    // gegen die fünf Plätze noch gegen die Belegung.
+    $graduated = Habit::factory()->for($user)->graduated()
+        ->create(['trigger_situation' => 'vor dem Schlafengehen']);
 
     $this->actingAs($user)
         ->post(route('habits.store'), [
             'template_key' => HabitTemplate::Meditieren->value,
             'target_amount' => 10,
-            'trigger_situation' => 'nach dem Aufstehen',
+            'trigger_situation' => $graduated->trigger_situation,
         ])
         ->assertSessionHasNoErrors();
 

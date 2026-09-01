@@ -16,6 +16,7 @@ import type {
     BusySlot,
     ChainCandidate,
     ScheduleType,
+    SituationChoice,
     SleepWindow,
     Weekday,
 } from '@/types';
@@ -92,7 +93,7 @@ export function SituationPicker({
     value,
     onChange,
 }: {
-    suggestions: string[];
+    suggestions: SituationChoice[];
     value: string;
     onChange: (value: string) => void;
 }) {
@@ -100,13 +101,36 @@ export function SituationPicker({
     // getippte — beim Übernehmen einer fremden Gewohnheit ist das der
     // Normalfall, und das Feld muss dann offen stehen.
     const [ownSituation, setOwnSituation] = useState(
-        value !== '' && !suggestions.includes(value),
+        value !== '' &&
+            !suggestions.some((choice) => choice.situation === value),
     );
 
     return (
         <div className="flex flex-col gap-2">
-            {suggestions.map((situation) => {
+            {suggestions.map(({ situation, takenBy }) => {
                 const isSelected = !ownSituation && value === situation;
+
+                // Ein vergebener Moment ist keine Wahl: Er bleibt sichtbar,
+                // damit erkennbar ist, wohin die Gewohnheit gehört, die ihn
+                // hält — aber er lässt sich nicht ein zweites Mal nehmen.
+                if (takenBy !== null) {
+                    return (
+                        <div
+                            key={situation}
+                            /* Ohne Kante: Was keine Wahl ist, sieht auch nicht
+                               wie eine aus. Die gestrichelte Kante gehört
+                               „Eigene Situation" — sie steht für offen, nicht
+                               für vergeben, und beide dürfen sich nicht
+                               gleichen (§16 Familiarity). */
+                            className="flex items-baseline justify-between gap-3 px-4 py-2 text-[15px] text-muted-foreground/70"
+                        >
+                            <span>{situation}</span>
+                            <span className="shrink-0 truncate text-xs">
+                                {takenBy}
+                            </span>
+                        </div>
+                    );
+                }
 
                 return (
                     <button

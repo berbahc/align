@@ -98,7 +98,7 @@ class DashboardController extends Controller
             // beim Anlegen, weil es dasselbe Anlegen ist — nur mit vorbelegten
             // Feldern. Ein fremder Zeitpunkt passt selten in den eigenen Tag.
             'scheduleTypes' => ScheduleType::options(),
-            'triggerSuggestions' => array_keys(Habit::TriggerSuggestions),
+            'triggerSuggestions' => Habit::situationChoicesFor($request->user()),
             'todayProgress' => $this->todayProgress($todaysHabits),
             'consistency' => $this->consistencyRate($habits, $today),
             'streak' => $this->streak($habits, $today),

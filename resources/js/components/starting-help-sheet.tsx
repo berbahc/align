@@ -154,10 +154,6 @@ export function StartingHelpSheet({
                     </button>
                 </div>
 
-                <p className="mt-4 text-center text-sm text-muted-foreground">
-                    Das reicht für heute.
-                </p>
-
                 {/* Der Warum-Satz, gelegentlich statt dauerhaft: hier steht er
                     im Moment des Zögerns, wo er trägt — nicht in der Liste, wo
                     er abstumpfen würde. */}

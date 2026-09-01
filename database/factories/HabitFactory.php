@@ -5,6 +5,7 @@ namespace Database\Factories;
 use App\Enums\HabitTemplate;
 use App\Enums\MeasureUnit;
 use App\Enums\ScheduleType;
+use App\Http\Requests\Concerns\ChecksSituation;
 use App\Models\Habit;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -15,6 +16,30 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 class HabitFactory extends Factory
 {
     /**
+     * Wie viele Gewohnheiten diese Factory schon erzeugt hat.
+     *
+     * Situationen werden reihum vergeben statt gewürfelt: Eine Situation
+     * trägt genau eine Gewohnheit ({@see ChecksSituation}),
+     * und ein Würfel aus fünf Werten erzeugt bei fünf Gewohnheiten fast sicher
+     * eine Dublette — der Test scheiterte dann an seinen eigenen Daten statt
+     * an dem, was er prüft.
+     */
+    private static int $created = 0;
+
+    /**
+     * Setzt die Vergabe zurück — je Test, aufgerufen in `tests/Pest.php`.
+     *
+     * Ohne das liefe der Zähler über die ganze Suite weiter, und welcher
+     * Moment eine Gewohnheit trifft, hinge davon ab, wie viele Tests vorher
+     * liefen. Ein Test, dessen Daten von seiner Position abhängen, ist kein
+     * Test.
+     */
+    public static function resetSituations(): void
+    {
+        self::$created = 0;
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function definition(): array
@@ -22,17 +47,13 @@ class HabitFactory extends Factory
         /** @var HabitTemplate $template */
         $template = fake()->randomElement(HabitTemplate::cases());
 
+        $situations = array_keys(Habit::TriggerSuggestions);
+
         return [
             'user_id' => User::factory(),
             'title' => $template->title(),
             'template_key' => $template->value,
-            'trigger_situation' => fake()->randomElement([
-                'nach dem Aufstehen',
-                'nach der Morgenvorlesung',
-                'nach dem Mittagessen',
-                'wenn ich nach Hause komme',
-                'vor dem Schlafengehen',
-            ]),
+            'trigger_situation' => $situations[self::$created++ % count($situations)],
             'behavior_type' => $template->behaviorType(),
             'target_amount' => $template->defaultMinutes(),
             'target_unit' => MeasureUnit::Minutes,
