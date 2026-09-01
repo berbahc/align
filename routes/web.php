@@ -5,6 +5,7 @@ use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\AppointmentNoticeController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DayOrderController;
 use App\Http\Controllers\FriendshipController;
 use App\Http\Controllers\HabitAdjustmentController;
 use App\Http\Controllers\HabitAdoptionController;
@@ -33,6 +34,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('dashboard', DashboardController::class)->name('dashboard');
 
         Route::get('calendar', CalendarController::class)->name('calendar');
+
+        // Den ganzen Tag neu ordnen — die Frage nach der Einzelanpassung.
+        // Der Vorschlag kostet einen KI-Aufruf und wird deshalb gedrosselt.
+        Route::post('calendar/order/suggestions', [DayOrderController::class, 'suggestions'])
+            ->middleware('throttle:20,1')
+            ->name('calendar.order.suggestions');
+        Route::post('calendar/order', [DayOrderController::class, 'store'])
+            ->name('calendar.order.store');
 
         // Der Schlafplan ist der Rahmen des Tages: Aufsteh- und Schlafenszeit
         // je Wochentag, Wecker und die Erinnerung vor der Schlafenszeit.

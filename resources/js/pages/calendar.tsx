@@ -6,7 +6,10 @@ import {
     alternativeLabel,
 } from '@/components/adjustment-sheet';
 import { CalendarBlock } from '@/components/calendar-block';
+import { DayOrderSheet } from '@/components/day-order-sheet';
+import { StartingHelpSheet } from '@/components/starting-help-sheet';
 import { Card, CardContent } from '@/components/ui/card';
+import { QUIET_LINK } from '@/lib/interaction';
 import { calendar } from '@/routes';
 import { destroy, store } from '@/routes/habits/completions';
 import { show as sleepShow } from '@/routes/sleep';
@@ -77,6 +80,10 @@ export default function Calendar({
 }: CalendarProps) {
     /** Welcher Block gerade im Anpassungs-Sheet steht; null heißt zu. */
     const [adjusting, setAdjusting] = useState<Block | null>(null);
+    /** Welcher Block gerade in der Starthilfe steht; null heißt zu. */
+    const [stuckOn, setStuckOn] = useState<Block | null>(null);
+    /** Steht die Frage nach der Tagesordnung offen? */
+    const [ordering, setOrdering] = useState(false);
     /** Die vorgemerkte Alternative — sie erzeugt den Ghost auf der Achse. */
     const [preview, setPreview] = useState<AnchorAlternative | null>(null);
 
@@ -216,6 +223,7 @@ export default function Calendar({
                                         canComplete={canComplete}
                                         onToggle={toggle}
                                         onAdjust={setAdjusting}
+                                        onStuck={setStuckOn}
                                         ghost={ghost}
                                         faded={faded}
                                         // Der Steg erscheint nur, wenn der
@@ -243,6 +251,20 @@ export default function Calendar({
                             time={bedtime}
                         />
 
+                        {/* Der Weg zur Tagesordnung steht unter der Achse, weil
+                            er den ganzen Tag betrifft und nicht eine Zeile. Ab
+                            zwei Gewohnheiten: bei einer gibt es keine
+                            Reihenfolge. */}
+                        {blocks.length > 1 && canComplete && (
+                            <button
+                                type="button"
+                                onClick={() => setOrdering(true)}
+                                className={`${QUIET_LINK} mt-4 block text-xs`}
+                            >
+                                ✦ Tag neu ordnen
+                            </button>
+                        )}
+
                         {/* Kein Fehler, sondern eine Grenze: Was der
                             Wochenstreifen nicht mehr zeigt, lässt sich auch
                             nicht mehr nachtragen. */}
@@ -259,6 +281,20 @@ export default function Calendar({
                 block={adjusting}
                 onOpenChange={(open) => !open && setAdjusting(null)}
                 onPreview={setPreview}
+            />
+
+            {/* Dieselbe Starthilfe wie auf der Übersicht: Wo die Gewohnheit
+                steht, soll auch der Weg stehen, sie kleiner zu machen. */}
+            <StartingHelpSheet
+                habit={stuckOn}
+                onOpenChange={(open) => !open && setStuckOn(null)}
+            />
+
+            <DayOrderSheet
+                open={ordering}
+                date={date}
+                blocks={blocks}
+                onOpenChange={setOrdering}
             />
         </>
     );

@@ -140,13 +140,20 @@ test('days before the habit existed are not counted against it', function () {
         ->assertJsonPath('observation', '„Lesen" stand in den letzten zwei Wochen 2× an, ohne dass etwas geschah.');
 });
 
-test('the other habits travel along so the AI can propose a chain', function () {
+/**
+ * Die KI muss den Tag kennen, um darin etwas verschieben zu können — was
+ * schon darin steht, ist der Grund, warum ein Moment frei ist oder nicht.
+ */
+test('the other habits travel along so the AI knows the day', function () {
     SuggestBetterAnchor::fake([[
-        'alternatives' => [['situation' => 'nach dem Zähneputzen', 'reason' => 'Hängt an etwas, das ohnehin passiert.']],
+        'alternatives' => [['situation' => 'nach dem Aufstehen', 'reason' => 'Morgens ist der Tag noch ruhig.']],
     ]]);
 
     $user = User::factory()->create();
-    $habit = neglectedHabit($user, ['title' => 'Lesen']);
+    $habit = neglectedHabit($user, [
+        'title' => 'Lesen',
+        'trigger_situation' => 'nach dem Mittagessen',
+    ]);
     Habit::factory()->for($user)->create([
         'title' => 'Zähneputzen',
         'trigger_situation' => 'vor dem Schlafengehen',
@@ -158,6 +165,96 @@ test('the other habits travel along so the AI can propose a chain', function () 
 
     SuggestBetterAnchor::assertPrompted(
         fn (AgentPrompt $prompt): bool => $prompt->contains('Zähneputzen'),
+    );
+});
+
+/**
+ * Bis hierher durfte die KI Momente erfinden — „nachdem ich die Laufschuhe
+ * ausgezogen habe" klingt plausibel, steht aber in keinem Tag und in keiner
+ * Auswahl. Der Tag besteht aus den Gewohnheiten und dem Schlafrhythmus; was
+ * es dort nicht gibt, lässt sich nicht einplanen.
+ */
+test('an invented moment never reaches the interface', function () {
+    SuggestBetterAnchor::fake([[
+        'alternatives' => [
+            ['situation' => 'nachdem ich die Laufschuhe ausgezogen habe', 'reason' => 'Erfunden.'],
+            ['situation' => 'bevor ich das Essen vorkoche', 'reason' => 'Auch erfunden.'],
+            ['situation' => 'nach dem Aufstehen', 'reason' => 'Steht in der Liste.'],
+        ],
+    ]]);
+
+    $user = User::factory()->create();
+    $habit = neglectedHabit($user, ['trigger_situation' => 'nach dem Mittagessen']);
+
+    $this->actingAs($user)
+        ->postJson(route('habits.adjustment.suggestions', $habit))
+        ->assertOk()
+        ->assertJsonCount(1, 'alternatives')
+        ->assertJsonPath('alternatives.0.situation', 'nach dem Aufstehen');
+});
+
+test('a moment that another habit already holds is not offered', function () {
+    SuggestBetterAnchor::fake([[
+        'alternatives' => [
+            ['situation' => 'vor dem Schlafengehen', 'reason' => 'Schon vergeben.'],
+            ['situation' => 'nach dem Aufstehen', 'reason' => 'Frei.'],
+        ],
+    ]]);
+
+    $user = User::factory()->create();
+    $habit = neglectedHabit($user, ['trigger_situation' => 'nach dem Mittagessen']);
+    Habit::factory()->for($user)->create(['trigger_situation' => 'vor dem Schlafengehen']);
+
+    $this->actingAs($user)
+        ->postJson(route('habits.adjustment.suggestions', $habit))
+        ->assertOk()
+        ->assertJsonCount(1, 'alternatives')
+        ->assertJsonPath('alternatives.0.situation', 'nach dem Aufstehen');
+});
+
+/**
+ * Eine Uhrzeit, die sich mit etwas überschneidet, das dort schon steht, ist
+ * keine Alternative, sondern eine Doppelbuchung. Geprüft wird die ganze
+ * Dauer: Eine Stunde ab 16:50 passt nicht in ein Fenster, das um 17:00 endet.
+ */
+test('a time that collides with another habit is dropped', function () {
+    SuggestBetterAnchor::fake([[
+        'alternatives' => [
+            ['time' => '09:00', 'days' => [1], 'reason' => 'Mitten in der anderen Gewohnheit.'],
+            ['time' => '14:00', 'days' => [1], 'reason' => 'Da ist Platz.'],
+        ],
+    ]]);
+
+    $user = User::factory()->create();
+    // Montags 09:00–10:00 ist belegt.
+    Habit::factory()->for($user)->fixedSchedule('09:00', [1])->withMeasure(60)->create();
+    $habit = Habit::factory()->for($user)->fixedSchedule('17:00', [1])->withMeasure(30)->create([
+        'created_at' => Carbon::today()->subDays(20),
+    ]);
+
+    $this->actingAs($user)
+        ->postJson(route('habits.adjustment.suggestions', $habit))
+        ->assertOk()
+        ->assertJsonCount(1, 'alternatives')
+        ->assertJsonPath('alternatives.0.time', '14:00');
+});
+
+test('the free windows travel into the prompt', function () {
+    SuggestBetterAnchor::fake([[
+        'alternatives' => [['time' => '14:00', 'days' => [1], 'reason' => 'Passt.']],
+    ]]);
+
+    $user = User::factory()->create();
+    $habit = Habit::factory()->for($user)->fixedSchedule('17:00', [1])->withMeasure(30)->create([
+        'created_at' => Carbon::today()->subDays(20),
+    ]);
+
+    $this->actingAs($user)
+        ->postJson(route('habits.adjustment.suggestions', $habit))
+        ->assertOk();
+
+    SuggestBetterAnchor::assertPrompted(
+        fn (AgentPrompt $prompt): bool => $prompt->contains('Freie Fenster im Tag'),
     );
 });
 

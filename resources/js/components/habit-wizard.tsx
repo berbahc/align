@@ -242,9 +242,12 @@ export function HabitWizard({
                         Schritt 2 von {STEP_COUNT}: Gewohnheit
                     </legend>
                     <p className={'type-eyebrow text-muted-foreground'}>
-                        Schritt 2 von {STEP_COUNT} · {chosenCategory.label}
+                        Schritt 2 von {STEP_COUNT}
                     </p>
-                    <h2 className="type-heading">Womit fängst du an?</h2>
+                    {/* Der Bereich steht als Überschrift, nicht als Zusatz in
+                        der Zeile darüber: Er ist die Antwort auf Schritt 1 und
+                        sagt, worin hier gewählt wird. */}
+                    <h2 className="type-heading">{chosenCategory.label}</h2>
                     <div className="flex flex-col gap-2">
                         {chosenCategory.templates.map((candidate) => {
                             const isSelected =
