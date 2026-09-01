@@ -16,6 +16,7 @@ import type {
     ChainCandidate,
     DurationLimits,
     ScheduleType,
+    SituationChoice,
     SleepWindow,
     Weekday,
 } from '@/types';
@@ -40,7 +41,7 @@ interface EditableHabit {
 
 interface EditHabitProps {
     habit: EditableHabit;
-    triggerSuggestions: string[];
+    triggerSuggestions: SituationChoice[];
     scheduleTypes: ScheduleTypeOption[];
     durationLimits: DurationLimits;
     sleepWindows: SleepWindow[];
@@ -185,8 +186,7 @@ export default function EditHabit({
                             melden. */}
                         {!isFixed && (
                             <p className="text-xs leading-relaxed text-muted-foreground">
-                                Ohne feste Uhrzeit gibt es nichts zu erinnern —
-                                eine gesetzte Erinnerung wird beim Speichern
+                                Eine gesetzte Erinnerung wird beim Speichern
                                 abgeschaltet.
                             </p>
                         )}

@@ -44,10 +44,8 @@ export function HabitLimitNote({
                         Warum nur {max}?
                     </p>
                     <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                        Jede Gewohnheit, die noch nicht sitzt, kostet dich
-                        täglich einen Vorsatz. Fünf davon sind genug. Läuft eine
-                        schon von allein, beende sie und der Platz ist dann frei
-                        für eine neue Gewohnheit.
+                        Läuft eine schon von allein, beende sie — dann ist der
+                        Platz frei für eine neue.
                     </p>
                 </div>
             </CollapsibleContent>

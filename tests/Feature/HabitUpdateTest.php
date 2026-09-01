@@ -196,8 +196,11 @@ test('the limit of five does not block a change', function () {
     $user = User::factory()->create();
     $habits = Habit::factory()->count(Habit::MaxActivePerUser)->for($user)->create();
 
+    // Die eigene Situation behalten: Sie gehört dieser Gewohnheit, und für
+    // sie selbst ist sie nicht belegt.
     $this->actingAs($user)
         ->put(route('habits.update', $habits->first()), habitFormData([
+            'trigger_situation' => $habits->first()->trigger_situation,
             'motivation' => 'Trotzdem geändert',
         ]))
         ->assertRedirect(route('habits.index'))

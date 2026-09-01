@@ -34,6 +34,7 @@ import type {
     HabitCategoryOption,
     HabitTemplateOption,
     ScheduleType,
+    SituationChoice,
     SleepWindow,
     Weekday,
 } from '@/types';
@@ -63,7 +64,7 @@ export function HabitWizard({
     action,
 }: {
     categories: HabitCategoryOption[];
-    triggerSuggestions: string[];
+    triggerSuggestions: SituationChoice[];
     scheduleTypes: ScheduleTypeOption[];
     durationLimits: DurationLimits;
     sleepWindows?: SleepWindow[];
@@ -228,9 +229,6 @@ export function HabitWizard({
                                     <span className="text-[15px] font-semibold">
                                         {candidate.label}
                                     </span>
-                                    <span className="text-xs leading-relaxed text-muted-foreground">
-                                        {candidate.description}
-                                    </span>
                                 </button>
                             );
                         })}
@@ -247,12 +245,6 @@ export function HabitWizard({
                         Schritt 2 von {STEP_COUNT} · {chosenCategory.label}
                     </p>
                     <h2 className="type-heading">Womit fängst du an?</h2>
-                    <p className="text-sm leading-relaxed text-muted-foreground">
-                        Alles hier lässt sich fest im Tag einplanen. Klein
-                        anfangen wirkt besser als groß planen — die Dauer
-                        stellst du gleich darunter ein.
-                    </p>
-
                     <div className="flex flex-col gap-2">
                         {chosenCategory.templates.map((candidate) => {
                             const isSelected =
@@ -311,12 +303,6 @@ export function HabitWizard({
                         Schritt 3 von {STEP_COUNT}
                     </p>
                     <h2 className="type-heading">Wann machst du das?</h2>
-                    <p className="text-sm leading-relaxed text-muted-foreground">
-                        Ein Moment im Tag trägt besser als eine Uhrzeit — eine
-                        Situation löst das Verhalten von selbst aus. Für alles,
-                        was ohnehin fest im Kalender steht, gibt es die Uhrzeit.
-                    </p>
-
                     <SchedulePicker
                         scheduleTypes={scheduleTypes}
                         scheduleType={data.schedule_type}
@@ -363,8 +349,6 @@ export function HabitWizard({
                     <h2 className="type-heading">Womit fängt das an?</h2>
                     <p className="text-sm leading-relaxed text-muted-foreground">
                         Ein einziger Handgriff, der in einer Minute getan ist.
-                        Er steht später unter deiner Gewohnheit — für die Tage,
-                        an denen der Anfang das Schwere ist.
                     </p>
 
                     {suggestion.loading ? (
@@ -459,11 +443,6 @@ export function HabitWizard({
                             </div>
                         )}
                     </div>
-
-                    <p className="text-xs leading-relaxed text-muted-foreground">
-                        Du kannst diesen Schritt auch auslassen und einfach
-                        weitergehen.
-                    </p>
 
                     <InputError message={errors.smallest_step} />
                 </fieldset>

@@ -28,6 +28,7 @@ import type {
     FriendshipPerson,
     Habit,
     HabitBlueprint,
+    SituationChoice,
     SleepWindow,
 } from '@/types';
 
@@ -55,7 +56,7 @@ interface DashboardProps {
     appointmentsEnabled: boolean;
     /** Für das Übernehmen einer fremden Gewohnheit — dieselbe Wahl wie beim Anlegen. */
     scheduleTypes: ScheduleTypeOption[];
-    triggerSuggestions: string[];
+    triggerSuggestions: SituationChoice[];
     /** Der Rahmen des heutigen Tages: Schlafen heute, Aufstehen morgen. */
     sleepCard: SleepCardData;
     /** Der eigene Schlafrahmen je Wochentag — fürs Übernahme-Sheet. */
@@ -377,9 +378,7 @@ export default function Dashboard({
                             ) : activeCount === 0 ? (
                                 <div className="flex flex-col items-start gap-4">
                                     <p className="text-sm leading-relaxed text-muted-foreground">
-                                        Du verfolgst noch keine Gewohnheiten.
-                                        Fang mit einer an — bis zu fünf
-                                        gleichzeitig halten den Fokus schmal.
+                                        Noch keine Gewohnheit.
                                     </p>
                                     <Link
                                         href={create()}

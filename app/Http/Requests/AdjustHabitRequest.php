@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\SuggestionKind;
+use App\Http\Requests\Concerns\ChecksSituation;
 use App\Http\Requests\Concerns\ChecksSleepWindow;
 use App\Models\AiSuggestion;
 use App\Models\Habit;
@@ -26,7 +27,7 @@ use Illuminate\Validation\Validator;
  */
 class AdjustHabitRequest extends FormRequest
 {
-    use ChecksSleepWindow;
+    use ChecksSituation, ChecksSleepWindow;
 
     public function authorize(): bool
     {
@@ -48,7 +49,13 @@ class AdjustHabitRequest extends FormRequest
             function (Validator $validator): void {
                 if ($this->habit()->schedule_type->hasClockTime()) {
                     $this->validateSleepWindow($validator);
+
+                    return;
                 }
+
+                // Auch ein Vorschlag der KI darf keinen Moment doppelt
+                // belegen — die eigene Gewohnheit zählt dabei nicht mit.
+                $this->validateSituationIsFree($validator, $this->habit());
             },
         ];
     }

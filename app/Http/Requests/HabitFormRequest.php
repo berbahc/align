@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Enums\MeasureUnit;
 use App\Enums\ScheduleType;
+use App\Http\Requests\Concerns\ChecksSituation;
 use App\Http\Requests\Concerns\ChecksSleepWindow;
 use App\Models\Habit;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -22,7 +23,7 @@ use Illuminate\Validation\Validator;
  */
 abstract class HabitFormRequest extends FormRequest
 {
-    use ChecksSleepWindow;
+    use ChecksSituation, ChecksSleepWindow;
 
     public function authorize(): bool
     {
@@ -99,7 +100,23 @@ abstract class HabitFormRequest extends FormRequest
             $this->validateDuration(...),
             $this->validateChain(...),
             $this->validateFrame(...),
+            $this->validateSituation(...),
         ];
+    }
+
+    /**
+     * Die Situation muss frei sein — geprüft nur, wo es eine gibt.
+     *
+     * Eine feste Uhrzeit und eine Kette haben keinen Situationstext, gegen den
+     * sich vergleichen ließe.
+     */
+    private function validateSituation(Validator $validator): void
+    {
+        if ($this->scheduleType() !== ScheduleType::Dynamic) {
+            return;
+        }
+
+        $this->validateSituationIsFree($validator, $this->editedHabit());
     }
 
     /**

@@ -177,7 +177,7 @@ class HabitController extends Controller
     {
         return Inertia::render('habits/create', [
             'categories' => HabitCategory::options(),
-            'triggerSuggestions' => array_keys(Habit::TriggerSuggestions),
+            'triggerSuggestions' => Habit::situationChoicesFor($request->user()),
             'scheduleTypes' => ScheduleType::options(),
             'durationLimits' => MeasureUnit::minutesLimits(),
             // Der Rahmen des Tages, für den Hinweis am Uhrzeit-Stepper: Was
@@ -272,7 +272,9 @@ class HabitController extends Controller
                 'smallestStep' => $habit->smallest_step,
                 'motivation' => $habit->motivation,
             ],
-            'triggerSuggestions' => array_keys(Habit::TriggerSuggestions),
+            // Ohne `$habit` in der Liste wäre die eigene Situation für sie
+            // selbst gesperrt.
+            'triggerSuggestions' => Habit::situationChoicesFor($request->user(), $habit),
             'scheduleTypes' => ScheduleType::options(),
             'durationLimits' => MeasureUnit::minutesLimits(),
             'sleepWindows' => array_values($request->user()->sleepWindows()),

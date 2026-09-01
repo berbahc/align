@@ -20,6 +20,7 @@ import { store } from '@/routes/habits/adoptions';
 import type {
     HabitBlueprint,
     ScheduleType,
+    SituationChoice,
     SleepWindow,
     Weekday,
 } from '@/types';
@@ -58,7 +59,7 @@ export function HabitAdoptionSheet({
     /** Die Absage-Notiz, aus der heraus übernommen wird — sie verschwindet dann mit. */
     noticeId?: number;
     scheduleTypes: ScheduleTypeOption[];
-    triggerSuggestions: string[];
+    triggerSuggestions: SituationChoice[];
     /** Der eigene Schlafrahmen — auch eine Übernahme muss in den Tag passen. */
     sleepWindows?: SleepWindow[];
     onOpenChange: (open: boolean) => void;
@@ -128,9 +129,8 @@ export function HabitAdoptionSheet({
                 <SheetHeader>
                     <SheetTitle>Selbst übernehmen</SheetTitle>
                     <SheetDescription>
-                        Die Gewohnheit kommt in deine eigene Liste — mit deinen
-                        Tagen und deinem Zeitpunkt. Der Verlauf der anderen
-                        Person bleibt bei ihr; bei dir beginnt Tag eins.
+                        Der Verlauf der anderen Person bleibt bei ihr; bei dir
+                        beginnt Tag eins.
                     </SheetDescription>
                 </SheetHeader>
 

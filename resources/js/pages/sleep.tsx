@@ -109,10 +109,6 @@ export default function Sleep({
                     <h1 className="type-title text-primary">
                         Schlaf & Rhythmus
                     </h1>
-                    <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                        Aufstehen und Schlafen sind der Rahmen deines Tages —
-                        Gewohnheiten lassen sich nur dazwischen einplanen.
-                    </p>
                 </header>
 
                 <form onSubmit={submit} className="flex flex-col gap-6">
@@ -123,9 +119,8 @@ export default function Sleep({
                                     Erinnerung {reminderLeadMinutes} Min vor der
                                     Schlafenszeit
                                 </p>
-                                <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                                    Erscheint in der App. Als Systemhinweis nur,
-                                    wenn du gerade in einem anderen Tab bist.
+                                <p className="mt-0.5 text-xs text-muted-foreground">
+                                    Nur bei geöffneter App.
                                 </p>
                             </div>
                             <ToggleSwitch
@@ -139,6 +134,11 @@ export default function Sleep({
                     </Card>
 
                     <section aria-label="Zeiten je Wochentag">
+                        {/* Die eine Grenze, die man kennen muss — dort, wo die
+                            Wecker stehen, nicht als Fußnote am Seitenende. */}
+                        <p className="mb-2 text-xs text-muted-foreground">
+                            Der Wecker klingelt nur bei geöffneter App.
+                        </p>
                         <ul className="flex flex-col gap-2">
                             {data.days.map((day) => {
                                 const isOpen = expanded === day.weekday;
@@ -310,23 +310,14 @@ export default function Sleep({
                     <InputError message={dayError} />
                     <InputError message={errors.bedtime_reminder_enabled} />
 
-                    <div className="flex flex-col gap-2">
-                        <button
-                            type="submit"
-                            disabled={processing || !isDirty}
-                            className={PRIMARY_BUTTON}
-                        >
-                            {processing && <Spinner className="size-4" />}
-                            Schlafplan speichern
-                        </button>
-
-                        {/* Beobachtend, nicht belehrend: Der Satz erklärt die
-                            Wirkung des Rahmens einmal, an seiner Quelle. */}
-                        <p className="text-center text-xs leading-relaxed text-muted-foreground">
-                            Der Wecker klingelt zur Aufstehzeit, solange Align
-                            in einem Tab geöffnet ist.
-                        </p>
-                    </div>
+                    <button
+                        type="submit"
+                        disabled={processing || !isDirty}
+                        className={PRIMARY_BUTTON}
+                    >
+                        {processing && <Spinner className="size-4" />}
+                        Schlafplan speichern
+                    </button>
                 </form>
             </div>
         </>

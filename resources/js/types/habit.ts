@@ -56,6 +56,18 @@ export type ScheduleType = 'dynamic' | 'fixed' | 'chained';
 export type Weekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 /**
+ * Ein Moment im Tag, den man als Auslöser wählen kann.
+ *
+ * `takenBy` trägt den Titel der Gewohnheit, die ihn schon hält — dann ist der
+ * Moment vergeben. Eine Situation trägt genau eine Gewohnheit: zwei Dinge im
+ * selben Moment sind kein Plan.
+ */
+export interface SituationChoice {
+    situation: string;
+    takenBy: string | null;
+}
+
+/**
  * Der Rahmen eines Wochentags: wann der Tag anfängt und wann er endet.
  *
  * Spiegelt `User::sleepWindows()`. Gewohnheiten lassen sich nur innerhalb

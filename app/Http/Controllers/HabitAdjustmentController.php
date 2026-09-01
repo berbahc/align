@@ -57,6 +57,13 @@ class HabitAdjustmentController extends Controller
                 // Übernehmen abgewiesen — die KI soll ihn deshalb gar nicht
                 // erst machen.
                 sleepWindows: $request->user()->sleepWindows(),
+                // Belegte Momente: Jede Situation trägt genau eine Gewohnheit,
+                // und ein Vorschlag auf einen vergebenen würde beim Übernehmen
+                // abgewiesen.
+                takenSituations: array_column(array_filter(
+                    Habit::situationChoicesFor($request->user(), $habit),
+                    fn (array $choice): bool => $choice['takenBy'] !== null,
+                ), 'situation'),
                 // Was Align über die Person weiß: ihr Warum, ihr Tagesablauf,
                 // ihr Rhythmus — und welche Zeitpunkte sie schon einmal
                 // angeboten bekam, ohne sie zu nehmen.

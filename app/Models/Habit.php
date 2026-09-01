@@ -7,6 +7,7 @@ use App\Enums\HabitCategory;
 use App\Enums\HabitTemplate;
 use App\Enums\MeasureUnit;
 use App\Enums\ScheduleType;
+use App\Http\Requests\Concerns\ChecksSituation;
 use Carbon\CarbonInterface;
 use Database\Factories\HabitFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -137,11 +138,44 @@ class Habit extends Model
     public const array TriggerSuggestions = [
         'nach dem Aufstehen' => 7,
         'nach dem Frühstück' => 8,
-        'nach der Morgenvorlesung' => 11,
+        'nach der Vorlesung' => 11,
         'nach dem Mittagessen' => 13,
         'wenn ich nach Hause komme' => 17,
         'vor dem Schlafengehen' => 22,
     ];
+
+    /**
+     * Die Situationen samt der Gewohnheit, die sie schon belegt.
+     *
+     * Eine Situation trägt genau eine Gewohnheit. „Nach dem Aufstehen" zweimal
+     * zu vergeben hieße, zwei Dinge im selben Moment zu tun — der Kalender
+     * zeigte sie untereinander, als gäbe es eine Reihenfolge, die niemand
+     * festgelegt hat. Das unterläuft das Time-Blocking, dem die ganze Planung
+     * dient.
+     *
+     * Diese Methode ist die eine Quelle dafür: Die Oberfläche sperrt daraus
+     * die belegten Einträge, {@see ChecksSituation}
+     * weist sie ab. Liefen beide auseinander, böte der Picker etwas an, das
+     * beim Speichern scheitert.
+     *
+     * `$except` ist die gerade bearbeitete Gewohnheit — ohne sie wäre ihre
+     * eigene Situation für sie selbst gesperrt.
+     *
+     * @return list<array{situation: string, takenBy: string|null}>
+     */
+    public static function situationChoicesFor(User $user, ?self $except = null): array
+    {
+        $taken = $user->habits()
+            ->active()
+            ->whereNotNull('trigger_situation')
+            ->when($except?->exists, fn (Builder $query) => $query->whereKeyNot($except))
+            ->pluck('title', 'trigger_situation');
+
+        return array_map(fn (string $situation): array => [
+            'situation' => $situation,
+            'takenBy' => $taken->get($situation),
+        ], array_keys(self::TriggerSuggestions));
+    }
 
     /**
      * Die Stunde, an der eine selbst getippte Situation einsortiert wird.

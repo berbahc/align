@@ -39,7 +39,7 @@ class FriendshipController extends Controller
             // beim Anlegen, weil es dasselbe Anlegen ist — nur mit vorbelegten
             // Feldern. Ein fremder Zeitpunkt passt selten in den eigenen Tag.
             'scheduleTypes' => ScheduleType::options(),
-            'triggerSuggestions' => array_keys(Habit::TriggerSuggestions),
+            'triggerSuggestions' => Habit::situationChoicesFor($request->user()),
             // Was jemand abgesagt hat — einmal, bis es weggeklickt ist (§5).
             'appointmentNotices' => AppointmentNotice::forUser($user),
             // Anders als die Übersicht bleibt hier stehen, was heute an der

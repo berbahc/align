@@ -10,12 +10,13 @@ import type {
     DurationLimits,
     FriendshipPerson,
     HabitCategoryOption,
+    SituationChoice,
     SleepWindow,
 } from '@/types';
 
 interface CreateHabitProps {
     categories: HabitCategoryOption[];
-    triggerSuggestions: string[];
+    triggerSuggestions: SituationChoice[];
     scheduleTypes: ScheduleTypeOption[];
     durationLimits: DurationLimits;
     sleepWindows: SleepWindow[];

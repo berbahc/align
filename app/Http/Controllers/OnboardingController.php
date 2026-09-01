@@ -32,7 +32,7 @@ class OnboardingController extends Controller
             'defaultWakeTime' => SleepSchedule::DefaultWakeTime,
             'defaultBedtime' => SleepSchedule::DefaultBedtime,
             'categories' => HabitCategory::options(),
-            'triggerSuggestions' => array_keys(Habit::TriggerSuggestions),
+            'triggerSuggestions' => Habit::situationChoicesFor($request->user()),
             'scheduleTypes' => ScheduleType::options(),
             'durationLimits' => MeasureUnit::minutesLimits(),
             'sleepWindows' => array_values($request->user()->sleepWindows()),

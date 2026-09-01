@@ -38,7 +38,7 @@ class DatabaseSeeder extends Seeder
         [
             'template' => HabitTemplate::VorlesungNachbereiten,
             'schedule' => ScheduleType::Dynamic,
-            'trigger' => 'nach der Morgenvorlesung',
+            'trigger' => 'nach der Vorlesung',
             'time' => null,
             'days' => null,
             'consistency' => 0.6,

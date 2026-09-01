@@ -79,8 +79,7 @@ export function AppointmentSheet({
                     {friends.length === 0 ? (
                         <p className="text-sm text-muted-foreground">
                             Dein Kreis ist noch leer. Unter „Community" fügst du
-                            jemanden hinzu — verabreden kannst du dich nur mit
-                            Menschen, die dich kennen.
+                            jemanden hinzu.
                         </p>
                     ) : (
                         <>
