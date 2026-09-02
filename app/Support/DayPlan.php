@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\Habit;
 use App\Models\SleepSchedule;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 /**
@@ -38,15 +39,19 @@ class DayPlan
      * Nur alte Zeilen aus der Zeit der freien Eingabe haben keine; der Katalog
      * vergibt immer eine.
      */
-    private const int AssumedMinutes = 15;
+    public const int AssumedMinutes = 15;
 
     /**
      * @param  Collection<int, Habit>  $habits  Die Gewohnheiten, die an diesem Tag anstehen
      * @param  array{weekday: int, wakeTime: string, bedtime: string, alarmEnabled: bool}  $window  Der Rahmen des Tages
+     * @param  Carbon|null  $date  Der konkrete Tag — nur mit ihm gelten Tagesverschiebungen
+     * @param  list<array{id: int, title: string, from: int, to: int}>  $extraBlocks  Was den Tag sonst noch belegt
      */
     public function __construct(
         private readonly Collection $habits,
         private readonly array $window,
+        private readonly ?Carbon $date = null,
+        private readonly array $extraBlocks = [],
     ) {}
 
     /** „07:30" → 450. */
@@ -91,6 +96,9 @@ class DayPlan
      * aber eine ehrliche Näherung: Sie ist die Stelle, an der die Gewohnheit
      * im Kalender steht.
      *
+     * Was nicht aus einer Gewohnheit kommt — etwa eine Verabredung, die an
+     * diesem Tag Platz braucht — reicht der Aufrufer als Fremdblock herein.
+     *
      * @return list<array{id: int, title: string, from: int, to: int}>
      */
     public function occupied(?Habit $except = null): array
@@ -112,6 +120,7 @@ class DayPlan
                 ];
             })
             ->filter()
+            ->concat($this->extraBlocks)
             ->sortBy('from')
             ->values()
             ->all();
@@ -183,13 +192,13 @@ class DayPlan
      */
     private function startOf(Habit $habit): ?int
     {
-        $exact = $habit->startsAt();
+        $exact = $habit->startsAt($this->date);
 
         if ($exact !== null) {
             return self::toMinutes($exact->format('H:i'));
         }
 
-        $hour = $habit->dayAnchorHour();
+        $hour = $habit->dayAnchorHour($this->date);
 
         return $hour === null ? null : $hour * 60;
     }
@@ -199,8 +208,9 @@ class DayPlan
      *
      * @param  Collection<int, Habit>  $habits
      * @param  array<int, array{weekday: int, wakeTime: string, bedtime: string, alarmEnabled: bool}>  $windows
+     * @param  list<array{id: int, title: string, from: int, to: int}>  $extraBlocks
      */
-    public static function for(Collection $habits, int $weekday, array $windows): self
+    public static function for(Collection $habits, int $weekday, array $windows, ?Carbon $date = null, array $extraBlocks = []): self
     {
         return new self(
             $habits,
@@ -210,6 +220,20 @@ class DayPlan
                 'bedtime' => SleepSchedule::DefaultBedtime,
                 'alarmEnabled' => false,
             ],
+            $date,
+            $extraBlocks,
         );
+    }
+
+    /**
+     * Derselbe Plan für ein Datum — Wochentag und Verschiebungen inbegriffen.
+     *
+     * @param  Collection<int, Habit>  $habits
+     * @param  array<int, array{weekday: int, wakeTime: string, bedtime: string, alarmEnabled: bool}>  $windows
+     * @param  list<array{id: int, title: string, from: int, to: int}>  $extraBlocks
+     */
+    public static function forDate(Collection $habits, Carbon $date, array $windows, array $extraBlocks = []): self
+    {
+        return self::for($habits, $date->dayOfWeekIso, $windows, $date, $extraBlocks);
     }
 }

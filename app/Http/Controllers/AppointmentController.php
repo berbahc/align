@@ -6,9 +6,12 @@ use App\Http\Requests\ProposeAppointmentRequest;
 use App\Models\Appointment;
 use App\Models\AppointmentNotice;
 use App\Models\Habit;
+use App\Support\AppointmentFit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
 
 class AppointmentController extends Controller
 {
@@ -37,12 +40,29 @@ class AppointmentController extends Controller
 
     /**
      * Zusagen — Screen A2, „Passt mir".
+     *
+     * Zugesagt wird nur in einen freien Platz. Wer zur selben Zeit schon etwas
+     * vorhat, sieht das auf der Karte und kann seine eigene Gewohnheit für
+     * diesen einen Tag verschieben; solange er das nicht tut, wäre die Zusage
+     * eine Doppelbuchung. Der Riegel steht hier und nicht nur in der
+     * Oberfläche: Ein Knopf, der nichts tut, ist keine Regel.
      */
-    public function update(Appointment $appointment): RedirectResponse
+    public function update(Appointment $appointment, Request $request): RedirectResponse
     {
         Gate::authorize('accept', $appointment);
 
-        $appointment->accepted_at = now();
+        $conflict = AppointmentFit::conflict($appointment, $request->user());
+
+        if ($conflict !== null) {
+            throw ValidationException::withMessages([
+                'appointment' => sprintf(
+                    'Um diese Zeit läuft bei dir schon „%s". Verschiebe sie für diesen Tag, dann kannst du zusagen.',
+                    $conflict->habit()->title,
+                ),
+            ]);
+        }
+
+        $appointment->accepted_at = Carbon::now();
         $appointment->save();
 
         return back();

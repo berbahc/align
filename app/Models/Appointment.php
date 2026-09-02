@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\AppointmentFit;
 use Carbon\CarbonInterface;
 use Database\Factories\AppointmentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -214,7 +215,7 @@ class Appointment extends Model
      * Vergangenes verfällt still: Eine Anfrage für gestern ist keine Frage
      * mehr, und ein Hinweis darauf wäre ein Vorwurf.
      *
-     * @return list<array{id: int, name: string, initial: string, title: string, anchor: string, day: string, blueprint: array{title: string, templateKey: string|null, behaviorType: string, durationMinutes: int, measureLabel: string|null, scheduleType: string, triggerSituation: string|null, scheduledTime: string|null, scheduledDays: list<int>|null}}>
+     * @return list<array{id: int, name: string, initial: string, title: string, anchor: string, day: string, date: string, blueprint: array{title: string, templateKey: string|null, behaviorType: string, durationMinutes: int, measureLabel: string|null, scheduleType: string, triggerSituation: string|null, scheduledTime: string|null, scheduledDays: list<int>|null}, conflict: array{habitId: int, title: string, from: string, to: string, options: list<array{time: string, label: string}>}|null}>
      */
     public static function pendingFor(User $user): array
     {
@@ -230,11 +231,17 @@ class Appointment extends Model
                 'title' => $appointment->habit->title,
                 'anchor' => $appointment->habit->scheduleLabel(),
                 'day' => self::dayLabel($appointment->scheduled_for),
+                // Das Datum roh dazu: Wer seinen Tag umstellen muss, um
+                // zusagen zu können, braucht den Tag, nicht sein Wort.
+                'date' => $appointment->scheduled_for->toDateString(),
                 // Wer gefragt wird, sieht hier zum ersten Mal eine Gewohnheit,
                 // die er selbst nicht führt. Manchmal ist die Antwort nicht ja
                 // oder nein, sondern „das will ich auch" — dafür reist die
                 // Vorlage mit.
                 'blueprint' => $appointment->habit->blueprint(),
+                // Und was dagegen steht: Wer zur selben Zeit schon etwas
+                // vorhat, soll das sehen, bevor er zusagt — nicht danach.
+                'conflict' => AppointmentFit::conflict($appointment, $user)?->present(),
             ])
             ->all();
     }

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\ScheduleType;
 use App\Models\Appointment;
 use App\Models\AppointmentNotice;
 use App\Models\Friendship;
@@ -37,6 +36,10 @@ class DashboardController extends Controller
             // Die Serie braucht die ganze Historie, `completions` ist oben aber
             // auf heute eingegrenzt — deshalb die zweite, schmale Relation.
             ->with('completionDates')
+            // Was heute ausnahmsweise woanders liegt: Ohne diese Zeile stünde
+            // eine verschobene Gewohnheit weiter an ihrer alten Stelle, und
+            // wer für eine Verabredung Platz gemacht hat, sähe davon nichts.
+            ->with(['dayShifts' => fn (Relation $query) => $query->whereDate('shifted_on', $today)])
             ->withCount(['completions as completions_last_30_days' => fn (Builder $query) => $query
                 ->where('completed_on', '>=', $today->copy()->subDays(29)->startOfDay()),
             ])
@@ -59,7 +62,7 @@ class DashboardController extends Controller
         $todaysHabits = $habits
             ->filter(fn (Habit $habit): bool => $habit->isScheduledOn($today))
             ->sortBy(fn (Habit $habit): array => [
-                $habit->dayAnchorHour() ?? PHP_INT_MAX,
+                $habit->dayAnchorHour($today) ?? PHP_INT_MAX,
                 $habit->position,
             ])
             ->values();
@@ -75,9 +78,6 @@ class DashboardController extends Controller
             // Eigenschaft mit dem Rahmen der umliegenden Tage — dieselbe
             // Bezeichnung würde sie auf dieser Seite überdecken.
             'sleepCard' => $this->sleepCard($request->user(), $today),
-            // Für das Übernahme-Sheet: Auch eine übernommene Gewohnheit muss
-            // in den eigenen Tag passen.
-            'sleepWindows' => array_values($request->user()->sleepWindows()),
             // Mockup A2 setzt die offene Anfrage über die Gewohnheiten. Es ist
             // der einzige Weg, auf dem jemand von ihr erfährt — es gibt keine
             // Mail und kein Nachfassen (community_feature3.md §5).
@@ -94,11 +94,6 @@ class DashboardController extends Controller
                 'initial' => mb_strtoupper(mb_substr($friend->name, 0, 1)),
             ])->all(),
             'appointmentsEnabled' => $request->user()->appointments_enabled,
-            // Für das Übernehmen einer fremden Gewohnheit: Dieselbe Wahl wie
-            // beim Anlegen, weil es dasselbe Anlegen ist — nur mit vorbelegten
-            // Feldern. Ein fremder Zeitpunkt passt selten in den eigenen Tag.
-            'scheduleTypes' => ScheduleType::options(),
-            'triggerSuggestions' => Habit::situationChoicesFor($request->user()),
             'todayProgress' => $this->todayProgress($todaysHabits),
             'consistency' => $this->consistencyRate($habits, $today),
             'streak' => $this->streak($habits, $today),
@@ -112,7 +107,7 @@ class DashboardController extends Controller
             'habits' => $todaysHabits->map(fn (Habit $habit): array => [
                 'id' => $habit->id,
                 'title' => $habit->title,
-                'scheduleLabel' => $habit->scheduleLabel(),
+                'scheduleLabel' => $habit->scheduleLabel($today),
                 'behaviorType' => $habit->behavior_type->value,
                 'measureLabel' => $habit->measureLabel(),
                 'smallestStep' => $habit->smallest_step,

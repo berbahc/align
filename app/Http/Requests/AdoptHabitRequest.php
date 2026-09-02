@@ -24,6 +24,10 @@ class AdoptHabitRequest extends StoreHabitRequest
             // Die Absage-Notiz, aus der heraus übernommen wird. Fehlt, wenn
             // der Weg aus der Anfrage-Karte kommt — dort gibt es keine Notiz.
             'notice_id' => ['nullable', 'integer'],
+            // Die offene Anfrage, aus der heraus übernommen wird. Wer die
+            // Gewohnheit zu seiner macht, macht mit — die Frage ist damit
+            // beantwortet und muss nicht ein zweites Mal gestellt werden.
+            'appointment_id' => ['nullable', 'integer'],
         ];
     }
 }

@@ -11,6 +11,7 @@ use App\Http\Controllers\HabitAdjustmentController;
 use App\Http\Controllers\HabitAdoptionController;
 use App\Http\Controllers\HabitCompletionController;
 use App\Http\Controllers\HabitController;
+use App\Http\Controllers\HabitDayShiftController;
 use App\Http\Controllers\HabitGraduationController;
 use App\Http\Controllers\HabitReminderController;
 use App\Http\Controllers\OnboardingController;
@@ -113,6 +114,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('habits/{habit}/smallest-step', [SmallestStepController::class, 'smaller'])
             ->middleware('throttle:20,1')
             ->name('habits.smallest-step.smaller');
+
+        // Platz machen für einen einzigen Tag. Steht bei den festen Strecken
+        // vor `{habit}`, aus demselben Grund wie die Erinnerungen darunter.
+        Route::post('habits/{habit}/shifts', [HabitDayShiftController::class, 'store'])
+            ->name('habits.shifts.store');
 
         // Erst fragen, dann übernehmen — dazwischen liegt die Entscheidung.
         // Nur der Vorschlag kostet einen KI-Aufruf und wird gedrosselt.
