@@ -1,7 +1,8 @@
-import { router } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { destroy } from '@/routes/appointment-notices';
+import { create } from '@/routes/habits';
 import type { AppointmentNotice as Notice } from '@/types';
 
 /**
@@ -29,13 +30,10 @@ const ACTION =
  */
 export function AppointmentNotice({
     notices,
-    onAdopt,
     onCarryOn,
     className,
 }: {
     notices: Notice[];
-    /** Die Gewohnheit gehört der anderen Person — sie lässt sich übernehmen. */
-    onAdopt: (notice: Notice) => void;
     /** Sie gehört einem selbst — sie läuft weiter, mit oder ohne Begleitung. */
     onCarryOn: (notice: Notice) => void;
     className?: string;
@@ -74,14 +72,18 @@ export function AppointmentNotice({
                                 </button>
                             )}
 
-                            {notice.blueprint !== null && (
-                                <button
-                                    type="button"
-                                    onClick={() => onAdopt(notice)}
+                            {/* Übernehmen ist ein Anlegen mit vorbelegten
+                                Feldern — es führt deshalb in denselben
+                                Assistenten wie jede neue Gewohnheit. */}
+                            {notice.blueprint?.templateKey != null && (
+                                <Link
+                                    href={create.url({
+                                        query: { notice: notice.id },
+                                    })}
                                     className={ACTION}
                                 >
                                     Selbst übernehmen
-                                </button>
+                                </Link>
                             )}
 
                             {/* „Alles gut" statt „Schließen": Das Wegklicken

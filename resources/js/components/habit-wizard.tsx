@@ -30,6 +30,7 @@ import type {
     BusySlot,
     ChainCandidate,
     DurationLimits,
+    HabitAdoption,
     HabitCategory,
     HabitCategoryOption,
     HabitTemplateOption,
@@ -39,7 +40,15 @@ import type {
     Weekday,
 } from '@/types';
 
-const STEP_COUNT = 5;
+/**
+ * Die Schritte des Assistenten, in ihrer Reihenfolge.
+ *
+ * Beim Übernehmen fällt der erste weg: Der Bereich ist keine Frage mehr, wenn
+ * die Gewohnheit schon feststeht. Alles andere bleibt — die Dauer, der
+ * Zeitpunkt, der erste Schritt, der Vorsatz. Es ist dasselbe Anlegen.
+ */
+const STEPS: number[] = [1, 2, 3, 4, 5];
+const ADOPTION_STEPS: number[] = [2, 3, 4, 5];
 
 /** Ein neutraler Nachmittagstermin, von dem aus sich in beide Richtungen steppen lässt. */
 const DEFAULT_TIME = '17:00';
@@ -61,6 +70,7 @@ export function HabitWizard({
     sleepWindows = [],
     chainCandidates = [],
     busySlots = [],
+    adoption = null,
     action,
 }: {
     categories: HabitCategoryOption[];
@@ -70,24 +80,44 @@ export function HabitWizard({
     sleepWindows?: SleepWindow[];
     chainCandidates?: ChainCandidate[];
     busySlots?: BusySlot[];
+    /** Gesetzt, wenn eine fremde Gewohnheit zur eigenen wird — sonst null. */
+    adoption?: HabitAdoption | null;
     action: string;
 }) {
-    const [step, setStep] = useState(1);
-    const [category, setCategory] = useState<HabitCategory | ''>('');
+    const blueprint = adoption?.blueprint ?? null;
+    const steps = adoption === null ? STEPS : ADOPTION_STEPS;
+
+    const [step, setStep] = useState<number>(steps[0]!);
+    const [category, setCategory] = useState<HabitCategory | ''>(
+        // Beim Übernehmen steht die Vorlage fest, und mit ihr der Bereich.
+        categories.find((candidate) =>
+            candidate.templates.some(
+                (option) => option.key === blueprint?.templateKey,
+            ),
+        )?.value ?? '',
+    );
     const [ownStep, setOwnStep] = useState(false);
 
     const suggestion = useSmallestStep();
 
     const { data, setData, post, processing, errors } = useForm({
-        template_key: '',
-        target_amount: durationLimits.min,
-        schedule_type: 'dynamic' as ScheduleType,
-        trigger_situation: '',
-        scheduled_time: DEFAULT_TIME,
-        scheduled_days: [1, 2, 3, 4, 5] as Weekday[],
+        template_key: blueprint?.templateKey ?? '',
+        // Die Dauer der anderen Person ist ein Startwert, keine Vorgabe: Sie
+        // lässt sich hier ändern wie bei jeder neuen Gewohnheit.
+        target_amount: blueprint?.durationMinutes ?? durationLimits.min,
+        schedule_type: blueprint?.scheduleType ?? ('dynamic' as ScheduleType),
+        trigger_situation: blueprint?.triggerSituation ?? '',
+        scheduled_time: blueprint?.scheduledTime ?? DEFAULT_TIME,
+        scheduled_days: (blueprint?.scheduledDays ?? [
+            1, 2, 3, 4, 5,
+        ]) as Weekday[],
         chained_to_habit_id: null as number | null,
         motivation: '',
         smallest_step: '',
+        // Was mit dem Anlegen beantwortet ist: die Absage-Notiz und die offene
+        // Anfrage, aus der heraus übernommen wird.
+        notice_id: adoption?.noticeId ?? null,
+        appointment_id: adoption?.appointmentId ?? null,
     });
 
     const chosenCategory = categories.find(
@@ -111,18 +141,26 @@ export function HabitWizard({
           )
         : null;
 
-    const canContinue = [
-        category !== '',
-        data.template_key !== '',
-        data.schedule_type === 'chained'
-            ? data.chained_to_habit_id !== null
-            : isFixed
-              ? data.scheduled_days.length > 0 && asleep === null
-              : data.trigger_situation.trim().length > 0,
+    const canContinue = {
+        1: category !== '',
+        2: data.template_key !== '',
+        3:
+            data.schedule_type === 'chained'
+                ? data.chained_to_habit_id !== null
+                : isFixed
+                  ? data.scheduled_days.length > 0 && asleep === null
+                  : data.trigger_situation.trim().length > 0,
         // Der kleinste Schritt ist überspringbar — bei ø 3,92 Schuldgefühl
         // darf hier kein weiteres Pflichtfeld entstehen.
-        true,
-    ][step - 1];
+        4: true,
+        5: true,
+    }[step];
+
+    const position = steps.indexOf(step);
+    const isLast = position === steps.length - 1;
+
+    /** „Schritt 2 von 4" — beim Übernehmen sind es vier, sonst fünf. */
+    const stepLabel = `Schritt ${position + 1} von ${steps.length}`;
 
     /**
      * Holt die Vorschläge der KI für den kleinsten Schritt.
@@ -146,7 +184,7 @@ export function HabitWizard({
             loadSuggestions();
         }
 
-        setStep(step + 1);
+        setStep(steps[position + 1] ?? step);
     }
 
     function chooseCategory(value: HabitCategory) {
@@ -177,12 +215,12 @@ export function HabitWizard({
     return (
         <form onSubmit={submit} className="flex flex-col gap-8">
             <div className="flex items-center gap-2" aria-hidden="true">
-                {Array.from({ length: STEP_COUNT }, (_, index) => (
+                {steps.map((candidate, index) => (
                     <span
-                        key={index}
+                        key={candidate}
                         className={cn(
                             'h-1 flex-1 rounded-full transition-colors duration-[var(--duration-fluid)] ease-[var(--ease-fluid)]',
-                            index < step ? 'bg-primary' : 'bg-sand',
+                            index <= position ? 'bg-primary' : 'bg-sand',
                         )}
                     />
                 ))}
@@ -190,11 +228,9 @@ export function HabitWizard({
 
             {step === 1 && (
                 <fieldset className="flex flex-col gap-4">
-                    <legend className="sr-only">
-                        Schritt 1 von {STEP_COUNT}: Bereich
-                    </legend>
+                    <legend className="sr-only">{stepLabel}: Bereich</legend>
                     <p className={'type-eyebrow text-muted-foreground'}>
-                        Schritt 1 von {STEP_COUNT}
+                        {stepLabel}
                     </p>
                     <h2 className="type-heading">
                         Woran möchtest du arbeiten?
@@ -238,17 +274,35 @@ export function HabitWizard({
 
             {step === 2 && chosenCategory && (
                 <fieldset className="flex flex-col gap-4">
-                    <legend className="sr-only">
-                        Schritt 2 von {STEP_COUNT}: Gewohnheit
-                    </legend>
+                    <legend className="sr-only">{stepLabel}: Gewohnheit</legend>
                     <p className={'type-eyebrow text-muted-foreground'}>
-                        Schritt 2 von {STEP_COUNT}
+                        {stepLabel}
                     </p>
                     {/* Der Bereich steht als Überschrift, nicht als Zusatz in
                         der Zeile darüber: Er ist die Antwort auf Schritt 1 und
                         sagt, worin hier gewählt wird. */}
                     <h2 className="type-heading">{chosenCategory.label}</h2>
-                    <div className="flex flex-col gap-2">
+
+                    {/* Beim Übernehmen ist die Gewohnheit keine Wahl mehr —
+                        sie steht schon fest. Der Satz darunter sagt, was das
+                        heißt: Der Verlauf der anderen Person bleibt bei ihr. */}
+                    {adoption !== null && (
+                        <div className="flex flex-col gap-1 rounded-2xl bg-card p-4">
+                            <p className="text-[15px] font-semibold">
+                                {blueprint?.title}
+                            </p>
+                            <p className="text-xs leading-relaxed text-muted-foreground">
+                                Bei dir beginnt Tag eins.
+                            </p>
+                        </div>
+                    )}
+
+                    <div
+                        className={cn(
+                            'flex flex-col gap-2',
+                            adoption !== null && 'hidden',
+                        )}
+                    >
                         {chosenCategory.templates.map((candidate) => {
                             const isSelected =
                                 data.template_key === candidate.key;
@@ -299,11 +353,9 @@ export function HabitWizard({
 
             {step === 3 && (
                 <fieldset className="flex flex-col gap-4">
-                    <legend className="sr-only">
-                        Schritt 3 von {STEP_COUNT}: Auslöser
-                    </legend>
+                    <legend className="sr-only">{stepLabel}: Auslöser</legend>
                     <p className={'type-eyebrow text-muted-foreground'}>
-                        Schritt 3 von {STEP_COUNT}
+                        {stepLabel}
                     </p>
                     <h2 className="type-heading">Wann machst du das?</h2>
                     <SchedulePicker
@@ -344,10 +396,10 @@ export function HabitWizard({
             {step === 4 && (
                 <fieldset className="flex flex-col gap-4">
                     <legend className="sr-only">
-                        Schritt 4 von {STEP_COUNT}: Erster Schritt
+                        {stepLabel}: Erster Schritt
                     </legend>
                     <p className={'type-eyebrow text-muted-foreground'}>
-                        Schritt 4 von {STEP_COUNT}
+                        {stepLabel}
                     </p>
                     <h2 className="type-heading">Womit fängt das an?</h2>
                     <p className="text-sm leading-relaxed text-muted-foreground">
@@ -454,10 +506,10 @@ export function HabitWizard({
             {step === 5 && (
                 <fieldset className="flex flex-col gap-4">
                     <legend className="sr-only">
-                        Schritt 5 von {STEP_COUNT}: Vorsatz bestätigen
+                        {stepLabel}: Vorsatz bestätigen
                     </legend>
                     <p className={'type-eyebrow text-muted-foreground'}>
-                        Schritt 5 von {STEP_COUNT}
+                        {stepLabel}
                     </p>
                     <h2 className="type-heading">Dein Vorsatz</h2>
 
@@ -530,7 +582,7 @@ export function HabitWizard({
             )}
 
             <div className="flex flex-col gap-3">
-                {step < STEP_COUNT ? (
+                {!isLast ? (
                     <button
                         type="button"
                         disabled={!canContinue}
@@ -563,10 +615,10 @@ export function HabitWizard({
                     </>
                 )}
 
-                {step > 1 && (
+                {position > 0 && (
                     <button
                         type="button"
-                        onClick={() => setStep(step - 1)}
+                        onClick={() => setStep(steps[position - 1] ?? step)}
                         className={QUIET_BUTTON}
                     >
                         Zurück

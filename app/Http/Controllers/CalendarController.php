@@ -42,6 +42,8 @@ class CalendarController extends Controller
                 // Die Kette wird beim Sortieren und Benennen jedes Blocks
                 // gefragt — ohne Vorladen wäre das eine Abfrage pro Glied.
                 'chainedTo.chainedTo',
+                // Was an genau diesem Tag woanders liegt.
+                'dayShifts' => fn (Relation $query) => $query->whereDate('shifted_on', $date),
             ])
             ->orderBy('position')
             ->get();
@@ -57,7 +59,7 @@ class CalendarController extends Controller
             // Der Tag wird von oben nach unten gelesen: Morgen zuerst, Abend
             // zuletzt. Bei gleicher Stunde entscheidet die eigene Reihenfolge
             // aus der Gewohnheitsliste.
-            ->sortBy(fn (Habit $habit): array => [$habit->dayAnchorHour() ?? PHP_INT_MAX, $habit->position])
+            ->sortBy(fn (Habit $habit): array => [$habit->dayAnchorHour($date) ?? PHP_INT_MAX, $habit->position])
             ->values();
 
         // Der Rahmen des gezeigten Tages: Die Achse beginnt beim Aufstehen
@@ -75,7 +77,7 @@ class CalendarController extends Controller
             'canComplete' => $this->withinBackdatingWindow($date, $today),
             'previousDate' => $this->previousDate($habits, $date),
             'nextDate' => $date->copy()->addDay()->toDateString(),
-            'blocks' => $blocks->map($this->block(...))->all(),
+            'blocks' => $blocks->map(fn (Habit $habit): array => $this->block($habit, $date))->all(),
             'wakeTime' => $window['wakeTime'],
             'bedtime' => $window['bedtime'],
         ]);
@@ -86,20 +88,20 @@ class CalendarController extends Controller
      *
      * @return array{id: int, title: string, anchor: string, anchorHour: int, measureLabel: string|null, timeRange: string|null, behaviorType: string, smallestStep: string|null, motivation: string|null, completed: bool, graduated: bool, chainedToId: int|null}
      */
-    private function block(Habit $habit): array
+    private function block(Habit $habit, Carbon $date): array
     {
         return [
             'id' => $habit->id,
             'title' => $habit->title,
-            'anchor' => $habit->scheduleLabel(),
+            'anchor' => $habit->scheduleLabel($date),
             // Reist mit, damit ein Vorschlag der KI sich einsortieren kann,
             // bevor er übernommen wurde.
-            'anchorHour' => $habit->dayAnchorHour() ?? Habit::UnknownAnchorHour,
+            'anchorHour' => $habit->dayAnchorHour($date) ?? Habit::UnknownAnchorHour,
             // Der Umfang und, wo er eine Dauer ist, die belegte Spanne.
             // „17:00 – 17:20" sagt zusätzlich, wann der Platz wieder frei
             // ist — die Größe, an der eine angehängte Gewohnheit beginnt.
             'measureLabel' => $habit->measureLabel(),
-            'timeRange' => $habit->timeRangeLabel(),
+            'timeRange' => $habit->timeRangeLabel($date),
             'behaviorType' => $habit->behavior_type->value,
             'smallestStep' => $habit->smallest_step,
             // Für die Starthilfe, die es jetzt auch im Kalender gibt.

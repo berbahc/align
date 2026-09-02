@@ -5,9 +5,7 @@ import { AppointmentNotice } from '@/components/appointment-notice';
 import { AppointmentRequestNotice } from '@/components/appointment-request-notice';
 import { AppointmentSheet } from '@/components/appointment-sheet';
 import { FriendRequestNotice } from '@/components/friend-request-notice';
-import { HabitAdoptionSheet } from '@/components/habit-adoption-sheet';
 import { HabitRow } from '@/components/habit-row';
-import type { ScheduleTypeOption } from '@/components/schedule-picker';
 import { SleepCard } from '@/components/sleep-card';
 import type { SleepCardData } from '@/components/sleep-card';
 import { StartingHelpSheet } from '@/components/starting-help-sheet';
@@ -27,9 +25,6 @@ import type {
     UpcomingAppointment,
     FriendshipPerson,
     Habit,
-    HabitBlueprint,
-    SituationChoice,
-    SleepWindow,
 } from '@/types';
 
 interface TodayProgress {
@@ -54,13 +49,8 @@ interface DashboardProps {
     friends: FriendshipPerson[];
     /** Screen A5: aus heißt, der Weg zur Verabredung wird nicht angeboten. */
     appointmentsEnabled: boolean;
-    /** Für das Übernehmen einer fremden Gewohnheit — dieselbe Wahl wie beim Anlegen. */
-    scheduleTypes: ScheduleTypeOption[];
-    triggerSuggestions: SituationChoice[];
     /** Der Rahmen des heutigen Tages: Schlafen heute, Aufstehen morgen. */
     sleepCard: SleepCardData;
-    /** Der eigene Schlafrahmen je Wochentag — fürs Übernahme-Sheet. */
-    sleepWindows: SleepWindow[];
     todayProgress: TodayProgress;
     /** Anteil erfüllter Tage der letzten 30 Tage; null, solange es keine Gewohnheiten gibt. */
     consistency: number | null;
@@ -83,10 +73,7 @@ export default function Dashboard({
     upcomingAppointments,
     friends,
     appointmentsEnabled,
-    scheduleTypes,
-    triggerSuggestions,
     sleepCard,
-    sleepWindows,
     todayProgress,
     consistency,
     streak,
@@ -105,13 +92,6 @@ export default function Dashboard({
 
     // Welche Gewohnheit gerade im Verabredungs-Sheet steht; null heißt zu.
     const [askingFor, setAskingFor] = useState<Habit | null>(null);
-
-    // Welche fremde Gewohnheit gerade zum Übernehmen offen steht, und aus
-    // welcher Absage heraus — die Notiz verschwindet dann mit.
-    const [adopting, setAdopting] = useState<{
-        blueprint: HabitBlueprint;
-        noticeId?: number;
-    } | null>(null);
 
     // Die Zeile, auf die eine Absage gerade verwiesen hat.
     const [highlighted, setHighlighted] = useState<number | null>(null);
@@ -237,25 +217,13 @@ export default function Dashboard({
                     darunter — sie ist das Einzige auf dieser Seite, das eine
                     andere Person betrifft und auf eine Antwort wartet. */}
                 <FriendRequestNotice requests={friendRequests} />
-                <AppointmentRequestNotice
-                    requests={appointmentRequests}
-                    onAdopt={(request) =>
-                        setAdopting({ blueprint: request.blueprint })
-                    }
-                />
+                <AppointmentRequestNotice requests={appointmentRequests} />
 
                 {/* Die Absage steht bei den Dingen, die andere Menschen
                     betreffen — und nicht bei den Gewohnheiten, wo sie wie ein
                     eigenes Versäumnis aussähe. */}
                 <AppointmentNotice
                     notices={appointmentNotices}
-                    onAdopt={(notice) =>
-                        notice.blueprint !== null &&
-                        setAdopting({
-                            blueprint: notice.blueprint,
-                            noticeId: notice.id,
-                        })
-                    }
                     onCarryOn={carryOn}
                 />
 
@@ -431,15 +399,6 @@ export default function Dashboard({
             <StartingHelpSheet
                 habit={stuckOn}
                 onOpenChange={(open) => !open && setStuckOn(null)}
-            />
-
-            <HabitAdoptionSheet
-                blueprint={adopting?.blueprint ?? null}
-                noticeId={adopting?.noticeId}
-                scheduleTypes={scheduleTypes}
-                triggerSuggestions={triggerSuggestions}
-                sleepWindows={sleepWindows}
-                onOpenChange={(open) => !open && setAdopting(null)}
             />
 
             <AppointmentSheet

@@ -2,12 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\ScheduleType;
 use App\Http\Requests\AddFriendRequest;
 use App\Models\Appointment;
 use App\Models\AppointmentNotice;
 use App\Models\Friendship;
-use App\Models\Habit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -35,11 +33,6 @@ class FriendshipController extends Controller
         return Inertia::render('community', [
             'appointmentsEnabled' => $user->appointments_enabled,
             'appointmentRequests' => Appointment::pendingFor($user),
-            // Für das Übernehmen einer fremden Gewohnheit: dieselbe Wahl wie
-            // beim Anlegen, weil es dasselbe Anlegen ist — nur mit vorbelegten
-            // Feldern. Ein fremder Zeitpunkt passt selten in den eigenen Tag.
-            'scheduleTypes' => ScheduleType::options(),
-            'triggerSuggestions' => Habit::situationChoicesFor($request->user()),
             // Was jemand abgesagt hat — einmal, bis es weggeklickt ist (§5).
             'appointmentNotices' => AppointmentNotice::forUser($user),
             // Anders als die Übersicht bleibt hier stehen, was heute an der

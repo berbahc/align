@@ -238,6 +238,20 @@ export interface HabitBlueprint {
 }
 
 /**
+ * Der Auftrag „mach diese fremde Gewohnheit zu deiner".
+ *
+ * Der Assistent zum Anlegen bekommt sie statt einer leeren Wahl: Die Vorlage
+ * steht fest, der erste Schritt entfällt, alles andere wird geplant wie bei
+ * jeder neuen Gewohnheit. Was beim Speichern beantwortet ist, reist mit —
+ * die Absage-Notiz und die offene Anfrage.
+ */
+export interface HabitAdoption {
+    blueprint: HabitBlueprint;
+    noticeId: number | null;
+    appointmentId: number | null;
+}
+
+/**
  * Ein von der KI vorgeschlagener anderer Zeitpunkt.
  *
  * Vorgeschlagen wird immer in der Form, die der Nutzer selbst gewählt hat:

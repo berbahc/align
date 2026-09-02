@@ -74,6 +74,38 @@ class Habit extends Model
     }
 
     /**
+     * Die Tage, an denen diese Gewohnheit ausnahmsweise woanders liegt.
+     *
+     * @return HasMany<HabitDayShift, $this>
+     */
+    public function dayShifts(): HasMany
+    {
+        return $this->hasMany(HabitDayShift::class);
+    }
+
+    /**
+     * Die Ausnahme-Uhrzeit für ein Datum — oder nichts.
+     *
+     * Nimmt die geladene Beziehung, wenn es sie gibt: Der Kalender fragt für
+     * jeden Block, und eine Abfrage pro Zeile wäre der Preis für eine
+     * Ausnahme, die die meisten Tage gar nicht haben.
+     */
+    public function shiftedTimeOn(?Carbon $date): ?string
+    {
+        if ($date === null) {
+            return null;
+        }
+
+        $shift = $this->relationLoaded('dayShifts')
+            ? $this->dayShifts->first(
+                fn (HabitDayShift $shift): bool => $shift->shifted_on->isSameDay($date),
+            )
+            : $this->dayShifts()->whereDate('shifted_on', $date)->first();
+
+        return $shift?->scheduled_time->format('H:i');
+    }
+
+    /**
      * progress-tracking.md: höchstens 5 gleichzeitig aktive Gewohnheiten,
      * damit die Liste schmal und der Fokus erhalten bleibt.
      */
@@ -545,13 +577,19 @@ class Habit extends Model
      * Dafür muss die `user`-Beziehung geladen sein; ohne sie gilt weiter der
      * Mittelwert, statt je Gewohnheit eine eigene Abfrage loszutreten.
      */
-    public function dayAnchorHour(): ?int
+    public function dayAnchorHour(?Carbon $on = null): ?int
     {
+        $shifted = $this->shiftedTimeOn($on);
+
+        if ($shifted !== null) {
+            return self::anchorHourFor(time: $shifted);
+        }
+
         // Die gekoppelte Gewohnheit sortiert sich zur Stunde ihres Vorgängers
         // und landet damit direkt unter ihm — die Reihenfolge innerhalb der
         // Stunde entscheidet dann `position`.
         if (! $this->schedule_type->hasOwnAnchor()) {
-            return $this->anchorHabit()?->dayAnchorHour();
+            return $this->anchorHabit()?->dayAnchorHour($on);
         }
 
         if ($this->schedule_type->hasClockTime()) {
@@ -662,9 +700,9 @@ class Habit extends Model
      * Nur feste Uhrzeiten bringen einen Zeitpunkt mit. Eine Situation ist keine
      * Uhrzeit, und „wenn es sich ergibt" erst recht nicht.
      */
-    public function startsAt(): ?CarbonInterface
+    public function startsAt(?Carbon $on = null): ?CarbonInterface
     {
-        return $this->resolveStart(0);
+        return $this->resolveStart(0, $on);
     }
 
     /**
@@ -676,10 +714,19 @@ class Habit extends Model
      * gleichzeitig anzufangen ist falsch, aber weniger falsch als eine
      * erfundene Länge.
      */
-    private function resolveStart(int $depth): ?CarbonInterface
+    private function resolveStart(int $depth, ?Carbon $on = null): ?CarbonInterface
     {
         if ($depth >= self::MaxChainDepth) {
             return null;
+        }
+
+        // Die Ausnahme für einen Tag schlägt jede Regel — auch die Kette. Wer
+        // sein Lesen einmal nach hinten schiebt, verschiebt damit den Block,
+        // nicht seinen Plan.
+        $shifted = $this->shiftedTimeOn($on);
+
+        if ($shifted !== null) {
+            return Carbon::createFromFormat('H:i', $shifted);
         }
 
         if ($this->schedule_type->hasClockTime()) {
@@ -696,7 +743,7 @@ class Habit extends Model
             return null;
         }
 
-        $start = $previous->resolveStart($depth + 1);
+        $start = $previous->resolveStart($depth + 1, $on);
         $minutes = $previous->durationMinutes();
 
         return $start !== null && $minutes !== null
@@ -710,9 +757,9 @@ class Habit extends Model
      * Ohne eines von beidem gibt es kein Ende: Eine Gewohnheit ohne Uhrzeit
      * belegt keinen Platz, und eine ohne Dauer ist ein Punkt, keine Spanne.
      */
-    public function endsAt(): ?CarbonInterface
+    public function endsAt(?Carbon $on = null): ?CarbonInterface
     {
-        $start = $this->startsAt();
+        $start = $this->startsAt($on);
         $minutes = $this->durationMinutes();
 
         return $start === null || $minutes === null
@@ -727,15 +774,15 @@ class Habit extends Model
      * dasselbe und dazu, wann der Platz wieder frei ist. Ohne Dauer bleibt es
      * beim Anker allein; eine erfundene Länge wäre schlechter als keine.
      */
-    public function timeRangeLabel(): ?string
+    public function timeRangeLabel(?Carbon $on = null): ?string
     {
-        $start = $this->startsAt();
+        $start = $this->startsAt($on);
 
         if ($start === null) {
             return null;
         }
 
-        $end = $this->endsAt();
+        $end = $this->endsAt($on);
 
         if ($end !== null) {
             return $start->format('H:i').' – '.$end->format('H:i');
@@ -754,8 +801,17 @@ class Habit extends Model
      *
      * Beispiele: „nach dem Aufstehen", „17:00 · Mo–Fr", „08:30 · täglich".
      */
-    public function scheduleLabel(): string
+    public function scheduleLabel(?Carbon $on = null): string
     {
+        // An einem verschobenen Tag gilt die Ausnahme, nicht der Plan. Sie sagt
+        // dazu, dass sie nur für diesen Tag gilt — sonst sähe die Zeile aus,
+        // als hätte sich die Gewohnheit dauerhaft geändert.
+        $shifted = $this->shiftedTimeOn($on);
+
+        if ($shifted !== null) {
+            return $shifted.' · nur an diesem Tag';
+        }
+
         // Der Vorgänger ist der Auslöser, also heißt er auch so: „nach dem
         // Spaziergang". Genau die Form, die time-blocking.md für Ketten
         // vorsieht — eine bestehende Gewohnheit ist der zuverlässigste Auslöser,

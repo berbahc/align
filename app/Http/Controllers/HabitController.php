@@ -10,6 +10,7 @@ use App\Enums\ScheduleType;
 use App\Http\Requests\StoreHabitRequest;
 use App\Http\Requests\UpdateHabitRequest;
 use App\Models\Appointment;
+use App\Models\AppointmentNotice;
 use App\Models\Habit;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -173,10 +174,23 @@ class HabitController extends Controller
             : null;
     }
 
+    /**
+     * Der Assistent zum Anlegen — und der Weg, auf dem eine fremde Gewohnheit
+     * zu einer eigenen wird.
+     *
+     * Beides ist derselbe Assistent, weil es dasselbe Anlegen ist: dieselbe
+     * Dauer, dieselben drei Formen der Planung, dieselben Hinweise auf
+     * Überschneidung und Schlafrahmen, derselbe erste Schritt. Übernehmen
+     * unterscheidet sich nur an zwei Stellen — die Vorlage steht schon fest,
+     * und am Ende ist eine Anfrage beantwortet.
+     */
     public function create(Request $request): Response
     {
         return Inertia::render('habits/create', [
             'categories' => HabitCategory::options(),
+            // Nur gesetzt, wenn der Weg aus einer Anfrage oder einer Absage
+            // kommt. Der Assistent überspringt dann die Wahl aus dem Katalog.
+            'adoption' => $this->adoption($request),
             'triggerSuggestions' => Habit::situationChoicesFor($request->user()),
             'scheduleTypes' => ScheduleType::options(),
             'durationLimits' => MeasureUnit::minutesLimits(),
@@ -196,6 +210,73 @@ class HabitController extends Controller
             ])->all(),
             'appointmentsEnabled' => $request->user()->appointments_enabled,
         ]);
+    }
+
+    /**
+     * Die Vorlage, aus der übernommen wird — samt dem, was sie beantwortet.
+     *
+     * Die Vorlage kommt nie aus der Adresszeile, sondern immer aus dem
+     * Eintrag, auf den sie sich beruft: aus der offenen Anfrage oder aus der
+     * Absage-Notiz. Sonst ließe sich über einen Parameter jede beliebige
+     * Gewohnheit als „übernommen" ausgeben, und die Anfrage einer fremden
+     * Person mitbeantworten.
+     *
+     * @return array{blueprint: array<string, mixed>, noticeId: int|null, appointmentId: int|null}|null
+     */
+    private function adoption(Request $request): ?array
+    {
+        $noticeId = $request->integer('notice');
+        $appointmentId = $request->integer('appointment');
+
+        if ($noticeId > 0) {
+            $notice = AppointmentNotice::query()->findOrFail($noticeId);
+            Gate::authorize('delete', $notice);
+
+            return $this->adoptionOf($request, $notice->habit_blueprint, noticeId: $notice->id);
+        }
+
+        if ($appointmentId > 0) {
+            $appointment = Appointment::query()->with('habit')->findOrFail($appointmentId);
+            Gate::authorize('accept', $appointment);
+
+            return $this->adoptionOf($request, $appointment->habit->blueprint(), appointmentId: $appointment->id);
+        }
+
+        return null;
+    }
+
+    /**
+     * Die Vorlage, für den eigenen Tag hergerichtet.
+     *
+     * Der fremde Auslöser reist nur mit, solange er hier frei ist: Eine
+     * Situation trägt genau eine Gewohnheit, und ein vorbelegter Moment, der
+     * schon vergeben ist, führte direkt in eine Fehlermeldung, die niemand
+     * verursacht hat.
+     *
+     * @param  array<string, mixed>|null  $blueprint
+     * @return array{blueprint: array<string, mixed>, noticeId: int|null, appointmentId: int|null}
+     */
+    private function adoptionOf(Request $request, ?array $blueprint, ?int $noticeId = null, ?int $appointmentId = null): array
+    {
+        // Ohne Vorlage im Katalog gibt es nichts zu übernehmen: Außerhalb des
+        // Katalogs lässt sich nichts mehr anlegen, und die Gewohnheit stammt
+        // aus der Zeit davor.
+        abort_if($blueprint === null || ($blueprint['templateKey'] ?? null) === null, 404);
+
+        $taken = array_column(array_filter(
+            Habit::situationChoicesFor($request->user()),
+            fn (array $choice): bool => $choice['takenBy'] !== null,
+        ), 'situation');
+
+        if (in_array($blueprint['triggerSituation'] ?? null, $taken, strict: true)) {
+            $blueprint['triggerSituation'] = null;
+        }
+
+        return [
+            'blueprint' => $blueprint,
+            'noticeId' => $noticeId,
+            'appointmentId' => $appointmentId,
+        ];
     }
 
     /**

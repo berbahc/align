@@ -6,6 +6,7 @@ use App\Enums\ScheduleType;
 use App\Models\Habit;
 use App\Models\SleepSchedule;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Inertia\Middleware;
@@ -109,6 +110,11 @@ class HandleInertiaRequests extends Middleware
             ->where('reminder_enabled', true)
             ->where('schedule_type', ScheduleType::Fixed->value)
             ->whereNotNull('scheduled_time')
+            // Was heute ausnahmsweise woanders liegt: Eine Erinnerung zur
+            // alten Uhrzeit wäre ein Wecker für einen Block, der dort nicht
+            // mehr steht — und käme ausgerechnet an dem Tag, an dem jemand
+            // für eine Verabredung Platz gemacht hat.
+            ->with(['dayShifts' => fn (Relation $query) => $query->whereDate('shifted_on', $today)])
             ->withExists(['completions as completed_today' => fn (Builder $query) => $query
                 ->whereDate('completed_on', $today),
             ])
@@ -116,7 +122,9 @@ class HandleInertiaRequests extends Middleware
             ->map(fn (Habit $habit): array => [
                 'id' => $habit->id,
                 'title' => $habit->title,
-                'scheduledTime' => $habit->scheduled_time?->format('H:i') ?? '',
+                'scheduledTime' => $habit->shiftedTimeOn($today)
+                    ?? $habit->scheduled_time?->format('H:i')
+                    ?? '',
                 'scheduledDays' => $habit->scheduled_days ?? [],
                 'completedToday' => (bool) $habit->completed_today,
             ])

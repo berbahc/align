@@ -1,12 +1,9 @@
 import { Form, Head, router, usePage } from '@inertiajs/react';
-import { useState } from 'react';
 import { AppointmentNotice } from '@/components/appointment-notice';
 import { AppointmentRequestNotice } from '@/components/appointment-request-notice';
 import { FriendRequestNotice } from '@/components/friend-request-notice';
-import { HabitAdoptionSheet } from '@/components/habit-adoption-sheet';
 import InputError from '@/components/input-error';
 import { PersonCircle } from '@/components/person-circle';
-import type { ScheduleTypeOption } from '@/components/schedule-picker';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -21,8 +18,6 @@ import type {
     AppointmentNotice as Notice,
     AppointmentRequest,
     FriendshipPerson,
-    HabitBlueprint,
-    SituationChoice,
     UpcomingAppointment,
 } from '@/types';
 
@@ -42,9 +37,6 @@ interface CommunityProps {
     appointmentNotices: Notice[];
     /** Was in der kommenden Woche mit jemandem ansteht. */
     upcomingAppointments: UpcomingAppointment[];
-    /** Für das Übernehmen einer fremden Gewohnheit — dieselbe Wahl wie beim Anlegen. */
-    scheduleTypes: ScheduleTypeOption[];
-    triggerSuggestions: SituationChoice[];
 }
 
 export default function Community({
@@ -56,18 +48,9 @@ export default function Community({
     appointmentRequests,
     appointmentNotices,
     upcomingAppointments,
-    scheduleTypes,
-    triggerSuggestions,
 }: CommunityProps) {
     const { auth } = usePage().props;
     const selfInitial = (auth.user?.name.charAt(0) ?? '').toUpperCase();
-
-    // Welche fremde Gewohnheit gerade zum Übernehmen offen steht, und aus
-    // welcher Absage heraus — die Notiz verschwindet dann mit.
-    const [adopting, setAdopting] = useState<{
-        blueprint: HabitBlueprint;
-        noticeId?: number;
-    } | null>(null);
 
     /**
      * „Mach ich trotzdem" auf dieser Seite.
@@ -118,24 +101,12 @@ export default function Community({
                 </header>
 
                 <FriendRequestNotice requests={incoming} />
-                <AppointmentRequestNotice
-                    requests={appointmentRequests}
-                    onAdopt={(request) =>
-                        setAdopting({ blueprint: request.blueprint })
-                    }
-                />
+                <AppointmentRequestNotice requests={appointmentRequests} />
 
                 {/* Über allem, was noch steht: Eine Absage erklärt die Lücke,
                     die man sonst weiter unten vergeblich sucht. */}
                 <AppointmentNotice
                     notices={appointmentNotices}
-                    onAdopt={(notice) =>
-                        notice.blueprint !== null &&
-                        setAdopting({
-                            blueprint: notice.blueprint,
-                            noticeId: notice.id,
-                        })
-                    }
                     onCarryOn={carryOn}
                 />
 
@@ -320,14 +291,6 @@ export default function Community({
                     </Card>
                 </section>
             </div>
-
-            <HabitAdoptionSheet
-                blueprint={adopting?.blueprint ?? null}
-                noticeId={adopting?.noticeId}
-                scheduleTypes={scheduleTypes}
-                triggerSuggestions={triggerSuggestions}
-                onOpenChange={(open) => !open && setAdopting(null)}
-            />
         </>
     );
 }
