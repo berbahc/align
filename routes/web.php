@@ -4,6 +4,8 @@ use App\Http\Controllers\AppointmentAvailabilityController;
 use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\AppointmentNoticeController;
 use App\Http\Controllers\CalendarController;
+use App\Http\Controllers\CourseController;
+use App\Http\Controllers\CourseExceptionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DayOrderController;
 use App\Http\Controllers\FriendshipController;
@@ -15,6 +17,7 @@ use App\Http\Controllers\HabitDayShiftController;
 use App\Http\Controllers\HabitGraduationController;
 use App\Http\Controllers\HabitReminderController;
 use App\Http\Controllers\OnboardingController;
+use App\Http\Controllers\SemesterController;
 use App\Http\Controllers\SleepScheduleController;
 use App\Http\Controllers\SmallestStepController;
 use App\Http\Middleware\EnsureOnboarded;
@@ -54,6 +57,30 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('calendar/{date}', [CalendarController::class, 'show'])
             ->where('date', '[0-9]{4}-[0-9]{2}-[0-9]{2}')
             ->name('calendar.day');
+
+        // Der Semesterplan ist der Rahmen des Studiums, wie der Schlafplan der
+        // Rahmen des Tages: Er sagt nicht, was zu tun ist, sondern wann nichts
+        // geht. Ohne Kennung in der Strecke, weil es je Person genau ein
+        // Semester gibt, um das es geht.
+        Route::get('semester', [SemesterController::class, 'show'])->name('semester.show');
+        Route::post('semester', [SemesterController::class, 'store'])->name('semester.store');
+        Route::put('semester', [SemesterController::class, 'update'])->name('semester.update');
+        Route::delete('semester', [SemesterController::class, 'destroy'])->name('semester.destroy');
+
+        // Die feste Strecke steht vor `{course}`, wie überall in dieser Datei.
+        Route::post('semester/courses', [CourseController::class, 'store'])
+            ->name('semester.courses.store');
+        Route::put('semester/courses/{course}', [CourseController::class, 'update'])
+            ->name('semester.courses.update');
+        Route::delete('semester/courses/{course}', [CourseController::class, 'destroy'])
+            ->name('semester.courses.destroy');
+
+        // Ausfall und Ersatztermin sind eine Tabelle: `POST` setzt die Ausnahme
+        // für ein Datum, `DELETE` nimmt sie zurück.
+        Route::post('semester/courses/{course}/exceptions', [CourseExceptionController::class, 'store'])
+            ->name('semester.courses.exceptions.store');
+        Route::delete('semester/courses/{course}/exceptions', [CourseExceptionController::class, 'destroy'])
+            ->name('semester.courses.exceptions.destroy');
 
         // Der Schlafplan ist der Rahmen des Tages: Aufsteh- und Schlafenszeit
         // je Wochentag, Wecker und die Erinnerung vor der Schlafenszeit.
