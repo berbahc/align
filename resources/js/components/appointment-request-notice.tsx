@@ -1,7 +1,11 @@
-import { router } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
+import { TriangleAlert } from 'lucide-react';
 import { PersonCircle } from '@/components/person-circle';
 import { Button } from '@/components/ui/button';
+import { QUIET_LINK } from '@/lib/interaction';
 import { destroy, update } from '@/routes/appointments';
+import { create } from '@/routes/habits';
+import { store as shift } from '@/routes/habits/shifts';
 import type { AppointmentRequest } from '@/types';
 
 /**
@@ -18,11 +22,8 @@ import type { AppointmentRequest } from '@/types';
  */
 export function AppointmentRequestNotice({
     requests,
-    onAdopt,
 }: {
     requests: AppointmentRequest[];
-    /** Der dritte Weg: die Gewohnheit selbst führen, unabhängig vom Termin. */
-    onAdopt: (request: AppointmentRequest) => void;
 }) {
     if (requests.length === 0) {
         return null;
@@ -38,6 +39,24 @@ export function AppointmentRequestNotice({
         }
 
         router.delete(destroy.url(appointmentId), options);
+    }
+
+    /**
+     * Die eigene Gewohnheit für diesen einen Tag woanders hinlegen.
+     *
+     * Nicht für immer: Wer am Mittwoch mitläuft, liest am Donnerstag wieder
+     * um halb acht. Die Gewohnheit selbst bleibt unberührt.
+     */
+    function makeRoom(request: AppointmentRequest, time: string) {
+        if (request.conflict === null) {
+            return;
+        }
+
+        router.post(
+            shift.url(request.conflict.habitId),
+            { date: request.date, scheduled_time: time },
+            { preserveScroll: true },
+        );
     }
 
     return (
@@ -73,8 +92,67 @@ export function AppointmentRequestNotice({
                         {request.anchor}?
                     </p>
 
+                    {/* Time-Blocking heißt, dass zwei Spannen sich nicht
+                        überschneiden. Wer zur selben Zeit schon etwas vorhat,
+                        soll das vor der Zusage sehen — und den eigenen Tag
+                        dafür einmal umstellen können, statt seine Gewohnheit
+                        für immer zu verlegen oder doppelt zu buchen. */}
+                    {request.conflict !== null && (
+                        <div className="mt-3 flex flex-col gap-3 rounded-2xl bg-sand/50 p-3">
+                            <p className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">
+                                <TriangleAlert
+                                    className="mt-0.5 size-4 shrink-0 text-primary"
+                                    strokeWidth={1.5}
+                                    aria-hidden="true"
+                                />
+                                <span>
+                                    Um diese Zeit läuft bei dir schon „
+                                    {request.conflict.title}" von{' '}
+                                    {request.conflict.from} bis{' '}
+                                    {request.conflict.to}.
+                                </span>
+                            </p>
+
+                            {request.conflict.options.length > 0 ? (
+                                <div className="flex flex-col gap-2">
+                                    <p className="type-eyebrow text-muted-foreground">
+                                        An diesem Tag stattdessen
+                                    </p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {request.conflict.options.map(
+                                            (option) => (
+                                                <button
+                                                    key={option.time}
+                                                    type="button"
+                                                    onClick={() =>
+                                                        makeRoom(
+                                                            request,
+                                                            option.time,
+                                                        )
+                                                    }
+                                                    className="h-10 shrink-0 cursor-pointer rounded-full border border-primary px-4 text-xs font-semibold text-primary transition-colors duration-[var(--duration-press)] ease-out hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                                                >
+                                                    {option.label}
+                                                </button>
+                                            ),
+                                        )}
+                                    </div>
+                                </div>
+                            ) : (
+                                /* §1.5 — benannt wird, was gilt: An diesem Tag
+                                   ist kein Platz mehr, und das ist keine
+                                   Aufforderung, irgendetwas zu ändern. */
+                                <p className="text-xs leading-relaxed text-muted-foreground">
+                                    An diesem Tag ist sonst nirgends Platz für „
+                                    {request.conflict.title}".
+                                </p>
+                            )}
+                        </div>
+                    )}
+
                     <div className="mt-4 flex gap-3">
                         <Button
+                            disabled={request.conflict !== null}
                             onClick={() => answer(request.id, true)}
                             className="h-11 flex-1 cursor-pointer rounded-xl"
                         >
@@ -90,17 +168,20 @@ export function AppointmentRequestNotice({
                     </div>
 
                     {/* Leiser und getrennt, weil es keine dritte Antwort ist:
-                        Die Frage nach dem einen Tag bleibt offen, wenn man
-                        hier tippt. Es ist der Weg für „das will ich auch" —
-                        bisher endete er mit dem einen Tag, und die Gewohnheit
-                        blieb die der anderen Person. */}
-                    <button
-                        type="button"
-                        onClick={() => onAdopt(request)}
-                        className="mt-3 cursor-pointer rounded-lg px-1 py-1 text-xs text-muted-foreground underline underline-offset-4 transition-colors duration-[var(--duration-press)] ease-out hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                    >
-                        Selbst übernehmen
-                    </button>
+                        Es ist der Weg für „das will ich auch" — und weil man
+                        damit ohnehin mitmacht, ist die Frage danach
+                        beantwortet. Geplant wird im selben Assistenten wie
+                        jede neue Gewohnheit. */}
+                    {request.blueprint.templateKey !== null && (
+                        <Link
+                            href={create.url({
+                                query: { appointment: request.id },
+                            })}
+                            className={`${QUIET_LINK} mt-3 inline-block text-xs`}
+                        >
+                            Selbst übernehmen
+                        </Link>
+                    )}
                 </div>
             ))}
         </section>

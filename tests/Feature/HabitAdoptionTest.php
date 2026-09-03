@@ -226,3 +226,145 @@ test('the notice reaches both pages with everything the next step needs', functi
             );
     }
 });
+
+test('the request leads into the same wizard, with the habit already chosen', function () {
+    [, $guest, , $appointment] = invitation();
+
+    $this->actingAs($guest)
+        ->get(route('habits.create', ['appointment' => $appointment->id]))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('habits/create')
+            ->where('adoption.blueprint.templateKey', HabitTemplate::Joggen->value)
+            ->where('adoption.blueprint.scheduledTime', '07:30')
+            ->where('adoption.appointmentId', $appointment->id)
+            ->where('adoption.noticeId', null)
+            // Es ist derselbe Assistent: dieselbe Dauer, dieselben Ketten,
+            // dieselben belegten Fenster wie beim Anlegen.
+            ->has('durationLimits')
+            ->has('chainCandidates')
+            ->has('busySlots')
+            ->has('sleepWindows')
+        );
+});
+
+test('a cancellation leads into the wizard as well', function () {
+    [, $guest, , $appointment] = invitation(accepted: true);
+
+    $this->actingAs($appointment->requester)
+        ->delete(route('appointments.destroy', $appointment));
+
+    $notice = AppointmentNotice::query()->sole();
+
+    $this->actingAs($guest)
+        ->get(route('habits.create', ['notice' => $notice->id]))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('adoption.blueprint.templateKey', HabitTemplate::Joggen->value)
+            ->where('adoption.noticeId', $notice->id)
+            ->where('adoption.appointmentId', null)
+        );
+});
+
+test('nobody adopts out of a request that was never theirs', function () {
+    [$owner, , , $appointment] = invitation();
+
+    $this->actingAs($owner)
+        ->get(route('habits.create', ['appointment' => $appointment->id]))
+        ->assertForbidden();
+});
+
+test('a habit from before the catalog cannot be adopted', function () {
+    $owner = User::factory()->create();
+    $guest = User::factory()->create();
+
+    $appointment = Appointment::factory()->create([
+        'habit_id' => Habit::factory()->for($owner)->legacy()->create()->id,
+        'requester_id' => $owner->id,
+        'invitee_id' => $guest->id,
+        'scheduled_for' => Carbon::tomorrow(),
+    ]);
+
+    $this->actingAs($guest)
+        ->get(route('habits.create', ['appointment' => $appointment->id]))
+        ->assertNotFound();
+});
+
+test('a moment that is already taken does not travel along', function () {
+    $owner = User::factory()->create();
+    $guest = User::factory()->create();
+
+    $appointment = Appointment::factory()->create([
+        'habit_id' => Habit::factory()->for($owner)
+            ->fromTemplate(HabitTemplate::Joggen)
+            ->create(['trigger_situation' => 'nach dem Aufstehen'])->id,
+        'requester_id' => $owner->id,
+        'invitee_id' => $guest->id,
+        'scheduled_for' => Carbon::tomorrow(),
+    ]);
+
+    // Der Moment gehört hier schon einer anderen Gewohnheit. Ihn vorzubelegen
+    // führte direkt in eine Fehlermeldung, die niemand verursacht hat.
+    Habit::factory()->for($guest)->create(['trigger_situation' => 'nach dem Aufstehen']);
+
+    $this->actingAs($guest)
+        ->get(route('habits.create', ['appointment' => $appointment->id]))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('adoption.blueprint.triggerSituation', null)
+        );
+});
+
+test('adopting out of a request answers it as a yes', function () {
+    [, $guest, $habit, $appointment] = invitation();
+
+    $this->actingAs($guest)
+        ->post(route('habits.adoptions.store'), [
+            'template_key' => $habit->template()?->value,
+            'target_amount' => 30,
+            'schedule_type' => ScheduleType::Dynamic->value,
+            'trigger_situation' => 'nach dem Aufstehen',
+            'appointment_id' => $appointment->id,
+        ])
+        ->assertRedirect(route('dashboard'));
+
+    // Wer die Gewohnheit zu seiner macht, macht an dem Tag ohnehin mit — die
+    // Frage ein zweites Mal zu stellen wäre eine Frage ohne offene Antwort.
+    expect($appointment->refresh()->accepted_at)->not->toBeNull()
+        ->and($guest->habits()->count())->toBe(1);
+});
+
+test('adopting leaves the request open when that time is taken', function () {
+    [, $guest, $habit, $appointment] = invitation();
+
+    // Zur Zeit der Verabredung läuft schon etwas Eigenes.
+    Habit::factory()->for($guest)
+        ->fixedSchedule('07:30', [1, 2, 3, 4, 5, 6, 7])
+        ->withMeasure(30)
+        ->create();
+
+    $this->actingAs($guest)->post(route('habits.adoptions.store'), [
+        'template_key' => $habit->template()?->value,
+        'target_amount' => 30,
+        'schedule_type' => ScheduleType::Dynamic->value,
+        'trigger_situation' => 'nach dem Aufstehen',
+        'appointment_id' => $appointment->id,
+    ]);
+
+    // Die Gewohnheit gehört ihm — die Zusage wäre aber eine Doppelbuchung.
+    expect($guest->habits()->count())->toBe(2)
+        ->and($appointment->refresh()->accepted_at)->toBeNull();
+});
+
+test('a request of someone else cannot be answered by adopting', function () {
+    [$owner, , $habit, $appointment] = invitation();
+
+    $this->actingAs($owner)
+        ->post(route('habits.adoptions.store'), [
+            'template_key' => $habit->template()?->value,
+            'target_amount' => 30,
+            'schedule_type' => ScheduleType::Dynamic->value,
+            'trigger_situation' => 'nach dem Aufstehen',
+            'appointment_id' => $appointment->id,
+        ])
+        ->assertForbidden();
+
+    expect($appointment->refresh()->accepted_at)->toBeNull();
+});

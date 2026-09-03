@@ -40,6 +40,8 @@ export type AppointmentRequest = {
     title: string;
     anchor: string;
     day: string;
+    /** Das Datum als ISO-Zeile — für das Verschieben des eigenen Tages. */
+    date: string;
     /**
      * Die Gewohnheit als Vorlage — für den dritten Weg neben ja und nein.
      *
@@ -48,6 +50,31 @@ export type AppointmentRequest = {
      * Übernahme eine Vorbelegung.
      */
     blueprint: HabitBlueprint;
+    /**
+     * Was der Zusage im Weg steht — die eigene Gewohnheit zur selben Zeit.
+     *
+     * Null heißt: Der Platz ist frei. Sonst nennt sie die Gewohnheit, ihre
+     * Spanne und die Zeiten, an die sie sich für diesen einen Tag legen
+     * ließe. Solange etwas hier steht, wäre eine Zusage eine Doppelbuchung.
+     */
+    conflict: AppointmentConflict | null;
+};
+
+/**
+ * Eine eigene Gewohnheit, die zur Zeit der Verabredung schon läuft.
+ *
+ * `options` sind Ausweichzeiten für **diesen einen Tag** — die Gewohnheit
+ * selbst bleibt, wo sie ist. Eine leere Liste heißt: An dem Tag ist sonst
+ * nirgends Platz.
+ */
+export type AppointmentConflict = {
+    habitId: number;
+    title: string;
+    /** „07:30" — Beginn der eigenen Gewohnheit an diesem Tag. */
+    from: string;
+    /** „08:00" — und wann der Platz wieder frei wäre. */
+    to: string;
+    options: { time: string; label: string }[];
 };
 
 /**

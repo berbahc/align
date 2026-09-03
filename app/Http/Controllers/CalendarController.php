@@ -114,8 +114,8 @@ class CalendarController extends Controller
                 // Die Kette wird beim Sortieren und Benennen jedes Blocks
                 // gefragt — ohne Vorladen wäre das eine Abfrage pro Glied.
                 'chainedTo.chainedTo',
-                // Die Ausnahmen dieses einen Tages. Ohne sie läge ein von Hand
-                // verschobener Block wieder an seiner regulären Stelle.
+                // Was an genau diesem Tag woanders liegt — von Hand verschoben
+                // oder für eine Verabredung freigeräumt.
                 'dayShifts' => fn (Relation $query) => $query->whereDate('shifted_on', $day),
                 'chainedTo.dayShifts' => fn (Relation $query) => $query->whereDate('shifted_on', $day),
                 'chainedTo.chainedTo.dayShifts' => fn (Relation $query) => $query->whereDate('shifted_on', $day),
@@ -135,7 +135,7 @@ class CalendarController extends Controller
             // zuletzt. Bei gleicher Stunde entscheidet die eigene Reihenfolge
             // aus der Gewohnheitsliste.
             ->sortBy(fn (Habit $habit): array => [
-                $habit->placementOn($day)['minute'] ?? PHP_INT_MAX,
+                $habit->dayStartMinute($day) ?? PHP_INT_MAX,
                 $habit->position,
             ])
             ->values();
@@ -236,15 +236,15 @@ class CalendarController extends Controller
      */
     private function block(Habit $habit, Carbon $day): array
     {
-        $placement = $habit->placementOn($day);
-
         return [
             'id' => $habit->id,
             'title' => $habit->title,
-            'anchor' => $habit->scheduleLabel(),
+            // Mit dem Tag: An einem verschobenen Tag gilt die Ausnahme, und
+            // sie sagt dazu, dass sie nur für ihn gilt.
+            'anchor' => $habit->scheduleLabel($day),
             // Reist mit, damit ein Vorschlag der KI sich einsortieren kann,
             // bevor er übernommen wurde.
-            'anchorHour' => $habit->dayAnchorHour() ?? Habit::UnknownAnchorHour,
+            'anchorHour' => $habit->dayAnchorHour($day) ?? Habit::UnknownAnchorHour,
             // Welche Planungsart der Zug antasten würde. Der Anker allein
             // verriete es nicht: Ein für heute verschobener Moment sieht aus
             // wie eine feste Uhrzeit.
@@ -252,15 +252,15 @@ class CalendarController extends Controller
             // Wo der Block im Raster liegt und wie hoch er ist. Beides in
             // Minuten, damit der Browser nichts nachrechnen muss, was der
             // Server ohnehin schon weiß.
-            'startMinute' => $placement['minute'],
+            'startMinute' => $habit->dayStartMinute($day),
             'durationMinutes' => $habit->durationMinutes(),
             // Ob die Stelle eine Uhrzeit ist oder eine Näherung. Der Kalender
             // zeichnet beides verschieden: Was keine Uhr hat, bekommt auch
             // keine — es liegt dort ungefähr, und das darf man sehen.
-            'exact' => $placement['exact'],
+            'exact' => $habit->startsAt($day) !== null,
             // Nur für diesen einen Tag von Hand hierher gelegt. Der Block sagt
             // das, und im Block-Sheet steht der Weg zurück.
-            'shifted' => $placement['shifted'],
+            'shifted' => $habit->shiftedTimeOn($day) !== null,
             // Der Umfang und, wo er eine Dauer ist, die belegte Spanne.
             // „17:00 – 17:20" sagt zusätzlich, wann der Platz wieder frei
             // ist — die Größe, an der eine angehängte Gewohnheit beginnt.

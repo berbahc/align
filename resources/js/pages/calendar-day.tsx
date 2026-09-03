@@ -19,8 +19,8 @@ import { day as calendarDay } from '@/routes/calendar';
 import { destroy, store } from '@/routes/habits/completions';
 import {
     destroy as destroyShift,
-    store as storeShift,
-} from '@/routes/habits/shift';
+    move as moveShift,
+} from '@/routes/habits/shifts';
 import type { AnchorAlternative, CalendarBlock as Block } from '@/types';
 
 interface CalendarDayProps {
@@ -163,8 +163,8 @@ export default function CalendarDay({
             return;
         }
 
-        router.post(
-            storeShift.url(dropped.id),
+        router.put(
+            moveShift.url(dropped.id),
             { date, start_minute: dropped.minute, scope },
             {
                 preserveScroll: true,

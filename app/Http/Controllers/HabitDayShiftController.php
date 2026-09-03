@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ScheduleType;
+use App\Http\Requests\ShiftHabitDayRequest;
 use App\Models\Habit;
 use App\Models\HabitDayShift;
 use App\Models\User;
@@ -14,33 +15,10 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
-/**
- * Einen Block im Tag verschieben — mit der Hand, nicht über die KI.
- *
- * Der Kalender zeigt seit dem Stundenraster, **wo** eine Gewohnheit liegt.
- * Diese Strecke ist die dazugehörige Geste: anfassen, woandershin legen. Sie
- * ist der einzige Weg in der App, der einen Zeitpunkt ohne Vorschlag ändert —
- * und deshalb der einzige, der hinterher fragt, wie weit die Änderung reichen
- * soll.
- *
- * Zwei Reichweiten, zwei völlig verschiedene Dinge:
- *
- * - **heute** legt eine Ausnahme für dieses eine Datum an
- *   ({@see HabitDayShift}). Auslöser und Kette bleiben, wie sie waren — „heute
- *   mache ich das später" ist keine Planänderung.
- * - **immer** schreibt die Uhrzeit an die Gewohnheit und macht sie damit zu
- *   einer festen. Derselbe Schritt, den {@see DayOrderController::store()} für
- *   einen ganzen Tag auf einmal tut: Auslöser und Kette fallen weg, weil eine
- *   Gewohnheit nur einen Zeitpunkt haben kann.
- *
- * Vor dem dauerhaften Umstellen wird jeder künftige Wochentag geprüft. Zwei
- * Gewohnheiten zur selben Zeit sind kein Plan, und die Antwort darauf ist
- * kein „geht nicht", sondern der Satz, der sagt, was zu tun ist.
- */
-class HabitShiftController extends Controller
+class HabitDayShiftController extends Controller
 {
     /**
-     * Wie fein sich schieben lässt.
+     * Wie fein sich von Hand schieben lässt.
      *
      * Eine Viertelstunde — derselbe Takt wie {@see DayPlan::BreatherMinutes}
      * und fein genug für jede Gewohnheit im Katalog. Minutengenau zu schieben
@@ -48,14 +26,64 @@ class HabitShiftController extends Controller
      */
     private const int SnapMinutes = 15;
 
-    public function store(Request $request, Habit $habit): RedirectResponse
+    /** Wo der Kalendertag endet — jenseits davon gibt es keine Uhrzeit mehr. */
+    private const int MinutesPerDay = 1440;
+
+    /**
+     * Eine Gewohnheit für einen einzigen Tag woanders hinlegen.
+     *
+     * Der Anlass ist die Verabredung: Wer um 7:30 gefragt wird und um 7:30
+     * selbst etwas vorhat, hatte bisher nur die Wahl zwischen Absagen und
+     * Doppelbuchung. Der dritte Weg ist, den eigenen Tag einmal umzustellen —
+     * einmal, nicht für immer. Die Gewohnheit selbst bleibt, wo sie ist.
+     *
+     * Ersetzt statt anzulegen: Zwei Uhrzeiten für denselben Tag wären zwei
+     * Pläne, und die Tabelle lässt sie deshalb gar nicht erst zu.
+     */
+    public function store(ShiftHabitDayRequest $request, Habit $habit): RedirectResponse
+    {
+        Gate::authorize('update', $habit);
+
+        /** @var Carbon $date */
+        $date = $request->shiftedOn();
+
+        HabitDayShift::query()->updateOrCreate(
+            ['habit_id' => $habit->id, 'shifted_on' => $date->toDateString()],
+            ['scheduled_time' => $request->string('scheduled_time')->toString()],
+        );
+
+        return back()->with('success', sprintf(
+            '„%s" liegt an diesem Tag um %s.',
+            $habit->title,
+            $request->string('scheduled_time')->toString(),
+        ));
+    }
+
+    /**
+     * Von Hand verschieben — die Geste im Stundenraster.
+     *
+     * Anders als {@see store()} fragt dieser Weg hinterher, wie weit die
+     * Änderung reichen soll. „Heute mache ich das später" und „ab jetzt immer
+     * um zwei" sehen als Geste gleich aus und meinen völlig Verschiedenes:
+     *
+     * - **heute** legt dieselbe Ausnahme an wie die Verabredung. Auslöser und
+     *   Kette bleiben, wie sie waren.
+     * - **immer** schreibt die Uhrzeit an die Gewohnheit und macht sie damit zu
+     *   einer festen. Derselbe Schritt, den {@see DayOrderController::store()}
+     *   für einen ganzen Tag auf einmal tut: Auslöser und Kette fallen weg,
+     *   weil eine Gewohnheit nur einen Zeitpunkt haben kann.
+     *
+     * Vor dem dauerhaften Umstellen wird jeder künftige Wochentag geprüft. Zwei
+     * Gewohnheiten zur selben Zeit sind kein Plan, und die Antwort darauf ist
+     * kein „geht nicht", sondern der Satz, der sagt, was zu tun ist.
+     */
+    public function move(Request $request, Habit $habit): RedirectResponse
     {
         Gate::authorize('update', $habit);
 
         $validated = $request->validate([
             'date' => ['required', 'date_format:Y-m-d'],
-            // Bis zum Ende eines Tages, der nach Mitternacht endet.
-            'start_minute' => ['required', 'integer', 'min:0', 'max:1740'],
+            'start_minute' => ['required', 'integer', 'min:0', 'max:1439'],
             'scope' => ['required', 'in:today,always'],
         ]);
 
@@ -104,9 +132,9 @@ class HabitShiftController extends Controller
     {
         $this->guard($user, $habit, $date, $start);
 
-        $habit->dayShifts()->updateOrCreate(
-            ['shifted_on' => $date->toDateString()],
-            ['start_minute' => $start],
+        HabitDayShift::query()->updateOrCreate(
+            ['habit_id' => $habit->id, 'shifted_on' => $date->toDateString()],
+            ['scheduled_time' => DayPlan::toTime($start)],
         );
     }
 
@@ -153,17 +181,23 @@ class HabitShiftController extends Controller
     {
         $others = $this->othersOn($user, $habit, $date);
         $window = $user->sleepWindowFor($date->dayOfWeekIso);
-        $plan = DayPlan::for($others, $date->dayOfWeekIso, $user->sleepWindows(), $date);
+        $plan = DayPlan::forDate($others, $date, $user->sleepWindows());
         $frame = $plan->frame();
 
+        // Die Ausnahme wird als Uhrzeit gespeichert. Alles jenseits von
+        // Mitternacht läse sich beim nächsten Aufschlagen als früher Vormittag
+        // — wer nach Mitternacht ins Bett geht, kann bis dorthin schieben und
+        // keine Minute weiter.
+        $latest = min($frame['to'], self::MinutesPerDay);
+
         foreach ($this->spans($habit, $start) as $span) {
-            if ($span['from'] < $frame['from'] || $span['to'] > $frame['to']) {
+            if ($span['from'] < $frame['from'] || $span['to'] > $latest) {
                 throw ValidationException::withMessages([
                     'start_minute' => sprintf(
                         '%s läge dann außerhalb deines Tages (%s bis %s Uhr). Passe die Zeit an — oder deinen Schlafplan.',
                         $span['title'] === $habit->title ? 'Die Gewohnheit' : sprintf('„%s"', $span['title']),
                         $window['wakeTime'],
-                        $window['bedtime'],
+                        DayPlan::toTime($latest),
                     ),
                 ]);
             }
