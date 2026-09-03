@@ -265,12 +265,15 @@ export function HabitRow({
                                     Mit jemandem zusammen?
                                 </button>
                             )}
+                            {/* Derselbe Wortlaut wie im Kalender: Es ist
+                        dieselbe Hilfe, und zwei Namen dafür wären zwei
+                        Angebote. Das ✦ steht für die KI dahinter. */}
                             <button
                                 type="button"
                                 onClick={() => onStuck(habit)}
                                 className="cursor-pointer text-xs font-semibold text-primary underline underline-offset-4 transition-colors duration-[var(--duration-press)] ease-out hover:text-primary/80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring active:text-primary/60"
                             >
-                                Ich komm nicht rein
+                                ✦ Kleinen ersten Schritt
                             </button>
                         </div>
                     )}

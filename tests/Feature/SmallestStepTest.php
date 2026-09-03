@@ -242,3 +242,105 @@ test('the suggestion endpoint is rate limited', function () {
     $this->postJson(route('habits.smallest-step.suggestions'), $payload)
         ->assertStatus(429);
 });
+
+/**
+ * Der gewählte Schritt bleibt an der Gewohnheit stehen — er hakt sie nicht ab.
+ *
+ * Der Knopf tat vorher beides in einem: Er speicherte den Schritt nicht und
+ * trug stattdessen einen erledigten Tag ein. Wer den Plan kleiner macht, hat
+ * ihn damit aber noch nicht ausgeführt.
+ */
+test('the chosen step is kept at the habit', function () {
+    $user = User::factory()->create(['onboarded_at' => now()]);
+    $habit = Habit::factory()->for($user)->create([
+        'smallest_step' => 'Lauf zehn Minuten.',
+    ]);
+
+    $this->actingAs($user)
+        ->patch(route('habits.smallest-step.update', $habit), [
+            'smallest_step' => 'Zieh die Laufschuhe an.',
+        ])
+        ->assertRedirect();
+
+    expect($habit->fresh()->smallest_step)->toBe('Zieh die Laufschuhe an.');
+});
+
+test('keeping a step leaves the day open', function () {
+    $user = User::factory()->create(['onboarded_at' => now()]);
+    $habit = Habit::factory()->for($user)->create();
+
+    $this->actingAs($user)
+        ->patch(route('habits.smallest-step.update', $habit), [
+            'smallest_step' => 'Zieh die Laufschuhe an.',
+        ])
+        ->assertRedirect();
+
+    expect($habit->completions()->count())->toBe(0);
+});
+
+/**
+ * Ohne diesen Eintrag läse die KI ihren eigenen Vorschlag beim nächsten Mal
+ * als „angeboten und liegengelassen".
+ */
+test('keeping a step marks the suggestion as taken', function () {
+    SuggestSmallestStep::fake([['steps' => ['Zieh die Laufschuhe an.']]]);
+
+    $user = User::factory()->create(['onboarded_at' => now()]);
+    $habit = Habit::factory()->for($user)->create();
+
+    $this->actingAs($user)->postJson(route('habits.smallest-step.smaller', $habit))->assertOk();
+
+    $this->actingAs($user)
+        ->patch(route('habits.smallest-step.update', $habit), [
+            'smallest_step' => 'Zieh die Laufschuhe an.',
+        ])
+        ->assertRedirect();
+
+    expect($user->aiSuggestions()->sole())
+        ->accepted_at->not->toBeNull()
+        ->habit_id->toBe($habit->id);
+});
+
+/**
+ * Die Strecke schreibt nur dieses eine Feld. Sonst löschte ein Speichern den
+ * Zeitpunkt: `PUT habits/{habit}` setzt jeden nicht gesendeten Zweig auf null,
+ * und genau deshalb ist das hier eine eigene Route.
+ */
+test('keeping a step leaves the anchor alone', function () {
+    $user = User::factory()->create(['onboarded_at' => now()]);
+    $habit = Habit::factory()->for($user)->fixedSchedule('17:00', [1, 3])->create();
+
+    $this->actingAs($user)
+        ->patch(route('habits.smallest-step.update', $habit), [
+            'smallest_step' => 'Zieh die Laufschuhe an.',
+        ])
+        ->assertRedirect();
+
+    expect($habit->fresh())
+        ->scheduled_time->format('H:i')->toBe('17:00')
+        ->scheduled_days->toBe([1, 3]);
+});
+
+test('an empty step is refused', function () {
+    $user = User::factory()->create(['onboarded_at' => now()]);
+    $habit = Habit::factory()->for($user)->create(['smallest_step' => 'Lauf zehn Minuten.']);
+
+    $this->actingAs($user)
+        ->patch(route('habits.smallest-step.update', $habit), ['smallest_step' => ''])
+        ->assertSessionHasErrors('smallest_step');
+
+    expect($habit->fresh()->smallest_step)->toBe('Lauf zehn Minuten.');
+});
+
+test('a foreign habit keeps its step', function () {
+    $user = User::factory()->create(['onboarded_at' => now()]);
+    $foreign = Habit::factory()->create(['smallest_step' => 'Lauf zehn Minuten.']);
+
+    $this->actingAs($user)
+        ->patch(route('habits.smallest-step.update', $foreign), [
+            'smallest_step' => 'Zieh die Laufschuhe an.',
+        ])
+        ->assertForbidden();
+
+    expect($foreign->fresh()->smallest_step)->toBe('Lauf zehn Minuten.');
+});

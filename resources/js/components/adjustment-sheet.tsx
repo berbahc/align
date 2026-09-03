@@ -57,9 +57,21 @@ export function AdjustmentSheet({
         blockId: number;
         index: number;
     } | null>(null);
+    // Die Absage hängt wie die Wahl an ihrem Block: So gilt sie beim Wechsel
+    // zu einer anderen Gewohnheit von selbst nicht mehr, statt in einem Effekt
+    // nachträglich zurückgesetzt zu werden.
+    const [refusal, setRefusal] = useState<{
+        blockId: number;
+        message: string;
+    } | null>(null);
 
     const chosenIndex =
         block !== null && chosen?.blockId === block.id ? chosen.index : null;
+
+    const refusalMessage =
+        block !== null && refusal?.blockId === block.id
+            ? refusal.message
+            : null;
 
     useEffect(() => {
         if (block === null) {
@@ -79,11 +91,13 @@ export function AdjustmentSheet({
         }
 
         setChosen({ blockId: block.id, index });
+        setRefusal(null);
         onPreview(suggestion.alternatives[index] ?? null);
     }
 
     function dismiss() {
         onPreview(null);
+        setRefusal(null);
         onOpenChange(false);
     }
 
@@ -109,11 +123,25 @@ export function AdjustmentSheet({
                           scheduled_days: alternative.days,
                       }),
             },
-            { preserveScroll: true },
+            {
+                preserveScroll: true,
+                // Erst schließen, wenn es geklappt hat. Vorher schloss das
+                // Sheet unbedingt — eine Abweisung des Servers verschwand
+                // damit spurlos, und die Gewohnheit stand unverändert da,
+                // ohne dass jemand erfuhr, warum.
+                onSuccess: () => {
+                    onPreview(null);
+                    onOpenChange(false);
+                },
+                onError: (errors) =>
+                    setRefusal({
+                        blockId: block.id,
+                        message:
+                            Object.values(errors)[0] ??
+                            'Das ließ sich gerade nicht übernehmen.',
+                    }),
+            },
         );
-
-        onPreview(null);
-        onOpenChange(false);
     }
 
     return (
@@ -187,6 +215,17 @@ export function AdjustmentSheet({
                         ))
                     )}
                 </div>
+
+                {/* §1.5 — die Absage steht dort, wo entschieden wird, und
+                    benennt den Grund, statt ihn zu verschlucken. */}
+                {refusalMessage && (
+                    <p
+                        role="alert"
+                        className="mt-4 rounded-[14px] bg-sand/60 px-4 py-3 text-sm leading-relaxed text-foreground"
+                    >
+                        {refusalMessage}
+                    </p>
+                )}
 
                 <div className="mt-5 flex gap-3">
                     <button

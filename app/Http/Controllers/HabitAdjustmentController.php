@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\RememberSuggestions;
 use App\Ai\Agents\SuggestBetterAnchor;
 use App\Ai\UserContext;
+use App\Enums\ScheduleType;
 use App\Enums\SuggestionKind;
 use App\Http\Requests\AdjustHabitRequest;
 use App\Models\AiSuggestion;
@@ -117,11 +118,18 @@ class HabitAdjustmentController extends Controller
         Gate::authorize('update', $habit);
 
         $previousLabel = $habit->scheduleLabel();
-        $previous = [
-            'trigger_situation' => $habit->trigger_situation,
-            'scheduled_time' => $habit->scheduled_time?->format('H:i'),
-            'scheduled_days' => $habit->scheduled_days,
-        ];
+        // Zurück führt nur, was zur bisherigen Planungsart gehört. Alle drei
+        // Spalten mitzuschicken hieße, dem Rückweg die Wahl zu lassen, welche
+        // er liest — und eine gekettete Gewohnheit käme mit einem leeren
+        // Paket zurück, weil sie weder Situation noch Uhrzeit hat.
+        $previous = array_filter(match ($habit->schedule_type) {
+            ScheduleType::Fixed => [
+                'scheduled_time' => $habit->scheduled_time?->format('H:i'),
+                'scheduled_days' => $habit->scheduled_days,
+            ],
+            ScheduleType::Dynamic => ['trigger_situation' => $habit->trigger_situation],
+            ScheduleType::Chained => ['chained_to_habit_id' => $habit->chained_to_habit_id],
+        }, fn (mixed $value): bool => $value !== null);
 
         $habit->update($request->anchor());
 
@@ -134,10 +142,7 @@ class HabitAdjustmentController extends Controller
             'title' => $habit->title,
             'anchor' => $habit->refresh()->scheduleLabel(),
             'previousLabel' => $previousLabel,
-            'previous' => array_filter(
-                $previous,
-                fn (mixed $value): bool => $value !== null,
-            ),
+            'previous' => $previous,
             'habitId' => $habit->id,
         ]);
 

@@ -37,6 +37,11 @@ class DashboardController extends Controller
             // Die Serie braucht die ganze Historie, `completions` ist oben aber
             // auf heute eingegrenzt — deshalb die zweite, schmale Relation.
             ->with('completionDates')
+            // Was heute ausnahmsweise woanders liegt. Ohne diese Zeile
+            // sortierte die Tagesliste einen von Hand verschobenen Block an
+            // seine reguläre Stelle und nennte auch dessen Uhrzeit.
+            ->with(['dayShifts' => fn (Relation $query) => $query->whereDate('shifted_on', $today)])
+            ->with(['chainedTo.dayShifts' => fn (Relation $query) => $query->whereDate('shifted_on', $today)])
             ->withCount(['completions as completions_last_30_days' => fn (Builder $query) => $query
                 ->where('completed_on', '>=', $today->copy()->subDays(29)->startOfDay()),
             ])
@@ -59,7 +64,7 @@ class DashboardController extends Controller
         $todaysHabits = $habits
             ->filter(fn (Habit $habit): bool => $habit->isScheduledOn($today))
             ->sortBy(fn (Habit $habit): array => [
-                $habit->dayAnchorHour() ?? PHP_INT_MAX,
+                $habit->placementOn($today)['minute'] ?? PHP_INT_MAX,
                 $habit->position,
             ])
             ->values();
@@ -112,7 +117,13 @@ class DashboardController extends Controller
             'habits' => $todaysHabits->map(fn (Habit $habit): array => [
                 'id' => $habit->id,
                 'title' => $habit->title,
-                'scheduleLabel' => $habit->scheduleLabel(),
+                // Der Anker, wie immer — außer die Gewohnheit liegt heute
+                // ausnahmsweise woanders. Dann zeigt die Übersicht die
+                // verschobene Spanne, sonst widerspräche sie dem Kalender.
+                'scheduleLabel' => $habit->placementOn($today)['shifted']
+                    ? ($habit->timeRangeLabel($today) ?? $habit->scheduleLabel())
+                    : $habit->scheduleLabel(),
+                'shiftedToday' => $habit->placementOn($today)['shifted'],
                 'behaviorType' => $habit->behavior_type->value,
                 'measureLabel' => $habit->measureLabel(),
                 'smallestStep' => $habit->smallest_step,

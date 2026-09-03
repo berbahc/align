@@ -1,0 +1,401 @@
+<?php
+
+use App\Enums\ScheduleType;
+use App\Models\Habit;
+use App\Models\User;
+use App\Support\DayPlan;
+use Illuminate\Support\Carbon;
+use Inertia\Testing\AssertableInertia;
+
+/**
+ * Einen Block im Tag mit der Hand verschieben.
+ *
+ * Zwei Reichweiten, zwei völlig verschiedene Dinge: „heute mache ich das
+ * später" ist keine Planänderung, „ab jetzt immer um zwei" schon. Die Geste
+ * sieht in beiden Fällen gleich aus — deshalb fragt die App hinterher, und
+ * deshalb prüfen die Tests hier vor allem, dass die beiden Wege nicht
+ * ineinanderlaufen.
+ */
+function shiftable(User $user, array $attributes = []): Habit
+{
+    return Habit::factory()->for($user)->withMeasure(30)->create([
+        'title' => 'Joggen gehen',
+        'trigger_situation' => 'nach dem Mittagessen',
+        ...$attributes,
+    ]);
+}
+
+test('a shift for today leaves the habit itself alone', function () {
+    $user = User::factory()->create();
+    $habit = shiftable($user);
+
+    $this->actingAs($user)
+        ->post(route('habits.shift.store', $habit), [
+            'date' => Carbon::today()->toDateString(),
+            'start_minute' => 14 * 60,
+            'scope' => 'today',
+        ])
+        ->assertRedirect();
+
+    expect($habit->fresh())
+        // Der Auslöser bleibt: „heute später" heißt nicht „ab jetzt anders".
+        ->trigger_situation->toBe('nach dem Mittagessen')
+        ->schedule_type->toBe(ScheduleType::Dynamic)
+        ->scheduled_time->toBeNull()
+        ->and($habit->dayShifts()->sole()->start_minute)->toBe(14 * 60);
+});
+
+test('the shifted block lies at its new place — and only on that day', function () {
+    $user = User::factory()->create();
+    $habit = shiftable($user);
+
+    $this->actingAs($user)->post(route('habits.shift.store', $habit), [
+        'date' => Carbon::today()->toDateString(),
+        'start_minute' => 14 * 60,
+        'scope' => 'today',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('calendar.day', Carbon::today()->toDateString()))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('blocks.0.startMinute', 14 * 60)
+            // Auf die Uhr gelegt heißt: für heute eine Zusage, keine Gegend.
+            ->where('blocks.0.exact', true)
+            ->where('blocks.0.shifted', true)
+        );
+
+    $this->actingAs($user)
+        ->get(route('calendar.day', Carbon::tomorrow()->toDateString()))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('blocks.0.startMinute', 13 * 60)
+            ->where('blocks.0.exact', false)
+            ->where('blocks.0.shifted', false)
+        );
+});
+
+test('a permanent shift makes a situational habit fixed and drops its trigger', function () {
+    $user = User::factory()->create();
+    $habit = shiftable($user);
+
+    $this->actingAs($user)
+        ->post(route('habits.shift.store', $habit), [
+            'date' => Carbon::today()->toDateString(),
+            'start_minute' => 14 * 60,
+            'scope' => 'always',
+        ])
+        ->assertRedirect();
+
+    expect($habit->fresh())
+        ->schedule_type->toBe(ScheduleType::Fixed)
+        ->scheduled_time->format('H:i')->toBe('14:00')
+        ->trigger_situation->toBeNull()
+        // Eine Gewohnheit ohne eigene Tage lief täglich und tut es weiter.
+        ->scheduled_days->toBe([1, 2, 3, 4, 5, 6, 7]);
+});
+
+test('a permanent shift releases the habit from its chain', function () {
+    $user = User::factory()->create();
+    $walk = Habit::factory()->for($user)->fixedSchedule('08:00', [1, 2, 3, 4, 5, 6, 7])
+        ->withMeasure(20)->create(['title' => 'Spazieren gehen']);
+    $read = Habit::factory()->for($user)->withMeasure(15)->create([
+        'title' => 'Lesen',
+        'schedule_type' => ScheduleType::Chained,
+        'chained_to_habit_id' => $walk->id,
+        'trigger_situation' => null,
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('habits.shift.store', $read), [
+            'date' => Carbon::today()->toDateString(),
+            'start_minute' => 15 * 60,
+            'scope' => 'always',
+        ])
+        ->assertRedirect();
+
+    expect($read->fresh())
+        ->schedule_type->toBe(ScheduleType::Fixed)
+        ->scheduled_time->format('H:i')->toBe('15:00')
+        ->chained_to_habit_id->toBeNull();
+});
+
+/**
+ * Eine Kette heißt „danach". Bliebe der Nachfolger stehen, wäre sein eigener
+ * Anker gelogen — auch wenn der Vorgänger nur für heute woanders liegt.
+ */
+test('a follower moves along, even for a single day', function () {
+    $user = User::factory()->create();
+    $walk = Habit::factory()->for($user)->fixedSchedule('08:00', [1, 2, 3, 4, 5, 6, 7])
+        ->withMeasure(20)->create(['title' => 'Spazieren gehen', 'position' => 0]);
+    Habit::factory()->for($user)->withMeasure(15)->create([
+        'title' => 'Lesen',
+        'schedule_type' => ScheduleType::Chained,
+        'chained_to_habit_id' => $walk->id,
+        'trigger_situation' => null,
+        'position' => 1,
+    ]);
+
+    $this->actingAs($user)->post(route('habits.shift.store', $walk), [
+        'date' => Carbon::today()->toDateString(),
+        'start_minute' => 15 * 60,
+        'scope' => 'today',
+    ])->assertRedirect();
+
+    $this->actingAs($user)
+        ->get(route('calendar.day', Carbon::today()->toDateString()))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('blocks.0.startMinute', 15 * 60)
+            ->where('blocks.1.title', 'Lesen')
+            ->where('blocks.1.startMinute', 15 * 60 + 20)
+        );
+});
+
+test('a habit that already sits there blocks the move and is named', function () {
+    $user = User::factory()->create();
+    Habit::factory()->for($user)->fixedSchedule('14:00', [1, 2, 3, 4, 5, 6, 7])
+        ->withMeasure(30)->create(['title' => 'Essen vorkochen']);
+    $habit = shiftable($user);
+
+    $this->actingAs($user)
+        ->post(route('habits.shift.store', $habit), [
+            'date' => Carbon::today()->toDateString(),
+            'start_minute' => 14 * 60,
+            'scope' => 'always',
+        ])
+        ->assertSessionHasErrors('start_minute');
+
+    expect($habit->fresh()->schedule_type)->toBe(ScheduleType::Dynamic);
+});
+
+/**
+ * Der Fall, um den es geht: Heute ist frei, aber montags liegt dort etwas.
+ */
+test('a collision on another weekday stops the permanent move', function () {
+    $user = User::factory()->create();
+    Habit::factory()->for($user)->fixedSchedule('14:00', [1])->withMeasure(30)
+        ->create(['title' => 'Essen vorkochen']);
+    // Läuft an allen Tagen — der Montag ist damit unvermeidlich.
+    $habit = Habit::factory()->for($user)->fixedSchedule('09:00', [1, 2, 3, 4, 5, 6, 7])
+        ->withMeasure(30)->create(['title' => 'Joggen gehen']);
+
+    $this->actingAs($user)
+        ->post(route('habits.shift.store', $habit), [
+            'date' => Carbon::today()->toDateString(),
+            'start_minute' => 14 * 60,
+            'scope' => 'always',
+        ])
+        ->assertSessionHasErrors(['start_minute' => '„Essen vorkochen" liegt montags schon um 14:00. Verschiebe die zuerst, dann lässt sich die Zeit hier umstellen.']);
+
+    expect($habit->fresh()->scheduled_time->format('H:i'))->toBe('09:00');
+});
+
+test('a place outside the waking day is refused', function () {
+    $user = User::factory()->create();
+    $habit = shiftable($user);
+
+    $this->actingAs($user)
+        ->post(route('habits.shift.store', $habit), [
+            'date' => Carbon::today()->toDateString(),
+            // Der Rahmen endet um 23:00; 30 Minuten ab 22:45 ragen darüber hinaus.
+            'start_minute' => 22 * 60 + 45,
+            'scope' => 'today',
+        ])
+        ->assertSessionHasErrors('start_minute');
+
+    expect($habit->dayShifts()->count())->toBe(0);
+});
+
+test('a follower that would run past bedtime stops the move', function () {
+    $user = User::factory()->create();
+    $walk = Habit::factory()->for($user)->fixedSchedule('08:00', [1, 2, 3, 4, 5, 6, 7])
+        ->withMeasure(30)->create(['title' => 'Spazieren gehen']);
+    Habit::factory()->for($user)->withMeasure(60)->create([
+        'title' => 'Lesen',
+        'schedule_type' => ScheduleType::Chained,
+        'chained_to_habit_id' => $walk->id,
+        'trigger_situation' => null,
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('habits.shift.store', $walk), [
+            'date' => Carbon::today()->toDateString(),
+            // Selbst passt der Spaziergang noch; „Lesen" liefe bis 23:30.
+            'start_minute' => 22 * 60,
+            'scope' => 'today',
+        ])
+        ->assertSessionHasErrors('start_minute');
+
+    expect($walk->dayShifts()->count())->toBe(0);
+});
+
+test('a shift can be taken back', function () {
+    $user = User::factory()->create();
+    $habit = shiftable($user);
+
+    $this->actingAs($user)->post(route('habits.shift.store', $habit), [
+        'date' => Carbon::today()->toDateString(),
+        'start_minute' => 14 * 60,
+        'scope' => 'today',
+    ]);
+
+    $this->actingAs($user)
+        ->delete(route('habits.shift.destroy', $habit), [
+            'date' => Carbon::today()->toDateString(),
+        ])
+        ->assertRedirect();
+
+    expect($habit->dayShifts()->count())->toBe(0);
+});
+
+/**
+ * Zwei Antworten für denselben Tag wären eine zu viel.
+ */
+test('a permanent time clears the exceptions it supersedes', function () {
+    $user = User::factory()->create();
+    $habit = shiftable($user);
+
+    $this->actingAs($user)->post(route('habits.shift.store', $habit), [
+        'date' => Carbon::today()->toDateString(),
+        'start_minute' => 14 * 60,
+        'scope' => 'today',
+    ]);
+
+    $this->actingAs($user)->post(route('habits.shift.store', $habit), [
+        'date' => Carbon::today()->toDateString(),
+        'start_minute' => 16 * 60,
+        'scope' => 'always',
+    ])->assertRedirect();
+
+    expect($habit->dayShifts()->count())->toBe(0)
+        ->and($habit->fresh()->scheduled_time->format('H:i'))->toBe('16:00');
+});
+
+test('the minute snaps to a quarter of an hour', function () {
+    $user = User::factory()->create();
+    $habit = shiftable($user);
+
+    $this->actingAs($user)->post(route('habits.shift.store', $habit), [
+        'date' => Carbon::today()->toDateString(),
+        'start_minute' => 14 * 60 + 7,
+        'scope' => 'today',
+    ])->assertRedirect();
+
+    expect($habit->dayShifts()->sole()->start_minute)->toBe(14 * 60);
+});
+
+test('a past day cannot be rearranged', function () {
+    $user = User::factory()->create();
+    $habit = shiftable($user);
+
+    $this->actingAs($user)
+        ->post(route('habits.shift.store', $habit), [
+            'date' => Carbon::yesterday()->toDateString(),
+            'start_minute' => 14 * 60,
+            'scope' => 'today',
+        ])
+        ->assertSessionHasErrors('date');
+
+    expect($habit->dayShifts()->count())->toBe(0);
+});
+
+test('the calendar says whether a day can be rearranged at all', function () {
+    $user = User::factory()->create();
+    shiftable($user, ['created_at' => Carbon::today()->subDays(10)]);
+
+    $this->actingAs($user)
+        ->get(route('calendar.day', Carbon::today()->toDateString()))
+        ->assertInertia(fn (AssertableInertia $page) => $page->where('canShift', true));
+
+    $this->actingAs($user)
+        ->get(route('calendar.day', Carbon::today()->subDay()->toDateString()))
+        ->assertInertia(fn (AssertableInertia $page) => $page->where('canShift', false));
+});
+
+test('a foreign habit stays where it is', function () {
+    $user = User::factory()->create();
+    $foreign = Habit::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('habits.shift.store', $foreign), [
+            'date' => Carbon::today()->toDateString(),
+            'start_minute' => 14 * 60,
+            'scope' => 'today',
+        ])
+        ->assertForbidden();
+
+    expect($foreign->dayShifts()->count())->toBe(0);
+});
+
+/**
+ * Der Grund, warum die Ausnahme überall gelten muss.
+ *
+ * Die Erinnerung ist ein Timer auf der Uhrzeit der Gewohnheit. Läse sie die
+ * Ausnahme nicht, meldete sie sich um 17:00, während der Kalender 14:00 zeigt
+ * — genau der Widerspruch, gegen den die App gebaut ist.
+ */
+test('the reminder follows the shift', function () {
+    $user = User::factory()->create(['onboarded_at' => now()]);
+    $habit = Habit::factory()->for($user)
+        ->fixedSchedule('17:00', [1, 2, 3, 4, 5, 6, 7])
+        ->withReminder()
+        ->withMeasure(30)
+        ->create(['title' => 'Joggen gehen']);
+
+    $this->actingAs($user)->post(route('habits.shift.store', $habit), [
+        'date' => Carbon::today()->toDateString(),
+        'start_minute' => 14 * 60,
+        'scope' => 'today',
+    ])->assertRedirect();
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('habitReminders.0.scheduledTime', '14:00')
+        );
+});
+
+test('the overview shows the shifted time, not the regular one', function () {
+    $user = User::factory()->create(['onboarded_at' => now()]);
+    $habit = Habit::factory()->for($user)
+        ->fixedSchedule('17:00', [1, 2, 3, 4, 5, 6, 7])
+        ->withMeasure(30)
+        ->create(['title' => 'Joggen gehen']);
+
+    $this->actingAs($user)->post(route('habits.shift.store', $habit), [
+        'date' => Carbon::today()->toDateString(),
+        'start_minute' => 14 * 60,
+        'scope' => 'today',
+    ])->assertRedirect();
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('habits.0.scheduleLabel', '14:00 – 14:30')
+            ->where('habits.0.shiftedToday', true)
+        );
+});
+
+/**
+ * Die freien Fenster der KI müssen die Ausnahme kennen — sonst böte sie einen
+ * Platz an, der an diesem Tag längst belegt ist.
+ */
+test('a shift occupies its new place for the AI as well', function () {
+    $user = User::factory()->create(['onboarded_at' => now()]);
+    $habit = Habit::factory()->for($user)
+        ->fixedSchedule('09:00', [1, 2, 3, 4, 5, 6, 7])
+        ->withMeasure(60)
+        ->create(['title' => 'Joggen gehen']);
+
+    $day = Carbon::today();
+    $habit->dayShifts()->create(['shifted_on' => $day, 'start_minute' => 14 * 60]);
+
+    $habits = $user->habits()->active()->get();
+    $habits->each(fn (Habit $each) => $each->setRelation('user', $user));
+    $habits->each(fn (Habit $each) => $each->load(['dayShifts' => fn ($query) => $query
+        ->whereDate('shifted_on', $day)]));
+
+    $plan = DayPlan::for($habits, $day->dayOfWeekIso, $user->sleepWindows(), $day);
+
+    expect($plan->occupied()[0]['from'])->toBe(14 * 60)
+        ->and($plan->collisionWith(14 * 60, 14 * 60 + 30))->not->toBeNull()
+        ->and($plan->collisionWith(9 * 60, 10 * 60))->toBeNull();
+});

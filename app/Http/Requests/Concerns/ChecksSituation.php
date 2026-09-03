@@ -37,8 +37,13 @@ trait ChecksSituation
         $conflict = $this->user()->habits()
             ->active()
             ->when($except?->exists, fn ($query) => $query->whereKeyNot($except))
-            ->get(['id', 'title', 'trigger_situation'])
-            ->first(fn (Habit $habit): bool => $habit->trigger_situation !== null
+            ->get(['id', 'title', 'schedule_type', 'trigger_situation'])
+            // Nur wer den Moment wirklich trägt, kann ihn blockieren. Eine
+            // gekettete Gewohnheit hängt an ihrem Vorgänger; was in ihrer
+            // Spalte steht, liest niemand — es darf also auch niemanden
+            // aussperren.
+            ->first(fn (Habit $habit): bool => $habit->schedule_type->hasOwnAnchor()
+                && $habit->trigger_situation !== null
                 && mb_strtolower(trim($habit->trigger_situation)) === mb_strtolower($situation));
 
         if ($conflict === null) {

@@ -233,7 +233,7 @@ test('the calendar carries the frame of the shown day', function () {
 
     // Der nächste Samstag.
     $this->actingAs($user)
-        ->get(route('calendar', ['date' => '2026-08-29']))
+        ->get(route('calendar.day', '2026-08-29'))
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->where('wakeTime', '09:30')
             ->where('bedtime', '23:45')

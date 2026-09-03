@@ -159,3 +159,36 @@ test('the edit form does not report the habit blocking itself', function () {
             ->where('triggerSuggestions.0.takenBy', null)
         );
 });
+
+/**
+ * Eine gekettete Gewohnheit belegt keinen Moment.
+ *
+ * Ihr Anker ist die Gewohnheit davor; was in ihrer `trigger_situation` steht,
+ * liest niemand — der Kalender zeigt „nach ‚Vorgänger'". Ein Altwert dort wäre
+ * unsichtbar und trotzdem eine Sperre: genau das hatte die alte
+ * Anpassungs-Strecke hinterlassen.
+ */
+test('a chained habit blocks no moment', function () {
+    $user = User::factory()->create();
+    $walk = Habit::factory()->for($user)->fixedSchedule('17:00')->withMeasure(20)->create();
+    Habit::factory()->for($user)->withoutMeasure()->create([
+        'schedule_type' => ScheduleType::Chained,
+        'chained_to_habit_id' => $walk->id,
+        'trigger_situation' => 'nach dem Aufstehen',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('habits.create'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('triggerSuggestions.0.situation', 'nach dem Aufstehen')
+            ->where('triggerSuggestions.0.takenBy', null)
+        );
+
+    $this->actingAs($user)
+        ->post(route('habits.store'), [
+            'template_key' => HabitTemplate::Meditieren->value,
+            'target_amount' => 10,
+            'trigger_situation' => 'nach dem Aufstehen',
+        ])
+        ->assertSessionHasNoErrors();
+});

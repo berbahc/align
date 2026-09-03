@@ -12,6 +12,7 @@ use App\Enums\SuggestionKind;
 use App\Models\Habit;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
@@ -30,6 +31,10 @@ use Throwable;
  *
  * Beide merken sich außerdem, was vorgeschlagen wurde. Erst dadurch kann der
  * nächste Aufruf etwas anderes anbieten, statt bei null zu beginnen.
+ *
+ * Dazu kommt ein dritter, stiller Weg: {@see update()} legt den gewählten
+ * Schritt an der Gewohnheit ab. Er fragt niemanden, kostet nichts und ist
+ * deshalb der einzige hier, der nicht gedrosselt wird.
  */
 class SmallestStepController extends Controller
 {
@@ -108,6 +113,60 @@ class SmallestStepController extends Controller
             $user,
             $habit,
         );
+    }
+
+    /**
+     * Den gewählten Schritt an der Gewohnheit hinterlegen.
+     *
+     * Er ersetzt den vorbereiteten Schritt und steht danach in der Tagesliste
+     * hinter dem Pfeil — dort, wo vorher der alte stand. Die Gewohnheit bleibt
+     * dabei offen: Ein kleinerer Handgriff ist ein anderer Plan, kein
+     * erledigter Tag. Abgehakt wird nur über den Kreis in der Zeile.
+     *
+     * Bewusst eine eigene Strecke statt `PUT habits/{habit}`: Dort verlangt
+     * {@see UpdateHabitRequest} den ganzen Anker-Block, und was nicht
+     * mitgeschickt wird, fällt auf `null` — ein Aufruf mit nur diesem einen
+     * Feld löschte den Zeitpunkt der Gewohnheit.
+     */
+    public function update(Request $request, Habit $habit): RedirectResponse
+    {
+        Gate::authorize('update', $habit);
+
+        $validated = $request->validate([
+            // Dieselbe Grenze wie im Formular: Was dort nicht hineinpasst,
+            // passt hier auch nicht in die Zeile.
+            'smallest_step' => ['required', 'string', 'max:160'],
+        ]);
+
+        $step = trim($validated['smallest_step']);
+
+        $habit->update(['smallest_step' => $step]);
+
+        $this->claimSuggestion($request->user(), $habit, $step);
+
+        return back();
+    }
+
+    /**
+     * Trägt ein, dass der Vorschlag genommen wurde.
+     *
+     * Ohne diese Zeile läse die KI ihn beim nächsten Mal als „angeboten und
+     * liegengelassen" und böte etwas anderes an — obwohl er gerade übernommen
+     * wurde. Verglichen wird wortgleich, aus demselben Grund wie in
+     * {@see CreateHabit::claimSuggestedStep()}.
+     */
+    private function claimSuggestion(User $user, Habit $habit, string $step): void
+    {
+        $user->aiSuggestions()
+            ->ofKind(SuggestionKind::SmallestStep)
+            ->notTaken()
+            ->where('label', $step)
+            ->latest()
+            ->first()
+            ?->forceFill([
+                'habit_id' => $habit->getKey(),
+                'accepted_at' => now(),
+            ])->save();
     }
 
     /**
