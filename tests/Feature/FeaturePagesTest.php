@@ -6,6 +6,7 @@ use Inertia\Testing\AssertableInertia;
 dataset('feature pages', [
     'Gewohnheiten' => ['habits.index', 'habits/index'],
     'Kalender' => ['calendar', 'calendar'],
+    'Semester' => ['semester.show', 'semester'],
     'Community' => ['community', 'community'],
 ]);
 
