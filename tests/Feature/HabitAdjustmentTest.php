@@ -2,7 +2,9 @@
 
 use App\Ai\Agents\SuggestBetterAnchor;
 use App\Enums\ScheduleType;
+use App\Models\Course;
 use App\Models\Habit;
+use App\Models\Semester;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Laravel\Ai\Prompts\AgentPrompt;
@@ -709,4 +711,67 @@ test('an adjustment without any new time is refused', function () {
         ->assertSessionHasErrors('trigger_situation');
 
     expect($habit->fresh()->trigger_situation)->toBe('wenn ich nach Hause komme');
+});
+
+/**
+ * Die Naht zum Semesterplan — bewiesen ohne eine Zeile im Agenten.
+ *
+ * Die freien Fenster kommen aus `DayPlan`, und `DayPlan` kennt seit dem
+ * Stundenplan auch die Vorlesungen. Der Agent bekommt deshalb eine Liste, in
+ * der die Vorlesungszeit gar nicht mehr vorkommt — er *kann* sie nicht mehr
+ * vorschlagen.
+ */
+test('a lecture is missing from the free windows the AI is handed', function () {
+    SuggestBetterAnchor::fake([[
+        'alternatives' => [['time' => '14:00', 'days' => [1], 'reason' => 'Passt.']],
+    ]]);
+
+    $user = User::factory()->create();
+    $semester = Semester::factory()->for($user)->create();
+    Course::factory()->for($semester)->onWeekday(1)->at('08:00', '09:30')
+        ->create(['title' => 'Analysis I']);
+
+    $habit = Habit::factory()->for($user)->fixedSchedule('17:00', [1])->withMeasure(30)->create([
+        'created_at' => Carbon::today()->subDays(20),
+    ]);
+
+    $this->actingAs($user)
+        ->postJson(route('habits.adjustment.suggestions', $habit))
+        ->assertOk();
+
+    SuggestBetterAnchor::assertPrompted(
+        fn (AgentPrompt $prompt): bool => $prompt->contains('Freie Fenster im Tag')
+            // Das Fenster vor der Vorlesung endet eine Atempause davor, statt
+            // bis zur Schlafenszeit durchzulaufen.
+            && $prompt->contains('07:45')
+            && ! $prompt->contains('08:00 bis'),
+    );
+});
+
+/**
+ * Und die Gegenprobe: Was das Modell trotzdem in eine Vorlesung legt, fällt
+ * serverseitig durch — nicht, weil der Agent es besser wüsste, sondern weil
+ * die Zeit in keinem der Fenster liegt, die er bekommen hat.
+ */
+test('a time inside a lecture is dropped even when the model returns it', function () {
+    SuggestBetterAnchor::fake([[
+        'alternatives' => [
+            ['situation' => '', 'time' => '08:30', 'days' => [1], 'reason' => 'Mitten in der Vorlesung.'],
+            ['situation' => '', 'time' => '14:00', 'days' => [1], 'reason' => 'Der Nachmittag ist frei.'],
+        ],
+    ]]);
+
+    $user = User::factory()->create();
+    $semester = Semester::factory()->for($user)->create();
+    Course::factory()->for($semester)->onWeekday(1)->at('08:00', '09:30')->create();
+
+    $habit = Habit::factory()->for($user)->fixedSchedule('17:00', [1])->withMeasure(30)->create([
+        'created_at' => Carbon::today()->subDays(20),
+    ]);
+
+    $this->actingAs($user)
+        ->postJson(route('habits.adjustment.suggestions', $habit))
+        ->assertOk()
+        ->assertJsonCount(1, 'alternatives')
+        ->assertJsonPath('alternatives.0.time', '14:00');
 });

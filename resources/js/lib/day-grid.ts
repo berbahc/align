@@ -1,4 +1,4 @@
-import type { CalendarBlock } from '@/types';
+import type { CalendarBlock, CourseBlock } from '@/types';
 
 /**
  * Die Rechnung hinter dem Stundenraster — getrennt von seiner Zeichnung.
@@ -56,9 +56,31 @@ export interface GridBounds {
     height: number;
 }
 
+/**
+ * Alles, was das Raster tragen kann.
+ *
+ * Unterschieden über `kind`: Eine Gewohnheit lässt sich abhaken und ziehen,
+ * ein Kurs nicht. Beide brauchen aber dieselbe Spaltenverteilung — läge eine
+ * Gewohnheit auf einer Vorlesung, müssten sie sich die Breite teilen wie zwei
+ * Gewohnheiten auch.
+ */
+export type GridBlock = CalendarBlock | CourseBlock;
+
+/**
+ * Das Wenigste, was ein Block zum Platzieren mitbringen muss.
+ *
+ * Die Rechnung kennt weder Haken noch Titel — nur wann etwas anfängt und wie
+ * lange es dauert.
+ */
+export interface Placeable {
+    id: number;
+    startMinute: number | null;
+    durationMinutes: number | null;
+}
+
 /** Ein Block mit seinem Platz im Raster. */
-export interface PlacedBlock {
-    block: CalendarBlock;
+export interface PlacedBlock<T extends Placeable = GridBlock> {
+    block: T;
     top: number;
     height: number;
     /** Die Spalte, in der er liegt — bei Überschneidung teilen sich Blöcke die Breite. */
@@ -132,10 +154,10 @@ export function timeLabel(minute: number): string {
  * Zehn-Minuten-Gewohnheiten zwanzig Minuten auseinander überschneiden sich
  * zeitlich nicht, ihre Mindesthöhen aber schon.
  */
-export function placeBlocks(
-    blocks: CalendarBlock[],
+export function placeBlocks<T extends Placeable>(
+    blocks: T[],
     bounds: GridBounds,
-): PlacedBlock[] {
+): PlacedBlock<T>[] {
     const spans = blocks
         .filter((block) => block.startMinute !== null)
         .map((block) => {
@@ -152,8 +174,8 @@ export function placeBlocks(
         })
         .sort((a, b) => a.from - b.from || b.until - a.until);
 
-    const placed: PlacedBlock[] = [];
-    let group: PlacedBlock[] = [];
+    const placed: PlacedBlock<T>[] = [];
+    let group: PlacedBlock<T>[] = [];
     let laneEnds: number[] = [];
     let groupEnd = -Infinity;
 
@@ -307,6 +329,7 @@ export function followersOf(
  */
 export function collisionOf(
     blocks: CalendarBlock[],
+    courses: CourseBlock[],
     draggedId: number,
     minute: number,
 ): string | null {
@@ -320,9 +343,16 @@ export function collisionOf(
             block.id === draggedId ||
             block.startMinute !== before.get(block.id),
     );
-    const resting = after.filter(
-        (block) => !moving.some((other) => other.id === block.id),
-    );
+    // Kurse ruhen immer: Sie ziehen nicht mit und weichen nicht aus. Sie
+    // stehen hier aus demselben Grund, aus dem `DayPlan::occupied()` die
+    // Fremdblöcke mitzählt — sonst sagte das Pop-up „frei", und der Server
+    // wiese den Zug danach ab.
+    const resting: GridBlock[] = [
+        ...after.filter(
+            (block) => !moving.some((other) => other.id === block.id),
+        ),
+        ...courses,
+    ];
 
     for (const block of moving) {
         const from = block.startMinute as number;

@@ -43,11 +43,13 @@ class SuggestDayOrder implements Agent, HasStructuredOutput
      * @param  string  $weekdayName  Der Wochentag, um den es geht
      * @param  array{from: int, to: int}  $frame  Der wache Teil des Tages, in Minuten
      * @param  list<array{id: int, title: string, minutes: int, anchor: string}>  $habits  Was an diesem Tag ansteht
+     * @param  list<array{title: string, from: int, to: int}>  $busy  Was der Tag sonst noch trägt — der Stundenplan
      */
     public function __construct(
         private readonly string $weekdayName,
         private readonly array $frame,
         private readonly array $habits,
+        private readonly array $busy = [],
     ) {}
 
     public function instructions(): string
@@ -67,6 +69,8 @@ class SuggestDayOrder implements Agent, HasStructuredOutput
         - Zwischen zwei Gewohnheiten liegen mindestens 15 Minuten Luft. Die
           Dauer der vorigen zählt dabei mit.
         - Keine zwei Gewohnheiten überschneiden sich.
+        - Was unter „Belegt" steht, ist nicht verschiebbar. Keine Gewohnheit
+          darf dort hineinragen — auch nicht mit ihrem Ende.
 
         Und die Haltung dahinter:
 
@@ -152,6 +156,12 @@ class SuggestDayOrder implements Agent, HasStructuredOutput
                 continue;
             }
 
+            // Und was ohnehin belegt ist, bleibt belegt: Eine Vorlesung rückt
+            // nicht, weil das Modell den Tag schöner findet.
+            if ($this->collidesWithBusy($start, $start + $habit['minutes'])) {
+                continue;
+            }
+
             $placed[$id] = [
                 'id' => $id,
                 'title' => $habit['title'],
@@ -182,6 +192,23 @@ class SuggestDayOrder implements Agent, HasStructuredOutput
                 160,
             ),
         ];
+    }
+
+    /**
+     * Liegt diese Spanne in etwas, das nicht weichen kann?
+     *
+     * Derselbe halboffene Vergleich wie in {@see DayPlan::collisionWith()} —
+     * was endet, wenn das andere anfängt, überschneidet sich nicht.
+     */
+    private function collidesWithBusy(int $from, int $to): bool
+    {
+        foreach ($this->busy as $block) {
+            if ($from < $block['to'] && $to > $block['from']) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -218,9 +245,24 @@ class SuggestDayOrder implements Agent, HasStructuredOutput
                 DayPlan::toTime($this->frame['from']),
                 DayPlan::toTime($this->frame['to']),
             ),
-            '',
-            'Gewohnheiten an diesem Tag:',
         ];
+
+        if ($this->busy !== []) {
+            $lines[] = '';
+            $lines[] = 'Belegt an diesem Tag (nicht verschiebbar):';
+
+            foreach ($this->busy as $block) {
+                $lines[] = sprintf(
+                    '- %s bis %s: %s',
+                    DayPlan::toTime($block['from']),
+                    DayPlan::toTime($block['to']),
+                    $block['title'],
+                );
+            }
+        }
+
+        $lines[] = '';
+        $lines[] = 'Gewohnheiten an diesem Tag:';
 
         foreach ($this->habits as $habit) {
             $lines[] = sprintf(

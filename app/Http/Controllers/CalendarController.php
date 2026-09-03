@@ -6,6 +6,7 @@ use App\Models\Habit;
 use App\Models\HabitCompletion;
 use App\Models\User;
 use App\Support\DayPlan;
+use App\Support\Timetable;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -74,11 +75,18 @@ class CalendarController extends Controller
 
         $habits = $this->habitsForRange($request->user(), $from, $to);
 
+        // Der Stundenplan einmal, die Vorlesungstage in einem Durchgang: Je
+        // Zelle zu fragen wären zweiundvierzig Fragen an dieselbe Auskunft.
+        $timetable = Timetable::for($request->user());
+        $lectureDays = $timetable->lectureDays($from, $to);
+
         $days = [];
 
         for ($day = $from->copy(); $day->lessThanOrEqualTo($to); $day->addDay()) {
-            $days[] = $this->day($habits, $day, $month, $today);
+            $days[] = $this->day($habits, $day, $month, $today, $lectureDays);
         }
+
+        $semester = $timetable->semester();
 
         return Inertia::render('calendar', [
             'month' => $month->format('Y-m'),
@@ -88,6 +96,13 @@ class CalendarController extends Controller
             'isCurrentMonth' => $month->isSameMonth($today),
             'today' => $today->toDateString(),
             'days' => $days,
+            // Die Zeile unter dem Raster kennt zwei Zustände: eine Einladung
+            // mit Grund, solange es keinen Plan gibt, und den Plan selbst,
+            // sobald er steht.
+            'semester' => $semester === null ? null : [
+                'title' => $semester->title,
+                'courseCount' => $timetable->courseCount(),
+            ],
         ]);
     }
 
@@ -147,7 +162,9 @@ class CalendarController extends Controller
         $window = $request->user()->sleepWindowFor($day->dayOfWeekIso);
         // `frame()` kennt die Schlafenszeit nach Mitternacht und zählt sie als
         // Minute jenseits von 1440 weiter — sonst risse die Achse am Tagesrand.
-        $frame = (new DayPlan($scheduled, $window, $day))->frame();
+        $timetable = Timetable::for($request->user());
+        $courseBlocks = $timetable->blocksOn($day);
+        $frame = (new DayPlan($scheduled, $window, $day, $courseBlocks))->frame();
 
         return Inertia::render('calendar-day', [
             'date' => $day->toDateString(),
@@ -162,6 +179,12 @@ class CalendarController extends Controller
             // Damit der Weg zurück in den Monat führt, aus dem man kam.
             'month' => $day->format('Y-m'),
             'blocks' => $scheduled->map(fn (Habit $habit): array => $this->block($habit, $day))->all(),
+            // Kurse liegen auf derselben Achse, sind aber keine Gewohnheiten:
+            // Sie werden nicht abgehakt, nicht gezogen und nicht angepasst.
+            // Deshalb eine eigene Liste — zehn nullbare Felder an `blocks`
+            // hätten jede Stelle, die einen Block anfasst, gegen eine Art
+            // verteidigen müssen, die sie nicht behandeln kann.
+            'courseBlocks' => $timetable->coursesOn($day),
             // Nur was noch kommt, lässt sich verlegen: Ein vergangener Tag ist
             // vorbei, und ihn umzuräumen änderte nichts mehr an ihm.
             'canShift' => $day->greaterThanOrEqualTo($today),
@@ -203,9 +226,10 @@ class CalendarController extends Controller
      * und ein Prozentwert über einem einzelnen Tag wäre eine Bewertung.
      *
      * @param  Collection<int, Habit>  $habits
-     * @return array{date: string, dayOfMonth: int, inMonth: bool, isToday: bool, isFuture: bool, planned: int, done: int}
+     * @param  array<string, true>  $lectureDays  Die Tage, an denen etwas an der Uni läuft
+     * @return array{date: string, dayOfMonth: int, inMonth: bool, isToday: bool, isFuture: bool, planned: int, done: int, hasLectures: bool}
      */
-    private function day(Collection $habits, Carbon $day, Carbon $month, Carbon $today): array
+    private function day(Collection $habits, Carbon $day, Carbon $month, Carbon $today, array $lectureDays): array
     {
         $scheduled = $habits
             ->filter(fn (Habit $habit): bool => $this->existedOn($habit, $day))
@@ -226,17 +250,23 @@ class CalendarController extends Controller
             'isFuture' => $day->greaterThan($today),
             'planned' => min($scheduled->count(), self::MaxDots),
             'done' => min($done, self::MaxDots),
+            // Nicht wie viel, nur ob: Der Monat sagt, dass dieser Tag an der
+            // Uni stattfindet, nicht wie voll er ist. Wie voll, steht im Tag.
+            'hasLectures' => isset($lectureDays[$day->toDateString()]),
         ];
     }
 
     /**
      * Eine Gewohnheit als Block auf der Achse.
      *
-     * @return array{id: int, title: string, anchor: string, anchorHour: int, scheduleType: string, startMinute: int|null, durationMinutes: int|null, exact: bool, shifted: bool, measureLabel: string|null, timeRange: string|null, behaviorType: string, smallestStep: string|null, motivation: string|null, completed: bool, graduated: bool, chainedToId: int|null}
+     * @return array{kind: 'habit', id: int, title: string, anchor: string, anchorHour: int, scheduleType: string, startMinute: int|null, durationMinutes: int|null, exact: bool, shifted: bool, measureLabel: string|null, timeRange: string|null, behaviorType: string, smallestStep: string|null, motivation: string|null, completed: bool, graduated: bool, chainedToId: int|null}
      */
     private function block(Habit $habit, Carbon $day): array
     {
         return [
+            // Sagt dem Raster, welcher Art dieser Block ist — daneben liegen
+            // Kurse, und die lassen sich weder abhaken noch ziehen.
+            'kind' => 'habit',
             'id' => $habit->id,
             'title' => $habit->title,
             // Mit dem Tag: An einem verschobenen Tag gilt die Ausnahme, und

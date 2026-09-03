@@ -53,3 +53,26 @@ export interface SemesterPlan {
     /** Läuft er gerade? Sonst belegen seine Kurse keine Zeit mehr. */
     isCurrent: boolean;
 }
+
+/**
+ * Ein Kurs als Block im Stundenraster.
+ *
+ * Weder abhakbar noch verschiebbar: Er ist kein Vorsatz, sondern eine
+ * Tatsache. `kind` unterscheidet ihn im Raster von einer Gewohnheit.
+ */
+export interface CourseBlock {
+    kind: 'course';
+    /** Negativ — Gewohnheiten tragen positive Kennungen, die Verabredung die 0. */
+    id: number;
+    title: string;
+    courseKind: CourseKind;
+    /** „Vorlesung", „Übung" … — fertig formatiert. */
+    kindLabel: string;
+    startMinute: number;
+    durationMinutes: number;
+    /** „08:00 – 09:30". */
+    timeRange: string;
+    location: string | null;
+    /** Liegt der Kurs an diesem Tag ausnahmsweise hier? */
+    moved: boolean;
+}

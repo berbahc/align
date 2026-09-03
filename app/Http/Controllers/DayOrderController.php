@@ -7,6 +7,7 @@ use App\Enums\ScheduleType;
 use App\Models\Habit;
 use App\Models\User;
 use App\Support\DayPlan;
+use App\Support\Timetable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -59,25 +60,29 @@ class DayOrderController extends Controller
             ], 422);
         }
 
-        $plan = DayPlan::for($due, $date->dayOfWeekIso, $request->user()->sleepWindows());
+        $busy = Timetable::for($request->user())->blocksOn($date);
+
+        $plan = DayPlan::for($due, $date->dayOfWeekIso, $request->user()->sleepWindows(), $date, $busy);
         $frame = $plan->frame();
 
         // Passt der Tag überhaupt? Die Summe aller Dauern plus die Luft
-        // dazwischen muss in den wachen Teil passen — sonst gibt es keine
-        // Ordnung, sondern zu viel für einen Tag. Das rechnet der Server, nicht
-        // die KI: Eine Absage aus einem Modell wäre eine Meinung, diese hier
-        // ist eine Tatsache.
+        // dazwischen muss in den wachen Teil passen — abzüglich dessen, was
+        // ohnehin belegt ist. Sonst gibt es keine Ordnung, sondern zu viel für
+        // einen Tag. Das rechnet der Server, nicht die KI: Eine Absage aus
+        // einem Modell wäre eine Meinung, diese hier ist eine Tatsache.
         $needed = $due->sum(fn (Habit $habit): int => $habit->durationMinutes() ?? 0)
             + (($due->count() - 1) * DayPlan::BreatherMinutes);
 
-        if ($needed > $frame['to'] - $frame['from']) {
+        $available = $frame['to'] - $frame['from'] - $this->busyMinutesWithin($busy, $frame);
+
+        if ($needed > $available) {
             return response()->json([
                 'message' => sprintf(
-                    'Deine Gewohnheiten brauchen zusammen %d Minuten — dein Tag hat zwischen %s und %s nur %d.',
+                    'Deine Gewohnheiten brauchen zusammen %d Minuten — dein Tag hat zwischen %s und %s nur %d frei.',
                     $needed,
                     DayPlan::toTime($frame['from']),
                     DayPlan::toTime($frame['to']),
-                    $frame['to'] - $frame['from'],
+                    max(0, $available),
                 ),
             ], 422);
         }
@@ -100,6 +105,14 @@ class DayOrderController extends Controller
                 weekdayName: $localised->isoFormat('dddd'),
                 frame: $frame,
                 habits: $habits,
+                // Der Stundenplan als Belegung: Ohne ihn legte die Ordnung
+                // eine Gewohnheit mitten in eine Vorlesung, und der Kalender
+                // wiese sie beim Übernehmen wieder ab.
+                busy: array_map(fn (array $block): array => [
+                    'title' => $block['title'],
+                    'from' => $block['from'],
+                    'to' => $block['to'],
+                ], $busy),
             ))->order();
         } catch (Throwable $exception) {
             Log::warning('Vorschlag für die Tagesordnung fehlgeschlagen.', [
@@ -165,6 +178,26 @@ class DayOrderController extends Controller
         Inertia::flash('dayReordered', ['count' => count($validated['order'])]);
 
         return back();
+    }
+
+    /**
+     * Wie viele Minuten des wachen Tages schon vergeben sind.
+     *
+     * Nur der Teil innerhalb des Rahmens zählt: Eine Vorlesung, die vor dem
+     * Aufstehen läge, nähme dem Tag nichts weg, den er hätte.
+     *
+     * @param  list<array{id: int, title: string, from: int, to: int}>  $busy
+     * @param  array{from: int, to: int}  $frame
+     */
+    private function busyMinutesWithin(array $busy, array $frame): int
+    {
+        return array_sum(array_map(
+            fn (array $block): int => max(
+                0,
+                min($block['to'], $frame['to']) - max($block['from'], $frame['from']),
+            ),
+            $busy,
+        ));
     }
 
     /**

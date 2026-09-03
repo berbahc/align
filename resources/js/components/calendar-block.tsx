@@ -42,7 +42,7 @@ export function CalendarBlock({
     dragging = false,
     dragHandlers,
 }: {
-    placed: PlacedBlock;
+    placed: PlacedBlock<Block>;
     canComplete: boolean;
     onToggle: (block: Block) => void;
     /** Öffnet den Block — dort stehen Anpassung, Starthilfe und der Rest. */
