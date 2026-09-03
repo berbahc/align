@@ -32,8 +32,14 @@ export const HOUR_HEIGHT = 96;
  */
 export const MIN_BLOCK_HEIGHT = 44;
 
-/** Der Spalt zwischen zwei Blöcken, damit zwei Kanten zwei bleiben. */
-const BLOCK_GAP = 2;
+/**
+ * Der Spalt zwischen zwei Blöcken, damit zwei Kanten zwei bleiben.
+ *
+ * Eine Haarlinie, mehr nicht: Ein Block soll bis an die Stundenlinie reichen,
+ * die seine Dauer begrenzt. Wäre der Spalt sichtbar, sähe eine Stunde kürzer
+ * aus als eine Stunde.
+ */
+const BLOCK_GAP = 1;
 
 /**
  * Wie lange ein Block ohne eigene Dauer belegt.
@@ -85,25 +91,58 @@ export function gridBounds(frameFrom: number, frameTo: number): GridBounds {
 }
 
 /**
- * Die vollen Stunden **innerhalb** des Rahmens.
+ * Die vollen Stunden im Raster.
  *
- * Die Ränder bleiben frei: Dort steht schon die Marke des Tagesrandes, und
- * „07:00" zweimal untereinander wäre eine Zeile, die nichts hinzufügt.
+ * `skip` nimmt die Minuten heraus, an denen schon eine Marke des Tagesrandes
+ * steht: „23:00" zweimal übereinander wäre eine Zeile, die nichts hinzufügt.
  */
-export function hourMarks(bounds: GridBounds): number[] {
+export function hourMarks(bounds: GridBounds, skip: number[] = []): number[] {
     const marks: number[] = [];
 
     for (
         let minute = Math.ceil(bounds.from / 60) * 60;
-        minute < bounds.to;
+        minute <= bounds.to;
         minute += 60
     ) {
-        if (minute > bounds.from) {
+        if (!skip.includes(minute)) {
             marks.push(minute);
         }
     }
 
     return marks;
+}
+
+/**
+ * Der Ausschnitt, der alles zeigt: den Rahmen des Tages und jeden Block.
+ *
+ * Normalerweise ist das der Rahmen allein. Aber ein Schlafplan lässt sich
+ * ändern, nachdem eine Gewohnheit angelegt wurde — dann liegt eine feste
+ * Uhrzeit plötzlich nach der Schlafenszeit. Sie deshalb aus dem Raster fallen
+ * zu lassen wäre das Gegenteil von hilfreich: Sie stünde über dem Text darunter
+ * und wäre nicht mehr zu greifen. Das Raster wächst stattdessen mit, und die
+ * Nacht darum herum wird sichtbar gemacht.
+ */
+export function boundsFor(
+    frameFrom: number,
+    frameTo: number,
+    blocks: CalendarBlock[],
+): GridBounds {
+    let from = frameFrom;
+    let to = frameTo;
+
+    for (const block of blocks) {
+        if (block.startMinute === null) {
+            continue;
+        }
+
+        from = Math.min(from, block.startMinute);
+        to = Math.max(
+            to,
+            block.startMinute + (block.durationMinutes ?? ASSUMED_MINUTES),
+        );
+    }
+
+    return gridBounds(from, to);
 }
 
 /** Wo eine Minute im Raster liegt, in Pixeln von oben. */
@@ -135,6 +174,17 @@ export function timeLabel(minute: number): string {
 export function placeBlocks(
     blocks: CalendarBlock[],
     bounds: GridBounds,
+    /**
+     * Die Schlafenszeit, als Minute — bis hierher darf gezeichnet werden.
+     *
+     * Ein Zehn-Minuten-Block wird 44 Pixel hoch gezeichnet, damit er sich
+     * treffen lässt (siehe {@see MIN_BLOCK_HEIGHT}). Wer „vor dem
+     * Schlafengehen" meditiert, bekäme dadurch ein Rechteck, das über die
+     * Schlafenszeit hinausragt — ausgerechnet die Grenze, an der die
+     * Gewohnheit enden soll. Passt sie in Wahrheit hinein, wird sie so weit
+     * nach oben gerückt, dass auch die Zeichnung hineinpasst.
+     */
+    limit?: number,
 ): PlacedBlock[] {
     const spans = blocks
         .filter((block) => block.startMinute !== null)
@@ -180,17 +230,21 @@ export function placeBlocks(
         laneEnds[lane] = span.until;
         groupEnd = Math.max(groupEnd, span.until);
 
-        group.push({
-            block: span.block,
-            top: offsetOf(span.from, bounds),
-            height:
-                Math.max(
-                    ((span.to - span.from) / 60) * HOUR_HEIGHT,
-                    MIN_BLOCK_HEIGHT,
-                ) - BLOCK_GAP,
-            lane,
-            lanes: 1,
-        });
+        const height =
+            Math.max(
+                ((span.to - span.from) / 60) * HOUR_HEIGHT,
+                MIN_BLOCK_HEIGHT,
+            ) - BLOCK_GAP;
+
+        let top = offsetOf(span.from, bounds);
+
+        if (limit !== undefined && span.to <= limit) {
+            const edge = offsetOf(limit, bounds);
+
+            top = Math.min(top, Math.max(edge - height - BLOCK_GAP, 0));
+        }
+
+        group.push({ block: span.block, top, height, lane, lanes: 1 });
     }
 
     closeGroup();
