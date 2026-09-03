@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { QUIET_LINK } from '@/lib/interaction';
 import { calendar } from '@/routes';
 import { day as calendarDay } from '@/routes/calendar';
+import { show as semesterShow } from '@/routes/semester';
 import type { MonthDay } from '@/types';
 
 interface CalendarProps {
@@ -19,6 +20,8 @@ interface CalendarProps {
     today: string;
     /** Volle Wochen, Montag bis Sonntag — auch über die Monatskante hinaus. */
     days: MonthDay[];
+    /** Der Semesterplan, wenn es einen gibt — sonst die Einladung dazu. */
+    semester: { title: string; courseCount: number } | null;
 }
 
 const NAV_BUTTON =
@@ -43,6 +46,7 @@ export default function Calendar({
     isCurrentMonth,
     today,
     days,
+    semester,
 }: CalendarProps) {
     return (
         <>
@@ -100,6 +104,29 @@ export default function Calendar({
                     >
                         Heutigen Tag öffnen
                     </Link>
+                </div>
+
+                {/* Der Semesterplan — kein Knopf, sondern eine Zeile, die den
+                    Zustand kennt. Ohne Plan nennt sie den Grund, mit Plan
+                    nennt sie ihn. Ein dauerhafter Aufruf zum Eintragen wäre
+                    für alle da, die gar nicht studieren; die Markierung im
+                    Raster darüber hat die Frage ohnehin schon gestellt. */}
+                <div className="flex justify-center">
+                    {semester === null ? (
+                        <p className="text-center text-sm text-muted-foreground">
+                            <Link href={semesterShow()} className={QUIET_LINK}>
+                                Semesterplan anlegen
+                            </Link>
+                            {' — dann plant Align um deine Kurse herum.'}
+                        </p>
+                    ) : (
+                        <Link
+                            href={semesterShow()}
+                            className={`${QUIET_LINK} text-sm`}
+                        >
+                            {`Semesterplan · ${semester.title} · ${semester.courseCount} ${semester.courseCount === 1 ? 'Kurs' : 'Kurse'}`}
+                        </Link>
+                    )}
                 </div>
             </div>
         </>

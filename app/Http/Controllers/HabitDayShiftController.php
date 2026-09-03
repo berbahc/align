@@ -8,6 +8,7 @@ use App\Models\Habit;
 use App\Models\HabitDayShift;
 use App\Models\User;
 use App\Support\DayPlan;
+use App\Support\Timetable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -28,6 +29,9 @@ class HabitDayShiftController extends Controller
 
     /** Wo der Kalendertag endet — jenseits davon gibt es keine Uhrzeit mehr. */
     private const int MinutesPerDay = 1440;
+
+    /** Der geladene Stundenplan, damit `always()` ihn nicht siebenmal holt. */
+    private ?Timetable $timetable = null;
 
     /**
      * Eine Gewohnheit für einen einzigen Tag woanders hinlegen.
@@ -170,6 +174,17 @@ class HabitDayShiftController extends Controller
     }
 
     /**
+     * Der Stundenplan dieses Nutzers — einmal je Anfrage.
+     *
+     * `always()` prüft bis zu sieben Wochentage. Ohne dieses Merken wären das
+     * sieben Ladevorgänge desselben Plans.
+     */
+    private function timetable(User $user): Timetable
+    {
+        return $this->timetable ??= Timetable::for($user);
+    }
+
+    /**
      * Weist ab, was an diesem Tag nicht ginge — mit dem Grund und dem Ausweg.
      *
      * Zwei Grenzen: der Schlafrahmen und die Blöcke, die dort schon liegen.
@@ -181,7 +196,7 @@ class HabitDayShiftController extends Controller
     {
         $others = $this->othersOn($user, $habit, $date);
         $window = $user->sleepWindowFor($date->dayOfWeekIso);
-        $plan = DayPlan::forDate($others, $date, $user->sleepWindows());
+        $plan = DayPlan::forDate($others, $date, $user->sleepWindows(), $this->timetable($user)->blocksOn($date));
         $frame = $plan->frame();
 
         // Die Ausnahme wird als Uhrzeit gespeichert. Alles jenseits von
@@ -206,12 +221,22 @@ class HabitDayShiftController extends Controller
 
             if ($conflict !== null) {
                 throw ValidationException::withMessages([
-                    'start_minute' => sprintf(
-                        '„%s" liegt %s schon um %s. Verschiebe die zuerst, dann lässt sich die Zeit hier umstellen.',
-                        $conflict['title'],
-                        $this->weekdayLabel($date),
-                        DayPlan::toTime($conflict['from']),
-                    ),
+                    'start_minute' => Timetable::isCourseBlock($conflict)
+                        // Eine Vorlesung lässt sich nicht wegschieben. Der
+                        // Ausweg ist eine andere Zeit, nicht eine andere
+                        // Reihenfolge — der Satz darf nichts anderes anbieten.
+                        ? sprintf(
+                            '%s läuft „%s" um %s. Such der Gewohnheit eine andere Zeit.',
+                            ucfirst($this->weekdayLabel($date)),
+                            $conflict['title'],
+                            DayPlan::toTime($conflict['from']),
+                        )
+                        : sprintf(
+                            '„%s" liegt %s schon um %s. Verschiebe die zuerst, dann lässt sich die Zeit hier umstellen.',
+                            $conflict['title'],
+                            $this->weekdayLabel($date),
+                            DayPlan::toTime($conflict['from']),
+                        ),
                 ]);
             }
         }

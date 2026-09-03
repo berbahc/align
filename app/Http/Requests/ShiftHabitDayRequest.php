@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Http\Requests\Concerns\ChecksSleepWindow;
 use App\Models\Habit;
 use App\Support\DayPlan;
+use App\Support\Timetable;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Carbon;
@@ -130,6 +131,10 @@ class ShiftHabitDayRequest extends FormRequest
             $habits->filter(fn (Habit $other): bool => $other->isScheduledOn($date))->values(),
             $date,
             $user->sleepWindows(),
+            // Der Stundenplan belegt denselben Tag. Ohne ihn ließe sich eine
+            // Gewohnheit in eine Vorlesung legen, und die Rechnung, wo Platz
+            // ist, sagte danach etwas anderes als der Kalender zeigt.
+            Timetable::for($user)->blocksOn($date),
         );
 
         $from = DayPlan::toMinutes($this->string('scheduled_time')->toString());

@@ -120,12 +120,17 @@ final class AppointmentFit
             $this->habits,
             $this->date,
             $this->invitee->sleepWindows(),
-            [[
-                'id' => 0,
-                'title' => 'Verabredung',
-                'from' => $this->window['from'],
-                'to' => $this->window['to'],
-            ]],
+            [
+                [
+                    'id' => 0,
+                    'title' => 'Verabredung',
+                    'from' => $this->window['from'],
+                    'to' => $this->window['to'],
+                ],
+                // Und der Stundenplan: Ein Ausweichfenster mitten in einer
+                // Vorlesung wäre derselbe Konflikt in einer anderen Farbe.
+                ...Timetable::for($this->invitee)->blocksOn($this->date),
+            ],
         );
 
         return array_map(

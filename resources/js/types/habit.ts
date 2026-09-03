@@ -283,6 +283,8 @@ export interface AnchorAlternative {
  * Datum, nicht zu „heute": `completed` meint den angezeigten Tag.
  */
 export interface CalendarBlock {
+    /** Unterscheidet die Gewohnheit vom Kurs, wenn beide im Raster liegen. */
+    kind: 'habit';
     id: number;
     title: string;
     /** Der Anker als Kopfzeile: „nach dem Aufstehen" oder „17:00 · Mo–Fr". */
@@ -362,6 +364,8 @@ export interface MonthDay {
     isFuture: boolean;
     planned: number;
     done: number;
+    /** Läuft an diesem Tag etwas aus dem Semesterplan? */
+    hasLectures: boolean;
 }
 
 /**

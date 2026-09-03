@@ -12,6 +12,7 @@ use App\Models\AiSuggestion;
 use App\Models\Habit;
 use App\Models\User;
 use App\Support\DayPlan;
+use App\Support\Timetable;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -169,6 +170,11 @@ class HabitAdjustmentController extends Controller
             $habits->filter(fn (Habit $other): bool => $other->isScheduledOn($day)),
             $day->dayOfWeekIso,
             $user->sleepWindows(),
+            $day,
+            // Der Stundenplan dieses Tages. Damit verschwinden Vorlesungszeiten
+            // aus den freien Fenstern — und die KI kann sie gar nicht mehr
+            // vorschlagen, ohne dass am Agenten eine Zeile geändert wurde.
+            Timetable::for($user)->blocksOn($day),
         );
 
         return $plan->freeWindowLabels($habit->durationMinutes() ?? 0, $habit);

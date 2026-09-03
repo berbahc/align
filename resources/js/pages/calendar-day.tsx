@@ -21,7 +21,11 @@ import {
     destroy as destroyShift,
     move as moveShift,
 } from '@/routes/habits/shifts';
-import type { AnchorAlternative, CalendarBlock as Block } from '@/types';
+import type {
+    AnchorAlternative,
+    CalendarBlock as Block,
+    CourseBlock as Course,
+} from '@/types';
 
 interface CalendarDayProps {
     /** Der angezeigte Tag als „YYYY-MM-DD". */
@@ -37,6 +41,8 @@ interface CalendarDayProps {
     /** Der Monat, aus dem dieser Tag kommt — das Ziel des Wegs zurück. */
     month: string;
     blocks: Block[];
+    /** Die Veranstaltungen dieses Tages — sie belegen Zeit, mehr nicht. */
+    courseBlocks: Course[];
     /** Der Rahmen des Tages als Uhrzeit … */
     wakeTime: string;
     bedtime: string;
@@ -72,6 +78,7 @@ export default function CalendarDay({
     nextDate,
     month,
     blocks,
+    courseBlocks,
     wakeTime,
     bedtime,
     frameFrom,
@@ -255,6 +262,7 @@ export default function CalendarDay({
                     <CardContent className="px-4 sm:px-5">
                         <DayGrid
                             blocks={blocks}
+                            courseBlocks={courseBlocks}
                             frameFrom={frameFrom}
                             frameTo={frameTo}
                             wakeTime={wakeTime}
@@ -321,7 +329,12 @@ export default function CalendarDay({
                 }
                 conflict={
                     dropped
-                        ? collisionOf(blocks, dropped.id, dropped.minute)
+                        ? collisionOf(
+                              blocks,
+                              courseBlocks,
+                              dropped.id,
+                              dropped.minute,
+                          )
                         : null
                 }
                 error={shiftError}

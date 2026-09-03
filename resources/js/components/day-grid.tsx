@@ -2,8 +2,10 @@ import { Link } from '@inertiajs/react';
 import { Moon, Sun } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { CalendarBlock } from '@/components/calendar-block';
+import { CourseBlock } from '@/components/course-block';
 import { useBlockDrag } from '@/hooks/use-block-drag';
 import type { BlockDrag } from '@/hooks/use-block-drag';
+import type { GridBlock } from '@/lib/day-grid';
 import {
     gridBounds,
     hourMarks,
@@ -13,7 +15,7 @@ import {
     withDrag,
 } from '@/lib/day-grid';
 import { show as sleepShow } from '@/routes/sleep';
-import type { CalendarBlock as Block } from '@/types';
+import type { CalendarBlock as Block, CourseBlock as Course } from '@/types';
 
 /** Die Breite der Stundenspalte links — „07:00" plus Luft. */
 const GUTTER = 'calc(var(--spacing) * 13)';
@@ -32,6 +34,7 @@ const GUTTER = 'calc(var(--spacing) * 13)';
  */
 export function DayGrid({
     blocks,
+    courseBlocks,
     frameFrom,
     frameTo,
     wakeTime,
@@ -45,6 +48,8 @@ export function DayGrid({
     ghost,
 }: {
     blocks: Block[];
+    /** Was der Stundenplan an diesem Tag belegt — liegt fest, reagiert nicht. */
+    courseBlocks: Course[];
     frameFrom: number;
     frameTo: number;
     wakeTime: string;
@@ -64,14 +69,26 @@ export function DayGrid({
 
     // Der Ghost darf über den Rahmen hinausragen — ein Vorschlag um 23:30 muss
     // sichtbar sein, damit man ihn ablehnen kann.
+    //
+    // Und die Kurse ebenso: Eine Abendvorlesung unter einer frühen
+    // Schlafenszeit belegt auf dem Server Zeit. Zeichnete das Raster sie
+    // nicht, wäre das genau der Widerspruch zwischen Rechnung und Bild, den
+    // dieser Kalender vermeiden soll.
     const bounds = gridBounds(
-        Math.min(frameFrom, ghost?.block.startMinute ?? frameFrom),
+        Math.min(
+            frameFrom,
+            ghost?.block.startMinute ?? frameFrom,
+            ...courseBlocks.map((course) => course.startMinute),
+        ),
         Math.max(
             frameTo,
             ghost?.block.startMinute !== null &&
                 ghost?.block.startMinute !== undefined
                 ? ghost.block.startMinute + (ghost.block.durationMinutes ?? 0)
                 : frameTo,
+            ...courseBlocks.map(
+                (course) => course.startMinute + course.durationMinutes,
+            ),
         ),
     );
 
@@ -88,7 +105,13 @@ export function DayGrid({
         ? withDrag(blocks, drag.drag.id, drag.drag.minute)
         : blocks;
 
-    const placed = placeBlocks(ghost ? [...shown, ghost.block] : shown, bounds);
+    // Beide Arten in einem Durchgang: Läge eine Gewohnheit auf einer
+    // Vorlesung, müssten sie sich die Breite teilen wie zwei Gewohnheiten
+    // auch. Zwei getrennte Aufrufe zeichneten sie übereinander.
+    const placed = placeBlocks<GridBlock>(
+        [...(ghost ? [...shown, ghost.block] : shown), ...courseBlocks],
+        bounds,
+    );
 
     // Was gar keine Stelle im Tag hat, verschwindet nicht — es steht unter dem
     // Raster. Eine Gewohnheit, deren Kette gerissen ist, wäre sonst weg.
@@ -127,32 +150,41 @@ export function DayGrid({
                     className="absolute inset-y-0 right-0"
                     style={{ left: GUTTER }}
                 >
-                    {placed.map((entry) => (
-                        <CalendarBlock
-                            key={
-                                entry.block.id === ghost?.block.id &&
-                                entry.block === ghost.block
-                                    ? `${entry.block.id}-ghost`
-                                    : entry.block.id
-                            }
-                            placed={entry}
-                            canComplete={canComplete}
-                            onToggle={onToggle}
-                            // Der Klick nach dem Loslassen ist der Nachhall der
-                            // Geste, nicht ihre eigene Absicht.
-                            onOpen={(block) =>
-                                drag.swallowsClick() || onOpen(block)
-                            }
-                            dragging={drag.drag?.id === entry.block.id}
-                            dragHandlers={canShift ? drag.handlers : undefined}
-                            ghost={entry.block === ghost?.block}
-                            faded={
-                                ghost !== null &&
-                                entry.block !== ghost.block &&
-                                entry.block.id === ghost.replaces
-                            }
-                        />
-                    ))}
+                    {placed.map((entry) =>
+                        entry.block.kind === 'course' ? (
+                            <CourseBlock
+                                key={entry.block.id}
+                                placed={{ ...entry, block: entry.block }}
+                            />
+                        ) : (
+                            <CalendarBlock
+                                placed={{ ...entry, block: entry.block }}
+                                key={
+                                    entry.block.id === ghost?.block.id &&
+                                    entry.block === ghost.block
+                                        ? `${entry.block.id}-ghost`
+                                        : entry.block.id
+                                }
+                                canComplete={canComplete}
+                                onToggle={onToggle}
+                                // Der Klick nach dem Loslassen ist der Nachhall der
+                                // Geste, nicht ihre eigene Absicht.
+                                onOpen={(block) =>
+                                    drag.swallowsClick() || onOpen(block)
+                                }
+                                dragging={drag.drag?.id === entry.block.id}
+                                dragHandlers={
+                                    canShift ? drag.handlers : undefined
+                                }
+                                ghost={entry.block === ghost?.block}
+                                faded={
+                                    ghost !== null &&
+                                    entry.block !== ghost.block &&
+                                    entry.block.id === ghost.replaces
+                                }
+                            />
+                        ),
+                    )}
                 </ul>
 
                 {/* Die Zielzeit, solange der Block wandert — in derselben
@@ -193,7 +225,7 @@ export function DayGrid({
                     </div>
                 )}
 
-                {blocks.length === 0 && (
+                {blocks.length === 0 && courseBlocks.length === 0 && (
                     /* §1.5 — benannt wird, was gilt, nicht was fehlt. */
                     <p
                         className="absolute inset-x-0 top-6 text-center text-sm leading-relaxed text-muted-foreground"
