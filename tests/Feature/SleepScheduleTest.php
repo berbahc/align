@@ -2,6 +2,7 @@
 
 use App\Enums\HabitTemplate;
 use App\Enums\ScheduleType;
+use App\Models\Habit;
 use App\Models\SleepSchedule;
 use App\Models\User;
 use Illuminate\Support\Carbon;
@@ -256,4 +257,98 @@ test('the plan belongs to its person alone', function () {
         );
 
     expect($other->sleepSchedules()->count())->toBe(0);
+});
+
+/**
+ * Der Schlafplan ist je Wochentag einstellbar — und das muss sich an den
+ * beiden Situationen am Tagesrand auszahlen, sonst ist er Dekoration.
+ */
+test('a habit after waking follows the wake time of the day it is shown on', function () {
+    $user = User::factory()->create();
+
+    // Ein fester Montag und ein fester Samstag, damit der Test nicht vom
+    // Wochentag des Laufs abhängt.
+    $monday = Carbon::today()->startOfWeek();
+    $saturday = $monday->copy()->addDays(5);
+
+    $user->sleepSchedules()->create([
+        'weekday' => $monday->dayOfWeekIso, 'wake_time' => '06:30', 'bedtime' => '22:00',
+    ]);
+    $user->sleepSchedules()->create([
+        'weekday' => $saturday->dayOfWeekIso, 'wake_time' => '10:15', 'bedtime' => '23:30',
+    ]);
+
+    Habit::factory()->for($user)->withMeasure(20)->create([
+        'title' => 'Meditieren',
+        'trigger_situation' => 'nach dem Aufstehen',
+        'created_at' => $monday->copy()->subDay(),
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('calendar.day', $monday->toDateString()))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            // Auf die Minute, nicht auf 06:00 gerundet — das läge vor dem
+            // Aufstehen und damit außerhalb des Tages.
+            ->where('blocks.0.startMinute', 6 * 60 + 30)
+        );
+
+    $this->actingAs($user)
+        ->get(route('calendar.day', $saturday->toDateString()))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('blocks.0.startMinute', 10 * 60 + 15)
+        );
+});
+
+/**
+ * „Vor dem Schlafengehen" endet an der Schlafenszeit, statt eine feste Stunde
+ * davor zu beginnen: Zehn Minuten Meditation lägen sonst fünfzig Minuten zu
+ * früh, eine Stunde Lesen ragte darüber hinaus.
+ */
+test('a habit before sleeping ends at bedtime, whatever it takes', function () {
+    $user = User::factory()->create();
+    $monday = Carbon::today()->startOfWeek();
+
+    $user->sleepSchedules()->create([
+        'weekday' => $monday->dayOfWeekIso, 'wake_time' => '07:00', 'bedtime' => '22:45',
+    ]);
+
+    $short = Habit::factory()->for($user)->withMeasure(10)->create([
+        'title' => 'Meditieren',
+        'trigger_situation' => 'vor dem Schlafengehen',
+        'created_at' => $monday->copy()->subDay(),
+    ]);
+    $short->setRelation('user', $user);
+
+    $long = Habit::factory()->for($user)->withMeasure(60)->create([
+        'title' => 'Lesen',
+        'trigger_situation' => 'wenn ich nach Hause komme',
+        'created_at' => $monday->copy()->subDay(),
+    ]);
+    $long->setRelation('user', $user);
+    $long->forceFill(['trigger_situation' => 'vor dem Schlafengehen'])->save();
+    $long->setRelation('user', $user);
+
+    expect($short->sleepBoundStartMinute($monday))->toBe(22 * 60 + 35)
+        ->and($long->sleepBoundStartMinute($monday))->toBe(21 * 60 + 45);
+});
+
+/**
+ * Eine Schlafenszeit nach Mitternacht liegt jenseits des Tagesrands — der
+ * Abendblock rutscht mit, statt an den Morgen zu springen.
+ */
+test('a bedtime after midnight carries the evening habit with it', function () {
+    $user = User::factory()->create();
+    $monday = Carbon::today()->startOfWeek();
+
+    $user->sleepSchedules()->create([
+        'weekday' => $monday->dayOfWeekIso, 'wake_time' => '07:00', 'bedtime' => '00:30',
+    ]);
+
+    $habit = Habit::factory()->for($user)->withMeasure(30)->create([
+        'trigger_situation' => 'vor dem Schlafengehen',
+        'created_at' => $monday->copy()->subDay(),
+    ]);
+    $habit->setRelation('user', $user);
+
+    expect($habit->sleepBoundStartMinute($monday))->toBe(24 * 60);
 });

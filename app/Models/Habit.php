@@ -8,6 +8,7 @@ use App\Enums\HabitTemplate;
 use App\Enums\MeasureUnit;
 use App\Enums\ScheduleType;
 use App\Http\Requests\Concerns\ChecksSituation;
+use App\Support\DayPlan;
 use Carbon\CarbonInterface;
 use Database\Factories\HabitFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -600,28 +601,67 @@ class Habit extends Model
             return self::anchorHourFor(time: $this->scheduled_time?->format('H:i'));
         }
 
-        return $this->sleepBoundAnchorHour()
+        return $this->sleepBoundAnchorHour($on)
             ?? self::anchorHourFor(situation: $this->trigger_situation);
     }
 
     /**
      * Die Stunde aus dem Schlafplan — für die Situationen am Tagesrand.
      *
-     * `null`, wenn die Situation nicht am Rahmen hängt oder der Nutzer nicht
-     * geladen ist. Gerechnet wird mit dem heutigen Wochentag: Die Achse zeigt
-     * einen konkreten Tag, und der hat einen konkreten Rahmen.
+     * Nur die grobe Stunde, fürs Einsortieren. Wo der Block wirklich liegt,
+     * sagt {@see sleepBoundStartMinute()}.
      */
-    private function sleepBoundAnchorHour(): ?int
+    private function sleepBoundAnchorHour(?Carbon $on = null): ?int
+    {
+        $minute = $this->sleepBoundStartMinute($on);
+
+        return $minute === null ? null : intdiv($minute, 60);
+    }
+
+    /**
+     * Wo „nach dem Aufstehen" und „vor dem Schlafengehen" wirklich sitzen.
+     *
+     * Beide hängen am Rahmen des **gezeigten** Tages, nicht an einer festen
+     * Stunde und nicht an heute: Wer am Wochenende später aufsteht, hat seine
+     * Morgengewohnheit auch später — und wer donnerstags erst um Mitternacht
+     * ins Bett geht, hat abends eine Stunde mehr. Der Schlafplan ist je
+     * Wochentag einstellbar, und diese Rechnung ist die Stelle, an der sich
+     * das auszahlen muss.
+     *
+     * Auf die Minute, nicht auf die Stunde gerundet. „Nach dem Aufstehen"
+     * beginnt beim Aufstehen — bei 07:40 also um 07:40 und nicht um 07:00, was
+     * noch vor dem Aufstehen läge. „Vor dem Schlafengehen" **endet** an der
+     * Schlafenszeit: Der Block wird so weit nach vorn gelegt, dass er gerade
+     * noch hineinpasst. Eine Stunde davor wäre bei zehn Minuten Meditation
+     * fünfzig Minuten zu früh und bei einer Stunde Lesen zu spät.
+     *
+     * `null`, wenn die Situation nicht am Rahmen hängt oder der Nutzer nicht
+     * geladen ist — dann bleibt es beim Mittelwert aus der Vorschlagsliste,
+     * statt je Gewohnheit eine eigene Abfrage loszutreten.
+     */
+    public function sleepBoundStartMinute(?Carbon $on = null): ?int
     {
         if (! $this->relationLoaded('user')) {
             return null;
         }
 
-        $window = $this->user->sleepWindowFor(Carbon::today()->dayOfWeekIso);
+        $window = $this->user->sleepWindowFor(($on ?? Carbon::today())->dayOfWeekIso);
+
+        $wake = DayPlan::toMinutes($window['wakeTime']);
+        $bed = DayPlan::toMinutes($window['bedtime']);
+
+        // Eine Schlafenszeit nach Mitternacht liegt jenseits des Tagesrands —
+        // dieselbe Rechnung wie in {@see DayPlan::frame()}.
+        if ($bed <= $wake) {
+            $bed += 1440;
+        }
 
         return match ($this->trigger_situation) {
-            'nach dem Aufstehen' => (int) substr($window['wakeTime'], 0, 2),
-            'vor dem Schlafengehen' => max(0, (int) substr($window['bedtime'], 0, 2) - 1),
+            'nach dem Aufstehen' => $wake,
+            'vor dem Schlafengehen' => max(
+                $wake,
+                $bed - ($this->durationMinutes() ?? DayPlan::AssumedMinutes),
+            ),
             default => null,
         };
     }
@@ -727,6 +767,14 @@ class Habit extends Model
 
         if ($exact !== null) {
             return $exact->hour * 60 + $exact->minute;
+        }
+
+        // Die beiden Situationen am Tagesrand kennen ihre Minute genau; für
+        // alle anderen bleibt es bei der Stunde aus der Vorschlagsliste.
+        $bound = $this->sleepBoundStartMinute($on);
+
+        if ($bound !== null) {
+            return $bound;
         }
 
         $hour = $this->dayAnchorHour($on);
