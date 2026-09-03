@@ -11,9 +11,9 @@ use App\Http\Controllers\HabitAdjustmentController;
 use App\Http\Controllers\HabitAdoptionController;
 use App\Http\Controllers\HabitCompletionController;
 use App\Http\Controllers\HabitController;
+use App\Http\Controllers\HabitDayShiftController;
 use App\Http\Controllers\HabitGraduationController;
 use App\Http\Controllers\HabitReminderController;
-use App\Http\Controllers\HabitShiftController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\SleepScheduleController;
 use App\Http\Controllers\SmallestStepController;
@@ -131,12 +131,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('habits/{habit}/smallest-step', [SmallestStepController::class, 'update'])
             ->name('habits.smallest-step.update');
 
-        // Einen Block im Tagesraster mit der Hand verschieben. Auch ohne
-        // Drossel: Hier wird niemand gefragt, nur gelegt.
-        Route::post('habits/{habit}/shift', [HabitShiftController::class, 'store'])
-            ->name('habits.shift.store');
-        Route::delete('habits/{habit}/shift', [HabitShiftController::class, 'destroy'])
-            ->name('habits.shift.destroy');
+        // Eine Gewohnheit für einen einzigen Tag woanders hinlegen. Drei Verben
+        // auf einer Strecke, weil es eine Tabelle ist: `POST` räumt Platz für
+        // eine Verabredung, `PUT` verschiebt von Hand im Raster (und darf dabei
+        // auch dauerhaft umstellen), `DELETE` nimmt die Ausnahme zurück.
+        //
+        // Steht bei den festen Strecken vor `{habit}`, aus demselben Grund wie
+        // die Erinnerungen darunter.
+        Route::post('habits/{habit}/shifts', [HabitDayShiftController::class, 'store'])
+            ->name('habits.shifts.store');
+        Route::put('habits/{habit}/shifts', [HabitDayShiftController::class, 'move'])
+            ->name('habits.shifts.move');
+        Route::delete('habits/{habit}/shifts', [HabitDayShiftController::class, 'destroy'])
+            ->name('habits.shifts.destroy');
 
         // Erst fragen, dann übernehmen — dazwischen liegt die Entscheidung.
         // Nur der Vorschlag kostet einen KI-Aufruf und wird gedrosselt.

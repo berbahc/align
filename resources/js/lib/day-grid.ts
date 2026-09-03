@@ -215,9 +215,14 @@ export function snapMinute(
 ): number {
     const snapped = Math.round(minute / SNAP_MINUTES) * SNAP_MINUTES;
 
+    // Nie über Mitternacht: Die Ausnahme wird als Uhrzeit gespeichert, und
+    // 00:10 läse sich beim nächsten Aufschlagen als früher Vormittag. Wessen
+    // Tag nach Mitternacht endet, kann bis dorthin schieben und nicht weiter.
+    const latest = Math.min(bounds.to, 1440);
+
     return Math.min(
         Math.max(snapped, bounds.from),
-        Math.max(bounds.to - durationMinutes, bounds.from),
+        Math.max(latest - durationMinutes, bounds.from),
     );
 }
 

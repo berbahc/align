@@ -4,11 +4,13 @@ import { HabitWizard } from '@/components/habit-wizard';
 import type { ScheduleTypeOption } from '@/components/schedule-picker';
 import { dashboard } from '@/routes';
 import { store } from '@/routes/habits';
+import { store as adopt } from '@/routes/habits/adoptions';
 import type {
     BusySlot,
     ChainCandidate,
     DurationLimits,
     FriendshipPerson,
+    HabitAdoption,
     HabitCategoryOption,
     SituationChoice,
     SleepWindow,
@@ -24,6 +26,13 @@ interface CreateHabitProps {
     busySlots: BusySlot[];
     /** Der eigene Kreis, für den letzten Schritt. */
     friends: FriendshipPerson[];
+    /**
+     * Gesetzt, wenn der Weg aus einer Anfrage oder einer Absage kommt.
+     *
+     * Übernehmen ist kein eigener Assistent: Es ist derselbe, nur mit
+     * feststehender Vorlage — und am Ende ist eine Anfrage beantwortet.
+     */
+    adoption: HabitAdoption | null;
 }
 
 export default function CreateHabit({
@@ -35,6 +44,7 @@ export default function CreateHabit({
     chainCandidates,
     busySlots,
     friends,
+    adoption,
 }: CreateHabitProps) {
     const { flash } = usePage();
     const created = flash.habitCreated;
@@ -48,13 +58,15 @@ export default function CreateHabit({
      */
     const asking = created !== undefined && friends.length > 0;
 
+    const heading = adoption === null ? 'Neue Gewohnheit' : 'Selbst übernehmen';
+
     return (
         <>
-            <Head title={asking ? 'Zusammen angehen?' : 'Neue Gewohnheit'} />
+            <Head title={asking ? 'Zusammen angehen?' : heading} />
 
             <div className="mx-auto w-full max-w-md p-4 sm:p-6">
                 <h1 className="type-heading mb-8 text-primary">
-                    {asking ? 'Fast fertig' : 'Neue Gewohnheit'}
+                    {asking ? 'Fast fertig' : heading}
                 </h1>
 
                 {asking ? (
@@ -74,7 +86,8 @@ export default function CreateHabit({
                         sleepWindows={sleepWindows}
                         chainCandidates={chainCandidates}
                         busySlots={busySlots}
-                        action={store.url()}
+                        adoption={adoption}
+                        action={adoption === null ? store.url() : adopt.url()}
                     />
                 )}
             </div>
