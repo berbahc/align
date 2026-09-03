@@ -13,6 +13,7 @@ use App\Http\Controllers\HabitCompletionController;
 use App\Http\Controllers\HabitController;
 use App\Http\Controllers\HabitGraduationController;
 use App\Http\Controllers\HabitReminderController;
+use App\Http\Controllers\HabitShiftController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\SleepScheduleController;
 use App\Http\Controllers\SmallestStepController;
@@ -33,7 +34,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware(EnsureOnboarded::class)->group(function () {
         Route::get('dashboard', DashboardController::class)->name('dashboard');
 
-        Route::get('calendar', CalendarController::class)->name('calendar');
+        // Zwei Ebenen: Der Monat ist der Einstieg, der Tag die Achse darin.
+        // Der Tag steht in der Adresse und nicht in einem Client-Zustand — so
+        // übersteht er ein Neuladen und lässt sich teilen.
+        Route::get('calendar', [CalendarController::class, 'index'])->name('calendar');
 
         // Den ganzen Tag neu ordnen — die Frage nach der Einzelanpassung.
         // Der Vorschlag kostet einen KI-Aufruf und wird deshalb gedrosselt.
@@ -42,6 +46,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('calendar.order.suggestions');
         Route::post('calendar/order', [DayOrderController::class, 'store'])
             ->name('calendar.order.store');
+
+        // Zuletzt, wie überall in dieser Datei: Die Strecke ohne festes Wort
+        // dahinter würde jedes `calendar/…` darüber schlucken. Das Muster
+        // grenzt zusätzlich ein — ein Wort, das kein Datum ist, soll hier
+        // nicht ankommen.
+        Route::get('calendar/{date}', [CalendarController::class, 'show'])
+            ->where('date', '[0-9]{4}-[0-9]{2}-[0-9]{2}')
+            ->name('calendar.day');
 
         // Der Schlafplan ist der Rahmen des Tages: Aufsteh- und Schlafenszeit
         // je Wochentag, Wecker und die Erinnerung vor der Schlafenszeit.
@@ -104,15 +116,27 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Wie bei den Erinnerungen steht die feste Strecke vor `{habit}`,
         // sonst wird „smallest-step" als Modellschlüssel gelesen.
         //
-        // Beide Wege sprechen mit der Claude API und werden deshalb gedrosselt:
-        // ein ungebremster Endpunkt zu einem bezahlten Dienst ist eine
-        // Rechnung, die jemand anderes schreiben kann.
+        // Die beiden fragenden Wege sprechen mit der Claude API und werden
+        // deshalb gedrosselt: ein ungebremster Endpunkt zu einem bezahlten
+        // Dienst ist eine Rechnung, die jemand anderes schreiben kann.
         Route::post('habits/smallest-step/suggestions', [SmallestStepController::class, 'suggestions'])
             ->middleware('throttle:20,1')
             ->name('habits.smallest-step.suggestions');
         Route::post('habits/{habit}/smallest-step', [SmallestStepController::class, 'smaller'])
             ->middleware('throttle:20,1')
             ->name('habits.smallest-step.smaller');
+
+        // Das Ergebnis behalten. Ohne Drossel, weil hier niemand gefragt wird
+        // — geschrieben wird nur, was vorher schon auf dem Bildschirm stand.
+        Route::patch('habits/{habit}/smallest-step', [SmallestStepController::class, 'update'])
+            ->name('habits.smallest-step.update');
+
+        // Einen Block im Tagesraster mit der Hand verschieben. Auch ohne
+        // Drossel: Hier wird niemand gefragt, nur gelegt.
+        Route::post('habits/{habit}/shift', [HabitShiftController::class, 'store'])
+            ->name('habits.shift.store');
+        Route::delete('habits/{habit}/shift', [HabitShiftController::class, 'destroy'])
+            ->name('habits.shift.destroy');
 
         // Erst fragen, dann übernehmen — dazwischen liegt die Entscheidung.
         // Nur der Vorschlag kostet einen KI-Aufruf und wird gedrosselt.

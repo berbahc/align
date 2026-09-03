@@ -3,6 +3,7 @@
 use App\Enums\MeasureUnit;
 use App\Models\Habit;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
 
 /**
@@ -79,16 +80,26 @@ test('the calendar ships the span and the measure', function () {
     ]);
 
     $this->actingAs($user)
-        ->get(route('calendar'))
+        ->get(route('calendar.day', Carbon::today()->toDateString()))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
-            ->component('calendar')
+            ->component('calendar-day')
             ->where('blocks.0.title', 'Spazieren gehen')
             ->where('blocks.0.timeRange', '17:00 – 17:20')
             ->where('blocks.0.measureLabel', '20 Min')
+            // Für das Stundenraster: die Minute, an der der Block anfängt,
+            // seine Höhe — und dass die Stelle eine echte Uhrzeit ist.
+            ->where('blocks.0.startMinute', 17 * 60)
+            ->where('blocks.0.durationMinutes', 20)
+            ->where('blocks.0.exact', true)
             // Seiten belegen keine Spanne, bleiben aber als Umfang sichtbar.
             ->where('blocks.1.title', 'Lesen')
             ->where('blocks.1.timeRange', null)
             ->where('blocks.1.measureLabel', '10 Seiten')
+            // „Vor dem Schlafengehen" hat keine Uhrzeit, sondern eine Gegend:
+            // eine Stunde vor der Schlafenszeit, und das Raster zeichnet sie
+            // gestrichelt statt als Zusage.
+            ->where('blocks.1.durationMinutes', null)
+            ->where('blocks.1.exact', false)
         );
 });

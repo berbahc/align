@@ -27,10 +27,12 @@ use RuntimeException;
  * statisch … wenn eine Gewohnheit nicht eingehalten wird, hat das keinen
  * Einfluss" (align.md).
  *
- * Vorgeschlagen wird immer **in der Form, die der Nutzer selbst gewählt hat**:
- * für eine situative Gewohnheit andere Situationen, für eine feste andere
- * Uhrzeiten. Die Planungsart zu wechseln ist keine Anpassung, sondern eine
- * andere Entscheidung — und die trifft niemand außer dem Nutzer.
+ * **Angeboten werden beide Formen nebeneinander**: freie Momente im Tagesablauf
+ * und freie Zeitfenster. Früher blieb jede Gewohnheit in der Form, in der sie
+ * angelegt war — das klang nach Respekt vor der Entscheidung des Nutzers, war
+ * aber vor allem eine Einschränkung: Wenn ein Moment nicht trägt, ist eine
+ * Uhrzeit manchmal genau die Antwort, und umgekehrt. Die Entscheidung bleibt
+ * beim Nutzer, nur die Auswahl ist jetzt vollständig.
  *
  * Der Vorschlag ist nie eine Setzung: Er wird angeboten, begründet und kann in
  * einem Tap abgelehnt werden (ki-assistent-design.md §2).
@@ -70,7 +72,7 @@ class SuggestBetterAnchor implements Agent, HasStructuredOutput
 
     public function instructions(): string
     {
-        $shared = <<<'PROMPT'
+        return <<<'PROMPT'
         Du hilfst Studierenden dabei, eine Gewohnheit an einer Stelle im Tag zu
         verankern, an der sie tatsächlich stattfindet.
 
@@ -83,64 +85,69 @@ class SuggestBetterAnchor implements Agent, HasStructuredOutput
         - Ein kurzer Satz je Begründung, höchstens 100 Zeichen.
         - Schlage keinen Zeitpunkt vor, der schon einmal vorgeschlagen und nicht
           übernommen wurde, und keinen, der dem aktuellen entspricht.
+
+        Ein Zeitpunkt hat zwei mögliche Formen, und du darfst beide anbieten —
+        auch nebeneinander in derselben Antwort:
+
+        **Ein Moment im Tagesablauf.** Trage ihn in `situation` ein, lass `time`
+        leer und `days` leer. **Wähle ausschließlich aus den unten aufgezählten
+        freien Momenten** und gib den Wortlaut genau so zurück, wie er dort
+        steht. Erfinde keine eigenen: Der Tag dieser Person besteht aus ihren
+        Gewohnheiten und ihrem Schlafrhythmus, und ein Moment, den es dort nicht
+        gibt, lässt sich nicht einplanen.
+
+        **Eine feste Uhrzeit.** Trage sie in `time` ein (Format HH:MM), dazu in
+        `days` die Wochentage, an denen die Gewohnheit künftig stattfinden soll
+        — nicht die, die wegfallen (ISO: 1 = Montag bis 7 = Sonntag). Lass
+        `situation` leer. **Die Uhrzeit muss in eines der unten genannten freien
+        Fenster fallen, und zwar so, dass die ganze Dauer hineinpasst.** Alles
+        andere überschneidet sich mit etwas, das dort schon steht.
+
+        - Nimm die Wochentage ernst, an denen es bisher nicht geklappt hat:
+          manchmal ist nicht die Uhrzeit falsch, sondern der Tag. Weniger Tage
+          sind eine zulässige Alternative.
+        - Die Begründung muss zu den Tagen passen, die du einträgst. Nenne keine
+          Tage, die nicht in `days` stehen.
+
+        **Mische die beiden Formen.** Solange unten beides steht, gehört
+        mindestens ein freier Moment und mindestens ein freies Zeitfenster in
+        deine Antwort — nicht dreimal dasselbe. Ein Moment löst Verhalten von
+        selbst aus; eine Uhrzeit trägt dort, wo der Tag ohnehin getaktet ist.
+        Welche davon passt, entscheidet die Person, und sie kann es nur, wenn
+        sie beide sieht. Wie die Gewohnheit bisher geplant war, spielt dabei
+        keine Rolle.
         PROMPT."\n\n".$this->voice();
-
-        if ($this->habit->schedule_type->hasClockTime()) {
-            return $shared."\n\n".<<<'PROMPT'
-            Diese Gewohnheit hängt an einer festen Uhrzeit. Schlage andere
-            Uhrzeiten und Wochentage vor.
-
-            - `time` ist eine Uhrzeit im Format HH:MM.
-            - `days` sind die Wochentage, an denen die Gewohnheit künftig
-              stattfinden soll — nicht die, die wegfallen. ISO-Nummern:
-              1 = Montag bis 7 = Sonntag.
-            - Nimm die Wochentage ernst, an denen es bisher nicht geklappt hat:
-              manchmal ist nicht die Uhrzeit falsch, sondern der Tag. Weniger
-              Tage sind eine zulässige Alternative.
-            - Die Begründung muss zu den Tagen passen, die du einträgst. Nenne
-              keine Tage, die nicht in `days` stehen.
-            - **Die Uhrzeit muss in eines der unten genannten freien Fenster
-              fallen, und zwar so, dass die ganze Dauer hineinpasst.** Alles
-              andere überschneidet sich mit etwas, das dort schon steht.
-            PROMPT;
-        }
-
-        return $shared."\n\n".<<<'PROMPT'
-        Diese Gewohnheit hängt an einer Situation im Tagesablauf, nicht an einer
-        Uhr.
-
-        **Wähle ausschließlich aus den unten aufgezählten freien Momenten.**
-        Erfinde keine eigenen: Der Tag dieser Person besteht aus ihren
-        Gewohnheiten und ihrem Schlafrhythmus, und ein Moment, den es dort
-        nicht gibt, lässt sich nicht einplanen. Gib den Moment wortgleich
-        zurück, wie er in der Liste steht.
-        PROMPT;
     }
 
     /**
-     * Das Schema richtet sich nach der Art der Gewohnheit.
+     * Ein Schema für beide Formen.
      *
-     * Claudes strukturierte Ausgabe verträgt kein `minItems`/`maxItems` auf
-     * Array-Typen — die Anzahl steuert deshalb die Anweisung im Prompt, geprüft
-     * wird sie in {@see alternatives()}.
+     * Alle Felder sind Pflicht, auch die jeweils ungenutzten: Strukturierte
+     * Ausgabe verträgt keine wahlweise fehlenden Schlüssel, und ein leerer
+     * String ist eine ehrlichere Antwort als ein Feld, das mal da ist und mal
+     * nicht. Welche Form gemeint war, sagt der Inhalt.
+     *
+     * Claudes strukturierte Ausgabe verträgt außerdem kein `minItems`/`maxItems`
+     * auf Array-Typen — die Anzahl steuert deshalb die Anweisung im Prompt,
+     * geprüft wird sie in {@see alternatives()}.
      *
      * @return array<string, Type>
      */
     public function schema(JsonSchema $schema): array
     {
-        $item = $this->habit->schedule_type->hasClockTime()
-            ? $schema->object([
-                'time' => $schema->string()->description('Uhrzeit im Format HH:MM.')->required(),
-                'days' => $schema->array()
-                    ->items($schema->integer())
-                    ->description('ISO-Wochentage, 1 = Montag bis 7 = Sonntag.')
-                    ->required(),
-                'reason' => $schema->string()->description('Ein kurzer Satz, warum das tragen könnte.')->required(),
-            ])
-            : $schema->object([
-                'situation' => $schema->string()->description('Der neue Moment im Tagesablauf.')->required(),
-                'reason' => $schema->string()->description('Ein kurzer Satz, warum das tragen könnte.')->required(),
-            ]);
+        $item = $schema->object([
+            'situation' => $schema->string()
+                ->description('Der Moment im Tagesablauf — leer, wenn du eine Uhrzeit vorschlägst.')
+                ->required(),
+            'time' => $schema->string()
+                ->description('Uhrzeit im Format HH:MM — leer, wenn du einen Moment vorschlägst.')
+                ->required(),
+            'days' => $schema->array()
+                ->items($schema->integer())
+                ->description('ISO-Wochentage zur Uhrzeit, 1 = Montag bis 7 = Sonntag. Leer bei einem Moment.')
+                ->required(),
+            'reason' => $schema->string()->description('Ein kurzer Satz, warum das tragen könnte.')->required(),
+        ]);
 
         return [
             'alternatives' => $schema->array()
@@ -154,9 +161,10 @@ class SuggestBetterAnchor implements Agent, HasStructuredOutput
      * Holt die Alternativen und gibt zurück, was davon brauchbar ist.
      *
      * Jeder Vorschlag wird nachgeprüft, statt ihm zu vertrauen: eine Uhrzeit
-     * muss eine Uhrzeit sein, ein Wochentag zwischen 1 und 7 liegen. Was die
-     * Oberfläche als wählbar anbietet, muss die Validierung beim Übernehmen
-     * auch akzeptieren — sonst führt ein Vorschlag in eine Fehlermeldung.
+     * muss eine Uhrzeit sein, ein Wochentag zwischen 1 und 7 liegen, ein Moment
+     * in der Liste der freien stehen. Was die Oberfläche als wählbar anbietet,
+     * muss die Validierung beim Übernehmen auch akzeptieren — sonst führt ein
+     * Vorschlag in eine Fehlermeldung.
      *
      * @return list<array{situation?: string, time?: string, days?: list<int>, reason: string}>
      *
@@ -183,7 +191,9 @@ class SuggestBetterAnchor implements Agent, HasStructuredOutput
                 continue;
             }
 
-            $alternative = $this->habit->schedule_type->hasClockTime()
+            // Was der Vorschlag trägt, sagt, welche Form er meint — nicht die
+            // Planungsart, in der die Gewohnheit gerade steht.
+            $alternative = $this->text($candidate, 'time') !== ''
                 ? $this->fixedAlternative($candidate)
                 : $this->dynamicAlternative($candidate);
 
@@ -211,8 +221,7 @@ class SuggestBetterAnchor implements Agent, HasStructuredOutput
      */
     private function dynamicAlternative(array $candidate): ?array
     {
-        $situation = is_string($candidate['situation'] ?? null) ? trim($candidate['situation']) : '';
-        $reason = $this->reason($candidate);
+        $situation = $this->text($candidate, 'situation');
 
         // Ein Vorschlag, der dem aktuellen Anker entspricht, ist keiner.
         if ($situation === '' || $situation === $this->habit->trigger_situation) {
@@ -226,7 +235,7 @@ class SuggestBetterAnchor implements Agent, HasStructuredOutput
         // zurückgegeben wird der Wortlaut aus der Liste.
         foreach ($this->availableSituations as $available) {
             if (mb_strtolower($available) === mb_strtolower($situation)) {
-                return ['situation' => $available, 'reason' => $reason];
+                return ['situation' => $available, 'reason' => $this->reason($candidate)];
             }
         }
 
@@ -239,7 +248,7 @@ class SuggestBetterAnchor implements Agent, HasStructuredOutput
      */
     private function fixedAlternative(array $candidate): ?array
     {
-        $time = is_string($candidate['time'] ?? null) ? trim($candidate['time']) : '';
+        $time = $this->text($candidate, 'time');
 
         if (preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $time) !== 1) {
             return null;
@@ -258,6 +267,11 @@ class SuggestBetterAnchor implements Agent, HasStructuredOutput
             ->all();
 
         if ($days === []) {
+            return null;
+        }
+
+        // Dieselbe Uhrzeit an denselben Tagen ist kein anderer Zeitpunkt.
+        if ($time === $this->habit->scheduled_time?->format('H:i') && $days === $this->habit->scheduled_days) {
             return null;
         }
 
@@ -311,26 +325,34 @@ class SuggestBetterAnchor implements Agent, HasStructuredOutput
     }
 
     /**
+     * Ein getrimmtes Textfeld aus der Antwort — leer, wenn es keins war.
+     *
+     * @param  array<mixed>  $candidate
+     */
+    private function text(array $candidate, string $key): string
+    {
+        return is_string($candidate[$key] ?? null) ? trim($candidate[$key]) : '';
+    }
+
+    /**
      * @param  array<mixed>  $candidate
      */
     private function reason(array $candidate): string
     {
-        $reason = is_string($candidate['reason'] ?? null) ? trim($candidate['reason']) : '';
-
-        return mb_substr($reason, 0, 160);
+        return mb_substr($this->text($candidate, 'reason'), 0, 160);
     }
 
     /**
      * Der Schlafrahmen als eine Zeile für den Prompt — oder nichts.
      *
      * Gleiche Zeiten an allen Tagen werden zu einem Satz zusammengezogen; wo
-     * sie sich unterscheiden, steht jeder Tag einzeln. Bei einer situativen
-     * Gewohnheit bleibt die Zeile weg: „nach dem Aufstehen" hat keine Uhrzeit,
-     * die im Rahmen liegen müsste.
+     * sie sich unterscheiden, steht jeder Tag einzeln. Die Zeile gilt für jede
+     * Gewohnheit, seit auch eine situative eine Uhrzeit vorgeschlagen bekommen
+     * kann.
      */
     private function frameLine(): ?string
     {
-        if ($this->sleepWindows === [] || ! $this->habit->schedule_type->hasClockTime()) {
+        if ($this->sleepWindows === []) {
             return null;
         }
 
@@ -376,13 +398,14 @@ class SuggestBetterAnchor implements Agent, HasStructuredOutput
 
         // Die Auswahl selbst, nicht nur ihre Grenzen: Der Tag besteht aus dem
         // Rahmen und den Gewohnheiten, die schon darin stehen — was es dort
-        // nicht gibt, lässt sich nicht einplanen.
-        if (! $this->habit->schedule_type->hasClockTime() && $this->availableSituations !== []) {
+        // nicht gibt, lässt sich nicht einplanen. Beide Listen reisen mit,
+        // weil beide Formen angeboten werden dürfen.
+        if ($this->availableSituations !== []) {
             $lines[] = 'Freie Momente, aus denen du wählen musst: '
                 .implode(', ', $this->availableSituations).'.';
         }
 
-        if ($this->habit->schedule_type->hasClockTime() && $this->freeWindows !== []) {
+        if ($this->freeWindows !== []) {
             $lines[] = sprintf(
                 'Freie Fenster im Tag (die Gewohnheit dauert %d Minuten und muss ganz hineinpassen): %s.',
                 $this->habit->durationMinutes() ?? 0,

@@ -495,3 +495,218 @@ test('the suggestion endpoint is rate limited', function () {
 
     $this->postJson(route('habits.adjustment.suggestions', $habit))->assertStatus(429);
 });
+
+/**
+ * Die Anpassung kannte zwei Planungsarten, es gibt aber drei.
+ *
+ * Eine gekettete Gewohnheit fiel in den situativen Zweig: Sie bekam eine
+ * `trigger_situation`, behielt sichtbar ihren alten Anker — denn die Spalte
+ * liest bei ihr niemand — und sperrte nebenbei einen Moment, den sie gar nicht
+ * belegte. Verschoben wurde nichts.
+ */
+test('a chained habit moves to a moment and leaves its chain', function () {
+    $user = User::factory()->create();
+    $walk = Habit::factory()->for($user)->fixedSchedule('17:00')->withMeasure(20)->create([
+        'title' => 'Spazieren gehen',
+    ]);
+    $read = Habit::factory()->for($user)->withoutMeasure()->create([
+        'title' => 'Lesen',
+        'schedule_type' => ScheduleType::Chained,
+        'chained_to_habit_id' => $walk->id,
+        'trigger_situation' => null,
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('habits.adjustment.store', $read), [
+            'trigger_situation' => 'nach dem Aufstehen',
+        ])
+        ->assertRedirect();
+
+    expect($read->fresh())
+        ->schedule_type->toBe(ScheduleType::Dynamic)
+        ->trigger_situation->toBe('nach dem Aufstehen')
+        ->chained_to_habit_id->toBeNull()
+        // Und der Kalender zeigt den neuen Anker, nicht mehr den Vorgänger.
+        ->scheduleLabel()->toBe('nach dem Aufstehen');
+});
+
+test('a chained habit moves into a free window and leaves its chain', function () {
+    $user = User::factory()->create();
+    $walk = Habit::factory()->for($user)->fixedSchedule('17:00')->withMeasure(20)->create();
+    $read = Habit::factory()->for($user)->withoutMeasure()->create([
+        'schedule_type' => ScheduleType::Chained,
+        'chained_to_habit_id' => $walk->id,
+        'trigger_situation' => null,
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('habits.adjustment.store', $read), [
+            'scheduled_time' => '09:00',
+            'scheduled_days' => [2, 4],
+        ])
+        ->assertRedirect();
+
+    expect($read->fresh())
+        ->schedule_type->toBe(ScheduleType::Fixed)
+        ->scheduled_time->format('H:i')->toBe('09:00')
+        ->scheduled_days->toBe([2, 4])
+        ->chained_to_habit_id->toBeNull();
+});
+
+/**
+ * Wer ein Zeitfenster wählt, wechselt die Form seiner Planung — und wer den
+ * Weg zurückgeht, muss ihn auch zurückwechseln können.
+ */
+test('a situational habit can move to a fixed time and back', function () {
+    $user = User::factory()->create();
+    $habit = neglectedHabit($user, ['trigger_situation' => 'wenn ich nach Hause komme']);
+
+    $this->actingAs($user)
+        ->post(route('habits.adjustment.store', $habit), [
+            'scheduled_time' => '09:00',
+            'scheduled_days' => [1, 2],
+        ])
+        // Der Rückweg trägt genau die Felder, mit denen sich das rückgängig
+        // machen lässt — und keine der neuen.
+        ->assertInertiaFlash('habitAdjusted.previous.trigger_situation', 'wenn ich nach Hause komme');
+
+    expect($habit->fresh())
+        ->schedule_type->toBe(ScheduleType::Fixed)
+        // Der alte Moment bleibt nicht als Altwert stehen: Er wäre unsichtbar
+        // und sperrte trotzdem.
+        ->trigger_situation->toBeNull();
+
+    $this->actingAs($user)
+        ->post(route('habits.adjustment.store', $habit), [
+            'trigger_situation' => 'wenn ich nach Hause komme',
+        ])
+        ->assertRedirect();
+
+    expect($habit->fresh())
+        ->schedule_type->toBe(ScheduleType::Dynamic)
+        ->trigger_situation->toBe('wenn ich nach Hause komme')
+        ->scheduled_time->toBeNull();
+});
+
+test('the way back re-attaches a chained habit', function () {
+    $user = User::factory()->create();
+    $walk = Habit::factory()->for($user)->fixedSchedule('17:00')->withMeasure(20)->create([
+        'title' => 'Spazieren gehen',
+    ]);
+    $read = Habit::factory()->for($user)->withoutMeasure()->create([
+        'schedule_type' => ScheduleType::Chained,
+        'chained_to_habit_id' => $walk->id,
+        'trigger_situation' => null,
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('habits.adjustment.store', $read), [
+            'trigger_situation' => 'nach dem Aufstehen',
+        ])
+        ->assertInertiaFlash('habitAdjusted.previousLabel', 'nach „Spazieren gehen"')
+        ->assertInertiaFlash('habitAdjusted.previous.chained_to_habit_id', $walk->id);
+
+    $this->actingAs($user)
+        ->post(route('habits.adjustment.store', $read), [
+            'chained_to_habit_id' => $walk->id,
+        ])
+        ->assertRedirect();
+
+    expect($read->fresh())
+        ->schedule_type->toBe(ScheduleType::Chained)
+        ->chained_to_habit_id->toBe($walk->id)
+        ->trigger_situation->toBeNull();
+});
+
+test('a chain that would close on itself is refused', function () {
+    $user = User::factory()->create();
+    $walk = Habit::factory()->for($user)->fixedSchedule('17:00')->withMeasure(20)->create();
+    $read = Habit::factory()->for($user)->withoutMeasure()->create([
+        'schedule_type' => ScheduleType::Chained,
+        'chained_to_habit_id' => $walk->id,
+        'trigger_situation' => null,
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('habits.adjustment.store', $read), ['chained_to_habit_id' => $read->id])
+        ->assertSessionHasErrors('chained_to_habit_id');
+
+    expect($read->fresh()->chained_to_habit_id)->toBe($walk->id);
+});
+
+/**
+ * Beide Formen nebeneinander: Wenn ein Moment nicht trägt, ist eine Uhrzeit
+ * manchmal genau die Antwort — und umgekehrt.
+ */
+test('a situational habit is offered free windows too', function () {
+    SuggestBetterAnchor::fake([[
+        'alternatives' => [
+            ['situation' => 'nach dem Aufstehen', 'time' => '', 'days' => [], 'reason' => 'Ein freier Moment.'],
+            ['situation' => '', 'time' => '14:00', 'days' => [1], 'reason' => 'Ein freies Fenster.'],
+        ],
+    ]]);
+
+    $user = User::factory()->create();
+    $habit = neglectedHabit($user, [
+        'trigger_situation' => 'nach dem Mittagessen',
+        'target_amount' => 30,
+    ]);
+
+    $this->actingAs($user)
+        ->postJson(route('habits.adjustment.suggestions', $habit))
+        ->assertOk()
+        ->assertJsonCount(2, 'alternatives')
+        ->assertJsonPath('alternatives.0.situation', 'nach dem Aufstehen')
+        ->assertJsonPath('alternatives.1.time', '14:00')
+        ->assertJsonPath('alternatives.1.anchorHour', 14);
+});
+
+test('a fixed habit is offered free moments too', function () {
+    SuggestBetterAnchor::fake([[
+        'alternatives' => [
+            ['situation' => 'nach dem Aufstehen', 'time' => '', 'days' => [], 'reason' => 'Morgens ist es ruhig.'],
+        ],
+    ]]);
+
+    $user = User::factory()->create();
+    $habit = Habit::factory()->for($user)->fixedSchedule('17:00')->create([
+        'created_at' => Carbon::today()->subDays(20),
+    ]);
+
+    $this->actingAs($user)
+        ->postJson(route('habits.adjustment.suggestions', $habit))
+        ->assertOk()
+        ->assertJsonPath('alternatives.0.situation', 'nach dem Aufstehen');
+});
+
+test('both lists travel into the prompt, whatever the habit is', function () {
+    SuggestBetterAnchor::fake([[
+        'alternatives' => [['situation' => 'nach dem Aufstehen', 'time' => '', 'days' => [], 'reason' => 'Frei.']],
+    ]]);
+
+    $user = User::factory()->create();
+    $habit = neglectedHabit($user, [
+        'trigger_situation' => 'nach dem Mittagessen',
+        'target_amount' => 30,
+    ]);
+
+    $this->actingAs($user)
+        ->postJson(route('habits.adjustment.suggestions', $habit))
+        ->assertOk();
+
+    SuggestBetterAnchor::assertPrompted(
+        fn (AgentPrompt $prompt): bool => $prompt->contains('Freie Momente')
+            && $prompt->contains('Freie Fenster im Tag'),
+    );
+});
+
+test('an adjustment without any new time is refused', function () {
+    $user = User::factory()->create();
+    $habit = neglectedHabit($user, ['trigger_situation' => 'wenn ich nach Hause komme']);
+
+    $this->actingAs($user)
+        ->post(route('habits.adjustment.store', $habit), ['suggestion_id' => 1])
+        ->assertSessionHasErrors('trigger_situation');
+
+    expect($habit->fresh()->trigger_situation)->toBe('wenn ich nach Hause komme');
+});

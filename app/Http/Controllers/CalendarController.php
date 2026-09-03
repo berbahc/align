@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Habit;
+use App\Models\HabitCompletion;
+use App\Models\User;
+use App\Support\DayPlan;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -11,37 +14,111 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Ein Tag als Achse von Ankern — der Ort, an dem der Plan sichtbar liegt.
+ * Der Kalender in zwei Ebenen: der Monat als Überblick, der Tag als Achse.
  *
  * Time-Blocking knüpft an bestehendes Verhalten an: 20 von 25 Befragten planen
  * ohnehin mit Kalender oder Planer, das meistgenutzte Hilfsmittel überhaupt.
- * Übernommen wird aber nur die vertraute Vertikale, nicht das Uhrzeit-Raster —
- * der Situationsanker schlägt in derselben Umfrage die feste Zeit (3,88 zu
- * 3,50), und ein Stundenlineal würde genau dagegen arbeiten.
+ * Bis hierher gab es nur den einen Tag — man konnte sich durch ihn blättern,
+ * aber nie sehen, wie die Wochen davor gelaufen sind. Der Monat beantwortet
+ * die Frage, die ein einzelner Tag nicht beantworten kann: „Wie läuft das
+ * gerade eigentlich?"
+ *
+ * Der Tag trägt jetzt ein Stundenraster. Das war lange bewusst nicht so — der
+ * Situationsanker schlägt in der Umfrage die feste Zeit (3,88 zu 3,50), und
+ * ein Stundenlineal schien dagegen zu arbeiten. Es bleibt deshalb
+ * **Hintergrund**: Die Linien geben Orientierung, die Überschrift eines Blocks
+ * ist weiter sein Anker („nach dem Frühstück"), nicht eine Uhrzeit. Was keine
+ * echte Uhrzeit hat, bekommt im Raster auch keine — es liegt dort ungefähr,
+ * und die Zeichnung sagt das ({@see Habit::dayStartMinute()}).
  *
  * Vergangene Tage sind neutral. Kein Rot, keine Kreuze, keine markierte Lücke:
- * bei einem Schuldwert von ø 3,92 darf ein Rückblick kein Vorwurf sein.
+ * bei einem Schuldwert von ø 3,92 darf ein Rückblick kein Vorwurf sein. Der
+ * Monat zeigt deshalb Punkte, keine Quoten — gefüllt, was lief; offen, was
+ * nicht. Beides in derselben Farbe.
  */
 class CalendarController extends Controller
 {
-    public function __invoke(Request $request): Response
+    /**
+     * Wie viele Punkte ein Tag im Monat höchstens zeigt.
+     *
+     * Fünf, weil mehr aktive Gewohnheiten nicht vorgesehen sind
+     * ({@see Habit::MaxActivePerUser}). Beendete aus der Vergangenheit können
+     * darüber hinausgehen; sie zählen mit, werden aber nicht mehr gezeichnet.
+     */
+    private const int MaxDots = 5;
+
+    /**
+     * Der Monat als Raster aus Wochen — die Ebene, auf der man ankommt.
+     */
+    public function index(Request $request): Response
     {
         $validated = $request->validate([
-            'date' => ['nullable', 'date_format:Y-m-d'],
+            'month' => ['nullable', 'date_format:Y-m'],
         ]);
 
         $today = Carbon::today();
-        $date = isset($validated['date'])
-            ? Carbon::parse($validated['date'])->startOfDay()
-            : $today->copy();
+        $month = isset($validated['month'])
+            ? Carbon::createFromFormat('Y-m', $validated['month'])->startOfMonth()
+            : $today->copy()->startOfMonth();
+
+        // Die Woche beginnt am Montag. Der ISO-Wochentag trägt die ganze App
+        // (1 = Montag), und ein Raster, das sonntags anfängt, stünde quer zu
+        // jeder anderen Wochendarstellung darin.
+        $from = $month->copy()->startOfWeek(Carbon::MONDAY);
+        $to = $month->copy()->endOfMonth()->endOfWeek(Carbon::SUNDAY);
+
+        // Die App-Locale ist nicht deutsch, die Oberfläche schon — dasselbe
+        // Muster wie in `heading()`, aus demselben Grund in zwei Zeilen.
+        $localised = $month->copy();
+        $localised->locale('de');
+
+        $habits = $this->habitsForRange($request->user(), $from, $to);
+
+        $days = [];
+
+        for ($day = $from->copy(); $day->lessThanOrEqualTo($to); $day->addDay()) {
+            $days[] = $this->day($habits, $day, $month, $today);
+        }
+
+        return Inertia::render('calendar', [
+            'month' => $month->format('Y-m'),
+            'heading' => $localised->isoFormat('MMMM YYYY'),
+            'previousMonth' => $month->copy()->subMonth()->format('Y-m'),
+            'nextMonth' => $month->copy()->addMonth()->format('Y-m'),
+            'isCurrentMonth' => $month->isSameMonth($today),
+            'today' => $today->toDateString(),
+            'days' => $days,
+        ]);
+    }
+
+    /**
+     * Ein Tag als Achse von Ankern, hinterlegt mit den Stunden.
+     */
+    public function show(Request $request, string $date): Response
+    {
+        // Das Routenmuster lässt nur Ziffern durch, aber „2026-02-30" ist
+        // ziffernrichtig und trotzdem kein Tag. PHP rollt so etwas stillschweigend
+        // weiter (auf den 2. März), und ein Kalender, der auf einen anderen Tag
+        // führt als der Link sagt, ist schlimmer als einer, der nichts findet.
+        // Der Rückweg durch dasselbe Format deckt beides auf.
+        $day = Carbon::createFromFormat('!Y-m-d', $date);
+
+        abort_unless($day->format('Y-m-d') === $date, 404);
+
+        $today = Carbon::today();
 
         $habits = $request->user()
             ->habits()
             ->with([
-                'completions' => fn (Relation $query) => $query->whereDate('completed_on', $date),
+                'completions' => fn (Relation $query) => $query->whereDate('completed_on', $day),
                 // Die Kette wird beim Sortieren und Benennen jedes Blocks
                 // gefragt — ohne Vorladen wäre das eine Abfrage pro Glied.
                 'chainedTo.chainedTo',
+                // Die Ausnahmen dieses einen Tages. Ohne sie läge ein von Hand
+                // verschobener Block wieder an seiner regulären Stelle.
+                'dayShifts' => fn (Relation $query) => $query->whereDate('shifted_on', $day),
+                'chainedTo.dayShifts' => fn (Relation $query) => $query->whereDate('shifted_on', $day),
+                'chainedTo.chainedTo.dayShifts' => fn (Relation $query) => $query->whereDate('shifted_on', $day),
             ])
             ->orderBy('position')
             ->get();
@@ -51,43 +128,116 @@ class CalendarController extends Controller
         // gesetzt, damit alle denselben geladenen Nutzer teilen.
         $habits->each(fn (Habit $habit) => $habit->setRelation('user', $request->user()));
 
-        $blocks = $habits
-            ->filter(fn (Habit $habit): bool => $this->existedOn($habit, $date))
-            ->filter(fn (Habit $habit): bool => $habit->isScheduledOn($date))
+        $scheduled = $habits
+            ->filter(fn (Habit $habit): bool => $this->existedOn($habit, $day))
+            ->filter(fn (Habit $habit): bool => $habit->isScheduledOn($day))
             // Der Tag wird von oben nach unten gelesen: Morgen zuerst, Abend
             // zuletzt. Bei gleicher Stunde entscheidet die eigene Reihenfolge
             // aus der Gewohnheitsliste.
-            ->sortBy(fn (Habit $habit): array => [$habit->dayAnchorHour() ?? PHP_INT_MAX, $habit->position])
+            ->sortBy(fn (Habit $habit): array => [
+                $habit->placementOn($day)['minute'] ?? PHP_INT_MAX,
+                $habit->position,
+            ])
             ->values();
 
-        // Der Rahmen des gezeigten Tages: Die Achse beginnt beim Aufstehen
-        // und endet bei der Schlafenszeit — der Tag hat einen Anfang und ein
-        // Ende, und beide stehen sichtbar an der Achse.
-        $window = $request->user()->sleepWindowFor($date->dayOfWeekIso);
+        // Der Rahmen des gezeigten Tages: Das Raster beginnt beim Aufstehen
+        // und endet bei der Schlafenszeit. Die Stunden davor und danach sind
+        // Nacht — sie zu zeichnen hieße, den Tag mit Platz zu füllen, in den
+        // nichts geplant werden darf.
+        $window = $request->user()->sleepWindowFor($day->dayOfWeekIso);
+        // `frame()` kennt die Schlafenszeit nach Mitternacht und zählt sie als
+        // Minute jenseits von 1440 weiter — sonst risse die Achse am Tagesrand.
+        $frame = (new DayPlan($scheduled, $window, $day))->frame();
 
-        return Inertia::render('calendar', [
-            'date' => $date->toDateString(),
-            'heading' => $this->heading($date, $today),
-            'isToday' => $date->isSameDay($today),
+        return Inertia::render('calendar-day', [
+            'date' => $day->toDateString(),
+            'heading' => $this->heading($day, $today),
+            'isToday' => $day->isSameDay($today),
             // Nachtragen darf nur, was der Wochenstreifen auch zeigt — dieselbe
             // Grenze, die HabitCompletionController serverseitig durchsetzt.
             // Die Zukunft ist ohnehin nicht abhakbar.
-            'canComplete' => $this->withinBackdatingWindow($date, $today),
-            'previousDate' => $this->previousDate($habits, $date),
-            'nextDate' => $date->copy()->addDay()->toDateString(),
-            'blocks' => $blocks->map($this->block(...))->all(),
+            'canComplete' => $this->withinBackdatingWindow($day, $today),
+            'previousDate' => $this->previousDate($habits, $day),
+            'nextDate' => $day->copy()->addDay()->toDateString(),
+            // Damit der Weg zurück in den Monat führt, aus dem man kam.
+            'month' => $day->format('Y-m'),
+            'blocks' => $scheduled->map(fn (Habit $habit): array => $this->block($habit, $day))->all(),
+            // Nur was noch kommt, lässt sich verlegen: Ein vergangener Tag ist
+            // vorbei, und ihn umzuräumen änderte nichts mehr an ihm.
+            'canShift' => $day->greaterThanOrEqualTo($today),
             'wakeTime' => $window['wakeTime'],
             'bedtime' => $window['bedtime'],
+            'frameFrom' => $frame['from'],
+            'frameTo' => $frame['to'],
         ]);
     }
 
     /**
-     * Eine Gewohnheit als Block — für die Achse wie für den Bereich darunter.
+     * Die Gewohnheiten eines Zeitraums samt der Haken, die darin liegen.
      *
-     * @return array{id: int, title: string, anchor: string, anchorHour: int, measureLabel: string|null, timeRange: string|null, behaviorType: string, smallestStep: string|null, motivation: string|null, completed: bool, graduated: bool, chainedToId: int|null}
+     * Eine Abfrage für den ganzen Monat statt einer je Tag: Bei 42 Zellen wäre
+     * das sonst der Unterschied zwischen zwei Abfragen und vierundachtzig.
+     *
+     * @return Collection<int, Habit>
      */
-    private function block(Habit $habit): array
+    private function habitsForRange(User $user, Carbon $from, Carbon $to): Collection
     {
+        $habits = $user->habits()
+            ->with([
+                'completions' => fn (Relation $query) => $query
+                    ->whereBetween('completed_on', [$from->toDateString(), $to->toDateString()]),
+                'chainedTo.chainedTo',
+            ])
+            ->orderBy('position')
+            ->get();
+
+        $habits->each(fn (Habit $habit) => $habit->setRelation('user', $user));
+
+        return $habits;
+    }
+
+    /**
+     * Eine Zelle im Monatsraster.
+     *
+     * `planned` und `done` sind Zahlen, keine Quote: Der Monat zeigt Punkte,
+     * und ein Prozentwert über einem einzelnen Tag wäre eine Bewertung.
+     *
+     * @param  Collection<int, Habit>  $habits
+     * @return array{date: string, dayOfMonth: int, inMonth: bool, isToday: bool, isFuture: bool, planned: int, done: int}
+     */
+    private function day(Collection $habits, Carbon $day, Carbon $month, Carbon $today): array
+    {
+        $scheduled = $habits
+            ->filter(fn (Habit $habit): bool => $this->existedOn($habit, $day))
+            ->filter(fn (Habit $habit): bool => $habit->isScheduledOn($day));
+
+        $done = $scheduled
+            ->filter(fn (Habit $habit): bool => $habit->completions
+                ->contains(fn (HabitCompletion $completion): bool => $completion->completed_on->isSameDay($day)))
+            ->count();
+
+        return [
+            'date' => $day->toDateString(),
+            'dayOfMonth' => $day->day,
+            'inMonth' => $day->isSameMonth($month),
+            'isToday' => $day->isSameDay($today),
+            // Ein künftiger Tag ist nicht „offen", er ist noch nicht dran —
+            // die Oberfläche zeichnet ihn deshalb leiser als einen vergangenen.
+            'isFuture' => $day->greaterThan($today),
+            'planned' => min($scheduled->count(), self::MaxDots),
+            'done' => min($done, self::MaxDots),
+        ];
+    }
+
+    /**
+     * Eine Gewohnheit als Block auf der Achse.
+     *
+     * @return array{id: int, title: string, anchor: string, anchorHour: int, scheduleType: string, startMinute: int|null, durationMinutes: int|null, exact: bool, shifted: bool, measureLabel: string|null, timeRange: string|null, behaviorType: string, smallestStep: string|null, motivation: string|null, completed: bool, graduated: bool, chainedToId: int|null}
+     */
+    private function block(Habit $habit, Carbon $day): array
+    {
+        $placement = $habit->placementOn($day);
+
         return [
             'id' => $habit->id,
             'title' => $habit->title,
@@ -95,11 +245,27 @@ class CalendarController extends Controller
             // Reist mit, damit ein Vorschlag der KI sich einsortieren kann,
             // bevor er übernommen wurde.
             'anchorHour' => $habit->dayAnchorHour() ?? Habit::UnknownAnchorHour,
+            // Welche Planungsart der Zug antasten würde. Der Anker allein
+            // verriete es nicht: Ein für heute verschobener Moment sieht aus
+            // wie eine feste Uhrzeit.
+            'scheduleType' => $habit->schedule_type->value,
+            // Wo der Block im Raster liegt und wie hoch er ist. Beides in
+            // Minuten, damit der Browser nichts nachrechnen muss, was der
+            // Server ohnehin schon weiß.
+            'startMinute' => $placement['minute'],
+            'durationMinutes' => $habit->durationMinutes(),
+            // Ob die Stelle eine Uhrzeit ist oder eine Näherung. Der Kalender
+            // zeichnet beides verschieden: Was keine Uhr hat, bekommt auch
+            // keine — es liegt dort ungefähr, und das darf man sehen.
+            'exact' => $placement['exact'],
+            // Nur für diesen einen Tag von Hand hierher gelegt. Der Block sagt
+            // das, und im Block-Sheet steht der Weg zurück.
+            'shifted' => $placement['shifted'],
             // Der Umfang und, wo er eine Dauer ist, die belegte Spanne.
             // „17:00 – 17:20" sagt zusätzlich, wann der Platz wieder frei
             // ist — die Größe, an der eine angehängte Gewohnheit beginnt.
             'measureLabel' => $habit->measureLabel(),
-            'timeRange' => $habit->timeRangeLabel(),
+            'timeRange' => $habit->timeRangeLabel($day),
             'behaviorType' => $habit->behavior_type->value,
             'smallestStep' => $habit->smallest_step,
             // Für die Starthilfe, die es jetzt auch im Kalender gibt.

@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\Habit;
 use App\Models\SleepSchedule;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 /**
@@ -36,17 +37,20 @@ class DayPlan
      * Wie lange eine Gewohnheit ohne eigene Dauer belegt.
      *
      * Nur alte Zeilen aus der Zeit der freien Eingabe haben keine; der Katalog
-     * vergibt immer eine.
+     * vergibt immer eine. Öffentlich, weil das Verschieben dieselbe Annahme
+     * braucht — zwei verschiedene Annahmen wären zwei verschiedene Tage.
      */
-    private const int AssumedMinutes = 15;
+    public const int AssumedMinutes = 15;
 
     /**
      * @param  Collection<int, Habit>  $habits  Die Gewohnheiten, die an diesem Tag anstehen
      * @param  array{weekday: int, wakeTime: string, bedtime: string, alarmEnabled: bool}  $window  Der Rahmen des Tages
+     * @param  Carbon|null  $date  Der konkrete Tag — nur nötig, wenn Ausnahmen mitzählen sollen
      */
     public function __construct(
         private readonly Collection $habits,
         private readonly array $window,
+        private readonly ?Carbon $date = null,
     ) {}
 
     /** „07:30" → 450. */
@@ -154,6 +158,27 @@ class DayPlan
     }
 
     /**
+     * Was einer Spanne im Weg liegt — oder nichts.
+     *
+     * Anders als {@see freeWindows()} ohne die 15 Minuten Atempause: Zwei
+     * Blöcke direkt hintereinander sind eine Planung, keine Doppelbuchung. Die
+     * Atempause ist ein Rat für einen Vorschlag, keine Grenze für eine
+     * Entscheidung, die jemand selbst trifft.
+     *
+     * @return array{id: int, title: string, from: int, to: int}|null
+     */
+    public function collisionWith(int $from, int $to, ?Habit $except = null): ?array
+    {
+        foreach ($this->occupied($except) as $block) {
+            if ($from < $block['to'] && $to > $block['from']) {
+                return $block;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Passt die Dauer überhaupt noch irgendwo in den Tag?
      */
     public function hasRoomFor(int $minutes, ?Habit $except = null): bool
@@ -177,21 +202,14 @@ class DayPlan
     /**
      * Wo eine Gewohnheit im Tag beginnt — als Minute.
      *
-     * Feste Uhrzeiten und Ketten bringen einen echten Zeitpunkt mit. Eine
-     * Situation hat keinen; für sie gilt die Stunde, auf die der Kalender sie
-     * ohnehin sortiert. Ohne jede Stelle im Tag gibt es nichts zu belegen.
+     * Die Rechnung steht am Modell ({@see Habit::dayStartMinute()}), weil das
+     * Stundenraster im Kalender dieselbe braucht: Ein Block, der woanders
+     * gezeichnet wird, als der Server ihn belegt, wäre ein sichtbarer
+     * Widerspruch.
      */
     private function startOf(Habit $habit): ?int
     {
-        $exact = $habit->startsAt();
-
-        if ($exact !== null) {
-            return self::toMinutes($exact->format('H:i'));
-        }
-
-        $hour = $habit->dayAnchorHour();
-
-        return $hour === null ? null : $hour * 60;
+        return $habit->dayStartMinute($this->date);
     }
 
     /**
@@ -200,7 +218,7 @@ class DayPlan
      * @param  Collection<int, Habit>  $habits
      * @param  array<int, array{weekday: int, wakeTime: string, bedtime: string, alarmEnabled: bool}>  $windows
      */
-    public static function for(Collection $habits, int $weekday, array $windows): self
+    public static function for(Collection $habits, int $weekday, array $windows, ?Carbon $date = null): self
     {
         return new self(
             $habits,
@@ -210,6 +228,7 @@ class DayPlan
                 'bedtime' => SleepSchedule::DefaultBedtime,
                 'alarmEnabled' => false,
             ],
+            $date,
         );
     }
 }

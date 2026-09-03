@@ -74,6 +74,23 @@ enum ScheduleType: string
     }
 
     /**
+     * Dieselbe Frage als Filter für eine Abfrage.
+     *
+     * Wer nach belegten Situationen sucht, muss die geketteten Gewohnheiten
+     * ausschließen: Sie tragen die Spalte womöglich noch, belegen den Moment
+     * aber nicht — gelesen wird er bei ihnen nirgends.
+     *
+     * @return list<string>
+     */
+    public static function withOwnAnchor(): array
+    {
+        return array_values(array_map(
+            fn (self $type): string => $type->value,
+            array_filter(self::cases(), fn (self $type): bool => $type->hasOwnAnchor()),
+        ));
+    }
+
+    /**
      * Bringt die Gewohnheit eine Uhrzeit mit — und damit einen Zeitpunkt, an
      * dem sich erinnern und eine Spanne berechnen lässt?
      */

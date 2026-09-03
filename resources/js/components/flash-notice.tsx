@@ -68,20 +68,25 @@ export function FlashNotice() {
                         </span>{' '}
                         liegt jetzt bei {adjusted.anchor}.{' '}
                         {/* Der einzige Weg zurück: Gewohnheiten lassen sich
-                            sonst nirgends bearbeiten. */}
-                        <button
-                            type="button"
-                            onClick={() =>
-                                router.post(
-                                    adjust.url(adjusted.habitId),
-                                    adjusted.previous,
-                                    { preserveScroll: true },
-                                )
-                            }
-                            className="cursor-pointer font-semibold text-primary underline underline-offset-4 transition-colors duration-[var(--duration-press)] ease-out hover:text-primary/80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                        >
-                            Zurück zu „{adjusted.previousLabel}"
-                        </button>
+                            sonst nirgends bearbeiten. Er steht nur da, wenn es
+                            wirklich einen gibt — eine Gewohnheit, die vorher
+                            ohne Anschluss war, hat kein Vorher, auf das sich
+                            zeigen ließe. */}
+                        {Object.keys(adjusted.previous).length > 0 && (
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    router.post(
+                                        adjust.url(adjusted.habitId),
+                                        adjusted.previous,
+                                        { preserveScroll: true },
+                                    )
+                                }
+                                className="cursor-pointer font-semibold text-primary underline underline-offset-4 transition-colors duration-[var(--duration-press)] ease-out hover:text-primary/80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                            >
+                                Zurück zu „{adjusted.previousLabel}"
+                            </button>
+                        )}
                     </>
                 )}
             </p>

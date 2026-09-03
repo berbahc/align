@@ -275,6 +275,37 @@ export interface CalendarBlock {
     anchor: string;
     /** Die Stelle im Tag als Stunde — sortiert die Achse. */
     anchorHour: number;
+    /**
+     * Wo der Block im Stundenraster liegt, als Minute seit Mitternacht.
+     *
+     * Null nur, wenn die Gewohnheit gar keine Stelle im Tag hat — dann gibt es
+     * nichts hinzulegen.
+     */
+    startMinute: number | null;
+    /** Wie hoch er ist. Ohne Dauer zeichnet das Raster eine Mindesthöhe. */
+    durationMinutes: number | null;
+    /**
+     * Ist die Stelle eine Uhrzeit oder eine Näherung?
+     *
+     * „17:00" ist eine Zusage, „nach dem Frühstück" eine Gegend. Das Raster
+     * zeichnet das Zweite gestrichelt und ohne Uhrzeit — sonst behauptete die
+     * Zeichnung etwas, das die Gewohnheit nicht sagt.
+     */
+    exact: boolean;
+    /**
+     * Liegt die Gewohnheit heute ausnahmsweise hier?
+     *
+     * Dann steht im Block-Sheet der Weg zurück. Ohne ihn wäre eine
+     * Verschiebung nur durch erneutes Ziehen rückgängig zu machen.
+     */
+    shifted: boolean;
+    /**
+     * Die Planungsart — was ein Zug antasten würde.
+     *
+     * Der Anker allein verriete es nicht: Ein für heute verschobener Moment
+     * sieht aus wie eine feste Uhrzeit.
+     */
+    scheduleType: ScheduleType;
     /** Die Dauer als fertige Zeile („20 Min"), sonst null. */
     measureLabel: string | null;
     /**
@@ -297,6 +328,26 @@ export interface CalendarBlock {
      * zusammengehört, soll auch zusammenhängend aussehen.
      */
     chainedToId: number | null;
+}
+
+/**
+ * Ein Tag im Monatsraster.
+ *
+ * Punkte statt Prozent: `planned` sagt, wie viele Gewohnheiten anstanden,
+ * `done`, wie viele davon liefen. Eine Quote über einem einzelnen Tag wäre
+ * eine Note, und der Monat soll ein Rückblick sein, kein Zeugnis.
+ */
+export interface MonthDay {
+    /** „YYYY-MM-DD" — zugleich das Ziel des Tippens. */
+    date: string;
+    dayOfMonth: number;
+    /** Gehört der Tag zum gezeigten Monat oder füllt er nur die Woche auf? */
+    inMonth: boolean;
+    isToday: boolean;
+    /** Ein künftiger Tag ist nicht offen, er ist noch nicht dran. */
+    isFuture: boolean;
+    planned: number;
+    done: number;
 }
 
 /**

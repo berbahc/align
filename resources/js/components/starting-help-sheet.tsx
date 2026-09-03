@@ -11,8 +11,7 @@ import {
 } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSmallestStep } from '@/hooks/use-smallest-step';
-import { store } from '@/routes/habits/completions';
-import { smaller } from '@/routes/habits/smallest-step';
+import { smaller, update } from '@/routes/habits/smallest-step';
 
 /**
  * Was das Sheet über eine Gewohnheit wissen muss — mehr nicht.
@@ -91,18 +90,25 @@ export function StartingHelpSheet({
     }
 
     /**
-     * Der Teilschritt zählt als erledigter Tag.
+     * Der Schritt bleibt an der Gewohnheit stehen.
      *
-     * K7: „bei ø 3,92 Schuldgefühl muss der Teilschritt als Erfolg zählen,
-     * nicht als halbe Niederlage." Es gibt deshalb keinen zweiten Begriff von
-     * „erledigt" — es ist dieselbe Route wie der Haken in der Liste.
+     * Früher hakte dieser Knopf sie ab — K7 („bei ø 3,92 Schuldgefühl muss der
+     * Teilschritt als Erfolg zählen") war die Begründung, aber sie trug nicht:
+     * Wer den Schritt wählt, hat ihn noch nicht getan. Abgehakt wird nur über
+     * den Kreis in der Zeile; hier wird der Plan kleiner gemacht, nicht der Tag
+     * für erledigt erklärt. Der Schritt steht danach in der Tagesliste hinter
+     * dem Pfeil und gilt auch morgen noch.
      */
-    function confirm() {
-        if (habit === null) {
+    function keep() {
+        if (habit === null || step === null) {
             return;
         }
 
-        router.post(store.url(habit.id), {}, { preserveScroll: true });
+        router.patch(
+            update.url(habit.id),
+            { smallest_step: step },
+            { preserveScroll: true },
+        );
         onOpenChange(false);
     }
 
@@ -159,11 +165,12 @@ export function StartingHelpSheet({
                     </button>
                     <button
                         type="button"
-                        onClick={confirm}
+                        onClick={keep}
+                        disabled={suggestion.loading || step === null}
                         className={`${ACTION_BUTTON} bg-primary text-primary-foreground hover:bg-primary/90`}
                     >
                         <Check className="size-4" aria-hidden="true" />
-                        Passt
+                        Merken
                     </button>
                 </div>
 

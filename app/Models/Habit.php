@@ -8,6 +8,7 @@ use App\Enums\HabitTemplate;
 use App\Enums\MeasureUnit;
 use App\Enums\ScheduleType;
 use App\Http\Requests\Concerns\ChecksSituation;
+use App\Support\DayPlan;
 use Carbon\CarbonInterface;
 use Database\Factories\HabitFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -168,6 +169,10 @@ class Habit extends Model
         $taken = $user->habits()
             ->active()
             ->whereNotNull('trigger_situation')
+            // Eine gekettete Gewohnheit belegt keinen Moment: Ihr Anker ist die
+            // Gewohnheit davor, und `trigger_situation` liest bei ihr niemand.
+            // Ohne diese Zeile sperrte sie einen Moment, den sie gar nicht hat.
+            ->whereIn('schedule_type', ScheduleType::withOwnAnchor())
             ->when($except?->exists, fn (Builder $query) => $query->whereKeyNot($except))
             ->pluck('title', 'trigger_situation');
 
@@ -668,6 +673,103 @@ class Habit extends Model
     }
 
     /**
+     * Wo im Tag die Gewohnheit beginnt, als Minute seit Mitternacht.
+     *
+     * Ohne Datum gilt der reguläre Zeitpunkt; mit Datum zählt eine Ausnahme für
+     * genau diesen Tag mit ({@see placementOn()}).
+     */
+    public function dayStartMinute(?Carbon $on = null): ?int
+    {
+        return $this->placementOn($on)['minute'];
+    }
+
+    /**
+     * Wo die Gewohnheit an einem Tag liegt — und wie verlässlich das ist.
+     *
+     * Vier Quellen in dieser Reihenfolge: die Ausnahme für diesen einen Tag,
+     * die feste Uhrzeit, der Vorgänger plus dessen Dauer, und zuletzt die
+     * Stunde, auf die der Kalender eine Situation ohnehin sortiert.
+     *
+     * `exact` trennt die Zusage von der Gegend: „17:00" ist eine Uhrzeit,
+     * „nach dem Frühstück" eine Näherung, und das Raster zeichnet beides
+     * verschieden. Eine Ausnahme macht auch eine situative Gewohnheit für
+     * diesen einen Tag exakt — sie wurde ja auf die Uhr gelegt.
+     *
+     * `shifted` sagt der Oberfläche, dass sie den Block als Einzelfall
+     * kennzeichnen und einen Weg zurück anbieten soll.
+     *
+     * Die Rechnung steht hier und nicht in {@see DayPlan}, weil drei Stellen
+     * sie brauchen: das Time-Blocking für freie Fenster, das Stundenraster zum
+     * Hinlegen und die Erinnerung für ihren Wecker. Liefen sie auseinander,
+     * stünde ein Block woanders, als der Server ihn glaubt.
+     *
+     * @return array{minute: int|null, exact: bool, shifted: bool}
+     */
+    public function placementOn(?Carbon $on = null): array
+    {
+        return $this->resolvePlacement(0, $on);
+    }
+
+    /**
+     * @return array{minute: int|null, exact: bool, shifted: bool}
+     */
+    private function resolvePlacement(int $depth, ?Carbon $on): array
+    {
+        if ($depth >= self::MaxChainDepth) {
+            return ['minute' => null, 'exact' => false, 'shifted' => false];
+        }
+
+        // Die Ausnahme schlägt alles andere — auch die Kette. Wer eine
+        // gekettete Gewohnheit für heute wegzieht, hat sie für heute
+        // abgehängt, nicht ihren Vorgänger verschoben.
+        $shift = $on === null ? null : $this->shiftOn($on);
+
+        if ($shift !== null) {
+            return ['minute' => $shift->start_minute, 'exact' => true, 'shifted' => true];
+        }
+
+        if ($this->schedule_type->hasClockTime()) {
+            $time = $this->scheduled_time;
+
+            return $time === null
+                ? ['minute' => null, 'exact' => false, 'shifted' => false]
+                : ['minute' => $time->hour * 60 + $time->minute, 'exact' => true, 'shifted' => false];
+        }
+
+        if ($this->schedule_type === ScheduleType::Chained) {
+            $previous = $this->chainedTo;
+
+            if ($previous === null) {
+                return ['minute' => null, 'exact' => false, 'shifted' => false];
+            }
+
+            // Hier zahlt sich die Dauer aus: Die gekoppelte Gewohnheit beginnt,
+            // wo die vorige aufhört — und rutscht damit von selbst mit, wenn
+            // die vorige an diesem Tag woanders liegt.
+            $before = $previous->resolvePlacement($depth + 1, $on);
+            $minutes = $previous->durationMinutes();
+
+            return [
+                'minute' => $before['minute'] === null
+                    ? null
+                    : $before['minute'] + ($minutes ?? 0),
+                'exact' => $before['exact'],
+                // Der Nachfolger rutscht mit, ist aber selbst keine Ausnahme:
+                // zurücklegen lässt sich nur die, die verschoben wurde.
+                'shifted' => false,
+            ];
+        }
+
+        $hour = $this->dayAnchorHour();
+
+        return [
+            'minute' => $hour === null ? null : $hour * 60,
+            'exact' => false,
+            'shifted' => false,
+        ];
+    }
+
+    /**
      * Hier zahlt sich die Dauer aus: Eine gekoppelte Gewohnheit beginnt, wo die
      * vorige aufhört. Ein 20-Minuten-Block um 17:00 setzt die nächste auf 17:20,
      * und über mehrere Glieder rechnet sich das durch.
@@ -727,26 +829,30 @@ class Habit extends Model
      * dasselbe und dazu, wann der Platz wieder frei ist. Ohne Dauer bleibt es
      * beim Anker allein; eine erfundene Länge wäre schlechter als keine.
      */
-    public function timeRangeLabel(): ?string
+    public function timeRangeLabel(?Carbon $on = null): ?string
     {
-        $start = $this->startsAt();
+        $placement = $this->placementOn($on);
 
-        if ($start === null) {
+        // Eine Gegend hat keine Spanne: „nach dem Frühstück" belegt Platz im
+        // Raster, aber keine Uhrzeit, die sich hinschreiben ließe.
+        if ($placement['minute'] === null || ! $placement['exact']) {
             return null;
         }
 
-        $end = $this->endsAt();
+        $minutes = $this->durationMinutes();
 
-        if ($end !== null) {
-            return $start->format('H:i').' – '.$end->format('H:i');
+        if ($minutes !== null) {
+            return DayPlan::toTime($placement['minute'])
+                .' – '.DayPlan::toTime($placement['minute'] + $minutes);
         }
 
         // Ohne Dauer bleibt nur der Beginn — und der lohnt die Zeile nur da, wo
         // er sonst nirgends steht. Bei fester Uhrzeit nennt ihn der Anker schon;
-        // bei „nach dem Spaziergang" wüsste man ihn sonst nicht.
-        return $this->schedule_type->hasOwnAnchor()
+        // bei „nach dem Spaziergang" oder an einem verschobenen Tag wüsste man
+        // ihn sonst nicht.
+        return $this->schedule_type->hasOwnAnchor() && ! $placement['shifted']
             ? null
-            : 'ab '.$start->format('H:i');
+            : 'ab '.DayPlan::toTime($placement['minute']);
     }
 
     /**
@@ -840,6 +946,34 @@ class Habit extends Model
     public function completions(): HasMany
     {
         return $this->hasMany(HabitCompletion::class);
+    }
+
+    /**
+     * Die Tage, an denen diese Gewohnheit ausnahmsweise woanders liegt.
+     *
+     * @return HasMany<HabitDayShift, $this>
+     */
+    public function dayShifts(): HasMany
+    {
+        return $this->hasMany(HabitDayShift::class);
+    }
+
+    /**
+     * Die Ausnahme für einen Tag — aus der geladenen Beziehung, ohne Abfrage.
+     *
+     * Wer sie braucht, lädt `dayShifts` für den gezeigten Zeitraum vor. Ohne
+     * geladene Beziehung gilt: keine Ausnahme. Das ist die richtige Antwort für
+     * jede Stelle, die gar keinen Tag meint — eine Verabredung etwa fragt nach
+     * der Gewohnheit im Allgemeinen, nicht nach einem Datum.
+     */
+    public function shiftOn(Carbon $date): ?HabitDayShift
+    {
+        if (! $this->relationLoaded('dayShifts')) {
+            return null;
+        }
+
+        return $this->dayShifts
+            ->first(fn (HabitDayShift $shift): bool => $shift->shifted_on->isSameDay($date));
     }
 
     /**

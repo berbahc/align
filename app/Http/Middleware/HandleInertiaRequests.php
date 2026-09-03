@@ -5,7 +5,9 @@ namespace App\Http\Middleware;
 use App\Enums\ScheduleType;
 use App\Models\Habit;
 use App\Models\SleepSchedule;
+use App\Support\DayPlan;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Inertia\Middleware;
@@ -112,14 +114,22 @@ class HandleInertiaRequests extends Middleware
             ->withExists(['completions as completed_today' => fn (Builder $query) => $query
                 ->whereDate('completed_on', $today),
             ])
+            // Der Wecker muss wissen, ob die Gewohnheit heute woanders liegt.
+            // Ohne diese Zeile meldete er sich um 17:00, während der Kalender
+            // 14:00 zeigt — genau der Widerspruch, gegen den die App gebaut ist.
+            ->with(['dayShifts' => fn (Relation $query) => $query->whereDate('shifted_on', $today)])
             ->get()
-            ->map(fn (Habit $habit): array => [
-                'id' => $habit->id,
-                'title' => $habit->title,
-                'scheduledTime' => $habit->scheduled_time?->format('H:i') ?? '',
-                'scheduledDays' => $habit->scheduled_days ?? [],
-                'completedToday' => (bool) $habit->completed_today,
-            ])
+            ->map(function (Habit $habit) use ($today): array {
+                $minute = $habit->placementOn($today)['minute'];
+
+                return [
+                    'id' => $habit->id,
+                    'title' => $habit->title,
+                    'scheduledTime' => $minute === null ? '' : DayPlan::toTime($minute),
+                    'scheduledDays' => $habit->scheduled_days ?? [],
+                    'completedToday' => (bool) $habit->completed_today,
+                ];
+            })
             ->all();
     }
 }

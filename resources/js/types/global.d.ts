@@ -52,11 +52,15 @@ declare module '@inertiajs/core' {
                 anchor: string;
                 /** Der bisherige, als Text für den Rückweg. */
                 previousLabel: string;
-                /** Die Felder, mit denen sich der bisherige wiederherstellen lässt. */
+                /**
+                 * Die Felder, mit denen sich der bisherige wiederherstellen
+                 * lässt — genau die der bisherigen Planungsart, nie mehr.
+                 */
                 previous: {
                     trigger_situation?: string;
                     scheduled_time?: string;
                     scheduled_days?: number[];
+                    chained_to_habit_id?: number;
                 };
             };
         };
