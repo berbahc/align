@@ -170,3 +170,22 @@ it('reicht Art, Ort und Spanne für die Oberfläche durch', function () {
         ->and($course['durationMinutes'])->toBe(90)
         ->and($course['moved'])->toBeFalse();
 });
+
+/**
+ * Das Unterscheidungsfeld, das der Zeichnung sagt, welcher Art ein Block ist.
+ *
+ * Es wird an zwei Stellen vergeben — hier für den Kurs, in
+ * `CalendarController::block()` für die Gewohnheit. Fehlt es an einer, hält
+ * das Raster den Block für die andere Art, sucht ein Symbol, das es für ihn
+ * nicht gibt, und die ganze Tagesansicht bleibt weiß. TypeScript fängt das
+ * nicht: Die Props kommen als JSON, die Schnittstelle ist ein Versprechen.
+ */
+it('gibt jedem Kursblock seine Art mit', function () {
+    $user = timetableUser();
+    $semester = Semester::factory()->for($user)->create();
+    Course::factory()->for($semester)->onWeekday(1)->create();
+
+    $course = Timetable::for($user)->coursesOn(nextMonday())[0];
+
+    expect($course['kind'])->toBe('course');
+});

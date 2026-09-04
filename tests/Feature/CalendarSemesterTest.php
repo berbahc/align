@@ -2,6 +2,7 @@
 
 use App\Models\Course;
 use App\Models\CourseException;
+use App\Models\Habit;
 use App\Models\Semester;
 use App\Models\User;
 use Illuminate\Support\Carbon;
@@ -25,11 +26,21 @@ it('liefert die Kurse eines Tages als eigene Liste neben den Gewohnheiten', func
 
     $monday = Carbon::today()->next(Carbon::MONDAY);
 
+    // Eine Gewohnheit daneben, damit sich beide Arten im selben Raster
+    // vergleichen lassen.
+    Habit::factory()->for($user)->fixedSchedule('14:00', [1])->withMeasure(30)->create();
+
     $this->actingAs($user)
         ->get(route('calendar.day', ['date' => $monday->toDateString()]))
         ->assertOk()
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->component('calendar-day')
+            // Das Unterscheidungsfeld zuerst: Ohne es hält die Zeichnung den
+            // Kurs für eine Gewohnheit, sucht ein Symbol, das es für ihn nicht
+            // gibt, und der ganze Tag bleibt weiß. Beide Arten werden hier
+            // geprüft, weil das Feld an zwei Stellen vergeben wird.
+            ->where('courseBlocks.0.kind', 'course')
+            ->where('blocks.0.kind', 'habit')
             ->where('courseBlocks.0.title', 'Analysis I')
             ->where('courseBlocks.0.timeRange', '08:00 – 09:30')
             ->where('courseBlocks.0.kindLabel', 'Vorlesung')
