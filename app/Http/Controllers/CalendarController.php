@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\RestoreDisplacedHabits;
 use App\Enums\CourseKind;
 use App\Models\Course;
 use App\Models\Habit;
@@ -54,8 +55,16 @@ class CalendarController extends Controller
     /**
      * Der Monat als Raster aus Wochen — die Ebene, auf der man ankommt.
      */
-    public function index(Request $request): Response
+    public function index(Request $request, RestoreDisplacedHabits $restore): Response
     {
+        // Ist der Stundenplan vorbei, kommt zurück, was er verdrängt hatte —
+        // hier, weil hier das Band steht, das es sonst weiter meldete. Nur
+        // ein Blick, wenn überhaupt etwas geparkt ist; geholt wird nur, was
+        // wirklich frei ist.
+        if ($request->user()->habits()->active()->displaced()->exists()) {
+            $restore->handle($request->user());
+        }
+
         $validated = $request->validate([
             'month' => ['nullable', 'date_format:Y-m'],
         ]);
@@ -186,10 +195,9 @@ class CalendarController extends Controller
             // Deshalb eine eigene Liste — zehn nullbare Felder an `blocks`
             // hätten jede Stelle, die einen Block anfasst, gegen eine Art
             // verteidigen müssen, die sie nicht behandeln kann.
+            // Der Block trägt den ganzen Kurs: Hier liegt er, hier fasst man
+            // ihn an — antippen öffnet das Sheet zum Ändern.
             'courseBlocks' => $timetable->coursesOn($day),
-            // Dieselben Kurse als Zeilen, damit sich ein Block im Tag antippen
-            // und bearbeiten lässt — hier liegen sie, hier fasst man sie an.
-            'courses' => $this->courseRows($timetable->semester(), $day),
             'kinds' => CourseKind::options(),
             'semester' => $this->semesterProps($timetable->semester(), $today),
             // Nur was noch kommt, lässt sich verlegen: Ein vergangener Tag ist
@@ -227,30 +235,10 @@ class CalendarController extends Controller
     }
 
     /**
-     * Die Kurse dieses Wochentags als Zeilen — für das Sheet hinter dem Block.
-     *
-     * @return list<array{id: int, title: string, kind: string, kindLabel: string, weekday: int, startsAt: string, endsAt: string, timeRange: string, location: string|null, exceptions: list<array{onDate: string, dateLabel: string, cancelled: bool, timeRange: string|null}>}>
-     */
-    private function courseRows(?Semester $semester, Carbon $day): array
-    {
-        if ($semester === null) {
-            return [];
-        }
-
-        return array_values($semester->courses()
-            ->with('exceptions')
-            ->where('weekday', $day->dayOfWeekIso)
-            ->orderBy('starts_at')
-            ->get()
-            ->map(fn (Course $course): array => $course->toRow())
-            ->all());
-    }
-
-    /**
      * Was der Stundenplan verdrängt hat — die Liste, um die es beim
      * Semesterwechsel eigentlich geht.
      *
-     * @return list<array{id: int, title: string, previousTime: string|null, previousLabel: string}>
+     * @return list<array{id: int, title: string, previousTime: string|null, previousLabel: string, from: string|null, fromLabel: string|null}>
      */
     private function displaced(User $user): array
     {
@@ -264,6 +252,11 @@ class CalendarController extends Controller
                 'title' => $habit->title,
                 'previousTime' => $habit->scheduled_time?->format('H:i'),
                 'previousLabel' => $habit->scheduleLabel(),
+                // Ab wann der Platz weg ist — null, wenn schon jetzt. Ein
+                // Kurs im Oktober wird im September angekündigt, nicht
+                // verschwiegen: So kommt die Änderung nicht über Nacht.
+                'from' => $habit->isDisplaced() ? null : $habit->displaced_at?->toDateString(),
+                'fromLabel' => $habit->isDisplaced() ? null : $habit->displaced_at?->settings(['locale' => 'de'])->isoFormat('D. MMMM'),
             ])
             ->all());
     }

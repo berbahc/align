@@ -166,17 +166,23 @@ class DayPlan
     /**
      * Was einer Spanne im Weg liegt — oder nichts.
      *
-     * Anders als {@see freeWindows()} ohne die 15 Minuten Atempause: Zwei
-     * Blöcke direkt hintereinander sind eine Planung, keine Doppelbuchung. Die
-     * Atempause ist ein Rat für einen Vorschlag, keine Grenze für eine
-     * Entscheidung, die jemand selbst trifft.
+     * Mit derselben Viertelstunde Luft wie {@see freeWindows()}: Was die KI
+     * nie vorschlüge, geht auch von Hand nicht — sonst hätte der Tag zwei
+     * Maßstäbe, und ein Vorschlag sähe strenger aus als die eigene Hand. Zwei
+     * Blöcke direkt hintereinander sind darum keine Planung, sondern zu eng.
      *
+     * Die eine Ausnahme sind Kurse untereinander: Die Uni legt sie Rücken an
+     * Rücken, und daran ist nichts zu prüfen.
+     *
+     * @param  bool  $spanIsCourse  Ist die Spanne selbst ein Kurs? Dann braucht sie zu anderen Kursen keine Luft
      * @return array{id: int, title: string, from: int, to: int}|null
      */
-    public function collisionWith(int $from, int $to, ?Habit $except = null): ?array
+    public function collisionWith(int $from, int $to, ?Habit $except = null, bool $spanIsCourse = false): ?array
     {
         foreach ($this->occupied($except) as $block) {
-            if ($from < $block['to'] && $to > $block['from']) {
+            $air = $spanIsCourse && Timetable::isCourseBlock($block) ? 0 : self::BreatherMinutes;
+
+            if ($from < $block['to'] + $air && $to + $air > $block['from']) {
                 return $block;
             }
         }

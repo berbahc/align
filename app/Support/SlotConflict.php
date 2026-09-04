@@ -34,6 +34,7 @@ final class SlotConflict
      * @param  list<int>  $days  An welchen ISO-Wochentagen
      * @param  list<int>  $ignore  Gewohnheiten, die dabei nicht zählen — die bewegten selbst
      * @param  bool  $withTimetable  Zählt der Stundenplan mit? Nein, wenn er selbst der Prüfling ist
+     * @param  bool  $spanIsCourse  Sind die Spannen Kurse? Die brauchen zu anderen Kursen keine Luft
      * @return array{block: array{id: int, title: string, from: int, to: int}, date: Carbon}|null
      */
     public static function find(
@@ -42,6 +43,7 @@ final class SlotConflict
         array $days,
         array $ignore = [],
         bool $withTimetable = true,
+        bool $spanIsCourse = false,
     ): ?array {
         if ($spans === [] || $days === []) {
             return null;
@@ -84,7 +86,7 @@ final class SlotConflict
             );
 
             foreach ($spans as $span) {
-                $block = $plan->collisionWith($span['from'], $span['to']);
+                $block = $plan->collisionWith($span['from'], $span['to'], null, $spanIsCourse);
 
                 if ($block !== null) {
                     return ['block' => $block, 'date' => $date];
@@ -110,7 +112,7 @@ final class SlotConflict
 
         if (Timetable::isCourseBlock($block)) {
             return sprintf(
-                '%s läuft „%s" von %s bis %s aus deinem Semesterplan. %s',
+                '%s läuft „%s" von %s bis %s aus deinem Semesterplan — davor und danach bleibt eine Viertelstunde Luft. %s',
                 ucfirst($when),
                 $block['title'],
                 DayPlan::toTime($block['from']),
@@ -120,10 +122,11 @@ final class SlotConflict
         }
 
         return sprintf(
-            '„%s" liegt %s schon um %s. %s',
+            '„%s" liegt %s schon um %s bis %s — dazwischen bleibt eine Viertelstunde Luft. %s',
             $block['title'],
             $when,
             DayPlan::toTime($block['from']),
+            DayPlan::toTime($block['to']),
             $remedy ?? 'Verschiebe die zuerst, dann ist hier Platz.',
         );
     }

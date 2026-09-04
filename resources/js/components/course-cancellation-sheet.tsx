@@ -10,7 +10,7 @@ import {
 import { Spinner } from '@/components/ui/spinner';
 import { PRIMARY_BUTTON, QUIET_BUTTON } from '@/lib/interaction';
 import { store } from '@/routes/calendar/semester/courses/exceptions';
-import type { CourseRow, SemesterPlan } from '@/types';
+import type { CourseBlock, SemesterPlan } from '@/types';
 
 /**
  * Ein Kurs fällt an einem einzelnen Tag aus.
@@ -29,7 +29,7 @@ export function CourseCancellationSheet({
     onOpenChange,
 }: {
     /** Null heißt zu. */
-    course: CourseRow | null;
+    course: CourseBlock | null;
     semester: SemesterPlan;
     onOpenChange: (open: boolean) => void;
 }) {
@@ -54,7 +54,7 @@ export function CourseCancellationSheet({
             return;
         }
 
-        post(store.url(course.id), {
+        post(store.url(course.courseId), {
             preserveScroll: true,
             onSuccess: () => {
                 reset();

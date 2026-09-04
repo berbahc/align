@@ -58,18 +58,19 @@ it('trägt einen Kurs ein und liefert ihn mit seiner Spanne zurück', function (
         ->assertRedirect()
         ->assertSessionHasNoErrors();
 
-    // Der Kurs liegt im Tag — dort kommt er als Zeile zum Anfassen mit.
+    // Der Kurs liegt im Tag — als Block, der alles zum Ändern mitbringt.
     $tuesday = Carbon::today()->next(Carbon::TUESDAY);
 
     $this->actingAs($user)
         ->get(route('calendar.day', ['date' => $tuesday->toDateString()]))
         ->assertInertia(fn (AssertableInertia $page) => $page
-            ->where('courses.0.title', 'Analysis I')
-            ->where('courses.0.weekday', 2)
-            ->where('courses.0.timeRange', '10:00 – 11:30')
-            ->where('courses.0.kindLabel', 'Vorlesung')
-            ->where('courses.0.location', 'HS 3')
+            ->where('courseBlocks.0.title', 'Analysis I')
+            ->where('courseBlocks.0.weekday', 2)
+            ->where('courseBlocks.0.timeRange', '10:00 – 11:30')
+            ->where('courseBlocks.0.kindLabel', 'Vorlesung')
+            ->where('courseBlocks.0.location', 'HS 3')
             ->where('courseBlocks.0.id', -1)
+            ->where('courseBlocks.0.courseId', 1)
             ->etc());
 
     // Der Monat zählt ihn nur.

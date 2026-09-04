@@ -73,6 +73,14 @@ export default function Calendar({
     const [courseOpen, setCourseOpen] = useState(false);
     const [placesOpen, setPlacesOpen] = useState(false);
 
+    // Steht schon etwas ohne Platz da — oder kündigt sich das erst an? Beides
+    // steht im Band, aber nicht mit demselben Satz: Was kommt, ist eine
+    // Ankündigung, keine Bitte um eine Entscheidung.
+    const upcoming = displaced.filter((habit) => habit.from !== null);
+    const onlyUpcoming =
+        displaced.length > 0 && upcoming.length === displaced.length;
+    const firstFrom = upcoming[0]?.fromLabel ?? null;
+
     return (
         <>
             <Head title="Kalender" />
@@ -142,10 +150,9 @@ export default function Calendar({
                         className="flex flex-col gap-2 rounded-xl border border-primary/25 bg-accent px-4 py-3"
                     >
                         <p className="text-sm text-foreground">
-                            {displaced.length === 1
-                                ? 'Eine Gewohnheit hat durch deinen Stundenplan ihren Platz verloren.'
-                                : `${displaced.length} Gewohnheiten haben durch deinen Stundenplan ihren Platz verloren.`}{' '}
-                            Sie bleiben, bis sie einen neuen haben.
+                            {onlyUpcoming
+                                ? `${displaced.length === 1 ? 'Eine Gewohnheit verliert' : `${displaced.length} Gewohnheiten verlieren`} ab dem ${firstFrom} durch deinen Stundenplan ihren Platz. Bis dahin läuft alles wie bisher — ein neuer Platz lässt sich schon jetzt finden.`
+                                : `${displaced.length === 1 ? 'Eine Gewohnheit hat' : `${displaced.length} Gewohnheiten haben`} durch deinen Stundenplan ihren Platz verloren. Sie bleiben, bis sie einen neuen haben.`}
                         </p>
                         <ul className="flex flex-col gap-1">
                             {displaced.map((habit) => (
@@ -158,7 +165,9 @@ export default function Calendar({
                                     </span>
                                     {habit.previousTime !== null && (
                                         <span className="shrink-0 text-muted-foreground">
-                                            lief bisher {habit.previousTime}
+                                            {habit.from === null
+                                                ? `lief bisher ${habit.previousTime}`
+                                                : `${habit.previousTime} · bis ${habit.fromLabel}`}
                                         </span>
                                     )}
                                 </li>

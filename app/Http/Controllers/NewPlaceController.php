@@ -234,9 +234,15 @@ class NewPlaceController extends Controller
         $timetable = Timetable::for($user);
         $sleep = $user->sleepWindows();
 
-        // Der Tag einmal je Wochentag — ohne die geparkten, die belegen ohnehin
-        // nichts, aber mit allem, was noch steht.
-        $others = $user->habits()->active()->with('chainedTo.chainedTo')->get();
+        // Der Tag einmal je Wochentag — ohne die geparkten, mit allem, was
+        // noch steht. Ausdrücklich ohne: Ein Vermerk, der erst ab
+        // Semesterbeginn gilt, belegt nächste Woche noch seinen alten Platz,
+        // und der darf dem eigenen Vorschlag nicht im Weg liegen.
+        $others = $user->habits()
+            ->active()
+            ->whereNotIn('id', $parked->pluck('id'))
+            ->with('chainedTo.chainedTo')
+            ->get();
         $others->each(fn (Habit $habit) => $habit->setRelation('user', $user));
 
         // Je Wochentag dieselben Daten wie die Kollisionsprüfung: der nächste

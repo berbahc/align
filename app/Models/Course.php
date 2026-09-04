@@ -91,16 +91,20 @@ class Course extends Model
     }
 
     /**
-     * Der Kurs als Zeile für die Oberfläche — samt seiner Ausnahmen.
+     * Der Kurs, wie ihn die Sheets zum Ändern brauchen — samt seiner Ausnahmen.
      *
-     * @return array{id: int, title: string, kind: string, kindLabel: string, weekday: int, startsAt: string, endsAt: string, timeRange: string, location: string|null, exceptions: list<array{onDate: string, dateLabel: string, cancelled: bool, timeRange: string|null}>}
+     * Die Grundlage des Blocks im Tag ({@see Timetable::coursesOn()}): Dort
+     * kommen Lage und Höhe dazu. Eine Form, nicht zwei — der Block, den man
+     * antippt, ist der Kurs, den man ändert.
+     *
+     * @return array{courseId: int, title: string, courseKind: string, kindLabel: string, weekday: int, startsAt: string, endsAt: string, timeRange: string, location: string|null, exceptions: list<array{onDate: string, dateLabel: string, cancelled: bool, timeRange: string|null}>}
      */
     public function toRow(): array
     {
         return [
-            'id' => $this->id,
+            'courseId' => $this->id,
             'title' => $this->title,
-            'kind' => $this->kind->value,
+            'courseKind' => $this->kind->value,
             'kindLabel' => $this->kind->label(),
             'weekday' => $this->weekday,
             'startsAt' => $this->starts_at->format('H:i'),
