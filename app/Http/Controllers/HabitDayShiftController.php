@@ -171,6 +171,7 @@ class HabitDayShiftController extends Controller
         // Die dauerhafte Zeit hebt die Einzelfall-Regel auf: Zwei Antworten für
         // denselben Tag wären eine zu viel.
         $habit->dayShifts()->delete();
+        $habit->takeAPlace();
     }
 
     /**

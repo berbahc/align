@@ -80,3 +80,18 @@ export interface CourseBlock {
     /** Liegt der Kurs an diesem Tag ausnahmsweise hier? */
     moved: boolean;
 }
+
+/**
+ * Eine Gewohnheit, die durch den Stundenplan ihren Platz verloren hat.
+ *
+ * Nicht verloren — geparkt. Die alte Uhrzeit bleibt als Erinnerung, damit
+ * der neue Platz nah daran liegen kann.
+ */
+export interface DisplacedHabit {
+    id: number;
+    title: string;
+    /** „10:15" — wann sie lief; null bei einer Gewohnheit ohne eigene Zeit. */
+    previousTime: string | null;
+    /** Die fertige Zeile: „braucht einen neuen Platz · lief bisher 10:15". */
+    previousLabel: string;
+}

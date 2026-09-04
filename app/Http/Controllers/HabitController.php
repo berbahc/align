@@ -189,12 +189,19 @@ class HabitController extends Controller
     }
 
     /**
-     * In welchem Block der Liste die Gewohnheit steht: heute oder später.
+     * In welchem Block der Liste die Gewohnheit steht: ohne Platz, heute
+     * oder später.
      *
-     * @return 'today'|'later'
+     * @return 'displaced'|'today'|'later'
      */
     private function listGroup(Habit $habit, Carbon $today): string
     {
+        // Eine geparkte Gewohnheit stünde sonst unter „Steht heute an" — sie
+        // steht aber nirgends an, bis sie einen neuen Platz hat.
+        if ($habit->isDisplaced()) {
+            return 'displaced';
+        }
+
         return $habit->isScheduledOn($today) ? 'today' : 'later';
     }
 
@@ -415,6 +422,8 @@ class HabitController extends Controller
         Gate::authorize('update', $habit);
 
         $habit->update($request->habitAttributes());
+        // Eine neue Zeit ist ein neuer Platz — der Vermerk fällt weg.
+        $habit->takeAPlace();
 
         // Wer von fester Uhrzeit auf eine Situation wechselt, nimmt der
         // Gewohnheit den Zeitpunkt, an dem eine Erinnerung hängen könnte. Bliebe

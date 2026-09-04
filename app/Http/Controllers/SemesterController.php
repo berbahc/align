@@ -2,17 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\DisplaceHabits;
+use App\Actions\RestoreDisplacedHabits;
 use App\Enums\CourseKind;
 use App\Http\Requests\StoreSemesterRequest;
 use App\Models\Course;
 use App\Models\CourseException;
+use App\Models\Habit;
 use App\Models\Semester;
 use App\Models\User;
-use App\Support\SlotConflict;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -55,6 +56,20 @@ class SemesterController extends Controller
             'courses' => $courses->map(fn (Course $course): array => $this->course($course))->all(),
             'kinds' => CourseKind::options(),
             'maxCourses' => Course::MaxPerSemester,
+            // Was durch den Plan seinen Platz verloren hat — die Liste, um die
+            // es beim Semesterwechsel eigentlich geht.
+            'displaced' => $request->user()->habits()
+                ->active()
+                ->whereNotNull('displaced_at')
+                ->orderBy('position')
+                ->get()
+                ->map(fn (Habit $habit): array => [
+                    'id' => $habit->id,
+                    'title' => $habit->title,
+                    'previousTime' => $habit->scheduled_time?->format('H:i'),
+                    'previousLabel' => $habit->scheduleLabel(),
+                ])
+                ->all(),
         ]);
     }
 
@@ -71,19 +86,29 @@ class SemesterController extends Controller
      * Ohne Kennung in der Strecke, weil es je Person genau eins gibt, um das
      * es geht — dasselbe Muster wie beim Schlafplan.
      */
-    public function update(StoreSemesterRequest $request): RedirectResponse
+    public function update(StoreSemesterRequest $request, DisplaceHabits $displace): RedirectResponse
     {
         $semester = $request->user()->currentSemester();
 
         abort_if($semester === null, 404);
 
+        $semester->update($request->validated());
+
         // Ein verschobener Zeitraum lässt Kurse gelten, die vorher nicht galten
         // — und die können auf Gewohnheiten liegen, die es damals noch nicht
-        // gab. Ohne diese Prüfung wäre der Zeitraum die Hintertür, durch die
-        // doch zwei Dinge auf eine Minute kämen.
-        $this->guardCoursesAgainstHabits($request->user(), $semester);
+        // gab. Auch hier gewinnt der Kurs, und die Gewohnheit wird geparkt.
+        $displaced = $this->displaceUnderCourses($request->user(), $semester, $displace);
 
-        $semester->update($request->validated());
+        if ($displaced !== []) {
+            Inertia::flash('coursePlaced', [
+                'title' => $semester->title,
+                'displaced' => array_map(fn (Habit $habit): array => [
+                    'id' => $habit->id,
+                    'title' => $habit->title,
+                    'previousTime' => $habit->scheduled_time?->format('H:i') ?? '',
+                ], $displaced),
+            ]);
+        }
 
         return back()->with('success', 'Dein Semester ist gespeichert.');
     }
@@ -91,7 +116,7 @@ class SemesterController extends Controller
     /**
      * Den Plan löschen — samt Kursen und deren Ausnahmen.
      */
-    public function destroy(Request $request): RedirectResponse
+    public function destroy(Request $request, RestoreDisplacedHabits $restore): RedirectResponse
     {
         $semester = $request->user()->currentSemester();
 
@@ -99,46 +124,38 @@ class SemesterController extends Controller
 
         $semester->delete();
 
+        // Mit dem Plan verschwinden seine Kurse — was sie verdrängt hatten,
+        // darf zurück, wo es frei ist.
+        $restore->handle($request->user());
+
         return back()->with('success', 'Dein Semesterplan ist gelöscht.');
     }
 
     /**
-     * Liegt einer der Kurse auf einer Gewohnheit?
+     * Räumt unter allen Kursen des Semesters, was dort noch liegt.
      *
-     * Geprüft wird gegen die Gewohnheiten allein: Ob die Kurse untereinander
-     * passen, steht beim Eintragen fest und ändert sich durch einen anderen
-     * Zeitraum nicht.
+     * Ohne den Stundenplan als Gegner: Er ist hier selbst der Prüfling, und
+     * ein Kurs kollidierte sonst mit sich.
+     *
+     * @return list<Habit>
      */
-    private function guardCoursesAgainstHabits(User $user, Semester $semester): void
+    private function displaceUnderCourses(User $user, Semester $semester, DisplaceHabits $displace): array
     {
+        $displaced = [];
+
         foreach ($semester->courses as $course) {
-            $conflict = SlotConflict::find(
-                $user,
-                [[
+            $displaced = [
+                ...$displaced,
+                ...$displace->handle($user, [[
                     'id' => -$course->id,
                     'title' => $course->title,
                     'from' => $course->startMinute(),
                     'to' => $course->endMinute(),
-                ]],
-                [$course->weekday],
-                withTimetable: false,
-            );
-
-            if ($conflict === null) {
-                continue;
-            }
-
-            throw ValidationException::withMessages([
-                'starts_on' => SlotConflict::message(
-                    $conflict['block'],
-                    $conflict['date'],
-                    sprintf(
-                        'In diesem Zeitraum läge „%s" darauf. Verschiebe die Gewohnheit zuerst.',
-                        $course->title,
-                    ),
-                ),
-            ]);
+                ]], [$course->weekday], withTimetable: false),
+            ];
         }
+
+        return $displaced;
     }
 
     /**

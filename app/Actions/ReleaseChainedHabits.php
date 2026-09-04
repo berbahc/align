@@ -58,6 +58,14 @@ class ReleaseChainedHabits
         $previous = null;
 
         foreach ($successors->sortBy('position') as $successor) {
+            // Der Platz reist mit — auch, wenn es gerade keiner ist. Eine
+            // verdrängte Gewohnheit vererbt ihre Uhrzeit als Erinnerung; sie
+            // ungeprüft als Termin weiterzugeben legte den Nachfolger in genau
+            // die Vorlesung, aus der sein Vorgänger gerade gewichen ist.
+            if ($previous === null && $habit->displaced_at !== null) {
+                $successor->forceFill(['displaced_at' => $habit->displaced_at]);
+            }
+
             $successor->update($previous === null ? $inherited : [
                 'schedule_type' => ScheduleType::Chained,
                 'chained_to_habit_id' => $previous->id,

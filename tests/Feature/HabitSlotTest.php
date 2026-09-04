@@ -318,33 +318,16 @@ test('applying a day order cannot stack two habits on each other', function () {
     expect($a->fresh()->scheduled_time->format('H:i'))->toBe('14:00');
 });
 
-test('a course cannot be entered on top of an existing habit', function () {
+/**
+ * Die eine Stelle, an der die Richtung umgekehrt ist: Der Kurs ist die
+ * Tatsache, die Gewohnheit das Bewegliche. Sie wird geparkt, nicht der Kurs
+ * abgewiesen — und behält ihre Zeit als Erinnerung.
+ */
+test('a course over an existing habit is entered and parks the habit', function () {
     $user = User::factory()->create();
     Semester::factory()->for($user)->create();
-    Habit::factory()->for($user)->fixedSchedule('10:00', [1])->withMeasure(60)
+    $habit = Habit::factory()->for($user)->fixedSchedule('10:00', [1])->withMeasure(60)
         ->create(['title' => 'Lesen']);
-
-    $this->actingAs($user)
-        ->post(route('calendar.semester.courses.store'), [
-            'title' => 'Mathe 1',
-            'kind' => CourseKind::Vorlesung->value,
-            'weekday' => 1,
-            'starts_at' => '10:00',
-            'ends_at' => '11:30',
-        ])
-        ->assertSessionHasErrors('starts_at');
-
-    expect(session('errors')->first('starts_at'))
-        ->toContain('Lesen')
-        // Hier ist die Gewohnheit das Bewegliche, nicht der Kurs.
-        ->toContain('dann passt der Kurs hier hinein')
-        ->and(Course::count())->toBe(0);
-});
-
-test('a course beside an existing habit is entered as before', function () {
-    $user = User::factory()->create();
-    Semester::factory()->for($user)->create();
-    Habit::factory()->for($user)->fixedSchedule('08:00', [1])->withMeasure(30)->create();
 
     $this->actingAs($user)
         ->post(route('calendar.semester.courses.store'), [
@@ -356,7 +339,28 @@ test('a course beside an existing habit is entered as before', function () {
         ])
         ->assertSessionHasNoErrors();
 
-    expect(Course::count())->toBe(1);
+    expect(Course::count())->toBe(1)
+        ->and($habit->fresh()->displaced_at)->not->toBeNull()
+        ->and($habit->fresh()->scheduled_time->format('H:i'))->toBe('10:00');
+});
+
+test('a course beside an existing habit is entered as before', function () {
+    $user = User::factory()->create();
+    Semester::factory()->for($user)->create();
+    $habit = Habit::factory()->for($user)->fixedSchedule('08:00', [1])->withMeasure(30)->create();
+
+    $this->actingAs($user)
+        ->post(route('calendar.semester.courses.store'), [
+            'title' => 'Mathe 1',
+            'kind' => CourseKind::Vorlesung->value,
+            'weekday' => 1,
+            'starts_at' => '10:00',
+            'ends_at' => '11:30',
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect(Course::count())->toBe(1)
+        ->and($habit->fresh()->displaced_at)->toBeNull();
 });
 
 test('a graduated habit cannot be resumed into an occupied slot', function () {
@@ -386,7 +390,7 @@ test('a graduated habit whose slot is still free comes back', function () {
 /**
  * Die Hintertür: Nicht der Kurs zieht um, sondern der Zeitraum um ihn herum.
  */
-test('moving the semester range cannot pull a course over a habit', function () {
+test('moving the semester range parks the habits its courses now cover', function () {
     $user = User::factory()->create();
     $semester = Semester::factory()->for($user)
         ->between(
@@ -397,7 +401,7 @@ test('moving the semester range cannot pull a course over a habit', function () 
     Course::factory()->for($semester)->onWeekday(1)->at('10:00', '11:30')
         ->create(['title' => 'Mathe 1']);
 
-    Habit::factory()->for($user)->fixedSchedule('10:15', [1])->withMeasure(30)
+    $habit = Habit::factory()->for($user)->fixedSchedule('10:15', [1])->withMeasure(30)
         ->create(['title' => 'Lesen']);
 
     $this->actingAs($user)
@@ -406,14 +410,12 @@ test('moving the semester range cannot pull a course over a habit', function () 
             'starts_on' => Carbon::today()->subDay()->toDateString(),
             'ends_on' => Carbon::today()->addMonths(4)->toDateString(),
         ])
-        ->assertSessionHasErrors('starts_on');
+        ->assertSessionHasNoErrors();
 
-    expect(session('errors')->first('starts_on'))
-        ->toContain('Lesen')
-        ->toContain('Mathe 1')
-        // Der Zeitraum bleibt, wie er war.
-        ->and($semester->fresh()->starts_on->toDateString())
-        ->toBe(Carbon::today()->addMonths(2)->toDateString());
+    // Der Zeitraum ist umgezogen — und die Gewohnheit darunter geparkt.
+    expect($semester->fresh()->starts_on->toDateString())
+        ->toBe(Carbon::today()->subDay()->toDateString())
+        ->and($habit->fresh()->displaced_at)->not->toBeNull();
 });
 
 test('a semester range without clashes still moves', function () {

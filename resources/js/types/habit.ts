@@ -172,7 +172,11 @@ export interface Habit {
 }
 
 /** Der Block der Gewohnheiten-Liste: steht heute an oder später. */
-export type HabitGroup = 'today' | 'later';
+/**
+ * `displaced` steht zuerst: Was seinen Platz verloren hat, wartet auf eine
+ * Entscheidung — und gehört damit vor das, was nur ansteht.
+ */
+export type HabitGroup = 'displaced' | 'today' | 'later';
 
 /** Eine Gewohnheit in der Verwaltungsansicht — dort zählt die Planung, nicht der heutige Tag. */
 export interface ManagedHabit {

@@ -90,6 +90,12 @@ class HabitGraduationController extends Controller
             return;
         }
 
+        // Eine geparkte Gewohnheit belegt nichts — es gibt keinen Platz, den
+        // man ihr verwehren könnte. Sie kommt geparkt zurück.
+        if ($habit->displaced_at !== null) {
+            return;
+        }
+
         $conflict = SlotConflict::find(
             $user,
             $habit->spansFrom(DayPlan::toMinutes($habit->scheduled_time->format('H:i'))),

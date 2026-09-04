@@ -156,6 +156,37 @@ enum HabitTemplate: string
      * „Ich weiß oft nicht, wo ich anfangen soll, dann werde ich überfordert
      * und fange erst gar nicht an."
      */
+    /**
+     * Die Tageszeit, zu der die Vorlage gehört — Minuten seit Mitternacht.
+     *
+     * `null` heißt: Der Tag entscheidet. Eine Spanne steht nur dort, wo das
+     * Wort selbst eine Tageszeit trägt — „Frühstück" um 14:00 ist kein
+     * Frühstück mehr, „Lesen" um 14:00 ist Lesen. Joggen, Lernen, Meditieren
+     * eine Grenze zu geben hieße, etwas zu behaupten, das nicht stimmt, und die
+     * KI um eine Wahl zu bringen, die sie besser trifft als eine Tabelle.
+     *
+     * Die Spanne ist eine Grenze und keine Empfehlung: Wer beim Semesterwechsel
+     * einen neuen Platz sucht, sucht ihn nur hierin — sonst landete das
+     * Frühstück mittags, nur weil dort Platz ist.
+     *
+     * Absolut in Uhrzeiten, obwohl der Tag einer Person das nicht ist. Wer um
+     * elf aufsteht, frühstückt trotzdem; wie sich Fenster und Wachrahmen dann
+     * vertragen, entscheidet der Aufrufer, nicht der Katalog.
+     *
+     * @return array{from: int, to: int}|null
+     */
+    public function dayBand(): ?array
+    {
+        return match ($this) {
+            self::UniTagPlanen => ['from' => 300, 'to' => 660],     // 05:00 – 11:00
+            self::Fruehstuecken => ['from' => 300, 'to' => 600],    // 05:00 – 10:00
+            self::Mittagessen => ['from' => 660, 'to' => 900],      // 11:00 – 15:00
+            self::Abendessen => ['from' => 1020, 'to' => 1290],     // 17:00 – 21:30
+            self::OfflineAbend => ['from' => 1080, 'to' => 1440],   // 18:00 – 24:00
+            default => null,
+        };
+    }
+
     public function defaultMinutes(): int
     {
         return match ($this) {

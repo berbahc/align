@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { store as adjust } from '@/routes/habits/adjustment';
 
 /**
- * Bestätigung nach dem Anlegen oder Verschieben einer Gewohnheit.
+ * Bestätigung nach dem Anlegen oder Verschieben einer Gewohnheit — und nach
+ * einem Kurs, der eine verdrängt oder wieder freigegeben hat.
  *
  * Sie bleibt stehen, bis sie weggeklickt wird — kein Auto-Ausblenden, weil der
  * Satz eine Auskunft trägt („steht am Montag") und nicht bloß ein Lob ist. Wer
@@ -17,6 +18,8 @@ export function FlashNotice() {
     const { flash } = usePage();
     const created = flash.habitCreated;
     const adjusted = flash.habitAdjusted;
+    const placed = flash.coursePlaced;
+    const restored = flash.habitsRestored;
     // Gemerkt wird die weggeklickte Meldung, nicht ein Ja/Nein. Eine neue
     // Meldung trägt eine andere Kennung und ist damit von selbst wieder
     // sichtbar — ohne Effekt, der den Zustand nachträglich zurücksetzt.
@@ -26,7 +29,11 @@ export function FlashNotice() {
         ? `created|${created.title}|${created.when}`
         : adjusted
           ? `adjusted|${adjusted.habitId}|${adjusted.anchor}`
-          : null;
+          : placed
+            ? `placed|${placed.title}|${placed.displaced.map((h) => h.id).join(',')}`
+            : restored
+              ? `restored|${restored.titles.join(',')}`
+              : null;
 
     if (key === null || dismissed === key) {
         return null;
@@ -86,6 +93,58 @@ export function FlashNotice() {
                             >
                                 Zurück zu „{adjusted.previousLabel}"
                             </button>
+                        )}
+                    </>
+                )}
+
+                {placed && (
+                    <>
+                        <span className="font-semibold">„{placed.title}"</span>{' '}
+                        steht im Plan.{' '}
+                        {placed.displaced.length === 1 ? (
+                            <>
+                                <span className="font-semibold">
+                                    „{placed.displaced[0].title}"
+                                </span>{' '}
+                                lag dort
+                                {placed.displaced[0].previousTime !== '' &&
+                                    ` um ${placed.displaced[0].previousTime}`}{' '}
+                                und braucht jetzt einen neuen Platz.
+                            </>
+                        ) : (
+                            <>
+                                {placed.displaced.length} Gewohnheiten lagen
+                                dort und brauchen jetzt einen neuen Platz:{' '}
+                                {placed.displaced
+                                    .map((habit) => `„${habit.title}"`)
+                                    .join(', ')}
+                                .
+                            </>
+                        )}
+                        <span className="text-muted-foreground">
+                            {' '}
+                            Nichts ist verloren — sie stehen in deiner
+                            Gewohnheitsliste unter „Braucht einen neuen Platz".
+                        </span>
+                    </>
+                )}
+
+                {restored && (
+                    <>
+                        {restored.titles.length === 1 ? (
+                            <>
+                                <span className="font-semibold">
+                                    „{restored.titles[0]}"
+                                </span>{' '}
+                                hat ihren alten Platz zurück.
+                            </>
+                        ) : (
+                            <>
+                                {restored.titles
+                                    .map((title) => `„${title}"`)
+                                    .join(', ')}{' '}
+                                haben ihren alten Platz zurück.
+                            </>
                         )}
                     </>
                 )}

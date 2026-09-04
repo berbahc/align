@@ -20,6 +20,7 @@ import {
 import type {
     CourseKindOption,
     CourseRow as Course,
+    DisplacedHabit,
     SemesterPlan,
     Weekday,
 } from '@/types';
@@ -40,6 +41,8 @@ interface CalendarSemesterProps {
     courses: Course[];
     kinds: CourseKindOption[];
     maxCourses: number;
+    /** Was der Plan verdrängt hat — leer, solange nichts wartet. */
+    displaced: DisplacedHabit[];
 }
 
 /**
@@ -58,6 +61,7 @@ export default function CalendarSemester({
     courses,
     kinds,
     maxCourses,
+    displaced,
 }: CalendarSemesterProps) {
     const [editing, setEditing] = useState<Course | null>(null);
     const [sheetOpen, setSheetOpen] = useState(false);
@@ -112,6 +116,40 @@ export default function CalendarSemester({
                             ? `Dieses Semester beginnt am ${semester.startsOnLabel}. Bis dahin steht dein Plan hier, belegt im Kalender aber noch keine Zeit.`
                             : 'Dieses Semester ist vorbei. Dein Plan bleibt als Vorlage stehen, belegt im Kalender aber keine Zeit mehr.'}
                     </p>
+                )}
+
+                {/* Was der Plan verdrängt hat. Steht über den Kursen, weil es
+                    eine Entscheidung braucht und die Kurse nur Tatsachen sind.
+                    Kein Warnton: Nichts ist verloren, es wartet nur. */}
+                {displaced.length > 0 && (
+                    <div
+                        role="status"
+                        className="flex flex-col gap-2 rounded-xl border border-primary/25 bg-accent px-4 py-3"
+                    >
+                        <p className="text-sm text-foreground">
+                            {displaced.length === 1
+                                ? 'Eine Gewohnheit hat durch deinen Plan ihren Platz verloren.'
+                                : `${displaced.length} Gewohnheiten haben durch deinen Plan ihren Platz verloren.`}{' '}
+                            Sie bleiben, bis sie einen neuen haben.
+                        </p>
+                        <ul className="flex flex-col gap-1">
+                            {displaced.map((habit) => (
+                                <li
+                                    key={habit.id}
+                                    className="flex items-baseline justify-between gap-3 text-sm"
+                                >
+                                    <span className="font-semibold">
+                                        {habit.title}
+                                    </span>
+                                    {habit.previousTime !== null && (
+                                        <span className="shrink-0 text-muted-foreground">
+                                            lief bisher {habit.previousTime}
+                                        </span>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
                 )}
 
                 {semester !== null && (

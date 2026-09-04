@@ -133,6 +133,8 @@ class HabitAdjustmentController extends Controller
         }, fn (mixed $value): bool => $value !== null);
 
         $habit->update($request->anchor());
+        // Der Weg von Hand für eine verdrängte Gewohnheit führt hier durch.
+        $habit->takeAPlace();
 
         // Ohne diesen Eintrag bliebe der Vorschlag im Gedächtnis offen — und
         // die KI würde ihn beim nächsten Mal als „nicht genommen" lesen,

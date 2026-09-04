@@ -2,12 +2,11 @@
 
 namespace App\Http\Requests;
 
+use App\Actions\DisplaceHabits;
 use App\Enums\CourseKind;
 use App\Models\Course;
 use App\Models\Semester;
 use App\Support\DayPlan;
-use App\Support\SlotConflict;
-use App\Support\Timetable;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -17,9 +16,13 @@ use Illuminate\Validation\Validator;
  * Einen Kurs in den Stundenplan eintragen.
  *
  * Es gelten dieselben Grenzen wie beim Planen überhaupt: Nichts liegt über
- * Mitternacht, und zwei Dinge liegen nicht übereinander. Ein Stundenplan, der
+ * Mitternacht, und zwei Kurse liegen nicht übereinander. Ein Stundenplan, der
  * sich selbst widerspricht, wäre als Rahmen wertlos — die Rechnung, wo im Tag
  * noch Platz ist, führt ihn ungeprüft weiter.
+ *
+ * Gegen Gewohnheiten wird hier bewusst **nicht** geprüft. Ein Kurs ist eine
+ * Tatsache und die Gewohnheit das Bewegliche: Liegt dort eine, wird sie
+ * geparkt ({@see DisplaceHabits}), nicht der Kurs abgewiesen.
  */
 class StoreCourseRequest extends FormRequest
 {
@@ -72,7 +75,6 @@ class StoreCourseRequest extends FormRequest
             $this->validateLength(...),
             $this->validateWithinTheDay(...),
             $this->validateSlotIsFree(...),
-            $this->validateNoHabitInTheWay(...),
             $this->validateCourseLimit(...),
         ];
     }
@@ -201,53 +203,6 @@ class StoreCourseRequest extends FormRequest
                 return;
             }
         }
-    }
-
-    /**
-     * An der Stelle darf auch keine Gewohnheit liegen.
-     *
-     * Die Richtung ist hier eine andere als sonst: Ein Kurs ist die Tatsache
-     * und die Gewohnheit das Bewegliche — eigentlich müsste sie weichen. Sie
-     * ungefragt zu verschieben wäre aber ein Eingriff in einen Plan, den sich
-     * jemand vorgenommen hat, und sie stillschweigend überdecken zu lassen
-     * hieße, zwei Dinge auf eine Minute zu legen.
-     *
-     * Also die dritte Möglichkeit: Der Kurs wartet, und der Satz sagt, was
-     * zuerst zu tun ist. Die Reihenfolge bleibt damit dieselbe wie überall —
-     * wer zuletzt kommt, sucht sich seinen Platz.
-     */
-    private function validateNoHabitInTheWay(Validator $validator): void
-    {
-        if (! $this->hasUsableTimes($validator) || $validator->errors()->has('starts_at')) {
-            return;
-        }
-
-        $user = $this->user();
-
-        if ($user === null) {
-            return;
-        }
-
-        $conflict = SlotConflict::find(
-            $user,
-            [[
-                'id' => 0,
-                'title' => $this->string('title')->toString(),
-                'from' => $this->startMinute(),
-                'to' => $this->endMinute(),
-            ]],
-            [$this->integer('weekday')],
-        );
-
-        if ($conflict === null || Timetable::isCourseBlock($conflict['block'])) {
-            return;
-        }
-
-        $validator->errors()->add('starts_at', SlotConflict::message(
-            $conflict['block'],
-            $conflict['date'],
-            'Verschiebe die zuerst, dann passt der Kurs hier hinein.',
-        ));
     }
 
     private function validateCourseLimit(Validator $validator): void

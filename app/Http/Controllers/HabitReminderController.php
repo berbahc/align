@@ -51,6 +51,9 @@ class HabitReminderController extends Controller
             ->active()
             ->where('schedule_type', ScheduleType::Fixed->value)
             ->whereNotNull('scheduled_time')
+            // Roh gelesen wie die Erinnerungen selbst — und aus demselben Grund
+            // ohne die geparkten.
+            ->placed()
             ->update(['reminder_enabled' => $validated['enabled']]);
 
         return back();
