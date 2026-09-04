@@ -209,6 +209,7 @@ export function SchedulePicker({
     onChainedToChange,
     busySlots = [],
     sleepWindows = [],
+    durationMinutes = 0,
     children,
 }: {
     scheduleTypes: ScheduleTypeOption[];
@@ -226,11 +227,16 @@ export function SchedulePicker({
     busySlots?: BusySlot[];
     /** Der Schlafrahmen je Wochentag — für den Hinweis, wenn die Uhrzeit außerhalb läge. */
     sleepWindows?: SleepWindow[];
+    /** Wie lange die Gewohnheit dauert — damit auch ihr Ende die Luft einhält. */
+    durationMinutes?: number;
     /** Die Situationsauswahl — sie bleibt im Wizard, wo ihre Vorschläge herkommen. */
     children: React.ReactNode;
 }) {
-    const conflict = findConflict(time, days, busySlots);
-    const free = conflict === null ? null : nextFreeTime(time, days, busySlots);
+    const conflict = findConflict(time, days, busySlots, durationMinutes);
+    const free =
+        conflict === null
+            ? null
+            : nextFreeTime(time, days, busySlots, durationMinutes);
 
     // Der Rahmen aus dem Schlafplan: Der Server weist eine Uhrzeit außerhalb
     // ohnehin ab — die Oberfläche sagt es vorher, mit demselben Ergebnis.
@@ -299,40 +305,51 @@ export function SchedulePicker({
                             aneinanderhängen.
                         </p>
                     ) : (
-                        chainCandidates.map((candidate) => {
-                            const isSelected = chainedTo === candidate.id;
+                        <>
+                            {/* Die Luft gilt auch in der Kette: „danach"
+                                heißt nach dem Ende plus einer Viertelstunde,
+                                nicht in derselben Minute. */}
+                            <p className="text-xs leading-relaxed text-muted-foreground">
+                                Eine angehängte Gewohnheit beginnt eine
+                                Viertelstunde nach dem Ende der vorherigen —
+                                Zeit zum Umschalten. Rückt die eine, rückt die
+                                andere mit.
+                            </p>
+                            {chainCandidates.map((candidate) => {
+                                const isSelected = chainedTo === candidate.id;
 
-                            return (
-                                <button
-                                    key={candidate.id}
-                                    type="button"
-                                    aria-pressed={isSelected}
-                                    onClick={() =>
-                                        onChainedToChange?.(candidate.id)
-                                    }
-                                    className={cn(
-                                        CHOICE_TILE,
-                                        'flex flex-col gap-0.5 px-4 py-3',
-                                        isSelected
-                                            ? CHOICE_TILE_ON
-                                            : CHOICE_TILE_OFF,
-                                    )}
-                                >
-                                    <span className="text-[15px] font-semibold">
-                                        {candidate.title}
-                                    </span>
-                                    <span className="text-xs text-muted-foreground">
-                                        {candidate.anchor}
-                                        {/* Erst die Dauer der vorigen
+                                return (
+                                    <button
+                                        key={candidate.id}
+                                        type="button"
+                                        aria-pressed={isSelected}
+                                        onClick={() =>
+                                            onChainedToChange?.(candidate.id)
+                                        }
+                                        className={cn(
+                                            CHOICE_TILE,
+                                            'flex flex-col gap-0.5 px-4 py-3',
+                                            isSelected
+                                                ? CHOICE_TILE_ON
+                                                : CHOICE_TILE_OFF,
+                                        )}
+                                    >
+                                        <span className="text-[15px] font-semibold">
+                                            {candidate.title}
+                                        </span>
+                                        <span className="text-xs text-muted-foreground">
+                                            {candidate.anchor}
+                                            {/* Erst die Dauer der vorigen
                                             Gewohnheit macht diesen Satz
                                             möglich — sie sagt, wann sie fertig
                                             ist. */}
-                                        {candidate.startsAt !== null &&
-                                            ` · danach ab ${candidate.startsAt}`}
-                                    </span>
-                                </button>
-                            );
-                        })
+                                            {candidate.startsAt !== null &&
+                                                ` · danach ab ${candidate.startsAt}`}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </>
                     )}
                 </div>
             ) : scheduleType === 'dynamic' ? (
@@ -347,10 +364,10 @@ export function SchedulePicker({
                         />
                     </div>
 
-                    {/* Ein Hinweis, keine Sperre: Wer zwei Dinge bewusst
-                        übereinanderlegt, darf das — die App sagt nur, was sie
-                        sieht. Möglich wird der Satz erst durch die Dauer, die
-                        das Ende des anderen Blocks kennt. */}
+                    {/* Der Server weist dasselbe ab — hier steht es vorher,
+                        mit der Erklärung dazu und einem Sprung zur nächsten
+                        freien Zeit. Möglich wird der Satz erst durch die
+                        Dauer, die das Ende des anderen Blocks kennt. */}
                     {conflict !== null && (
                         <p className="flex items-start gap-2 rounded-2xl bg-sand/50 p-3 text-xs leading-relaxed text-muted-foreground">
                             <TriangleAlert
@@ -359,10 +376,11 @@ export function SchedulePicker({
                                 aria-hidden="true"
                             />
                             <span>
-                                Um diese Zeit läuft schon „{conflict.title}"
+                                Zu nah an „{conflict.title}" ({conflict.from}
                                 {conflict.to !== conflict.from &&
-                                    ` bis ${conflict.to}`}
-                                .
+                                    ` – ${conflict.to}`}
+                                ): Davor und danach hält Align eine
+                                Viertelstunde Luft — zum Umschalten.
                                 {free !== null && (
                                     <>
                                         {' '}

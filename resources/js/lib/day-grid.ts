@@ -307,9 +307,13 @@ export function withDrag(
 
             const previous = byId.get(block.chainedToId);
 
+            // „Danach" heißt: nach dem Ende plus der Viertelstunde Luft —
+            // dieselbe Rechnung wie `Habit::resolveStart()`.
             moved.set(
                 block.id,
-                start + (previous?.durationMinutes ?? ASSUMED_MINUTES),
+                start +
+                    (previous?.durationMinutes ?? ASSUMED_MINUTES) +
+                    BREATHER_MINUTES,
             );
         }
     }
@@ -349,6 +353,9 @@ export function followersOf(
 export interface BlockConflict {
     title: string;
     kind: 'habit' | 'course';
+    /** Wo das Hindernis liegt — für den Satz, bis wann und ab wann Platz ist. */
+    from: number;
+    to: number;
 }
 
 /**
@@ -405,7 +412,12 @@ export function collisionOf(
                 from < otherTo + BREATHER_MINUTES &&
                 to + BREATHER_MINUTES > other.startMinute
             ) {
-                return { title: other.title, kind: other.kind };
+                return {
+                    title: other.title,
+                    kind: other.kind,
+                    from: other.startMinute,
+                    to: otherTo,
+                };
             }
         }
     }

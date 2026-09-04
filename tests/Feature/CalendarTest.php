@@ -361,7 +361,7 @@ test('a situation lands at its anchor hour and says it is no clock time', functi
  * Eine gekettete Gewohnheit erbt ihre Minute vom Vorgänger — sie ist deshalb
  * genauso genau wie er.
  */
-test('a chained habit starts where the previous one ends', function () {
+test('a chained habit starts a quarter hour after the previous one ends', function () {
     $user = User::factory()->create();
 
     $walk = Habit::factory()->for($user)->fixedSchedule('17:00', [1, 2, 3, 4, 5, 6, 7])
@@ -379,7 +379,7 @@ test('a chained habit starts where the previous one ends', function () {
         ->get(route('calendar.day', Carbon::today()->toDateString()))
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->where('blocks.1.title', 'Lesen')
-            ->where('blocks.1.startMinute', 17 * 60 + 20)
+            ->where('blocks.1.startMinute', 17 * 60 + 20 + 15)
             ->where('blocks.1.durationMinutes', 15)
             ->where('blocks.1.exact', true)
         );

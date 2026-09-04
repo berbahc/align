@@ -44,9 +44,10 @@ class HabitController extends Controller
                 'id' => $habit->id,
                 'title' => $habit->titleWithMeasure(),
                 'anchor' => $habit->scheduleLabel(),
-                // Wo der Anschluss läge — null, wenn die Kette an einer
-                // Situation hängt und niemand die Uhrzeit kennt.
-                'startsAt' => $habit->endsAt()?->format('H:i'),
+                // Wo der Anschluss läge — nach dem Ende plus der Viertelstunde
+                // Luft. Null, wenn die Kette an einer Situation hängt und
+                // niemand die Uhrzeit kennt.
+                'startsAt' => $habit->followerStartsAt()?->format('H:i'),
             ])
             ->all());
     }

@@ -110,23 +110,32 @@ final class SlotConflict
     {
         $when = self::weekdayLabel($date);
 
+        // Die Luft wird erklärt, nicht nur genannt — und mit ihr die Kanten:
+        // Wer weiß, bis wann und ab wann Platz ist, muss nicht raten.
+        $before = DayPlan::toTime($block['from'] - DayPlan::BreatherMinutes);
+        $after = DayPlan::toTime($block['to'] + DayPlan::BreatherMinutes);
+
         if (Timetable::isCourseBlock($block)) {
             return sprintf(
-                '%s läuft „%s" von %s bis %s aus deinem Semesterplan — davor und danach bleibt eine Viertelstunde Luft. %s',
+                '%s läuft „%s" von %s bis %s aus deinem Semesterplan. Davor und danach hält Align eine Viertelstunde Luft — zum Hinkommen und Umschalten. Platz ist bis %s und wieder ab %s. %s',
                 ucfirst($when),
                 $block['title'],
                 DayPlan::toTime($block['from']),
                 DayPlan::toTime($block['to']),
+                $before,
+                $after,
                 $remedy ?? 'Such eine andere Zeit — der Kurs rückt nicht.',
             );
         }
 
         return sprintf(
-            '„%s" liegt %s schon um %s bis %s — dazwischen bleibt eine Viertelstunde Luft. %s',
+            '„%s" liegt %s schon um %s bis %s. Zwischen zwei Gewohnheiten hält Align eine Viertelstunde Luft — zum Umschalten. Platz ist bis %s und wieder ab %s. Soll sie direkt hinterher laufen, häng sie als „danach" an: Dann rückt sie mit, wenn die andere rückt. %s',
             $block['title'],
             $when,
             DayPlan::toTime($block['from']),
             DayPlan::toTime($block['to']),
+            $before,
+            $after,
             $remedy ?? 'Verschiebe die zuerst, dann ist hier Platz.',
         );
     }
