@@ -65,3 +65,14 @@ export const STEPPER_BUTTON = `flex size-8 items-center justify-center rounded-f
  * flach: Bewegung ohne Ziel ist Dekoration.
  */
 export const INTERACTIVE_CARD = `block rounded-xl transition-[scale,box-shadow] duration-[var(--duration-press)] ease-out ${FOCUS} motion-safe:active:scale-[0.995]`;
+
+/**
+ * Die Schale jedes Sheets, das von unten kommt.
+ *
+ * Zehn Sheets tragen dieselbe Zeile — von der Kursliste bis zum Vorschlag der
+ * KI. Sie einmal zu schreiben heißt, dass Höhe, Breite und Rundung überall
+ * dieselben bleiben: Ein Sheet, das anders sitzt als das davor, liest sich als
+ * anderer Ort, obwohl es dieselbe Geste ist.
+ */
+export const BOTTOM_SHEET =
+    'mx-auto max-h-[85vh] max-w-lg gap-0 overflow-y-auto rounded-t-2xl px-5 pt-6 pb-8';

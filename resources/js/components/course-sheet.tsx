@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/sheet';
 import { Spinner } from '@/components/ui/spinner';
 import {
+    BOTTOM_SHEET,
     CHOICE_TILE,
     CHOICE_TILE_OFF,
     CHOICE_TILE_ON,
@@ -125,10 +126,7 @@ export function CourseSheet({
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent
-                side="bottom"
-                className="mx-auto max-h-[85vh] max-w-lg gap-0 overflow-y-auto rounded-t-2xl px-5 pt-6 pb-8"
-            >
+            <SheetContent side="bottom" className={BOTTOM_SHEET}>
                 <SheetHeader className="gap-2 p-0">
                     <SheetTitle className="type-eyebrow text-left text-muted-foreground">
                         {course === null ? 'Neuer Kurs' : 'Kurs ändern'}

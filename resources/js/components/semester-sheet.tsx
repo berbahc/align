@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/sheet';
 import { Spinner } from '@/components/ui/spinner';
 import {
+    BOTTOM_SHEET,
     OUTLINE_BUTTON,
     PRIMARY_BUTTON,
     QUIET_BUTTON,
@@ -107,10 +108,7 @@ export function SemesterSheet({
 
     return (
         <Sheet open={open} onOpenChange={close}>
-            <SheetContent
-                side="bottom"
-                className="mx-auto max-h-[85vh] max-w-lg gap-0 overflow-y-auto rounded-t-2xl px-5 pt-6 pb-8"
-            >
+            <SheetContent side="bottom" className={BOTTOM_SHEET}>
                 <SheetHeader className="gap-2 p-0">
                     <SheetTitle className="type-eyebrow text-left text-muted-foreground">
                         {semester === null ? 'Semester anlegen' : 'Stundenplan'}

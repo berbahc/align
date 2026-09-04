@@ -8,7 +8,12 @@ import {
 } from '@/components/ui/sheet';
 import { BEHAVIOR_ICONS } from '@/lib/behavior-icons';
 import { ASSUMED_MINUTES, spanLabel } from '@/lib/day-grid';
-import { OUTLINE_BUTTON, PRIMARY_BUTTON, QUIET_LINK } from '@/lib/interaction';
+import {
+    BOTTOM_SHEET,
+    OUTLINE_BUTTON,
+    PRIMARY_BUTTON,
+    QUIET_LINK,
+} from '@/lib/interaction';
 import { cn } from '@/lib/utils';
 import type { CalendarBlock as Block } from '@/types';
 
@@ -60,10 +65,7 @@ export function BlockSheet({
 
     return (
         <Sheet open={block !== null} onOpenChange={onOpenChange}>
-            <SheetContent
-                side="bottom"
-                className="mx-auto max-h-[85vh] max-w-lg gap-0 overflow-y-auto rounded-t-2xl px-5 pt-6 pb-8"
-            >
+            <SheetContent side="bottom" className={BOTTOM_SHEET}>
                 <SheetHeader className="gap-2 p-0">
                     <SheetTitle className="type-eyebrow text-left text-muted-foreground">
                         {/* Bei fester Uhrzeit die belegte Spanne, sonst der

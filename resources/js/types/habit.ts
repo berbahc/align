@@ -128,14 +128,6 @@ export interface BusySlot {
     to: string;
 }
 
-/**
- * Die Einheit, in der der Umfang einer Gewohnheit gemessen wird.
- *
- * Neu vergeben wird nur noch `minutes` — der Katalog kennt nur Aktivitäten
- * mit Dauer. Die übrigen Werte existieren in alten Gewohnheiten weiter.
- */
-export type MeasureUnit = 'minutes' | 'pages' | 'liters' | 'times';
-
 export interface Habit {
     id: number;
     title: string;
