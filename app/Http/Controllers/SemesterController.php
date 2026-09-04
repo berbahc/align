@@ -6,9 +6,13 @@ use App\Enums\CourseKind;
 use App\Http\Requests\StoreSemesterRequest;
 use App\Models\Course;
 use App\Models\CourseException;
+use App\Models\Semester;
+use App\Models\User;
+use App\Support\SlotConflict;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -73,6 +77,12 @@ class SemesterController extends Controller
 
         abort_if($semester === null, 404);
 
+        // Ein verschobener Zeitraum lässt Kurse gelten, die vorher nicht galten
+        // — und die können auf Gewohnheiten liegen, die es damals noch nicht
+        // gab. Ohne diese Prüfung wäre der Zeitraum die Hintertür, durch die
+        // doch zwei Dinge auf eine Minute kämen.
+        $this->guardCoursesAgainstHabits($request->user(), $semester);
+
         $semester->update($request->validated());
 
         return back()->with('success', 'Dein Semester ist gespeichert.');
@@ -90,6 +100,45 @@ class SemesterController extends Controller
         $semester->delete();
 
         return back()->with('success', 'Dein Semesterplan ist gelöscht.');
+    }
+
+    /**
+     * Liegt einer der Kurse auf einer Gewohnheit?
+     *
+     * Geprüft wird gegen die Gewohnheiten allein: Ob die Kurse untereinander
+     * passen, steht beim Eintragen fest und ändert sich durch einen anderen
+     * Zeitraum nicht.
+     */
+    private function guardCoursesAgainstHabits(User $user, Semester $semester): void
+    {
+        foreach ($semester->courses as $course) {
+            $conflict = SlotConflict::find(
+                $user,
+                [[
+                    'id' => -$course->id,
+                    'title' => $course->title,
+                    'from' => $course->startMinute(),
+                    'to' => $course->endMinute(),
+                ]],
+                [$course->weekday],
+                withTimetable: false,
+            );
+
+            if ($conflict === null) {
+                continue;
+            }
+
+            throw ValidationException::withMessages([
+                'starts_on' => SlotConflict::message(
+                    $conflict['block'],
+                    $conflict['date'],
+                    sprintf(
+                        'In diesem Zeitraum läge „%s" darauf. Verschiebe die Gewohnheit zuerst.',
+                        $course->title,
+                    ),
+                ),
+            ]);
+        }
     }
 
     /**

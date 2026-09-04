@@ -220,6 +220,15 @@ abstract class HabitFormRequest extends FormRequest
         $edited = $this->editedHabit();
 
         if ($edited === null) {
+            // Beim Anlegen gibt es noch keine eigene Kennung, die auszunehmen
+            // wäre — der Zyklus-Fall kann hier ohnehin nicht eintreten.
+            if ($previous->chainedHabits()->active()->exists()) {
+                $validator->errors()->add(
+                    'chained_to_habit_id',
+                    sprintf('An „%s" hängt schon eine Gewohnheit. Häng deine an die letzte der Reihe.', $previous->title),
+                );
+            }
+
             return;
         }
 
@@ -228,6 +237,21 @@ abstract class HabitFormRequest extends FormRequest
                 'chained_to_habit_id',
                 'Damit hinge die Gewohnheit an sich selbst.',
             );
+
+            return;
+        }
+
+        // Eine Kette ist eine Reihe, kein Fächer. Hängen zwei Gewohnheiten an
+        // derselben, beginnen beide, wenn die vorige endet — zwei Dinge auf
+        // einer Minute. {@see Habit::spansFrom()} folgt ohnehin nur der ersten;
+        // die Regel schreibt also fest, wovon die Rechnung längst ausgeht.
+        if ($previous->chainedHabits()->active()->whereKeyNot($edited->id)->exists()) {
+            $validator->errors()->add(
+                'chained_to_habit_id',
+                sprintf('An „%s" hängt schon eine Gewohnheit. Häng deine an die letzte der Reihe.', $previous->title),
+            );
+
+            return;
         }
     }
 

@@ -7,6 +7,7 @@ use App\Enums\ScheduleType;
 use App\Models\Habit;
 use App\Models\User;
 use App\Support\DayPlan;
+use App\Support\SlotConflict;
 use App\Support\Timetable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -14,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Throwable;
 
@@ -157,6 +159,8 @@ class DayOrderController extends Controller
         $date = Carbon::parse($validated['date'])->startOfDay();
         $due = $this->habitsOn($request->user(), $date)->keyBy('id');
 
+        $this->guard($request->user(), $date, $validated['order'], $due);
+
         foreach ($validated['order'] as $row) {
             $habit = $due->get((int) $row['id']);
 
@@ -178,6 +182,91 @@ class DayOrderController extends Controller
         Inertia::flash('dayReordered', ['count' => count($validated['order'])]);
 
         return back();
+    }
+
+    /**
+     * Weist ab, was sich beim Übernehmen überschneiden würde.
+     *
+     * Der Vorschlag wird geprüft, bevor er gezeigt wird — hier wird geprüft,
+     * was ankommt. Zwischen beidem liegt eine Entscheidung, und in der Zeit
+     * kann ein Kurs dazugekommen sein; und eine zusammengesetzte Anfrage kommt
+     * ohnehin nie durch einen Vorschlag.
+     *
+     * Zwei Vergleiche, weil es zwei Arten von Nachbarn gibt: die Blöcke, die
+     * der Tag ohnehin trägt — Kurse und Gewohnheiten, die nicht mitgeordnet
+     * werden —, und die geordneten untereinander.
+     *
+     * @param  list<array{id: int|string, time: string}>  $order
+     * @param  Collection<int, Habit>  $due
+     */
+    private function guard(User $user, Carbon $date, array $order, Collection $due): void
+    {
+        $spans = [];
+
+        foreach ($order as $row) {
+            $habit = $due->get((int) $row['id']);
+
+            if ($habit === null) {
+                continue;
+            }
+
+            $from = DayPlan::toMinutes($row['time']);
+
+            $spans[] = [
+                'id' => $habit->id,
+                'title' => $habit->title,
+                'from' => $from,
+                'to' => $from + ($habit->durationMinutes() ?? DayPlan::AssumedMinutes),
+            ];
+        }
+
+        $conflict = SlotConflict::find(
+            $user,
+            $spans,
+            [$date->dayOfWeekIso],
+            array_column($spans, 'id'),
+        );
+
+        if ($conflict !== null) {
+            throw ValidationException::withMessages([
+                'order' => SlotConflict::message(
+                    $conflict['block'],
+                    $conflict['date'],
+                    Timetable::isCourseBlock($conflict['block'])
+                        ? 'Die Ordnung lässt sich so nicht übernehmen — der Kurs rückt nicht.'
+                        : 'Die Ordnung lässt sich so nicht übernehmen.',
+                ),
+            ]);
+        }
+
+        $this->assertOrderDoesNotOverlapItself($spans);
+    }
+
+    /**
+     * Zwei geordnete Gewohnheiten zur selben Zeit sind keine Ordnung.
+     *
+     * {@see SlotConflict} kann das nicht sehen: Dort zählen die geordneten
+     * bewusst nicht mit, weil sie sich ja gerade bewegen.
+     *
+     * @param  list<array{id: int, title: string, from: int, to: int}>  $spans
+     */
+    private function assertOrderDoesNotOverlapItself(array $spans): void
+    {
+        usort($spans, fn (array $a, array $b): int => $a['from'] <=> $b['from']);
+
+        foreach ($spans as $index => $span) {
+            $next = $spans[$index + 1] ?? null;
+
+            if ($next !== null && $next['from'] < $span['to']) {
+                throw ValidationException::withMessages([
+                    'order' => sprintf(
+                        '„%s" und „%s" lägen übereinander. Die Ordnung lässt sich so nicht übernehmen.',
+                        $span['title'],
+                        $next['title'],
+                    ),
+                ]);
+            }
+        }
     }
 
     /**

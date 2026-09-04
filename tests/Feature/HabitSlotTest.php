@@ -1,6 +1,7 @@
 <?php
 
 use App\Ai\Agents\SuggestBetterAnchor;
+use App\Enums\CourseKind;
 use App\Enums\HabitTemplate;
 use App\Enums\ScheduleType;
 use App\Models\Course;
@@ -270,4 +271,219 @@ test('a habit in the way is named without pretending a lecture could move', func
     expect(session('errors')->first('scheduled_time'))
         ->toContain('Essen vorkochen')
         ->not->toContain('rückt nicht');
+});
+
+/**
+ * Die Wege, auf denen sich bis hierher ein Überlapp erzeugen ließ.
+ *
+ * Alle vier sind erst nach der Frage „darf es einen Zustand geben, in dem auf
+ * einem Zeitpunkt zwei Sachen liegen?" aufgefallen — die Prüfung hing an den
+ * Formularen, nicht am Tag.
+ */
+test('applying a day order cannot drop a habit into a lecture', function () {
+    $user = studentWithCourse('10:00', '11:30');
+    $a = Habit::factory()->for($user)->fixedSchedule('14:00', [1])->withMeasure(30)->create(['title' => 'A']);
+    $b = Habit::factory()->for($user)->fixedSchedule('16:00', [1])->withMeasure(30)->create(['title' => 'B']);
+
+    $monday = Carbon::today()->next(Carbon::MONDAY);
+
+    $this->actingAs($user)
+        ->post(route('calendar.order.store'), [
+            'date' => $monday->toDateString(),
+            'order' => [
+                ['id' => $a->id, 'time' => '10:15'],
+                ['id' => $b->id, 'time' => '16:00'],
+            ],
+        ])
+        ->assertSessionHasErrors('order');
+
+    expect($a->fresh()->scheduled_time->format('H:i'))->toBe('14:00');
+});
+
+test('applying a day order cannot stack two habits on each other', function () {
+    $user = User::factory()->create();
+    $a = Habit::factory()->for($user)->fixedSchedule('14:00', [1])->withMeasure(30)->create(['title' => 'A']);
+    $b = Habit::factory()->for($user)->fixedSchedule('16:00', [1])->withMeasure(30)->create(['title' => 'B']);
+
+    $this->actingAs($user)
+        ->post(route('calendar.order.store'), [
+            'date' => Carbon::today()->next(Carbon::MONDAY)->toDateString(),
+            'order' => [
+                ['id' => $a->id, 'time' => '09:00'],
+                ['id' => $b->id, 'time' => '09:15'],
+            ],
+        ])
+        ->assertSessionHasErrors('order');
+
+    expect($a->fresh()->scheduled_time->format('H:i'))->toBe('14:00');
+});
+
+test('a course cannot be entered on top of an existing habit', function () {
+    $user = User::factory()->create();
+    Semester::factory()->for($user)->create();
+    Habit::factory()->for($user)->fixedSchedule('10:00', [1])->withMeasure(60)
+        ->create(['title' => 'Lesen']);
+
+    $this->actingAs($user)
+        ->post(route('calendar.semester.courses.store'), [
+            'title' => 'Mathe 1',
+            'kind' => CourseKind::Vorlesung->value,
+            'weekday' => 1,
+            'starts_at' => '10:00',
+            'ends_at' => '11:30',
+        ])
+        ->assertSessionHasErrors('starts_at');
+
+    expect(session('errors')->first('starts_at'))
+        ->toContain('Lesen')
+        // Hier ist die Gewohnheit das Bewegliche, nicht der Kurs.
+        ->toContain('dann passt der Kurs hier hinein')
+        ->and(Course::count())->toBe(0);
+});
+
+test('a course beside an existing habit is entered as before', function () {
+    $user = User::factory()->create();
+    Semester::factory()->for($user)->create();
+    Habit::factory()->for($user)->fixedSchedule('08:00', [1])->withMeasure(30)->create();
+
+    $this->actingAs($user)
+        ->post(route('calendar.semester.courses.store'), [
+            'title' => 'Mathe 1',
+            'kind' => CourseKind::Vorlesung->value,
+            'weekday' => 1,
+            'starts_at' => '10:00',
+            'ends_at' => '11:30',
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect(Course::count())->toBe(1);
+});
+
+test('a graduated habit cannot be resumed into an occupied slot', function () {
+    $user = studentWithCourse('10:00', '11:30');
+    $habit = Habit::factory()->for($user)->fixedSchedule('10:15', [1])->withMeasure(30)
+        ->create(['title' => 'Alt', 'graduated_at' => Carbon::now()]);
+
+    $this->actingAs($user)
+        ->delete(route('habits.graduation.destroy', $habit))
+        ->assertSessionHasErrors('habit');
+
+    expect($habit->fresh()->graduated_at)->not->toBeNull();
+});
+
+test('a graduated habit whose slot is still free comes back', function () {
+    $user = studentWithCourse('10:00', '11:30');
+    $habit = Habit::factory()->for($user)->fixedSchedule('14:00', [1])->withMeasure(30)
+        ->create(['graduated_at' => Carbon::now()]);
+
+    $this->actingAs($user)
+        ->delete(route('habits.graduation.destroy', $habit))
+        ->assertSessionHasNoErrors();
+
+    expect($habit->fresh()->graduated_at)->toBeNull();
+});
+
+/**
+ * Die Hintertür: Nicht der Kurs zieht um, sondern der Zeitraum um ihn herum.
+ */
+test('moving the semester range cannot pull a course over a habit', function () {
+    $user = User::factory()->create();
+    $semester = Semester::factory()->for($user)
+        ->between(
+            Carbon::today()->addMonths(2)->toDateString(),
+            Carbon::today()->addMonths(6)->toDateString(),
+        )
+        ->create();
+    Course::factory()->for($semester)->onWeekday(1)->at('10:00', '11:30')
+        ->create(['title' => 'Mathe 1']);
+
+    Habit::factory()->for($user)->fixedSchedule('10:15', [1])->withMeasure(30)
+        ->create(['title' => 'Lesen']);
+
+    $this->actingAs($user)
+        ->put(route('calendar.semester.update'), [
+            'title' => $semester->title,
+            'starts_on' => Carbon::today()->subDay()->toDateString(),
+            'ends_on' => Carbon::today()->addMonths(4)->toDateString(),
+        ])
+        ->assertSessionHasErrors('starts_on');
+
+    expect(session('errors')->first('starts_on'))
+        ->toContain('Lesen')
+        ->toContain('Mathe 1')
+        // Der Zeitraum bleibt, wie er war.
+        ->and($semester->fresh()->starts_on->toDateString())
+        ->toBe(Carbon::today()->addMonths(2)->toDateString());
+});
+
+test('a semester range without clashes still moves', function () {
+    $user = User::factory()->create();
+    $semester = Semester::factory()->for($user)->create();
+    Course::factory()->for($semester)->onWeekday(1)->at('10:00', '11:30')->create();
+    Habit::factory()->for($user)->fixedSchedule('14:00', [1])->withMeasure(30)->create();
+
+    $this->actingAs($user)
+        ->put(route('calendar.semester.update'), [
+            'title' => 'Sommersemester 26',
+            'starts_on' => Carbon::today()->toDateString(),
+            'ends_on' => Carbon::today()->addMonths(5)->toDateString(),
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect($semester->fresh()->title)->toBe('Sommersemester 26');
+});
+
+/**
+ * Eine Kette ist eine Reihe, kein Fächer.
+ *
+ * Hingen zwei Gewohnheiten an derselben, begannen beide, wenn die vorige
+ * endet — zwei Dinge auf einer Minute, und zwar schon vor jedem Auflösen.
+ * `Habit::spansFrom()` folgte ohnehin nur der ersten; die Regel schreibt fest,
+ * wovon die Rechnung längst ausging.
+ */
+test('a habit cannot chain onto one that already has a follower', function () {
+    $user = User::factory()->create();
+    $anchor = Habit::factory()->for($user)->fixedSchedule('10:00', [1])->withMeasure(30)
+        ->create(['title' => 'Anker']);
+    Habit::factory()->for($user)->withMeasure(30)->create([
+        'title' => 'Erster',
+        'schedule_type' => ScheduleType::Chained,
+        'trigger_situation' => null,
+        'chained_to_habit_id' => $anchor->id,
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('habits.store'), [
+            'template_key' => HabitTemplate::Lesen->value,
+            'target_amount' => 30,
+            'schedule_type' => ScheduleType::Chained->value,
+            'chained_to_habit_id' => $anchor->id,
+        ])
+        ->assertSessionHasErrors('chained_to_habit_id');
+
+    expect(session('errors')->first('chained_to_habit_id'))->toContain('Anker');
+});
+
+test('releasing a chain lays its followers in a row, not on each other', function () {
+    $user = User::factory()->create();
+    $anchor = Habit::factory()->for($user)->fixedSchedule('10:00', [1])->withMeasure(30)
+        ->create(['title' => 'Anker']);
+
+    // Von Hand angelegt, wie es aus der Zeit vor der Regel noch dastehen kann.
+    $first = Habit::factory()->for($user)->withMeasure(30)->create([
+        'title' => 'Erster', 'position' => 1,
+        'schedule_type' => ScheduleType::Chained,
+        'trigger_situation' => null, 'chained_to_habit_id' => $anchor->id,
+    ]);
+    $second = Habit::factory()->for($user)->withMeasure(30)->create([
+        'title' => 'Zweiter', 'position' => 2,
+        'schedule_type' => ScheduleType::Chained,
+        'trigger_situation' => null, 'chained_to_habit_id' => $anchor->id,
+    ]);
+
+    $this->actingAs($user)->post(route('habits.graduation.store', $anchor));
+
+    expect($first->fresh()->scheduled_time->format('H:i'))->toBe('10:00')
+        ->and($second->fresh()->chained_to_habit_id)->toBe($first->id)
+        ->and($second->fresh()->startsAt()->format('H:i'))->toBe('10:30');
 });
