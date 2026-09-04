@@ -8,6 +8,7 @@ use App\Models\Habit;
 use App\Models\Semester;
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Inertia\Testing\AssertableInertia;
 use Laravel\Ai\Prompts\AgentPrompt;
 
 /**
@@ -356,4 +357,89 @@ test('two places may share a weekday when applied together', function () {
     expect($walk->fresh()->displaced_at)->toBeNull()
         ->and($gym->fresh()->displaced_at)->toBeNull()
         ->and($gym->fresh()->scheduled_time->format('H:i'))->toBe('11:45');
+});
+
+test('each place names the day on which to look at it — the first lecture day', function () {
+    $user = User::factory()->create();
+    $semester = Semester::factory()->for($user)->between(
+        Carbon::today()->addMonth()->toDateString(),
+        Carbon::today()->addMonths(5)->toDateString(),
+    )->create();
+    $walk = parkedHabit($user, 'Spazieren', '10:45', days: [1, 3], minutes: 20);
+    enterCourse($user, 1, '10:00', '11:30');
+
+    SuggestNewPlaces::fake([[
+        'places' => [['id' => $walk->id, 'time' => '11:45', 'days' => [1, 3], 'reason' => 'Nach Mathe.']],
+    ]]);
+
+    $firstMonday = Carbon::parse($semester->starts_on->toDateString());
+
+    while ($firstMonday->dayOfWeekIso !== 1) {
+        $firstMonday->addDay();
+    }
+
+    $this->actingAs($user)
+        ->postJson(route('calendar.semester.places.suggestions'))
+        ->assertOk()
+        ->assertJsonPath('places.0.previewDate', $firstMonday->toDateString());
+});
+
+test('the day shows a suggested place as a ghost, and only where it would apply', function () {
+    $user = studentWithSemester();
+    $walk = parkedHabit($user, 'Spazieren', '10:45', days: [1, 3], minutes: 20);
+    enterCourse($user, 1, '10:00', '11:30');
+
+    SuggestNewPlaces::fake([[
+        'places' => [['id' => $walk->id, 'time' => '11:45', 'days' => [1, 3], 'reason' => 'Nach Mathe.']],
+    ]]);
+
+    $response = $this->actingAs($user)->postJson(route('calendar.semester.places.suggestions'))->assertOk();
+    $suggestionId = $response->json('places.0.suggestionId');
+    $monday = $response->json('places.0.previewDate');
+
+    $this->actingAs($user)
+        ->get(route('calendar.day', ['date' => $monday, 'suggestion' => $suggestionId]))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('proposal.suggestionId', $suggestionId)
+            ->where('proposal.title', 'Spazieren')
+            ->where('proposal.time', '11:45')
+            ->where('proposal.block.startMinute', 11 * 60 + 45)
+            ->where('proposal.block.exact', true)
+            ->where('proposal.block.timeRange', '11:45 – 12:05')
+            ->etc());
+
+    // Dienstag ist keiner seiner Tage — dort gäbe es nichts zu zeigen.
+    $tuesday = Carbon::parse($monday)->addDay()->toDateString();
+
+    $this->actingAs($user)
+        ->get(route('calendar.day', ['date' => $tuesday, 'suggestion' => $suggestionId]))
+        ->assertInertia(fn (AssertableInertia $page) => $page->where('proposal', null)->etc());
+
+    // Übernommen — dann ist der Vorschlag keiner mehr.
+    $this->actingAs($user)
+        ->post(route('calendar.semester.places.store'), [
+            'places' => [['id' => $walk->id, 'time' => '11:45', 'days' => [1, 3], 'suggestion_id' => $suggestionId]],
+        ])
+        ->assertSessionHasNoErrors();
+
+    $this->actingAs($user)
+        ->get(route('calendar.day', ['date' => $monday, 'suggestion' => $suggestionId]))
+        ->assertInertia(fn (AssertableInertia $page) => $page->where('proposal', null)->etc());
+});
+
+test('a suggestion of someone else is no proposal', function () {
+    $user = studentWithSemester();
+    $stranger = studentWithSemester();
+    $walk = parkedHabit($stranger, 'Spazieren', '10:45', minutes: 20);
+    enterCourse($stranger, 1, '10:00', '11:30');
+
+    SuggestNewPlaces::fake([[
+        'places' => [['id' => $walk->id, 'time' => '11:45', 'days' => [1], 'reason' => 'x']],
+    ]]);
+
+    $response = $this->actingAs($stranger)->postJson(route('calendar.semester.places.suggestions'))->assertOk();
+
+    $this->actingAs($user)
+        ->get(route('calendar.day', ['date' => $response->json('places.0.previewDate'), 'suggestion' => $response->json('places.0.suggestionId')]))
+        ->assertInertia(fn (AssertableInertia $page) => $page->where('proposal', null)->etc());
 });

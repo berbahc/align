@@ -1,4 +1,4 @@
-import { router } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 import { ArrowRight, Check, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { AiSuggestionFailure } from '@/components/ai-suggestion';
@@ -11,8 +11,9 @@ import {
 } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNewPlaces } from '@/hooks/use-new-places';
-import { OUTLINE_BUTTON, PRIMARY_BUTTON } from '@/lib/interaction';
+import { OUTLINE_BUTTON, PRIMARY_BUTTON, QUIET_LINK } from '@/lib/interaction';
 import { cn } from '@/lib/utils';
+import { day as calendarDay } from '@/routes/calendar';
 import { store, suggestions } from '@/routes/calendar/semester/places';
 
 /** Beide Knöpfe gleich breit — ein kleinerer Ablehn-Knopf wäre eine Empfehlung, keine Wahl. */
@@ -160,58 +161,76 @@ export function NewPlacesSheet({
                         const on = !declined.has(place.suggestionId);
 
                         return (
-                            <button
+                            <div
                                 key={place.suggestionId}
-                                type="button"
-                                onClick={() => toggle(place.suggestionId)}
-                                aria-pressed={on}
-                                className={cn(
-                                    'flex w-full cursor-pointer items-start gap-3 rounded-[14px] border-2 bg-card px-4 py-3 text-left transition-[border-color,scale] duration-[var(--duration-press)] ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-safe:active:scale-[0.97]',
-                                    on
-                                        ? 'border-primary'
-                                        : 'border-border hover:border-secondary',
-                                )}
+                                className="flex flex-col gap-1"
                             >
-                                <span
+                                <button
+                                    type="button"
+                                    onClick={() => toggle(place.suggestionId)}
+                                    aria-pressed={on}
                                     className={cn(
-                                        'mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors duration-[var(--duration-press)] ease-out',
+                                        'flex w-full cursor-pointer items-start gap-3 rounded-[14px] border-2 bg-card px-4 py-3 text-left transition-[border-color,scale] duration-[var(--duration-press)] ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-safe:active:scale-[0.97]',
                                         on
-                                            ? 'border-primary bg-primary text-primary-foreground'
-                                            : 'border-input',
+                                            ? 'border-primary'
+                                            : 'border-border hover:border-secondary',
                                     )}
-                                    aria-hidden="true"
                                 >
-                                    {on && (
-                                        <Check
-                                            className="size-3.5"
-                                            strokeWidth={3}
-                                        />
-                                    )}
-                                </span>
-                                <span className="min-w-0 flex-1">
-                                    <span className="block text-[15px] leading-snug font-semibold">
-                                        {place.title}
+                                    <span
+                                        className={cn(
+                                            'mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors duration-[var(--duration-press)] ease-out',
+                                            on
+                                                ? 'border-primary bg-primary text-primary-foreground'
+                                                : 'border-input',
+                                        )}
+                                        aria-hidden="true"
+                                    >
+                                        {on && (
+                                            <Check
+                                                className="size-3.5"
+                                                strokeWidth={3}
+                                            />
+                                        )}
                                     </span>
-                                    <span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                                        <span className="line-through">
-                                            {place.previousLabel.replace(
-                                                'braucht einen neuen Platz · lief bisher ',
-                                                '',
-                                            )}
+                                    <span className="min-w-0 flex-1">
+                                        <span className="block text-[15px] leading-snug font-semibold">
+                                            {place.title}
                                         </span>
-                                        <ArrowRight
-                                            className="size-3"
-                                            aria-hidden="true"
-                                        />
-                                        <span className="font-semibold text-foreground">
-                                            {place.label}
+                                        <span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                                            <span className="line-through">
+                                                {place.previousLabel.replace(
+                                                    'braucht einen neuen Platz · lief bisher ',
+                                                    '',
+                                                )}
+                                            </span>
+                                            <ArrowRight
+                                                className="size-3"
+                                                aria-hidden="true"
+                                            />
+                                            <span className="font-semibold text-foreground">
+                                                {place.label}
+                                            </span>
+                                        </span>
+                                        <span className="mt-1 block text-sm leading-relaxed text-muted-foreground">
+                                            {place.reason}
                                         </span>
                                     </span>
-                                    <span className="mt-1 block text-sm leading-relaxed text-muted-foreground">
-                                        {place.reason}
-                                    </span>
-                                </span>
-                            </button>
+                                </button>
+                                {/* Der Weg in den Tag: Dort liegt der Vorschlag
+                                gestrichelt neben den Kursen, um die es geht —
+                                und lässt sich übernehmen oder selbst
+                                einordnen. */}
+                                <Link
+                                    href={calendarDay(place.previewDate, {
+                                        query: {
+                                            suggestion: place.suggestionId,
+                                        },
+                                    })}
+                                    className={`${QUIET_LINK} self-end text-xs`}
+                                >
+                                    Im Tag ansehen
+                                </Link>
+                            </div>
                         );
                     })}
                 </div>

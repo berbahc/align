@@ -17,6 +17,7 @@ use App\Support\Timetable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -79,6 +80,7 @@ class NewPlaceController extends Controller
 
         $byId = $parked->keyBy('id');
         $placedIds = array_column($places, 'id');
+        $timetable = Timetable::for($user);
 
         // Was das Modell weggelassen hat, steht neben dem, was nie gefragt
         // wurde: Für die Person ist es dasselbe — sie legt es selbst hin.
@@ -100,7 +102,7 @@ class NewPlaceController extends Controller
                     : '%d von %d passen wieder in deinen Tag.',
                 ...(count($places) === 1 ? [$parked->count()] : [count($places), $parked->count()]),
             ),
-            'places' => array_map(function (array $place) use ($byId, $user, $remember): array {
+            'places' => array_map(function (array $place) use ($byId, $user, $remember, $timetable): array {
                 /** @var Habit $habit */
                 $habit = $byId->get($place['id']);
 
@@ -118,6 +120,7 @@ class NewPlaceController extends Controller
                     'label' => Habit::anchorLabel(time: $place['time'], days: $place['days']),
                     'timeRange' => $place['time'].' – '.DayPlan::toTime(DayPlan::toMinutes($place['time']) + $place['minutes']),
                     'reason' => $place['reason'],
+                    'previewDate' => $this->previewDate($place['days'], $timetable),
                 ];
             }, $places),
             'unplaced' => $unplaced,
@@ -203,6 +206,28 @@ class NewPlaceController extends Controller
         ]);
 
         return back();
+    }
+
+    /**
+     * Der Tag, an dem man den Vorschlag ansieht.
+     *
+     * Der erste seiner Wochentage, an dem der Stundenplan gilt — sonst der
+     * nächste. Wer den Vorschlag gestrichelt im Raster sieht, soll die Kurse
+     * daneben sehen, um die es geht; ein Montag im September ohne Mathe
+     * zeigte einen Tag, den es so nicht mehr geben wird.
+     *
+     * @param  list<int>  $days
+     */
+    private function previewDate(array $days, Timetable $timetable): string
+    {
+        $dates = array_map(
+            fn (int $day): Carbon => $timetable->firstDateOf($day) ?? SlotConflict::nextWeekday($day),
+            $days,
+        );
+
+        usort($dates, fn (Carbon $a, Carbon $b): int => $a->getTimestamp() <=> $b->getTimestamp());
+
+        return $dates[0]->toDateString();
     }
 
     /**
