@@ -319,6 +319,12 @@ export function followersOf(
         }));
 }
 
+/** Was im Weg liegt: sein Titel und ob es sich überhaupt bewegen lässt. */
+export interface BlockConflict {
+    title: string;
+    kind: 'habit' | 'course';
+}
+
 /**
  * Was dem Zug an diesem Tag im Weg liegt — oder nichts.
  *
@@ -326,13 +332,16 @@ export function followersOf(
  * `DayPlan::collisionWith()`: Zwei Blöcke direkt hintereinander sind eine
  * Planung, keine Doppelbuchung. Die Antwort steht dadurch sofort im Pop-up,
  * statt erst nach einem Rundweg über den Server.
+ *
+ * Die Art kommt mit, weil sie den Ausweg bestimmt: Eine Gewohnheit lässt sich
+ * verschieben, eine Vorlesung nicht — sie kommt von der Uni.
  */
 export function collisionOf(
     blocks: CalendarBlock[],
     courses: CourseBlock[],
     draggedId: number,
     minute: number,
-): string | null {
+): BlockConflict | null {
     const after = withDrag(blocks, draggedId, minute);
     const before = new Map(
         blocks.map((block) => [block.id, block.startMinute]),
@@ -367,7 +376,7 @@ export function collisionOf(
                 other.startMinute + (other.durationMinutes ?? ASSUMED_MINUTES);
 
             if (from < otherTo && to > other.startMinute) {
-                return other.title;
+                return { title: other.title, kind: other.kind };
             }
         }
     }

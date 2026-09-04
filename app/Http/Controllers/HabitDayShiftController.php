@@ -222,11 +222,12 @@ class HabitDayShiftController extends Controller
             if ($conflict !== null) {
                 throw ValidationException::withMessages([
                     'start_minute' => Timetable::isCourseBlock($conflict)
-                        // Eine Vorlesung lässt sich nicht wegschieben. Der
-                        // Ausweg ist eine andere Zeit, nicht eine andere
-                        // Reihenfolge — der Satz darf nichts anderes anbieten.
+                        // Ein Kurs lässt sich nicht wegschieben — er kommt von
+                        // der Uni. Der Ausweg ist eine andere Zeit, nicht eine
+                        // andere Reihenfolge; der Satz darf nichts anderes
+                        // anbieten.
                         ? sprintf(
-                            '%s läuft „%s" um %s. Such der Gewohnheit eine andere Zeit.',
+                            '%s läuft „%s" um %s aus deinem Semesterplan. Such der Gewohnheit eine andere Zeit — der Kurs rückt nicht.',
                             ucfirst($this->weekdayLabel($date)),
                             $conflict['title'],
                             DayPlan::toTime($conflict['from']),

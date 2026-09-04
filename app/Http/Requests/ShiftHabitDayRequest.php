@@ -142,10 +142,18 @@ class ShiftHabitDayRequest extends FormRequest
 
         foreach ($plan->occupied($habit) as $block) {
             if ($from < $block['to'] && $to > $block['from']) {
-                $validator->errors()->add('scheduled_time', sprintf(
-                    'Um diese Zeit läuft an dem Tag schon „%s".',
-                    $block['title'],
-                ));
+                // Eine Vorlesung kommt von der Uni und rückt nicht; eine eigene
+                // Gewohnheit schon. Ein Ausweg, den es nicht gibt, ist
+                // schlimmer als keiner.
+                $validator->errors()->add('scheduled_time', Timetable::isCourseBlock($block)
+                    ? sprintf(
+                        'Um diese Zeit läuft an dem Tag „%s" aus deinem Semesterplan. Such eine andere Zeit — der Kurs rückt nicht.',
+                        $block['title'],
+                    )
+                    : sprintf(
+                        'Um diese Zeit läuft an dem Tag schon „%s".',
+                        $block['title'],
+                    ));
 
                 return;
             }

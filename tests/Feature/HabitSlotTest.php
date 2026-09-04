@@ -55,8 +55,8 @@ test('a new habit cannot be planned into a lecture', function () {
     $message = session('errors')->first('scheduled_time');
 
     expect($message)->toContain('Mathe 1')
-        // Eine Vorlesung rückt nicht — der Satz darf nichts anderes anbieten.
-        ->toContain('die Vorlesung rückt nicht')
+        // Ein Kurs rückt nicht — der Satz darf nichts anderes anbieten.
+        ->toContain('der Kurs rückt nicht')
         ->not->toContain('Verschiebe die zuerst')
         ->and($user->habits()->count())->toBe(0);
 });
@@ -223,4 +223,51 @@ test('a lecture outside the semester blocks nothing', function () {
         ->assertSessionHasNoErrors();
 
     expect($user->habits()->count())->toBe(1);
+});
+
+/**
+ * Der Weg über die Verabredung: Wer Platz für jemanden macht, wählt eine neue
+ * Zeit — und dabei gilt dasselbe.
+ */
+test('making room for an appointment cannot land in a lecture either', function () {
+    $user = studentWithCourse('10:00', '11:30');
+    $habit = Habit::factory()->for($user)->fixedSchedule('14:00', [1])->withMeasure(30)->create();
+
+    $monday = Carbon::today()->next(Carbon::MONDAY);
+
+    $this->actingAs($user)
+        ->post(route('habits.shifts.store', $habit), [
+            'date' => $monday->toDateString(),
+            'scheduled_time' => '10:30',
+        ])
+        ->assertSessionHasErrors('scheduled_time');
+
+    expect(session('errors')->first('scheduled_time'))
+        ->toContain('Mathe 1')
+        ->toContain('der Kurs rückt nicht')
+        ->and($habit->dayShifts()->count())->toBe(0);
+});
+
+/**
+ * Und die Gegenprobe: Bei einer eigenen Gewohnheit bleibt der Ausweg stehen,
+ * denn den gibt es dort.
+ */
+test('a habit in the way is named without pretending a lecture could move', function () {
+    $user = User::factory()->create();
+    Habit::factory()->for($user)->fixedSchedule('10:00', [1])->withMeasure(60)
+        ->create(['title' => 'Essen vorkochen']);
+    $habit = Habit::factory()->for($user)->fixedSchedule('14:00', [1])->withMeasure(30)->create();
+
+    $monday = Carbon::today()->next(Carbon::MONDAY);
+
+    $this->actingAs($user)
+        ->post(route('habits.shifts.store', $habit), [
+            'date' => $monday->toDateString(),
+            'scheduled_time' => '10:30',
+        ])
+        ->assertSessionHasErrors('scheduled_time');
+
+    expect(session('errors')->first('scheduled_time'))
+        ->toContain('Essen vorkochen')
+        ->not->toContain('rückt nicht');
 });

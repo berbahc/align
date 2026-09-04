@@ -17,10 +17,11 @@ use Illuminate\Validation\Validator;
  * ins Formular tippte, kam durch. Der Plan widersprach sich damit selbst, und
  * zwar an der Stelle, an der die App ihr Versprechen einlöst.
  *
- * Ein Kurs wiegt dabei schwerer als eine Gewohnheit: Eine Vorlesung lässt sich
- * nicht verschieben, eine eigene Gewohnheit schon. Deshalb zwei Sätze statt
- * einem — der eine nennt einen Ausweg, den es gibt, der andere keinen, den es
- * nicht gibt.
+ * Ein Kurs wiegt dabei schwerer als eine Gewohnheit: Er kommt von der Uni und
+ * rückt nicht, eine eigene Gewohnheit schon. Deshalb zwei Sätze statt einem —
+ * der eine nennt einen Ausweg, den es gibt, der andere keinen, den es nicht
+ * gibt. „Kurs" und nicht „Vorlesung", weil eine Übung, ein Seminar und ein
+ * Praktikum genauso wenig weichen.
  *
  * Geprüft wird an konkreten Daten und nicht an „montags": Der Schlafrahmen
  * hängt am Wochentag, die Ausnahmen des Stundenplans am Datum.
@@ -114,7 +115,7 @@ trait ChecksDayPlan
 
         if (Timetable::isCourseBlock($conflict)) {
             return sprintf(
-                '%s läuft „%s" von %s bis %s. Such der Gewohnheit eine andere Zeit — die Vorlesung rückt nicht.',
+                '%s läuft „%s" von %s bis %s aus deinem Semesterplan. Such der Gewohnheit eine andere Zeit — der Kurs rückt nicht.',
                 ucfirst($when),
                 $conflict['title'],
                 DayPlan::toTime($conflict['from']),
