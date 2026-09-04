@@ -6,6 +6,9 @@ import {
     alternativeLabel,
 } from '@/components/adjustment-sheet';
 import { BlockSheet } from '@/components/block-sheet';
+import { CourseCancellationSheet } from '@/components/course-cancellation-sheet';
+import { CourseDetailSheet } from '@/components/course-detail-sheet';
+import { CourseSheet } from '@/components/course-sheet';
 import { DayGrid } from '@/components/day-grid';
 import { DayOrderSheet } from '@/components/day-order-sheet';
 import { ShiftSheet } from '@/components/shift-sheet';
@@ -25,6 +28,9 @@ import type {
     AnchorAlternative,
     CalendarBlock as Block,
     CourseBlock as Course,
+    CourseKindOption,
+    CourseRow,
+    SemesterPlan,
 } from '@/types';
 
 interface CalendarDayProps {
@@ -41,8 +47,13 @@ interface CalendarDayProps {
     /** Der Monat, aus dem dieser Tag kommt — das Ziel des Wegs zurück. */
     month: string;
     blocks: Block[];
-    /** Die Veranstaltungen dieses Tages — sie belegen Zeit, mehr nicht. */
+    /** Die Veranstaltungen dieses Tages als Blöcke — sie belegen Zeit. */
     courseBlocks: Course[];
+    /** Dieselben als Zeilen, zum Anfassen: Ändern, Ausfall, Löschen. */
+    courses: CourseRow[];
+    kinds: CourseKindOption[];
+    /** Der Zeitraum — für die Grenzen eines Ausfalls. Null ohne Semester. */
+    semester: SemesterPlan | null;
     /** Der Rahmen des Tages als Uhrzeit … */
     wakeTime: string;
     bedtime: string;
@@ -79,6 +90,9 @@ export default function CalendarDay({
     month,
     blocks,
     courseBlocks,
+    courses,
+    kinds,
+    semester,
     wakeTime,
     bedtime,
     frameFrom,
@@ -87,6 +101,20 @@ export default function CalendarDay({
 }: CalendarDayProps) {
     /** Welcher Block gerade aufgeschlagen ist; null heißt zu. */
     const [opened, setOpened] = useState<Block | null>(null);
+    /** Welcher Kurs gerade aufgeschlagen ist; null heißt zu. */
+    const [openedCourse, setOpenedCourse] = useState<CourseRow | null>(null);
+    const [editingCourse, setEditingCourse] = useState<CourseRow | null>(null);
+    const [courseSheetOpen, setCourseSheetOpen] = useState(false);
+    const [cancellingCourse, setCancellingCourse] = useState<CourseRow | null>(
+        null,
+    );
+
+    /** Vom Block im Raster zur Zeile — die Kennung im Raster ist negativ. */
+    function openCourse(block: Course) {
+        setOpenedCourse(
+            courses.find((course) => course.id === -block.id) ?? null,
+        );
+    }
     /** Welcher Block gerade im Anpassungs-Sheet steht; null heißt zu. */
     const [adjusting, setAdjusting] = useState<Block | null>(null);
     /** Welcher Block gerade in der Starthilfe steht; null heißt zu. */
@@ -263,6 +291,7 @@ export default function CalendarDay({
                         <DayGrid
                             blocks={blocks}
                             courseBlocks={courseBlocks}
+                            onOpenCourse={openCourse}
                             frameFrom={frameFrom}
                             frameTo={frameTo}
                             wakeTime={wakeTime}
@@ -366,6 +395,33 @@ export default function CalendarDay({
                 blocks={blocks}
                 onOpenChange={setOrdering}
             />
+
+            {/* Die Kurse liegen hier, also werden sie hier angefasst — mit
+                denselben Sheets, die es dafür gibt, nicht mit eigenen. */}
+            <CourseDetailSheet
+                course={openedCourse}
+                onOpenChange={() => setOpenedCourse(null)}
+                onEdit={(course) => {
+                    setEditingCourse(course);
+                    setCourseSheetOpen(true);
+                }}
+                onCancelDate={setCancellingCourse}
+            />
+
+            <CourseSheet
+                open={courseSheetOpen}
+                course={editingCourse}
+                kinds={kinds}
+                onOpenChange={setCourseSheetOpen}
+            />
+
+            {semester !== null && (
+                <CourseCancellationSheet
+                    course={cancellingCourse}
+                    semester={semester}
+                    onOpenChange={() => setCancellingCourse(null)}
+                />
+            )}
         </>
     );
 }

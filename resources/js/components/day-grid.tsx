@@ -44,6 +44,7 @@ export function DayGrid({
     isToday,
     onToggle,
     onOpen,
+    onOpenCourse,
     onDrop,
     ghost,
 }: {
@@ -60,6 +61,8 @@ export function DayGrid({
     isToday: boolean;
     onToggle: (block: Block) => void;
     onOpen: (block: Block) => void;
+    /** Ein Kurs wurde angetippt — seine Handlungen liegen im Sheet dahinter. */
+    onOpenCourse: (block: Course) => void;
     /** Ein Block wurde losgelassen — jetzt kommt die Frage nach der Reichweite. */
     onDrop: (drag: BlockDrag) => void;
     /** Der Vorschlag der KI: sein Block, und wessen Platz er vorwegnimmt. */
@@ -155,6 +158,7 @@ export function DayGrid({
                             <CourseBlock
                                 key={entry.block.id}
                                 placed={{ ...entry, block: entry.block }}
+                                onOpen={onOpenCourse}
                             />
                         ) : (
                             <CalendarBlock

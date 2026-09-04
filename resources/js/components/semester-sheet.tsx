@@ -1,5 +1,6 @@
 import { router, useForm } from '@inertiajs/react';
-import { useEffect } from 'react';
+import { GraduationCap, Plus } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import {
     Sheet,
     SheetContent,
@@ -19,22 +20,30 @@ const ERROR_PANEL =
     'rounded-xl border border-primary/25 bg-accent px-3 py-2 text-sm text-foreground';
 
 /**
- * Der Zeitraum des Semesters — anlegen oder ändern.
+ * Der Stundenplan hinter dem Knopf oben rechts im Monat.
  *
- * Ein Sheet und keine Seite: Der Zeitraum ist eine Angabe, keine Ansicht. Er
- * entscheidet nur, ab wann und bis wann die Kurse im Kalender gelten — und das
- * stellt man einmal im Semester ein, nicht jede Woche.
+ * Ein Sheet und keine Seite: Der Zeitraum ist eine Angabe, keine Ansicht, und
+ * die Kurse liegen im Tag, wo man sie anfasst. Hier steht, was gilt, ein Weg,
+ * es zu ändern, und der Weg zu einem neuen Kurs — mehr nicht.
  */
 export function SemesterSheet({
     open,
     semester,
+    courseCount,
+    maxCourses,
     onOpenChange,
+    onAddCourse,
 }: {
     open: boolean;
     /** Null heißt: noch keins — dann wird angelegt statt geändert. */
     semester: SemesterPlan | null;
+    courseCount: number;
+    maxCourses: number;
     onOpenChange: (open: boolean) => void;
+    /** Führt ins Kurs-Sheet — erst zu, dann auf. */
+    onAddCourse: () => void;
 }) {
+    const [editing, setEditing] = useState(false);
     const { data, setData, post, put, processing, errors, clearErrors } =
         useForm({
             title: semester?.title ?? '',
@@ -57,12 +66,27 @@ export function SemesterSheet({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, semester]);
 
+    /** Zu heißt auch: nicht mehr im Ändern — das nächste Öffnen zeigt, was gilt. */
+    function close(next: boolean) {
+        if (!next) {
+            setEditing(false);
+        }
+
+        onOpenChange(next);
+    }
+
     function submit(event: React.FormEvent) {
         event.preventDefault();
 
         const options = {
             preserveScroll: true,
-            onSuccess: () => onOpenChange(false),
+            onSuccess: () => {
+                setEditing(false);
+
+                if (semester === null) {
+                    close(false);
+                }
+            },
         };
 
         if (semester === null) {
@@ -75,22 +99,84 @@ export function SemesterSheet({
     }
 
     return (
-        <Sheet open={open} onOpenChange={onOpenChange}>
+        <Sheet open={open} onOpenChange={close}>
             <SheetContent
                 side="bottom"
                 className="mx-auto max-h-[85vh] max-w-lg gap-0 overflow-y-auto rounded-t-2xl px-5 pt-6 pb-8"
             >
                 <SheetHeader className="gap-2 p-0">
                     <SheetTitle className="type-eyebrow text-left text-muted-foreground">
-                        {semester === null ? 'Semester anlegen' : 'Semester'}
+                        {semester === null ? 'Semester anlegen' : 'Stundenplan'}
                     </SheetTitle>
                     <SheetDescription className="text-left text-sm text-muted-foreground">
-                        Zwischen Anfang und Ende belegen deine Kurse ihre Zeit
-                        im Kalender. Davor und danach ist die Woche frei.
+                        {semester === null
+                            ? 'Zwischen Anfang und Ende belegen deine Kurse ihre Zeit im Kalender — und Align plant deine Gewohnheiten darum herum.'
+                            : 'Deine Kurse belegen ihre Zeit im Kalender; Align plant deine Gewohnheiten darum herum.'}
                     </SheetDescription>
                 </SheetHeader>
 
-                <form onSubmit={submit} className="mt-6 flex flex-col gap-5">
+                {semester !== null && !editing && (
+                    <div className="mt-6 flex flex-col gap-4">
+                        <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
+                            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-sand text-olive-mid">
+                                <GraduationCap
+                                    className="size-5"
+                                    strokeWidth={1.5}
+                                    aria-hidden="true"
+                                />
+                            </span>
+                            <div className="min-w-0 flex-1">
+                                <p className="truncate text-[15px] font-semibold">
+                                    {semester.title}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                    {semester.rangeLabel}
+                                    {!semester.isCurrent &&
+                                        (semester.startsInFuture
+                                            ? ` · beginnt am ${semester.startsOnLabel}`
+                                            : ' · vorbei')}
+                                    {' · '}
+                                    {courseCount === 1
+                                        ? '1 Kurs'
+                                        : `${courseCount} Kurse`}
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setEditing(true)}
+                                className={`${QUIET_BUTTON} shrink-0`}
+                            >
+                                Ändern
+                            </button>
+                        </div>
+
+                        {/* Der eigentliche Weg: Die Kurse liegen im Tag, dort
+                            werden sie angefasst. Hier kommt nur ein neuer dazu. */}
+                        <button
+                            type="button"
+                            onClick={onAddCourse}
+                            disabled={courseCount >= maxCourses}
+                            className={PRIMARY_BUTTON}
+                        >
+                            <Plus className="size-4" aria-hidden="true" />
+                            Kurs eintragen
+                        </button>
+                        <p className="text-center text-xs leading-relaxed text-muted-foreground">
+                            {courseCount >= maxCourses
+                                ? `${maxCourses} Kurse sind das Maximum — mehr wäre kein Plan mehr.`
+                                : 'Eingetragene Kurse findest du an ihrem Tag im Kalender — antippen zum Ändern.'}
+                        </p>
+                    </div>
+                )}
+
+                <form
+                    onSubmit={submit}
+                    className={
+                        semester === null || editing
+                            ? 'mt-6 flex flex-col gap-5'
+                            : 'hidden'
+                    }
+                >
                     <div className="flex flex-col gap-2">
                         <label
                             htmlFor="semester-title"
@@ -177,7 +263,11 @@ export function SemesterSheet({
                         </button>
                         <button
                             type="button"
-                            onClick={() => onOpenChange(false)}
+                            onClick={() =>
+                                semester === null
+                                    ? close(false)
+                                    : setEditing(false)
+                            }
                             className={QUIET_BUTTON}
                         >
                             Abbrechen
@@ -192,7 +282,7 @@ export function SemesterSheet({
                         <button
                             type="button"
                             onClick={() => {
-                                onOpenChange(false);
+                                close(false);
                                 router.delete(destroy.url(), {
                                     preserveScroll: true,
                                 });

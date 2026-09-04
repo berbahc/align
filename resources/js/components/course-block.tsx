@@ -30,13 +30,21 @@ const LANE_GAP = 4;
  *   linken Kante „das hast du dir vorgenommen" bedeutet, und das hat sich
  *   niemand vorgenommen.
  *
- * Und sie ist von Bauart nicht bedienbar: ein `div`, kein Knopf. Ein Kurs, der
- * sich anfassen ließe, würde das Versprechen des Rasters brechen, dass alles,
- * was reagiert, auch etwas tut.
+ * Antippen öffnet den Kurs — Ändern, ein Ausfall, Löschen —, denn hier liegt
+ * er, und hier fasst man ihn an. Kein Haken, kein Ziehen: Ein Kurs wird nicht
+ * abgehakt und rückt nicht.
  */
-export function CourseBlock({ placed }: { placed: PlacedBlock<Course> }) {
+export function CourseBlock({
+    placed,
+    onOpen,
+}: {
+    placed: PlacedBlock<Course>;
+    /** Öffnet den Kurs — dort stehen Ändern, Ausfall und Löschen. */
+    onOpen?: (block: Course) => void;
+}) {
     const { block, top, height, lane, lanes } = placed;
     const spacious = height >= SPACIOUS;
+    const Surface = onOpen ? 'button' : 'div';
 
     return (
         <li
@@ -48,10 +56,15 @@ export function CourseBlock({ placed }: { placed: PlacedBlock<Course> }) {
                 left: `calc((((100% - ${(lanes - 1) * LANE_GAP}px) / ${lanes}) + ${LANE_GAP}px) * ${lane})`,
             }}
         >
-            <div
+            <Surface
+                type={onOpen ? 'button' : undefined}
+                onClick={onOpen ? () => onOpen(block) : undefined}
                 aria-label={`${block.kindLabel} ${block.title}, ${block.timeRange.replace('–', 'bis')}`}
                 className={cn(
-                    'flex h-full w-full cursor-default items-center gap-2.5 overflow-hidden rounded-xl border-l-[3px] border-l-olive-mid bg-sand px-2.5',
+                    'flex h-full w-full items-center gap-2.5 overflow-hidden rounded-xl border-l-[3px] border-l-olive-mid bg-sand px-2.5 text-left',
+                    onOpen
+                        ? 'cursor-pointer transition-[background-color,scale] duration-[var(--duration-press)] ease-out hover:bg-sand/80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-safe:active:scale-[0.97]'
+                        : 'cursor-default',
                     spacious ? 'py-2' : 'py-1',
                 )}
             >
@@ -81,7 +94,7 @@ export function CourseBlock({ placed }: { placed: PlacedBlock<Course> }) {
                         </span>
                     )}
                 </span>
-            </div>
+            </Surface>
         </li>
     );
 }

@@ -33,12 +33,13 @@ it('legt ein Semester an und zeigt es auf der Seite', function () {
         ->assertRedirect();
 
     $this->actingAs($user)
-        ->get(route('calendar.week'))
+        ->get(route('calendar'))
         ->assertInertia(fn (AssertableInertia $page) => $page
-            ->component('calendar-week')
+            ->component('calendar')
             ->where('semester.title', 'Wintersemester 25/26')
             ->where('semester.isCurrent', true)
-            ->where('courses', []));
+            ->where('courseCount', 0)
+            ->etc());
 });
 
 it('trägt einen Kurs ein und liefert ihn mit seiner Spanne zurück', function () {
@@ -57,14 +58,24 @@ it('trägt einen Kurs ein und liefert ihn mit seiner Spanne zurück', function (
         ->assertRedirect()
         ->assertSessionHasNoErrors();
 
+    // Der Kurs liegt im Tag — dort kommt er als Zeile zum Anfassen mit.
+    $tuesday = Carbon::today()->next(Carbon::TUESDAY);
+
     $this->actingAs($user)
-        ->get(route('calendar.week'))
+        ->get(route('calendar.day', ['date' => $tuesday->toDateString()]))
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->where('courses.0.title', 'Analysis I')
             ->where('courses.0.weekday', 2)
             ->where('courses.0.timeRange', '10:00 – 11:30')
             ->where('courses.0.kindLabel', 'Vorlesung')
-            ->where('courses.0.location', 'HS 3'));
+            ->where('courses.0.location', 'HS 3')
+            ->where('courseBlocks.0.id', -1)
+            ->etc());
+
+    // Der Monat zählt ihn nur.
+    $this->actingAs($user)
+        ->get(route('calendar'))
+        ->assertInertia(fn (AssertableInertia $page) => $page->where('courseCount', 1)->etc());
 });
 
 it('weist einen Kurs ab, der endet, bevor er anfängt', function () {
@@ -326,7 +337,7 @@ it('zeigt ein abgelaufenes Semester weiter an, aber nicht mehr als laufendes', f
     Semester::factory()->for($user)->past()->create();
 
     $this->actingAs($user)
-        ->get(route('calendar.week'))
+        ->get(route('calendar'))
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->where('semester.title', 'Sommersemester 25')
             ->where('semester.isCurrent', false));
