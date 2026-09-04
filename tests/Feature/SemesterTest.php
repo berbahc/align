@@ -25,7 +25,7 @@ it('legt ein Semester an und zeigt es auf der Seite', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user)
-        ->post(route('semester.store'), [
+        ->post(route('calendar.semester.store'), [
             'title' => 'Wintersemester 25/26',
             'starts_on' => Carbon::today()->toDateString(),
             'ends_on' => Carbon::today()->addMonths(4)->toDateString(),
@@ -33,9 +33,9 @@ it('legt ein Semester an und zeigt es auf der Seite', function () {
         ->assertRedirect();
 
     $this->actingAs($user)
-        ->get(route('semester.show'))
+        ->get(route('calendar.semester'))
         ->assertInertia(fn (AssertableInertia $page) => $page
-            ->component('semester')
+            ->component('calendar-semester')
             ->where('semester.title', 'Wintersemester 25/26')
             ->where('semester.isCurrent', true)
             ->where('courses', []));
@@ -46,7 +46,7 @@ it('trägt einen Kurs ein und liefert ihn mit seiner Spanne zurück', function (
     semesterFor($user);
 
     $this->actingAs($user)
-        ->post(route('semester.courses.store'), [
+        ->post(route('calendar.semester.courses.store'), [
             'title' => 'Analysis I',
             'kind' => CourseKind::Vorlesung->value,
             'weekday' => 2,
@@ -58,7 +58,7 @@ it('trägt einen Kurs ein und liefert ihn mit seiner Spanne zurück', function (
         ->assertSessionHasNoErrors();
 
     $this->actingAs($user)
-        ->get(route('semester.show'))
+        ->get(route('calendar.semester'))
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->where('courses.0.title', 'Analysis I')
             ->where('courses.0.weekday', 2)
@@ -72,7 +72,7 @@ it('weist einen Kurs ab, der endet, bevor er anfängt', function () {
     semesterFor($user);
 
     $this->actingAs($user)
-        ->post(route('semester.courses.store'), [
+        ->post(route('calendar.semester.courses.store'), [
             'title' => 'Analysis I',
             'kind' => CourseKind::Vorlesung->value,
             'weekday' => 1,
@@ -89,7 +89,7 @@ it('weist eine Veranstaltung über sechs Stunden ab', function () {
     semesterFor($user);
 
     $this->actingAs($user)
-        ->post(route('semester.courses.store'), [
+        ->post(route('calendar.semester.courses.store'), [
             'title' => 'Blockseminar',
             'kind' => CourseKind::Seminar->value,
             'weekday' => 1,
@@ -104,7 +104,7 @@ it('lässt keinen Kurs vor fünf Uhr und keinen über Mitternacht', function (st
     semesterFor($user);
 
     $this->actingAs($user)
-        ->post(route('semester.courses.store'), [
+        ->post(route('calendar.semester.courses.store'), [
             'title' => 'Nachtschicht',
             'kind' => CourseKind::Sonstiges->value,
             'weekday' => 1,
@@ -126,7 +126,7 @@ it('weist zwei Kurse ab, die am selben Wochentag übereinanderliegen', function 
     ]);
 
     $this->actingAs($user)
-        ->post(route('semester.courses.store'), [
+        ->post(route('calendar.semester.courses.store'), [
             'title' => 'Lineare Algebra',
             'kind' => CourseKind::Vorlesung->value,
             'weekday' => 3,
@@ -143,7 +143,7 @@ it('lässt einen Kurs zu, der beginnt, wenn der vorige endet', function () {
     Course::factory()->for($semester)->onWeekday(3)->at('10:00', '11:30')->create();
 
     $this->actingAs($user)
-        ->post(route('semester.courses.store'), [
+        ->post(route('calendar.semester.courses.store'), [
             'title' => 'Lineare Algebra',
             'kind' => CourseKind::Vorlesung->value,
             'weekday' => 3,
@@ -161,7 +161,7 @@ it('lässt denselben Kurs auf einen anderen Wochentag legen, ohne ihn mit sich s
     $course = Course::factory()->for($semester)->onWeekday(3)->at('10:00', '11:30')->create();
 
     $this->actingAs($user)
-        ->put(route('semester.courses.update', $course), [
+        ->put(route('calendar.semester.courses.update', $course), [
             'title' => 'Analysis I',
             'kind' => CourseKind::Vorlesung->value,
             'weekday' => 3,
@@ -187,7 +187,7 @@ it('hält die Kursgrenze auch dann ein, wenn das Frontend umgangen wird', functi
     }
 
     $this->actingAs($user)
-        ->post(route('semester.courses.store'), [
+        ->post(route('calendar.semester.courses.store'), [
             'title' => 'Einer zu viel',
             'kind' => CourseKind::Vorlesung->value,
             'weekday' => 1,
@@ -204,7 +204,7 @@ it('lässt niemanden den Kurs eines anderen ändern oder löschen', function () 
     $stranger = User::factory()->create();
 
     $this->actingAs($stranger)
-        ->put(route('semester.courses.update', $course), [
+        ->put(route('calendar.semester.courses.update', $course), [
             'title' => 'Fremd',
             'kind' => CourseKind::Vorlesung->value,
             'weekday' => 1,
@@ -214,7 +214,7 @@ it('lässt niemanden den Kurs eines anderen ändern oder löschen', function () 
         ->assertForbidden();
 
     $this->actingAs($stranger)
-        ->delete(route('semester.courses.destroy', $course))
+        ->delete(route('calendar.semester.courses.destroy', $course))
         ->assertForbidden();
 
     expect($course->fresh()->title)->toBe('Analysis I');
@@ -228,7 +228,7 @@ it('vermerkt einen Ausfall und nimmt ihn wieder zurück', function () {
     $monday = Carbon::today()->next(Carbon::MONDAY);
 
     $this->actingAs($user)
-        ->post(route('semester.courses.exceptions.store', $course), [
+        ->post(route('calendar.semester.courses.exceptions.store', $course), [
             'on_date' => $monday->toDateString(),
         ])
         ->assertSessionHasNoErrors();
@@ -236,7 +236,7 @@ it('vermerkt einen Ausfall und nimmt ihn wieder zurück', function () {
     expect($course->exceptions()->sole()->isCancellation())->toBeTrue();
 
     $this->actingAs($user)
-        ->delete(route('semester.courses.exceptions.destroy', $course), [
+        ->delete(route('calendar.semester.courses.exceptions.destroy', $course), [
             'on_date' => $monday->toDateString(),
         ])
         ->assertSessionHasNoErrors();
@@ -251,11 +251,11 @@ it('ersetzt eine Absage durch den Ersatztermin desselben Tages statt beide zu be
 
     $monday = Carbon::today()->next(Carbon::MONDAY)->toDateString();
 
-    $this->actingAs($user)->post(route('semester.courses.exceptions.store', $course), [
+    $this->actingAs($user)->post(route('calendar.semester.courses.exceptions.store', $course), [
         'on_date' => $monday,
     ]);
 
-    $this->actingAs($user)->post(route('semester.courses.exceptions.store', $course), [
+    $this->actingAs($user)->post(route('calendar.semester.courses.exceptions.store', $course), [
         'on_date' => $monday,
         'starts_at' => '14:00',
         'ends_at' => '15:30',
@@ -274,7 +274,7 @@ it('weist einen Ausfall an einem Tag ab, an dem der Kurs ohnehin nicht läuft', 
     $course = Course::factory()->for($semester)->onWeekday(1)->create();
 
     $this->actingAs($user)
-        ->post(route('semester.courses.exceptions.store', $course), [
+        ->post(route('calendar.semester.courses.exceptions.store', $course), [
             'on_date' => Carbon::today()->next(Carbon::THURSDAY)->toDateString(),
         ])
         ->assertSessionHasErrors('on_date');
@@ -288,7 +288,7 @@ it('weist eine Ausnahme außerhalb des Semesters ab', function () {
     $course = Course::factory()->for($semester)->onWeekday(1)->create();
 
     $this->actingAs($user)
-        ->post(route('semester.courses.exceptions.store', $course), [
+        ->post(route('calendar.semester.courses.exceptions.store', $course), [
             'on_date' => Carbon::today()->addYear()->next(Carbon::MONDAY)->toDateString(),
         ])
         ->assertSessionHasErrors('on_date');
@@ -301,7 +301,7 @@ it('räumt beim Löschen des Semesters Kurse und Ausnahmen mit ab', function () 
     CourseException::factory()->for($course)->create();
 
     $this->actingAs($user)
-        ->delete(route('semester.destroy'))
+        ->delete(route('calendar.semester.destroy'))
         ->assertRedirect();
 
     expect(Semester::count())->toBe(0)
@@ -313,7 +313,7 @@ it('weist ein Semester ab, das nur drei Tage dauert', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user)
-        ->post(route('semester.store'), [
+        ->post(route('calendar.semester.store'), [
             'title' => 'Zu kurz',
             'starts_on' => Carbon::today()->toDateString(),
             'ends_on' => Carbon::today()->addDays(3)->toDateString(),
@@ -326,7 +326,7 @@ it('zeigt ein abgelaufenes Semester weiter an, aber nicht mehr als laufendes', f
     Semester::factory()->for($user)->past()->create();
 
     $this->actingAs($user)
-        ->get(route('semester.show'))
+        ->get(route('calendar.semester'))
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->where('semester.title', 'Sommersemester 25')
             ->where('semester.isCurrent', false));

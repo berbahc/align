@@ -17,7 +17,7 @@ import {
     QUIET_BUTTON,
 } from '@/lib/interaction';
 import { cn } from '@/lib/utils';
-import { store, update } from '@/routes/semester/courses';
+import { store, update } from '@/routes/calendar/semester/courses';
 import type { CourseKind, CourseKindOption, CourseRow, Weekday } from '@/types';
 
 /** Montag zuerst — dieselbe Zählung wie überall in der App. */

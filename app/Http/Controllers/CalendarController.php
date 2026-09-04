@@ -86,8 +86,6 @@ class CalendarController extends Controller
             $days[] = $this->day($habits, $day, $month, $today, $lectureDays);
         }
 
-        $semester = $timetable->semester();
-
         return Inertia::render('calendar', [
             'month' => $month->format('Y-m'),
             'heading' => $localised->isoFormat('MMMM YYYY'),
@@ -96,13 +94,10 @@ class CalendarController extends Controller
             'isCurrentMonth' => $month->isSameMonth($today),
             'today' => $today->toDateString(),
             'days' => $days,
-            // Die Zeile unter dem Raster kennt zwei Zustände: eine Einladung
-            // mit Grund, solange es keinen Plan gibt, und den Plan selbst,
-            // sobald er steht.
-            'semester' => $semester === null ? null : [
-                'title' => $semester->title,
-                'courseCount' => $timetable->courseCount(),
-            ],
+            // Nur ob, nicht was: Steht ein Plan, führt der Umschalter im Kopf
+            // hin; steht keiner, braucht die Einladung darunter einen Grund.
+            // Alles Weitere steht in der Semesteransicht.
+            'hasSemester' => $timetable->semester() !== null,
         ]);
     }
 

@@ -1,8 +1,8 @@
 import { router } from '@inertiajs/react';
 import { CalendarOff, MapPin, Pencil, Trash2 } from 'lucide-react';
 import { QUIET_BUTTON } from '@/lib/interaction';
-import { destroy } from '@/routes/semester/courses';
-import { destroy as undoException } from '@/routes/semester/courses/exceptions';
+import { destroy } from '@/routes/calendar/semester/courses';
+import { destroy as undoException } from '@/routes/calendar/semester/courses/exceptions';
 import type { CourseRow as Course } from '@/types';
 
 /**

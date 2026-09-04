@@ -1,11 +1,12 @@
 import { Head, Link } from '@inertiajs/react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { CalendarViews } from '@/components/calendar-views';
 import { MonthGrid } from '@/components/month-grid';
 import { Card, CardContent } from '@/components/ui/card';
 import { QUIET_LINK } from '@/lib/interaction';
 import { calendar } from '@/routes';
 import { day as calendarDay } from '@/routes/calendar';
-import { show as semesterShow } from '@/routes/semester';
+import { semester as calendarSemester } from '@/routes/calendar';
 import type { MonthDay } from '@/types';
 
 interface CalendarProps {
@@ -20,8 +21,8 @@ interface CalendarProps {
     today: string;
     /** Volle Wochen, Montag bis Sonntag — auch über die Monatskante hinaus. */
     days: MonthDay[];
-    /** Der Semesterplan, wenn es einen gibt — sonst die Einladung dazu. */
-    semester: { title: string; courseCount: number } | null;
+    /** Steht ein Semesterplan? Sonst lädt die Zeile unter dem Raster dazu ein. */
+    hasSemester: boolean;
 }
 
 const NAV_BUTTON =
@@ -46,7 +47,7 @@ export default function Calendar({
     isCurrentMonth,
     today,
     days,
-    semester,
+    hasSemester,
 }: CalendarProps) {
     return (
         <>
@@ -77,6 +78,8 @@ export default function Calendar({
                     </Link>
                 </header>
 
+                <CalendarViews active="month" />
+
                 {!isCurrentMonth && (
                     <div className="flex justify-center">
                         <Link
@@ -106,28 +109,19 @@ export default function Calendar({
                     </Link>
                 </div>
 
-                {/* Der Semesterplan — kein Knopf, sondern eine Zeile, die den
-                    Zustand kennt. Ohne Plan nennt sie den Grund, mit Plan
-                    nennt sie ihn. Ein dauerhafter Aufruf zum Eintragen wäre
-                    für alle da, die gar nicht studieren; die Markierung im
-                    Raster darüber hat die Frage ohnehin schon gestellt. */}
-                <div className="flex justify-center">
-                    {semester === null ? (
-                        <p className="text-center text-sm text-muted-foreground">
-                            <Link href={semesterShow()} className={QUIET_LINK}>
-                                Semesterplan anlegen
-                            </Link>
-                            {' — dann plant Align um deine Kurse herum.'}
-                        </p>
-                    ) : (
-                        <Link
-                            href={semesterShow()}
-                            className={`${QUIET_LINK} text-sm`}
-                        >
-                            {`Semesterplan · ${semester.title} · ${semester.courseCount} ${semester.courseCount === 1 ? 'Kurs' : 'Kurse'}`}
+                {/* Nur die Einladung, und nur solange es keinen Plan gibt.
+                    Steht einer, führt der Umschalter oben ohnehin hin — zwei
+                    Wege zum selben Ziel auf einem Bildschirm wären Lärm. Was
+                    der Umschalter allein nicht sagt, ist das Warum; deshalb
+                    bleibt der Satz hier, bis er beantwortet ist. */}
+                {!hasSemester && (
+                    <p className="text-center text-sm text-muted-foreground">
+                        <Link href={calendarSemester()} className={QUIET_LINK}>
+                            Semester eintragen
                         </Link>
-                    )}
-                </div>
+                        {' — dann plant Align um deine Kurse herum.'}
+                    </p>
+                )}
             </div>
         </>
     );

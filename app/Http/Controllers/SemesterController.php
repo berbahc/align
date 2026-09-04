@@ -15,12 +15,12 @@ use Inertia\Response;
 class SemesterController extends Controller
 {
     /**
-     * Der Stundenplan einer Woche.
+     * Der Stundenplan einer Woche — die zweite Ansicht des Kalenders.
      *
-     * Ein Semester je Person, sichtbar auch nach seinem Ende: Wer im März auf
-     * die Seite kommt, soll seinen alten Plan als Vorlage vorfinden und nicht
-     * ein leeres Formular. Ob die Kurse gerade Zeit belegen, entscheidet
-     * allein der Zeitraum — nicht, ob sie hier stehen.
+     * Ein Semester je Person, sichtbar auch außerhalb seines Zeitraums: Wer im
+     * März auf die Seite kommt, soll seinen alten Plan als Vorlage vorfinden
+     * und nicht ein leeres Formular. Ob die Kurse gerade Zeit belegen,
+     * entscheidet allein der Zeitraum — nicht, ob sie hier stehen.
      */
     public function show(Request $request): Response
     {
@@ -30,16 +30,23 @@ class SemesterController extends Controller
             ? collect()
             : $semester->courses()->with('exceptions')->orderBy('weekday')->orderBy('starts_at')->get();
 
-        return Inertia::render('semester', [
+        $today = Carbon::today();
+
+        return Inertia::render('calendar-semester', [
             'semester' => $semester === null ? null : [
                 'title' => $semester->title,
                 'startsOn' => $semester->starts_on->toDateString(),
                 'endsOn' => $semester->ends_on->toDateString(),
                 'rangeLabel' => $semester->rangeLabel(),
-                // Ein abgelaufenes Semester bleibt bearbeitbar, sagt aber, dass
-                // es nichts mehr blockiert — sonst wundert sich jemand, warum
-                // seine Vorlesungen im Kalender fehlen.
-                'isCurrent' => $semester->covers(Carbon::today()),
+                // Ein Semester, das nicht läuft, bleibt bearbeitbar, sagt aber,
+                // dass es nichts blockiert — und ab wann wieder. Ohne diesen
+                // Satz sucht jemand den Fehler im Kalender, obwohl seine
+                // Vorlesungszeit schlicht noch nicht angefangen hat.
+                'isCurrent' => $semester->covers($today),
+                'startsInFuture' => $semester->starts_on->toDateString() > $today->toDateString(),
+                // „am 1. Oktober" — fertig formatiert, wie jedes Datum in
+                // dieser App.
+                'startsOnLabel' => $semester->starts_on->settings(['locale' => 'de'])->isoFormat('D. MMMM YYYY'),
             ],
             'courses' => $courses->map(fn (Course $course): array => $this->course($course))->all(),
             'kinds' => CourseKind::options(),

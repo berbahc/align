@@ -1,6 +1,7 @@
 import { Head, useForm } from '@inertiajs/react';
 import { GraduationCap, Plus } from 'lucide-react';
 import { useState } from 'react';
+import { CalendarViews } from '@/components/calendar-views';
 import { CourseCancellationSheet } from '@/components/course-cancellation-sheet';
 import { CourseRow } from '@/components/course-row';
 import { CourseSheet } from '@/components/course-sheet';
@@ -11,11 +12,11 @@ import {
     PRIMARY_BUTTON,
     QUIET_BUTTON,
 } from '@/lib/interaction';
-import { dashboard } from '@/routes';
+import { calendar } from '@/routes';
 import {
     store as storeSemester,
     update as updateSemester,
-} from '@/routes/semester';
+} from '@/routes/calendar/semester';
 import type {
     CourseKindOption,
     CourseRow as Course,
@@ -33,7 +34,7 @@ const WEEKDAY_NAMES: Record<Weekday, string> = {
     7: 'Sonntag',
 };
 
-interface SemesterProps {
+interface CalendarSemesterProps {
     /** Null, solange niemand einen Zeitraum eingetragen hat. */
     semester: SemesterPlan | null;
     courses: Course[];
@@ -52,12 +53,12 @@ interface SemesterProps {
  * Erst der Zeitraum, dann die Kurse. Ohne Anfang und Ende wüsste niemand, ab
  * wann die Vorlesungen im Kalender stehen und ab wann nicht mehr.
  */
-export default function Semester({
+export default function CalendarSemester({
     semester,
     courses,
     kinds,
     maxCourses,
-}: SemesterProps) {
+}: CalendarSemesterProps) {
     const [editing, setEditing] = useState<Course | null>(null);
     const [sheetOpen, setSheetOpen] = useState(false);
     const [cancelling, setCancelling] = useState<Course | null>(null);
@@ -93,7 +94,25 @@ export default function Semester({
                     </p>
                 </header>
 
+                <CalendarViews active="semester" />
+
                 <SemesterFrame semester={semester} />
+
+                {/* Warum im Kalender nichts steht, obwohl der Plan voll ist.
+                    Ohne diesen Satz sucht man den Fehler in der App, dabei hat
+                    die Vorlesungszeit schlicht noch nicht angefangen — oder
+                    schon aufgehört. Kein Warnton: Es ist nichts falsch, es ist
+                    nur noch nicht so weit. */}
+                {semester !== null && !semester.isCurrent && (
+                    <p
+                        role="status"
+                        className="rounded-xl border border-primary/25 bg-accent px-4 py-3 text-sm text-foreground"
+                    >
+                        {semester.startsInFuture
+                            ? `Dieses Semester beginnt am ${semester.startsOnLabel}. Bis dahin steht dein Plan hier, belegt im Kalender aber noch keine Zeit.`
+                            : 'Dieses Semester ist vorbei. Dein Plan bleibt als Vorlage stehen, belegt im Kalender aber keine Zeit mehr.'}
+                    </p>
+                )}
 
                 {semester !== null && (
                     <>
@@ -235,8 +254,6 @@ function SemesterFrame({ semester }: { semester: SemesterPlan | null }) {
                         </p>
                         <p className="mt-0.5 text-sm text-muted-foreground">
                             {semester.rangeLabel}
-                            {!semester.isCurrent &&
-                                ' · vorbei, blockiert nichts mehr'}
                         </p>
                     </div>
                     <button
@@ -359,9 +376,9 @@ function SemesterFrame({ semester }: { semester: SemesterPlan | null }) {
 const ERROR_PANEL =
     'rounded-xl border border-primary/25 bg-accent px-3 py-2 text-sm text-foreground';
 
-Semester.layout = {
+CalendarSemester.layout = {
     breadcrumbs: [
-        { title: 'Übersicht', href: dashboard() },
+        { title: 'Kalender', href: calendar() },
         { title: 'Semester', href: '' },
     ],
 };

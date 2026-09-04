@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/sheet';
 import { Spinner } from '@/components/ui/spinner';
 import { PRIMARY_BUTTON, QUIET_BUTTON } from '@/lib/interaction';
-import { store } from '@/routes/semester/courses/exceptions';
+import { store } from '@/routes/calendar/semester/courses/exceptions';
 import type { CourseRow, SemesterPlan } from '@/types';
 
 /**
