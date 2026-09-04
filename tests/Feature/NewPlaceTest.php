@@ -303,6 +303,10 @@ test('the suggestion looks at the first lecture day, not just next week', functi
 
     expect($walk->fresh()->displaced_at)->not->toBeNull();
 
+    // Die Frage stellt sich erst mit dem Semester — vorher läuft die
+    // Gewohnheit weiter, wo sie lief.
+    $this->travelTo(Carbon::today()->addMonth()->setTime(9, 0));
+
     SuggestNewPlaces::fake([[
         'places' => [
             ['id' => $walk->id, 'time' => '10:45', 'days' => [1], 'reason' => 'Gleiche Uhrzeit.'],
@@ -328,4 +332,6 @@ test('the suggestion looks at the first lecture day, not just next week', functi
         ->postJson(route('calendar.semester.places.suggestions'))
         ->assertOk()
         ->assertJsonPath('places.0.timeRange', '11:45 – 12:05');
+
+    $this->travelBack();
 });

@@ -6,6 +6,7 @@ use App\Models\Habit;
 use App\Models\User;
 use App\Support\SlotConflict;
 use App\Support\Timetable;
+use Carbon\CarbonInterface;
 
 /**
  * Räumt Gewohnheiten aus einer Spanne, die ein Kurs jetzt belegt.
@@ -42,6 +43,7 @@ class DisplaceHabits
     public function handle(User $user, array $spans, array $days, bool $withTimetable = true): array
     {
         $displaced = [];
+        $from = null;
 
         for ($round = 0; $round < Habit::MaxActivePerUser; $round++) {
             $conflict = SlotConflict::find($user, $spans, $days, [], $withTimetable);
@@ -67,10 +69,30 @@ class DisplaceHabits
             // wird ihr Anker, weil nur der eine Stelle im Tag hat.
             $anchor = $habit->anchorHabit() ?? $habit;
 
-            $anchor->forceFill(['displaced_at' => now()])->save();
+            $anchor->forceFill(['displaced_at' => $from ??= self::effectiveFrom($user)])->save();
             $displaced[] = $anchor;
         }
 
         return $displaced;
+    }
+
+    /**
+     * Ab wann der Platz weg ist.
+     *
+     * Sofort, wenn das Semester schon läuft — sonst erst an seinem ersten Tag.
+     * Ein Kurs im Oktober nimmt im September noch nichts weg: Bis dahin läuft
+     * die Gewohnheit weiter, wo sie lief, und erst mit dem Semester steht die
+     * Frage nach einem neuen Platz an.
+     */
+    private static function effectiveFrom(User $user): CarbonInterface
+    {
+        $semester = $user->currentSemester();
+        $now = now();
+
+        if ($semester === null || $semester->starts_on->lte($now)) {
+            return $now;
+        }
+
+        return $semester->starts_on->startOfDay();
     }
 }

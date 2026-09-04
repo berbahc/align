@@ -256,7 +256,7 @@ class CalendarController extends Controller
     {
         return array_values($user->habits()
             ->active()
-            ->whereNotNull('displaced_at')
+            ->displaced()
             ->orderBy('position')
             ->get()
             ->map(fn (Habit $habit): array => [
