@@ -10,16 +10,19 @@ namespace App\Enums;
  * Auge da: Ein Stundenplan aus acht Zeilen „Analysis I" wäre richtig und
  * trotzdem unlesbar.
  *
- * Fünf Fälle, weil der fünfte der Ausweg ist. Wer einen Sprachkurs, ein
+ * Vier Fälle, weil der vierte der Ausweg ist. Wer einen Sprachkurs, ein
  * Tutorium oder eine Sprechstunde einträgt, soll nicht daran scheitern, dass
  * die Liste sein Wort nicht kennt.
+ *
+ * Kein Praktikum: Das ist kein Kurs neben anderen, sondern nimmt ein halbes
+ * Jahr am Stück — dann fällt der Stundenplan als Ganzes weg, nicht eine Zeile
+ * darin.
  */
 enum CourseKind: string
 {
     case Vorlesung = 'vorlesung';
     case Uebung = 'uebung';
     case Seminar = 'seminar';
-    case Praktikum = 'praktikum';
     case Sonstiges = 'sonstiges';
 
     /**
@@ -41,7 +44,6 @@ enum CourseKind: string
             self::Vorlesung => 'Vorlesung',
             self::Uebung => 'Übung',
             self::Seminar => 'Seminar',
-            self::Praktikum => 'Praktikum',
             self::Sonstiges => 'Sonstiges',
         };
     }

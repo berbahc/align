@@ -342,3 +342,16 @@ it('zeigt ein abgelaufenes Semester weiter an, aber nicht mehr als laufendes', f
             ->where('semester.title', 'Sommersemester 25')
             ->where('semester.isCurrent', false));
 });
+
+it('kennt kein Praktikum als Kursart', function () {
+    // Ein Praktikum nimmt ein halbes Jahr am Stück — dann fällt der ganze
+    // Stundenplan weg, nicht eine Zeile darin.
+    expect(CourseKind::cases())->toHaveCount(4)
+        ->and(array_column(CourseKind::options(), 'value'))->not->toContain('praktikum');
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('calendar'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('kinds', CourseKind::options())
+            ->etc());
+});
