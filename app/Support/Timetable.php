@@ -7,6 +7,7 @@ use App\Models\CourseException;
 use App\Models\Semester;
 use App\Models\User;
 use Carbon\CarbonInterface;
+use Illuminate\Support\Carbon;
 
 /**
  * Der Stundenplan als Belegung eines Tages.
@@ -100,6 +101,38 @@ final class Timetable
     /**
      * Wie viele Kurse der Plan trägt.
      */
+    /**
+     * Der erste Termin dieses Wochentags, an dem der Stundenplan gilt.
+     *
+     * Heute oder später — und erst ab Semesterbeginn. Wer im September einen
+     * Kurs für Oktober einträgt, hat ihn im September noch nicht im Tag; die
+     * Kollisionsprüfung muss trotzdem dorthin schauen, sonst läge die
+     * Gewohnheit am ersten Vorlesungstag mitten im Kurs. Null ohne Semester,
+     * oder wenn der Wochentag darin keinen Termin mehr hat.
+     */
+    public function firstDateOf(int $weekday): ?Carbon
+    {
+        if ($this->semester === null) {
+            return null;
+        }
+
+        $day = Carbon::today();
+
+        if ($day->lt($this->semester->starts_on)) {
+            $day = Carbon::parse($this->semester->starts_on->toDateString());
+        }
+
+        for ($step = 0; $step < 7; $step++) {
+            if ($day->dayOfWeekIso === $weekday) {
+                return $this->semester->covers($day) ? $day : null;
+            }
+
+            $day->addDay();
+        }
+
+        return null;
+    }
+
     public function courseCount(): int
     {
         return array_sum(array_map(count(...), $this->byWeekday));

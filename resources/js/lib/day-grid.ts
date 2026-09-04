@@ -40,11 +40,9 @@ const BLOCK_GAP = 2;
  *
  * Derselbe Wert wie in `DayPlan::AssumedMinutes` — nur alte Zeilen aus der
  * Zeit der freien Eingabe haben keine Dauer, der Katalog vergibt immer eine.
+ * Wo damit gerechnet wird, soll es auch dastehen ({@see spanLabel}).
  */
-const ASSUMED_MINUTES = 15;
-
-/** Die kleinste Spanne, die ein Block visuell einnimmt. */
-const MIN_VISUAL_MINUTES = (MIN_BLOCK_HEIGHT / HOUR_HEIGHT) * 60;
+export const ASSUMED_MINUTES = 15;
 
 /** Der Ausschnitt des Tages, den das Raster zeigt — volle Stunden. */
 export interface GridBounds {
@@ -133,6 +131,25 @@ export function offsetOf(minute: number, bounds: GridBounds): number {
     return ((minute - bounds.from) / 60) * HOUR_HEIGHT;
 }
 
+/**
+ * Die belegte Spanne, wie sie im Block steht — auch die angenommene.
+ *
+ * Ohne eigene Dauer rechnet der Tag mit einer Viertelstunde. Das soll
+ * dastehen („10:45 – ca. 11:00") und nicht nur gelten: Sonst sieht man einen
+ * Block ohne Ende, und was direkt danach liegt, wirkt, als läge es darin.
+ */
+export function spanLabel(block: CalendarBlock): string {
+    if (block.timeRange !== null) {
+        return block.timeRange;
+    }
+
+    if (block.startMinute === null || !block.exact) {
+        return block.anchor;
+    }
+
+    return `${timeLabel(block.startMinute)} – ca. ${timeLabel(block.startMinute + ASSUMED_MINUTES)}`;
+}
+
 /** Eine Minute seit Mitternacht als „07:30" — auch über den Tagesrand hinaus. */
 export function timeLabel(minute: number): string {
     const wrapped = ((minute % 1440) + 1440) % 1440;
@@ -150,9 +167,12 @@ export function timeLabel(minute: number): string {
  * die Gruppe — nicht der ganze Tag, sonst würde eine einzige Überschneidung am
  * Morgen den Abend halb so breit machen.
  *
- * Gerechnet wird mit der **gezeichneten** Spanne, nicht der echten: Zwei
- * Zehn-Minuten-Gewohnheiten zwanzig Minuten auseinander überschneiden sich
- * zeitlich nicht, ihre Mindesthöhen aber schon.
+ * Gerechnet wird mit der **echten** Spanne, nicht der gezeichneten: Zwei
+ * Blöcke direkt hintereinander sind eine Reihenfolge, keine Überschneidung —
+ * und nebeneinander gemalt läsen sie sich als „liegt drin". Ragt die
+ * Mindesthöhe des ersten in den zweiten, deckt der zweite sie ab: Er kommt
+ * später und liegt darum obenauf. Die Zeile des ersten steht oben im Block
+ * und bleibt lesbar.
  */
 export function placeBlocks<T extends Placeable>(
     blocks: T[],
@@ -168,11 +188,9 @@ export function placeBlocks<T extends Placeable>(
                 block,
                 from,
                 to: from + minutes,
-                // Was das Auge belegt sieht — die Grundlage der Spaltenwahl.
-                until: from + Math.max(minutes, MIN_VISUAL_MINUTES),
             };
         })
-        .sort((a, b) => a.from - b.from || b.until - a.until);
+        .sort((a, b) => a.from - b.from || b.to - a.to);
 
     const placed: PlacedBlock<T>[] = [];
     let group: PlacedBlock<T>[] = [];
@@ -199,8 +217,8 @@ export function placeBlocks<T extends Placeable>(
         const free = laneEnds.findIndex((end) => end <= span.from);
         const lane = free === -1 ? laneEnds.length : free;
 
-        laneEnds[lane] = span.until;
-        groupEnd = Math.max(groupEnd, span.until);
+        laneEnds[lane] = span.to;
+        groupEnd = Math.max(groupEnd, span.to);
 
         group.push({
             block: span.block,

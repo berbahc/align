@@ -775,3 +775,36 @@ test('a time inside a lecture is dropped even when the model returns it', functi
         ->assertJsonCount(1, 'alternatives')
         ->assertJsonPath('alternatives.0.time', '14:00');
 });
+
+/**
+ * Und die Naht hält auch, wenn das Semester noch nicht angefangen hat: Die
+ * Fenster gelten an beiden Daten — nächste Woche *und* am ersten
+ * Vorlesungstag. Ein Vorschlag, der nur nächste Woche kennt, läge im Oktober
+ * mitten in der Vorlesung.
+ */
+test('a lecture in a semester that has not started yet is already missing from the windows', function () {
+    SuggestBetterAnchor::fake([[
+        'alternatives' => [['time' => '14:00', 'days' => [1], 'reason' => 'Passt.']],
+    ]]);
+
+    $user = User::factory()->create();
+    $semester = Semester::factory()->for($user)->between(
+        Carbon::today()->addMonth()->toDateString(),
+        Carbon::today()->addMonths(5)->toDateString(),
+    )->create();
+    Course::factory()->for($semester)->onWeekday(1)->at('08:00', '09:30')
+        ->create(['title' => 'Analysis I']);
+
+    $habit = Habit::factory()->for($user)->fixedSchedule('17:00', [1])->withMeasure(30)->create([
+        'created_at' => Carbon::today()->subDays(20),
+    ]);
+
+    $this->actingAs($user)
+        ->postJson(route('habits.adjustment.suggestions', $habit))
+        ->assertOk();
+
+    SuggestBetterAnchor::assertPrompted(
+        fn (AgentPrompt $prompt): bool => $prompt->contains('07:45')
+            && ! $prompt->contains('08:00 bis'),
+    );
+});

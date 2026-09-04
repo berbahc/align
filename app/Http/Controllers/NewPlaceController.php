@@ -239,17 +239,22 @@ class NewPlaceController extends Controller
         $others = $user->habits()->active()->with('chainedTo.chainedTo')->get();
         $others->each(fn (Habit $habit) => $habit->setRelation('user', $user));
 
-        /** @var array<int, DayPlan> $plans */
+        // Je Wochentag dieselben Daten wie die Kollisionsprüfung: der nächste
+        // Termin — und der erste im Semester, wenn das noch vor uns liegt.
+        // Sonst rechnete der Vorschlag gegen einen September ohne Kurse und
+        // fiele beim Übernehmen an genau dem Kurs durch, den er nicht sah.
+        /** @var array<int, list<DayPlan>> $plans */
         $plans = [];
 
         foreach (range(1, 7) as $weekday) {
-            $date = SlotConflict::nextWeekday($weekday);
-            $plans[$weekday] = DayPlan::forDate(
-                $others->filter(fn (Habit $habit): bool => $habit->isScheduledOn($date))->values(),
-                $date,
-                $sleep,
-                $timetable->blocksOn($date),
-            );
+            foreach (SlotConflict::datesFor([$weekday], $timetable) as $date) {
+                $plans[$weekday][] = DayPlan::forDate(
+                    $others->filter(fn (Habit $habit): bool => $habit->isScheduledOn($date))->values(),
+                    $date,
+                    $sleep,
+                    $timetable->blocksOn($date),
+                );
+            }
         }
 
         $askable = [];
@@ -265,13 +270,14 @@ class NewPlaceController extends Controller
             $windows = [];
 
             foreach ($days as $weekday) {
-                $frame = $plans[$weekday]->frame();
+                $frame = $plans[$weekday][0]->frame();
                 [$clip, $hard] = $this->clip($band, $frame);
                 $bandIsHard = $bandIsHard && $hard;
 
+                // Frei ist nur, was an jedem der Daten frei ist.
                 $free = array_values(array_filter(array_map(
                     fn (array $window): ?array => $this->intersect($window, $clip, $minutes),
-                    $plans[$weekday]->freeWindows($minutes),
+                    DayPlan::commonFreeWindows($plans[$weekday], $minutes),
                 )));
 
                 usort($free, fn (array $a, array $b): int => abs($a['from'] - $previousStart) <=> abs($b['from'] - $previousStart));
