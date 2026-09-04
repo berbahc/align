@@ -88,11 +88,6 @@ final class Timetable
         return new self(null, [], [], []);
     }
 
-    public function isEmpty(): bool
-    {
-        return $this->byWeekday === [];
-    }
-
     public function semester(): ?Semester
     {
         return $this->semester;
@@ -191,11 +186,6 @@ final class Timetable
         }, $this->occurrencesOn($date));
     }
 
-    public function hasLecturesOn(CarbonInterface $date): bool
-    {
-        return $this->occurrencesOn($date) !== [];
-    }
-
     /**
      * Die Vorlesungstage eines Zeitraums in einem Durchgang.
      *
@@ -210,7 +200,7 @@ final class Timetable
         $days = [];
 
         for ($day = $from->copy(); $day->lessThanOrEqualTo($to); $day = $day->addDay()) {
-            if ($this->hasLecturesOn($day)) {
+            if ($this->occurrencesOn($day) !== []) {
                 $days[$day->toDateString()] = true;
             }
         }

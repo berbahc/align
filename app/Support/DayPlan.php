@@ -243,9 +243,20 @@ class DayPlan
      */
     public function freeWindowLabels(int $minutes, ?Habit $except = null): array
     {
+        return self::windowLabels($this->freeWindows($minutes, $except));
+    }
+
+    /**
+     * Fenster als Zeilen für den Prompt — „07:00 bis 09:45".
+     *
+     * @param  list<array{from: int, to: int}>  $windows
+     * @return list<string>
+     */
+    public static function windowLabels(array $windows): array
+    {
         return array_map(
             fn (array $window): string => self::toTime($window['from']).' bis '.self::toTime($window['to']),
-            $this->freeWindows($minutes, $except),
+            $windows,
         );
     }
 

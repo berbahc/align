@@ -2,7 +2,7 @@ import { useHttp } from '@inertiajs/react';
 import { useState } from 'react';
 
 /** Eine Gewohnheit an ihrem vorgeschlagenen Platz. */
-export interface OrderedHabit {
+interface OrderedHabit {
     id: number;
     title: string;
     /** Der neue Beginn, „07:30". */

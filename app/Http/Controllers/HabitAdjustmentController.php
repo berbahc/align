@@ -185,8 +185,7 @@ class HabitAdjustmentController extends Controller
             SlotConflict::datesFor([$day->dayOfWeekIso], $timetable),
         );
 
-        return array_map(
-            fn (array $window): string => DayPlan::toTime($window['from']).' bis '.DayPlan::toTime($window['to']),
+        return DayPlan::windowLabels(
             DayPlan::commonFreeWindows($plans, $habit->durationMinutes() ?? 0, $habit),
         );
     }

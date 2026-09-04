@@ -148,7 +148,7 @@ it('kostet den ganzen Monat keine Abfrage je Zelle', function () {
 it('liefert für einen Nutzer ohne Semester einen leeren Plan', function () {
     $timetable = Timetable::for(timetableUser());
 
-    expect($timetable->isEmpty())->toBeTrue()
+    expect($timetable->courseCount())->toBe(0)
         ->and($timetable->semester())->toBeNull()
         ->and($timetable->blocksOn(nextMonday()))->toBe([])
         ->and($timetable->coursesOn(nextMonday()))->toBe([]);

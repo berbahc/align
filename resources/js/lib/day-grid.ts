@@ -70,7 +70,7 @@ export type GridBlock = CalendarBlock | CourseBlock;
  * Die Rechnung kennt weder Haken noch Titel — nur wann etwas anfängt und wie
  * lange es dauert.
  */
-export interface Placeable {
+interface Placeable {
     id: number;
     startMinute: number | null;
     durationMinutes: number | null;
@@ -245,7 +245,7 @@ export function placeBlocks<T extends Placeable>(
  * Server, und 24 Pixel bei `HOUR_HEIGHT`. Minutengenau zu schieben hieße, mit
  * dem Finger eine Genauigkeit zu verlangen, die niemand hat.
  */
-export const SNAP_MINUTES = 15;
+const SNAP_MINUTES = 15;
 
 /** Auf die nächste Viertelstunde, aber nie aus dem Rahmen heraus. */
 export function snapMinute(

@@ -14,7 +14,7 @@ const ACTION_BUTTON =
     'inline-flex h-12 flex-1 items-center justify-center rounded-xl px-4 text-[15px] font-semibold disabled:pointer-events-none disabled:opacity-50';
 
 /** Was der Zug mitnimmt: Titel und neue Uhrzeit. */
-export interface Follower {
+interface Follower {
     title: string;
     minute: number;
 }
