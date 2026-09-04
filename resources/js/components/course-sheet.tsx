@@ -52,6 +52,30 @@ function blank(): CourseForm {
     };
 }
 
+/** „10:15" → 615. */
+function toMinutes(time: string): number {
+    const [hours = 0, minutes = 0] = time.split(':').map(Number);
+
+    return hours * 60 + minutes;
+}
+
+/** 615 → „10:15", innerhalb desselben Tages. */
+function toTime(minutes: number): string {
+    const clamped = Math.max(0, Math.min(minutes, LATEST_END));
+
+    return `${String(Math.floor(clamped / 60)).padStart(2, '0')}:${String(clamped % 60).padStart(2, '0')}`;
+}
+
+/**
+ * Die Grenzen, die der Server ohnehin zieht ({@see StoreCourseRequest}).
+ *
+ * Sie stehen hier, damit das mitspringende Ende gar nicht erst irgendwo
+ * landet, wo es abgewiesen würde.
+ */
+const MINIMUM_MINUTES = 30;
+const MAXIMUM_MINUTES = 360;
+const LATEST_END = 23 * 60 + 59;
+
 /**
  * Einen Kurs eintragen oder ändern.
  *
@@ -103,6 +127,48 @@ export function CourseSheet({
         // zurückzusetzen.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, course]);
+
+    /**
+     * Der Anfang zieht das Ende mit — die Länge bleibt, wie sie war.
+     *
+     * Wer den Kurs von 8 auf 11 Uhr schiebt, hat ihn verschoben und nicht
+     * verkürzt. Das Ende hinterherzutippen wäre Arbeit, die niemand meint;
+     * ausdrücklich verkürzen kann man immer noch am zweiten Zeiger.
+     */
+    function moveStart(value: string) {
+        const length = Math.min(
+            Math.max(
+                toMinutes(data.ends_at) - toMinutes(data.starts_at),
+                MINIMUM_MINUTES,
+            ),
+            MAXIMUM_MINUTES,
+        );
+
+        setData((current) => ({
+            ...current,
+            starts_at: value,
+            ends_at: toTime(toMinutes(value) + length),
+        }));
+    }
+
+    /**
+     * Das Ende bleibt hinter dem Anfang — und innerhalb dessen, was ein Kurs
+     * sein kann. Sonst stünde am zweiten Zeiger eine Zeit, die der Server
+     * gleich wieder abweist.
+     */
+    function moveEnd(value: string) {
+        const start = toMinutes(data.starts_at);
+
+        setData(
+            'ends_at',
+            toTime(
+                Math.min(
+                    Math.max(toMinutes(value), start + MINIMUM_MINUTES),
+                    start + MAXIMUM_MINUTES,
+                ),
+            ),
+        );
+    }
 
     function submit(event: React.FormEvent) {
         event.preventDefault();
@@ -206,9 +272,7 @@ export function CourseSheet({
                         <div className="flex items-center gap-4">
                             <TimeStepper
                                 value={data.starts_at}
-                                onChange={(value) =>
-                                    setData('starts_at', value)
-                                }
+                                onChange={moveStart}
                                 label="Anfang"
                                 size="compact"
                             />
@@ -220,7 +284,7 @@ export function CourseSheet({
                             </span>
                             <TimeStepper
                                 value={data.ends_at}
-                                onChange={(value) => setData('ends_at', value)}
+                                onChange={moveEnd}
                                 label="Ende"
                                 size="compact"
                             />
