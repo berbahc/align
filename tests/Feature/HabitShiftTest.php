@@ -148,7 +148,7 @@ test('a follower moves along, even for a single day', function () {
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->where('blocks.0.startMinute', 15 * 60)
             ->where('blocks.1.title', 'Lesen')
-            ->where('blocks.1.startMinute', 15 * 60 + 20)
+            ->where('blocks.1.startMinute', 15 * 60 + 20 + 15)
         );
 });
 

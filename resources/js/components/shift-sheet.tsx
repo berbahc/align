@@ -6,7 +6,7 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import type { BlockConflict } from '@/lib/day-grid';
-import { timeLabel } from '@/lib/day-grid';
+import { BREATHER_MINUTES, timeLabel } from '@/lib/day-grid';
 import { OUTLINE_BUTTON, PRIMARY_BUTTON } from '@/lib/interaction';
 import type { CalendarBlock } from '@/types';
 
@@ -104,14 +104,21 @@ export function ShiftSheet({
                         {conflict.kind === 'course' ? (
                             <>
                                 Während „{conflict.title}" geht das nicht — der
-                                Kurs kommt von der Uni und rückt nicht. Such der
-                                Gewohnheit eine Zeit davor oder danach, mit
-                                einer Viertelstunde Luft.
+                                Kurs kommt von der Uni und rückt nicht. Davor
+                                und danach hält Align eine Viertelstunde Luft,
+                                zum Hinkommen und Umschalten: Platz ist bis{' '}
+                                {timeLabel(conflict.from - BREATHER_MINUTES)}{' '}
+                                und wieder ab{' '}
+                                {timeLabel(conflict.to + BREATHER_MINUTES)}.
                             </>
                         ) : (
                             <>
-                                „{conflict.title}" liegt heute schon dort, und
-                                dazwischen braucht es eine Viertelstunde Luft.
+                                „{conflict.title}" liegt heute schon dort.
+                                Zwischen zwei Gewohnheiten hält Align eine
+                                Viertelstunde Luft — Platz ist bis{' '}
+                                {timeLabel(conflict.from - BREATHER_MINUTES)}{' '}
+                                und wieder ab{' '}
+                                {timeLabel(conflict.to + BREATHER_MINUTES)}.
                                 Verschiebe die zuerst, dann ist hier Platz.
                             </>
                         )}

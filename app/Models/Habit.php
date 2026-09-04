@@ -376,7 +376,8 @@ class Habit extends Model
                 'from' => $cursor,
                 'to' => $cursor + $minutes,
             ];
-            $cursor += $minutes;
+            // Das nächste Glied fängt nach der Luft an, nicht am Ende.
+            $cursor += $minutes + DayPlan::BreatherMinutes;
 
             $next = $current->chainedHabits()
                 ->whereNull('graduated_at')
@@ -898,12 +899,24 @@ class Habit extends Model
             return null;
         }
 
-        $start = $previous->resolveStart($depth + 1, $on);
-        $minutes = $previous->durationMinutes();
+        // „Danach" heißt nicht „in derselben Minute": Nach dem Ende bleibt
+        // die Viertelstunde Luft, die zwischen zwei Gewohnheiten überall gilt.
+        return $previous->resolveStart($depth + 1, $on)
+            ?->copy()
+            ->addMinutes(($previous->durationMinutes() ?? DayPlan::AssumedMinutes) + DayPlan::BreatherMinutes);
+    }
 
-        return $start !== null && $minutes !== null
-            ? $start->copy()->addMinutes($minutes)
-            : $start;
+    /**
+     * Wann eine angehängte Gewohnheit anfinge — nach dem Ende, plus Luft.
+     *
+     * Dieselbe Rechnung wie in {@see resolveStart()}, nur von außen
+     * gefragt: für die Zeile „danach ab 17:35" bei der Wahl der Vorgängerin.
+     */
+    public function followerStartsAt(?Carbon $on = null): ?CarbonInterface
+    {
+        return $this->startsAt($on)
+            ?->copy()
+            ->addMinutes(($this->durationMinutes() ?? DayPlan::AssumedMinutes) + DayPlan::BreatherMinutes);
     }
 
     /**
