@@ -19,10 +19,10 @@ export default function AuthSplitLayout({
                     className="relative z-20 flex items-center text-lg font-medium"
                 >
                     {/* Diese Fläche ist unabhängig vom Theme dunkel
-                        (`bg-zinc-900`), deshalb hier fest die dunkle
-                        Variante statt der umschaltenden Komponente. */}
+                        (`bg-zinc-900`), deshalb hier fest die Kachel für
+                        dunklen Grund statt der umschaltenden Komponente. */}
                     <img
-                        src="/logo-dark.webp"
+                        src="/logo-on-dark.webp"
                         alt="Align"
                         className="mr-2 size-8"
                     />
