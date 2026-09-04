@@ -113,6 +113,9 @@ class CalendarController extends Controller
             'kinds' => CourseKind::options(),
             'maxCourses' => Course::MaxPerSemester,
             'courseCount' => $timetable->courseCount(),
+            // Alle Kurse für die Übersicht — Ändern und Löschen laufen über
+            // dieselben Sheets wie im Tag.
+            'courses' => $timetable->courseRows(),
             'displaced' => $this->displaced($request->user()),
         ]);
     }

@@ -1,5 +1,5 @@
 import { router, useForm } from '@inertiajs/react';
-import { GraduationCap, Plus } from 'lucide-react';
+import { GraduationCap, List, Plus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import {
     Sheet,
@@ -9,7 +9,11 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { Spinner } from '@/components/ui/spinner';
-import { PRIMARY_BUTTON, QUIET_BUTTON } from '@/lib/interaction';
+import {
+    OUTLINE_BUTTON,
+    PRIMARY_BUTTON,
+    QUIET_BUTTON,
+} from '@/lib/interaction';
 import { destroy, store, update } from '@/routes/calendar/semester';
 import type { SemesterPlan } from '@/types';
 
@@ -33,6 +37,7 @@ export function SemesterSheet({
     maxCourses,
     onOpenChange,
     onAddCourse,
+    onShowCourses,
 }: {
     open: boolean;
     /** Null heißt: noch keins — dann wird angelegt statt geändert. */
@@ -42,6 +47,8 @@ export function SemesterSheet({
     onOpenChange: (open: boolean) => void;
     /** Führt ins Kurs-Sheet — erst zu, dann auf. */
     onAddCourse: () => void;
+    /** Führt in die Übersicht aller Kurse — erst zu, dann auf. */
+    onShowCourses: () => void;
 }) {
     const [editing, setEditing] = useState(false);
     const { data, setData, post, put, processing, errors, clearErrors } =
@@ -161,10 +168,23 @@ export function SemesterSheet({
                             <Plus className="size-4" aria-hidden="true" />
                             Kurs eintragen
                         </button>
+                        {/* Die Übersicht: Wer sechs Kurse hat, will sie auch
+                            einmal alle sehen — und ändern oder löschen, ohne
+                            sechs Tage zu öffnen. */}
+                        {courseCount > 0 && (
+                            <button
+                                type="button"
+                                onClick={onShowCourses}
+                                className={`${OUTLINE_BUTTON} w-full justify-center`}
+                            >
+                                <List className="size-4" aria-hidden="true" />
+                                Alle Kurse ansehen
+                            </button>
+                        )}
                         <p className="text-center text-xs leading-relaxed text-muted-foreground">
                             {courseCount >= maxCourses
                                 ? `${maxCourses} Kurse sind das Maximum — mehr wäre kein Plan mehr.`
-                                : 'Eingetragene Kurse findest du an ihrem Tag im Kalender — antippen zum Ändern.'}
+                                : 'Eingetragene Kurse liegen an ihrem Tag im Kalender — antippen zum Ändern.'}
                         </p>
                     </div>
                 )}

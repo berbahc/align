@@ -46,10 +46,14 @@ export interface SemesterPlan {
  * Weder abhakbar noch verschiebbar: Er ist kein Vorsatz, sondern eine
  * Tatsache. `kind` unterscheidet ihn im Raster von einer Gewohnheit.
  */
-export interface CourseBlock {
-    kind: 'course';
-    /** Negativ — Gewohnheiten tragen positive Kennungen, die Verabredung die 0. */
-    id: number;
+/**
+ * Ein Kurs, wie ihn die Sheets zum Ändern brauchen.
+ *
+ * Die eine Form für alles, was einen Kurs anfasst: die Übersicht hinter dem
+ * Stundenplan-Knopf und der Block im Tag ({@see CourseBlock}) tragen dieselben
+ * Felder — was man antippt, ist das, was man ändert.
+ */
+export interface CourseRow {
     /** Die echte Kennung — für Ändern, Ausfall und Löschen. */
     courseId: number;
     title: string;
@@ -60,14 +64,21 @@ export interface CourseBlock {
     /** „10:00" — für das Formular. */
     startsAt: string;
     endsAt: string;
-    startMinute: number;
-    durationMinutes: number;
-    /** „08:00 – 09:30" — die Spanne an diesem Tag. */
+    /** „08:00 – 09:30". */
     timeRange: string;
     location: string | null;
+    exceptions: CourseExceptionRow[];
+}
+
+/** Derselbe Kurs mit seiner Stelle an einem Datum — für das Raster. */
+export interface CourseBlock extends CourseRow {
+    kind: 'course';
+    /** Negativ — Gewohnheiten tragen positive Kennungen, die Verabredung die 0. */
+    id: number;
+    startMinute: number;
+    durationMinutes: number;
     /** Liegt der Kurs an diesem Tag ausnahmsweise hier? */
     moved: boolean;
-    exceptions: CourseExceptionRow[];
 }
 
 /**
