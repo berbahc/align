@@ -110,6 +110,10 @@ class HandleInertiaRequests extends Middleware
             ->where('reminder_enabled', true)
             ->where('schedule_type', ScheduleType::Fixed->value)
             ->whereNotNull('scheduled_time')
+            // Diese Abfrage liest die Uhrzeit roh, nicht über `startsAt()` —
+            // eine geparkte Gewohnheit klingelte sonst weiter zur alten Zeit,
+            // obwohl dort jetzt eine Vorlesung läuft.
+            ->placed()
             // Was heute ausnahmsweise woanders liegt: Eine Erinnerung zur
             // alten Uhrzeit wäre ein Wecker für einen Block, der dort nicht
             // mehr steht — und käme ausgerechnet an dem Tag, an dem jemand

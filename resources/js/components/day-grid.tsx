@@ -238,8 +238,16 @@ export function DayGrid({
 
             <FrameMarker icon={Moon} label="Schlafenszeit" time={bedtime} />
 
+            {/* Was im Tag keine Stelle hat: die verdrängten, und die seltene
+                gerissene Kette. Die Überschrift sagt, was diese Zone ist —
+                sonst sähe sie aus wie ein Rest, der nicht ins Raster passte. */}
             {homeless.length > 0 && (
-                <ul className="mt-4 flex flex-col gap-2 border-t border-border pt-4">
+                <p className="type-eyebrow mt-4 border-t border-border pt-4 text-muted-foreground">
+                    Ohne festen Platz
+                </p>
+            )}
+            {homeless.length > 0 && (
+                <ul className="mt-2 flex flex-col gap-2">
                     {homeless.map((block) => (
                         <li key={block.id}>
                             <button

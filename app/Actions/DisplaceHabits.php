@@ -1,0 +1,76 @@
+<?php
+
+namespace App\Actions;
+
+use App\Models\Habit;
+use App\Models\User;
+use App\Support\SlotConflict;
+use App\Support\Timetable;
+
+/**
+ * Räumt Gewohnheiten aus einer Spanne, die ein Kurs jetzt belegt.
+ *
+ * Bis hierher war es umgekehrt: Der Kurs wurde abgewiesen, solange dort eine
+ * Gewohnheit lag. Beim Semesterwechsel ist das die falsche Richtung — wer
+ * seinen Stundenplan einträgt, kann nicht erst jede Gewohnheit von Hand
+ * wegräumen, und wer es versucht, verliert sie.
+ *
+ * Der Kurs ist die Tatsache, die Gewohnheit das Bewegliche. Sie wird deshalb
+ * geparkt, nicht gelöscht: Ihre Uhrzeit bleibt als Erinnerung, ihr Platz im
+ * Tag ist weg. So liegt weiterhin nichts übereinander, und trotzdem geht
+ * nichts verloren.
+ */
+class DisplaceHabits
+{
+    /**
+     * Alles, was in diese Spannen ragt, verliert seinen Platz.
+     *
+     * Über {@see SlotConflict::find()} in Runden, nicht über eine eigene
+     * Suche: Die gibt bewusst nur den ersten Konflikt zurück, aber jede Runde
+     * parkt einen, und die nächste findet den nächsten. So erbt die Suche
+     * alles, was sie ohnehin kann — Tagesausnahmen, den Lauf durch die Kette,
+     * den Schlafrahmen je Wochentag. Begrenzt durch die Fünfergrenze.
+     *
+     * Verdrängt wird der Anker; was an ihm hängt, wird darüber von selbst
+     * platzlos und braucht keinen eigenen Vermerk.
+     *
+     * @param  list<array{id: int, title: string, from: int, to: int}>  $spans  Was der Kurs belegt
+     * @param  list<int>  $days  An welchen ISO-Wochentagen
+     * @param  bool  $withTimetable  Nein, wenn der Stundenplan selbst der Prüfling ist
+     * @return list<Habit> Was dafür seinen Platz verloren hat
+     */
+    public function handle(User $user, array $spans, array $days, bool $withTimetable = true): array
+    {
+        $displaced = [];
+
+        for ($round = 0; $round < Habit::MaxActivePerUser; $round++) {
+            $conflict = SlotConflict::find($user, $spans, $days, [], $withTimetable);
+
+            if ($conflict === null) {
+                break;
+            }
+
+            // Ein Kurs im Weg bleibt eine Abweisung — er rückt nicht, und zwei
+            // Kurse übereinander weist der Request ohnehin schon ab. Die 0 ist
+            // die Verabredung und ebenfalls nichts, was sich parken ließe.
+            if (Timetable::isCourseBlock($conflict['block']) || $conflict['block']['id'] < 1) {
+                break;
+            }
+
+            $habit = $user->habits()->active()->find($conflict['block']['id']);
+
+            if ($habit === null) {
+                break;
+            }
+
+            // Der Block gehört vielleicht einer gekoppelten Gewohnheit; geparkt
+            // wird ihr Anker, weil nur der eine Stelle im Tag hat.
+            $anchor = $habit->anchorHabit() ?? $habit;
+
+            $anchor->forceFill(['displaced_at' => now()])->save();
+            $displaced[] = $anchor;
+        }
+
+        return $displaced;
+    }
+}

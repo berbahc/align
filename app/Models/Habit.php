@@ -40,6 +40,7 @@ use Illuminate\Support\Carbon;
  * @property int $position
  * @property Carbon|null $committed_at
  * @property Carbon|null $graduated_at
+ * @property Carbon|null $displaced_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -285,6 +286,49 @@ class Habit extends Model
     public function chainedHabits(): HasMany
     {
         return $this->hasMany(Habit::class, 'chained_to_habit_id');
+    }
+
+    /**
+     * Steht diese Gewohnheit ohne Platz da?
+     *
+     * Verdrängt wird der Anker, nicht die Kette: Eine gekoppelte Gewohnheit hat
+     * keine eigene Stelle im Tag, sondern erbt die des Vorgängers — fällt der
+     * aus dem Tag, fällt sie mit. Deshalb fragt sie hier ihren Anker, statt
+     * selbst eine Spalte zu tragen; beim Zurücklegen kommt sie so in einem
+     * einzigen Schreibvorgang mit.
+     *
+     * Sie bleibt aktiv — zählt gegen die Fünfergrenze, steht in der Liste,
+     * behält ihre Uhrzeit als Erinnerung. Nur im Tag liegt sie nirgends, bis
+     * sie einen neuen Platz bekommt.
+     */
+    public function isDisplaced(): bool
+    {
+        return $this->anchorHabit()?->displaced_at !== null;
+    }
+
+    /**
+     * Die Gewohnheit hat wieder einen Platz — der Vermerk fällt weg.
+     *
+     * Ein Leerlauf, wenn sie nie verdrängt war: Jeder Weg, der eine Uhrzeit
+     * setzt, darf das ohne Nachfrage aufrufen.
+     */
+    /**
+     * Die Tageszeit, zu der diese Gewohnheit gehört — falls die Vorlage eine kennt.
+     *
+     * @return array{from: int, to: int}|null
+     */
+    public function dayBand(): ?array
+    {
+        return $this->template()?->dayBand();
+    }
+
+    public function takeAPlace(): void
+    {
+        if ($this->displaced_at === null) {
+            return;
+        }
+
+        $this->forceFill(['displaced_at' => null])->save();
     }
 
     /**
@@ -630,6 +674,14 @@ class Habit extends Model
      */
     public function dayAnchorHour(?Carbon $on = null): ?int
     {
+        // Auch keine ungefähre Stelle: Die Stunde ist eine Sortierhilfe für
+        // Blöcke, die im Tag stehen — und diese steht dort gerade nicht. Eine
+        // gekoppelte fragt weiter unten ihren Anker und bekommt dort dieselbe
+        // Antwort.
+        if ($this->displaced_at !== null) {
+            return null;
+        }
+
         $shifted = $this->shiftedTimeOn($on);
 
         if ($shifted !== null) {
@@ -696,7 +748,9 @@ class Habit extends Model
     public function canRemind(): bool
     {
         return $this->schedule_type->hasClockTime()
-            && $this->scheduled_time !== null;
+            && $this->scheduled_time !== null
+            // Eine Uhrzeit, die nur noch Erinnerung ist, weckt niemanden.
+            && $this->displaced_at === null;
     }
 
     /**
@@ -796,6 +850,15 @@ class Habit extends Model
             return null;
         }
 
+        // Eine geparkte Gewohnheit hat keine Stelle im Tag — sonst läge sie
+        // weiter dort, wo jetzt der Kurs ist. Hier und nicht bei den
+        // Aufrufern, damit Raster, Rechnung und Erinnerung dasselbe sehen.
+        // Die Kette fällt mit: Ein Nachfolger fragt seinen Vorgänger, und der
+        // antwortet mit nichts. Deshalb reicht hier die eigene Spalte.
+        if ($this->displaced_at !== null) {
+            return null;
+        }
+
         // Die Ausnahme für einen Tag schlägt jede Regel — auch die Kette. Wer
         // sein Lesen einmal nach hinten schiebt, verschiebt damit den Block,
         // nicht seinen Plan.
@@ -886,6 +949,17 @@ class Habit extends Model
 
         if ($shifted !== null) {
             return $shifted.' · nur an diesem Tag';
+        }
+
+        // Verdrängt, aber nicht vergessen: Die Zeile nennt, wann die Gewohnheit
+        // lief — das ist der Anhaltspunkt für den neuen Platz, für die Person
+        // wie für die KI.
+        if ($this->isDisplaced()) {
+            $previous = $this->anchorHabit()?->scheduled_time?->format('H:i');
+
+            return $previous === null
+                ? 'braucht einen neuen Platz'
+                : 'braucht einen neuen Platz · lief bisher '.$previous;
         }
 
         // Der Vorgänger ist der Auslöser, also heißt er auch so: „nach dem
@@ -1008,6 +1082,20 @@ class Habit extends Model
     protected function active(Builder $query): void
     {
         $query->whereNull('graduated_at');
+    }
+
+    /**
+     * Alles, was im Tag noch eine Stelle hat.
+     *
+     * Für Abfragen, die `scheduled_time` roh lesen, statt über `startsAt()`
+     * zu gehen — dort greift der Vermerk nicht von selbst.
+     *
+     * @param  Builder<$this>  $query
+     */
+    #[Scope]
+    protected function placed(Builder $query): void
+    {
+        $query->whereNull('displaced_at');
     }
 
     /**
@@ -1215,6 +1303,7 @@ class Habit extends Model
             'reminder_enabled' => 'boolean',
             'committed_at' => 'datetime',
             'graduated_at' => 'datetime',
+            'displaced_at' => 'datetime',
         ];
     }
 }

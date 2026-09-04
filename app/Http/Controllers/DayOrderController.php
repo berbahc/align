@@ -177,6 +177,7 @@ class DayOrderController extends Controller
                 'trigger_situation' => null,
                 'chained_to_habit_id' => null,
             ]);
+            $habit->takeAPlace();
         }
 
         Inertia::flash('dayReordered', ['count' => count($validated['order'])]);
@@ -299,6 +300,12 @@ class DayOrderController extends Controller
         $habits = $user->habits()->active()->with('chainedTo')->orderBy('position')->get();
         $habits->each(fn (Habit $habit) => $habit->setRelation('user', $user));
 
-        return $habits->filter(fn (Habit $habit): bool => $habit->isScheduledOn($date))->values();
+        return $habits
+            ->filter(fn (Habit $habit): bool => $habit->isScheduledOn($date))
+            // Die Ordnung betrifft den Tag, wie er liegt. Was keinen Platz
+            // hat, bekommt ihn auf dem eigenen Weg — und nicht nebenbei mit
+            // einer Uhrzeit, die den Vermerk stehen ließe.
+            ->reject(fn (Habit $habit): bool => $habit->isDisplaced())
+            ->values();
     }
 }
