@@ -20,6 +20,7 @@ export function FlashNotice() {
     const adjusted = flash.habitAdjusted;
     const placed = flash.coursePlaced;
     const restored = flash.habitsRestored;
+    const applied = flash.placesApplied;
     // Gemerkt wird die weggeklickte Meldung, nicht ein Ja/Nein. Eine neue
     // Meldung trägt eine andere Kennung und ist damit von selbst wieder
     // sichtbar — ohne Effekt, der den Zustand nachträglich zurücksetzt.
@@ -33,7 +34,9 @@ export function FlashNotice() {
             ? `placed|${placed.title}|${placed.displaced.map((h) => h.id).join(',')}`
             : restored
               ? `restored|${restored.titles.join(',')}`
-              : null;
+              : applied
+                ? `applied|${applied.titles.join(',')}|${applied.remaining}`
+                : null;
 
     if (key === null || dismissed === key) {
         return null;
@@ -145,6 +148,32 @@ export function FlashNotice() {
                                     .join(', ')}{' '}
                                 haben ihren alten Platz zurück.
                             </>
+                        )}
+                    </>
+                )}
+
+                {applied && (
+                    <>
+                        {applied.titles.length === 1 ? (
+                            <>
+                                <span className="font-semibold">
+                                    „{applied.titles[0]}"
+                                </span>{' '}
+                                hat einen neuen Platz.
+                            </>
+                        ) : (
+                            <>
+                                {applied.titles.length} Gewohnheiten haben einen
+                                neuen Platz.
+                            </>
+                        )}
+                        {applied.remaining > 0 && (
+                            <span className="text-muted-foreground">
+                                {' '}
+                                {applied.remaining === 1
+                                    ? 'Eine wartet noch — die legst du selbst hin.'
+                                    : `${applied.remaining} warten noch — die legst du selbst hin.`}
+                            </span>
                         )}
                     </>
                 )}

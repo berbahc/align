@@ -16,6 +16,7 @@ use App\Http\Controllers\HabitController;
 use App\Http\Controllers\HabitDayShiftController;
 use App\Http\Controllers\HabitGraduationController;
 use App\Http\Controllers\HabitReminderController;
+use App\Http\Controllers\NewPlaceController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\SemesterController;
 use App\Http\Controllers\SleepScheduleController;
@@ -67,6 +68,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('calendar.semester.update');
         Route::delete('calendar/semester', [SemesterController::class, 'destroy'])
             ->name('calendar.semester.destroy');
+
+        // Neue Plätze für das, was der Stundenplan verdrängt hat. Der Vorschlag
+        // kostet einen KI-Aufruf und wird gedrosselt; das Übernehmen nicht.
+        // Die feste Strecke vor `courses/{course}`, wie überall in dieser Datei.
+        Route::post('calendar/semester/places/suggestions', [NewPlaceController::class, 'suggestions'])
+            ->middleware('throttle:20,1')
+            ->name('calendar.semester.places.suggestions');
+        Route::post('calendar/semester/places', [NewPlaceController::class, 'store'])
+            ->name('calendar.semester.places.store');
 
         Route::post('calendar/semester/courses', [CourseController::class, 'store'])
             ->name('calendar.semester.courses.store');

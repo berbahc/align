@@ -95,3 +95,30 @@ export interface DisplacedHabit {
     /** Die fertige Zeile: „braucht einen neuen Platz · lief bisher 10:15". */
     previousLabel: string;
 }
+
+/** Ein neuer Platz, den die KI für eine verdrängte Gewohnheit gefunden hat. */
+export interface NewPlace {
+    id: number;
+    title: string;
+    /** Der gemerkte Vorschlag — reist beim Übernehmen zurück, damit die KI weiß, was genommen wurde. */
+    suggestionId: number;
+    /** Wo sie lag, als Zeile: „braucht einen neuen Platz · lief bisher 10:15". */
+    previousLabel: string;
+    /** „11:45". */
+    time: string;
+    days: Weekday[];
+    /** „11:45 · Mo–Fr" — dieselbe Form wie jeder Anker. */
+    label: string;
+    /** „11:45 – 12:15". */
+    timeRange: string;
+    reason: string;
+}
+
+/** Eine verdrängte Gewohnheit, für die es keinen Vorschlag gibt. */
+export interface UnplacedHabit {
+    id: number;
+    title: string;
+    previousLabel: string;
+    /** Warum nicht — kein Fenster, oder vom Modell weggelassen. */
+    message: string;
+}
