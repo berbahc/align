@@ -316,7 +316,7 @@ class Habit extends Model
      * `displaced_at` ist der Tag, ab dem der Platz weg ist — sofort, wenn der
      * Kurs schon läuft, sonst der Semesterbeginn ({@see DisplaceHabits}).
      */
-    public function displacedOn(?Carbon $on = null): bool
+    private function displacedOn(?Carbon $on = null): bool
     {
         return $this->displaced_at !== null
             && $this->displaced_at->toDateString() <= ($on ?? Carbon::today())->toDateString();

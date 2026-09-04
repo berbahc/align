@@ -8,6 +8,7 @@ use App\Models\Habit;
 use App\Models\HabitDayShift;
 use App\Models\User;
 use App\Support\DayPlan;
+use App\Support\SlotConflict;
 use App\Support\Timetable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -157,7 +158,7 @@ class HabitDayShiftController extends Controller
         $days = $habit->scheduled_days ?? [1, 2, 3, 4, 5, 6, 7];
 
         foreach ($days as $weekday) {
-            $this->guard($user, $habit, $this->nextWeekday($weekday), $start);
+            $this->guard($user, $habit, SlotConflict::nextWeekday($weekday), $start);
         }
 
         $habit->update([
@@ -268,27 +269,6 @@ class HabitDayShiftController extends Controller
             ->filter(fn (Habit $other): bool => $other->isScheduledOn($date))
             ->reject(fn (Habit $other): bool => in_array($other->id, $moving, strict: true))
             ->values();
-    }
-
-    /**
-     * Der nächste Tag mit diesem Wochentag, heute eingeschlossen.
-     *
-     * Geprüft wird an einem konkreten Datum, weil der Schlafrahmen und die
-     * Ausnahmen daran hängen — „montags" allein hat keinen Rahmen.
-     */
-    private function nextWeekday(int $weekday): Carbon
-    {
-        $day = Carbon::today();
-
-        for ($step = 0; $step < 7; $step++) {
-            if ($day->dayOfWeekIso === $weekday) {
-                return $day;
-            }
-
-            $day->addDay();
-        }
-
-        return $day;
     }
 
     /**
