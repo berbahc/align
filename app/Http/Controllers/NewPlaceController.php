@@ -209,7 +209,7 @@ class NewPlaceController extends Controller
     {
         $habits = $user->habits()
             ->active()
-            ->whereNotNull('displaced_at')
+            ->displaced()
             ->whereNotNull('scheduled_time')
             ->orderBy('position')
             ->get();

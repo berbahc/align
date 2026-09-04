@@ -297,3 +297,77 @@ test('moving a course inside a future semester parks what lies under its new tim
 
     expect($habit->fresh()->displaced_at)->not->toBeNull();
 });
+
+/** Ein Student, dessen Semester erst nächsten Monat anfängt — und schon einen Kurs hat. */
+function studentBeforeTheSemester(): array
+{
+    $user = User::factory()->create();
+    $semester = Semester::factory()->for($user)->between(
+        Carbon::today()->addMonth()->toDateString(),
+        Carbon::today()->addMonths(5)->toDateString(),
+    )->create();
+    $habit = Habit::factory()->for($user)->fixedSchedule('10:45', [1])->withMeasure(20)
+        ->create(['title' => '20 Minuten spazieren', 'reminder_enabled' => true]);
+
+    test()->actingAs($user)->post(route('calendar.semester.courses.store'), [
+        'title' => 'Mathe 1',
+        'kind' => CourseKind::Vorlesung->value,
+        'weekday' => 1,
+        'starts_at' => '10:00',
+        'ends_at' => '11:30',
+    ])->assertSessionHasNoErrors();
+
+    $habit = $habit->fresh();
+    $habit->setRelation('user', $user);
+
+    return [$user, $semester, $habit];
+}
+
+test('before the semester starts, the habit keeps its place and the mark waits for the first day', function () {
+    [$user, $semester, $habit] = studentBeforeTheSemester();
+
+    $firstLectureMonday = Carbon::parse($semester->starts_on->toDateString());
+
+    while ($firstLectureMonday->dayOfWeekIso !== 1) {
+        $firstLectureMonday->addDay();
+    }
+
+    // Der Vermerk trägt den Semesterbeginn, nicht den Klick.
+    expect($habit->displaced_at?->toDateString())->toBe($semester->starts_on->toDateString())
+        // Nächsten Montag läuft sie noch — samt Erinnerung.
+        ->and($habit->dayStartMinute(parkedMonday()))->toBe(645)
+        ->and($habit->isDisplaced(parkedMonday()))->toBeFalse()
+        ->and($habit->isDisplaced())->toBeFalse()
+        ->and($habit->canRemind())->toBeTrue()
+        ->and($habit->scheduleLabel(parkedMonday()))->not->toContain('braucht einen neuen Platz')
+        // Am ersten Vorlesungsmontag nicht mehr.
+        ->and($habit->dayStartMinute($firstLectureMonday))->toBeNull()
+        ->and($habit->isDisplaced($firstLectureMonday))->toBeTrue();
+
+    // Der Monat zeigt das Band noch nicht — die Frage hat noch keine Frist.
+    $this->actingAs($user)
+        ->get(route('calendar'))
+        ->assertInertia(fn (AssertableInertia $page) => $page->where('displaced', [])->etc());
+
+    // Und die neuen Plätze haben noch nichts zu tun.
+    $this->actingAs($user)
+        ->postJson(route('calendar.semester.places.suggestions'))
+        ->assertStatus(422);
+});
+
+test('once the semester has started, the mark takes effect and the band appears', function () {
+    [$user, $semester, $habit] = studentBeforeTheSemester();
+
+    $this->travelTo(Carbon::parse($semester->starts_on->toDateString())->addDay()->setTime(9, 0));
+
+    expect($habit->isDisplaced())->toBeTrue()
+        ->and($habit->canRemind())->toBeFalse();
+
+    $this->actingAs($user)
+        ->get(route('calendar'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('displaced.0.title', '20 Minuten spazieren')
+            ->etc());
+
+    $this->travelBack();
+});

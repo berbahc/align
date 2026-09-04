@@ -300,10 +300,26 @@ class Habit extends Model
      * Sie bleibt aktiv — zählt gegen die Fünfergrenze, steht in der Liste,
      * behält ihre Uhrzeit als Erinnerung. Nur im Tag liegt sie nirgends, bis
      * sie einen neuen Platz bekommt.
+     *
+     * Mit Datum: Der Vermerk gilt ab einem Tag, nicht seit einem Klick. Ein
+     * Kurs im Oktober nimmt im September noch nichts weg — bis zum
+     * Semesterbeginn läuft die Gewohnheit weiter, wo sie lief.
      */
-    public function isDisplaced(): bool
+    public function isDisplaced(?Carbon $on = null): bool
     {
-        return $this->anchorHabit()?->displaced_at !== null;
+        return $this->anchorHabit()?->displacedOn($on) ?? false;
+    }
+
+    /**
+     * Gilt der eigene Vermerk an diesem Tag schon?
+     *
+     * `displaced_at` ist der Tag, ab dem der Platz weg ist — sofort, wenn der
+     * Kurs schon läuft, sonst der Semesterbeginn ({@see DisplaceHabits}).
+     */
+    public function displacedOn(?Carbon $on = null): bool
+    {
+        return $this->displaced_at !== null
+            && $this->displaced_at->toDateString() <= ($on ?? Carbon::today())->toDateString();
     }
 
     /**
@@ -678,7 +694,7 @@ class Habit extends Model
         // Blöcke, die im Tag stehen — und diese steht dort gerade nicht. Eine
         // gekoppelte fragt weiter unten ihren Anker und bekommt dort dieselbe
         // Antwort.
-        if ($this->displaced_at !== null) {
+        if ($this->displacedOn($on)) {
             return null;
         }
 
@@ -750,7 +766,7 @@ class Habit extends Model
         return $this->schedule_type->hasClockTime()
             && $this->scheduled_time !== null
             // Eine Uhrzeit, die nur noch Erinnerung ist, weckt niemanden.
-            && $this->displaced_at === null;
+            && ! $this->displacedOn();
     }
 
     /**
@@ -855,7 +871,7 @@ class Habit extends Model
         // Aufrufern, damit Raster, Rechnung und Erinnerung dasselbe sehen.
         // Die Kette fällt mit: Ein Nachfolger fragt seinen Vorgänger, und der
         // antwortet mit nichts. Deshalb reicht hier die eigene Spalte.
-        if ($this->displaced_at !== null) {
+        if ($this->displacedOn($on)) {
             return null;
         }
 
@@ -954,7 +970,7 @@ class Habit extends Model
         // Verdrängt, aber nicht vergessen: Die Zeile nennt, wann die Gewohnheit
         // lief — das ist der Anhaltspunkt für den neuen Platz, für die Person
         // wie für die KI.
-        if ($this->isDisplaced()) {
+        if ($this->isDisplaced($on)) {
             $previous = $this->anchorHabit()?->scheduled_time?->format('H:i');
 
             return $previous === null
@@ -1095,7 +1111,25 @@ class Habit extends Model
     #[Scope]
     protected function placed(Builder $query): void
     {
-        $query->whereNull('displaced_at');
+        // Ein Vermerk, der erst ab Semesterbeginn gilt, nimmt heute nichts weg.
+        $query->where(fn (Builder $inner) => $inner
+            ->whereNull('displaced_at')
+            ->orWhere('displaced_at', '>', now()));
+    }
+
+    /**
+     * Was heute ohne Platz dasteht.
+     *
+     * Nicht jeder Vermerk gilt schon: Bis das Semester anfängt, läuft die
+     * Gewohnheit weiter, und wer sie jetzt schon als platzlos meldete, fragte
+     * nach einer Entscheidung, die noch keine Frist hat.
+     *
+     * @param  Builder<$this>  $query
+     */
+    #[Scope]
+    protected function displaced(Builder $query): void
+    {
+        $query->whereNotNull('displaced_at')->where('displaced_at', '<=', now());
     }
 
     /**

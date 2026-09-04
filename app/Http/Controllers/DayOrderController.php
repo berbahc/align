@@ -305,7 +305,7 @@ class DayOrderController extends Controller
             // Die Ordnung betrifft den Tag, wie er liegt. Was keinen Platz
             // hat, bekommt ihn auf dem eigenen Weg — und nicht nebenbei mit
             // einer Uhrzeit, die den Vermerk stehen ließe.
-            ->reject(fn (Habit $habit): bool => $habit->isDisplaced())
+            ->reject(fn (Habit $habit): bool => $habit->isDisplaced($date))
             ->values();
     }
 }
