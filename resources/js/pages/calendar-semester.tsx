@@ -1,10 +1,11 @@
 import { Head, useForm } from '@inertiajs/react';
-import { GraduationCap, Plus } from 'lucide-react';
+import { GraduationCap, Plus, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import { CalendarViews } from '@/components/calendar-views';
 import { CourseCancellationSheet } from '@/components/course-cancellation-sheet';
 import { CourseDetailSheet } from '@/components/course-detail-sheet';
 import { CourseSheet } from '@/components/course-sheet';
+import { NewPlacesSheet } from '@/components/new-places-sheet';
 import { Card, CardContent } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 import { WeekGrid } from '@/components/week-grid';
@@ -62,6 +63,7 @@ export default function CalendarSemester({
     const [sheetOpen, setSheetOpen] = useState(false);
     const [cancelling, setCancelling] = useState<Course | null>(null);
     const [opened, setOpened] = useState<Course | null>(null);
+    const [placesOpen, setPlacesOpen] = useState(false);
 
     function openNew() {
         setEditing(null);
@@ -137,6 +139,15 @@ export default function CalendarSemester({
                                 </li>
                             ))}
                         </ul>
+                        {/* Der Weg zur KI — ✦ steht nur hier (§8). */}
+                        <button
+                            type="button"
+                            onClick={() => setPlacesOpen(true)}
+                            className={`${OUTLINE_BUTTON} self-start`}
+                        >
+                            <Sparkles className="size-4" aria-hidden="true" />
+                            Neue Zeiten vorschlagen
+                        </button>
                     </div>
                 )}
 
@@ -223,6 +234,11 @@ export default function CalendarSemester({
                             onOpenChange={() => setOpened(null)}
                             onEdit={openEdit}
                             onCancelDate={setCancelling}
+                        />
+
+                        <NewPlacesSheet
+                            open={placesOpen}
+                            onOpenChange={setPlacesOpen}
                         />
                     </>
                 )}

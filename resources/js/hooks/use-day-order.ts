@@ -23,7 +23,7 @@ interface OrderResponse {
  * Der Rumpf kommt als Zeichenkette; ein unlesbarer darf nicht dazu führen,
  * dass die Oberfläche gar nichts sagt.
  */
-function readMessage(body: string): string | null {
+export function readMessage(body: string): string | null {
     try {
         const parsed: unknown = JSON.parse(body);
 

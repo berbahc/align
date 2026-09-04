@@ -80,6 +80,15 @@ declare module '@inertiajs/core' {
             habitsRestored?: {
                 titles: string[];
             };
+            /**
+             * Neue Plätze übernommen. Ohne Rückweg: Die alten Zeiten waren
+             * vergeben, dorthin führt nichts zurück.
+             */
+            placesApplied?: {
+                titles: string[];
+                /** Wie viele noch warten. */
+                remaining: number;
+            };
         };
     }
 }
