@@ -1,8 +1,7 @@
 import type { Weekday } from './habit';
 
 /** Die Art einer Veranstaltung — für das Auge, nicht für die Rechnung. */
-export type CourseKind =
-    'vorlesung' | 'uebung' | 'seminar' | 'praktikum' | 'sonstiges';
+export type CourseKind = 'vorlesung' | 'uebung' | 'seminar' | 'sonstiges';
 
 /** Eine Art als Wahl im Formular. */
 export interface CourseKindOption {
@@ -121,14 +120,4 @@ export interface UnplacedHabit {
     previousLabel: string;
     /** Warum nicht — kein Fenster, oder vom Modell weggelassen. */
     message: string;
-}
-
-/** Eine Gewohnheit im Wochenraster — nur ihre Stelle, keine Handlung. */
-export interface WeekHabitBlock {
-    id: number;
-    title: string;
-    startMinute: number;
-    durationMinutes: number;
-    /** Uhrzeit (durchgezogen) oder Situation (gestrichelt)? */
-    exact: boolean;
 }
