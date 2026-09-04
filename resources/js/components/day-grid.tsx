@@ -7,6 +7,7 @@ import { useBlockDrag } from '@/hooks/use-block-drag';
 import type { BlockDrag } from '@/hooks/use-block-drag';
 import type { GridBlock } from '@/lib/day-grid';
 import {
+    collisionOf,
     gridBounds,
     hourMarks,
     offsetOf,
@@ -14,6 +15,7 @@ import {
     timeLabel,
     withDrag,
 } from '@/lib/day-grid';
+import { cn } from '@/lib/utils';
 import { show as sleepShow } from '@/routes/sleep';
 import type { CalendarBlock as Block, CourseBlock as Course } from '@/types';
 
@@ -108,13 +110,44 @@ export function DayGrid({
         ? withDrag(blocks, drag.drag.id, drag.drag.minute)
         : blocks;
 
+    // Was gerade wandert — der gezogene Block und alles, was an ihm hängt.
+    // Es wird getrennt vom Rest gelegt: Teilte es sich unterwegs die Spalte
+    // mit dem, worüber es gerade schwebt, spränge es beim Streifen eines
+    // Kurses auf halbe Breite nach rechts. Es liegt stattdessen obenauf, in
+    // voller Breite, und der Rest bleibt, wo er ist.
+    const before = new Map(
+        blocks.map((block) => [block.id, block.startMinute]),
+    );
+    const moving = drag.drag
+        ? shown.filter(
+              (block) =>
+                  block.id === drag.drag?.id ||
+                  block.startMinute !== before.get(block.id),
+          )
+        : [];
+    const resting = shown.filter(
+        (block) => !moving.some((other) => other.id === block.id),
+    );
+
     // Beide Arten in einem Durchgang: Läge eine Gewohnheit auf einer
     // Vorlesung, müssten sie sich die Breite teilen wie zwei Gewohnheiten
     // auch. Zwei getrennte Aufrufe zeichneten sie übereinander.
     const placed = placeBlocks<GridBlock>(
-        [...(ghost ? [...shown, ghost.block] : shown), ...courseBlocks],
+        [...(ghost ? [...resting, ghost.block] : resting), ...courseBlocks],
         bounds,
     );
+    // Ein Durchgang, eine Liste: Der getragene Block behält sein Element —
+    // wanderte er beim Anheben in eine zweite Liste, verlöre der Browser
+    // den Griff (`setPointerCapture` hängt am Element, nicht an der Kennung).
+    const lifted = new Set(moving.map((block) => block.id));
+    const entries = [...placed, ...placeBlocks<GridBlock>(moving, bounds)];
+
+    // Ob die Stelle unter dem Finger überhaupt geht — steht am Zeitschild,
+    // bevor man loslässt. Ein Kurs rückt nicht; das soll man sehen, nicht
+    // erst im Pop-up lesen.
+    const blockedBy = drag.drag
+        ? collisionOf(blocks, courseBlocks, drag.drag.id, drag.drag.minute)
+        : null;
 
     // Was gar keine Stelle im Tag hat, verschwindet nicht — es steht unter dem
     // Raster. Eine Gewohnheit, deren Kette gerissen ist, wäre sonst weg.
@@ -153,7 +186,7 @@ export function DayGrid({
                     className="absolute inset-y-0 right-0"
                     style={{ left: GUTTER }}
                 >
-                    {placed.map((entry) =>
+                    {entries.map((entry) =>
                         entry.block.kind === 'course' ? (
                             <CourseBlock
                                 key={entry.block.id}
@@ -186,6 +219,7 @@ export function DayGrid({
                                     entry.block !== ghost.block &&
                                     entry.block.id === ghost.replaces
                                 }
+                                lifted={lifted.has(entry.block.id)}
                             />
                         ),
                     )}
@@ -193,19 +227,39 @@ export function DayGrid({
 
                 {/* Die Zielzeit, solange der Block wandert — in derselben
                     Spalte wie die Stunden, damit man sie im Blick hat, ohne
-                    den Finger zu heben. */}
+                    den Finger zu heben. Liegt die Stelle in einem Kurs, sagt
+                    das Schild es gleich: Loslassen ginge hier nicht. */}
                 {drag.drag !== null && (
                     <div
                         className="pointer-events-none absolute inset-x-0 z-40 flex items-center gap-2"
                         style={{ top: offsetOf(drag.drag.minute, bounds) }}
                     >
                         <span
-                            className="shrink-0 -translate-y-1/2 rounded-full bg-primary px-1.5 py-0.5 text-center text-[11px] leading-none font-semibold text-primary-foreground tabular-nums"
+                            className={cn(
+                                'shrink-0 -translate-y-1/2 rounded-full px-1.5 py-0.5 text-center text-[11px] leading-none font-semibold tabular-nums',
+                                blockedBy === null
+                                    ? 'bg-primary text-primary-foreground'
+                                    : 'bg-foreground text-background line-through',
+                            )}
                             style={{ width: GUTTER }}
                         >
                             {timeLabel(drag.drag.minute)}
                         </span>
-                        <span className="h-px flex-1 bg-primary/40" />
+                        <span
+                            className={cn(
+                                'h-px flex-1',
+                                blockedBy === null
+                                    ? 'bg-primary/40'
+                                    : 'bg-foreground/40',
+                            )}
+                        />
+                        {blockedBy !== null && (
+                            <span className="shrink-0 -translate-y-1/2 rounded-full bg-foreground px-2 py-0.5 text-[11px] leading-none font-semibold text-background">
+                                {blockedBy.kind === 'course'
+                                    ? `nicht während „${blockedBy.title}"`
+                                    : `dort liegt „${blockedBy.title}"`}
+                            </span>
+                        )}
                     </div>
                 )}
 

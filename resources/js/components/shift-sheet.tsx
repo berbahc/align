@@ -103,9 +103,9 @@ export function ShiftSheet({
                     >
                         {conflict.kind === 'course' ? (
                             <>
-                                Dort liegt heute „{conflict.title}" aus deinem
-                                Semesterplan. Such der Gewohnheit eine andere
-                                Zeit — der Kurs rückt nicht.
+                                Während „{conflict.title}" geht das nicht — der
+                                Kurs kommt von der Uni und rückt nicht. Such der
+                                Gewohnheit eine Zeit davor oder danach.
                             </>
                         ) : (
                             <>

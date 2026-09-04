@@ -40,6 +40,7 @@ export function CalendarBlock({
     ghost = false,
     faded = false,
     dragging = false,
+    lifted = false,
     dragHandlers,
 }: {
     placed: PlacedBlock<Block>;
@@ -53,6 +54,8 @@ export function CalendarBlock({
     faded?: boolean;
     /** Wird dieser Block gerade getragen? */
     dragging?: boolean;
+    /** Rutscht er gerade mit — an der Kette des Getragenen? Dann liegt er mit obenauf. */
+    lifted?: boolean;
     /** Die Geste — sie hängt an der Fläche, die auch ins Sheet führt. */
     dragHandlers?: {
         onPointerDown: (event: React.PointerEvent, block: Block) => void;
@@ -77,6 +80,7 @@ export function CalendarBlock({
                 dragging
                     ? 'z-30 transition-none'
                     : 'transition-[top] duration-[var(--duration-fluid)] ease-[var(--ease-fluid)]',
+                lifted && !dragging && 'z-20',
             )}
             style={{
                 top,
