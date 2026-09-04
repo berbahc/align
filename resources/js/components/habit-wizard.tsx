@@ -24,6 +24,7 @@ import {
     QUIET_BUTTON,
 } from '@/lib/interaction';
 import { outsideSleepWindow } from '@/lib/sleep';
+import { findConflict } from '@/lib/slots';
 import { cn } from '@/lib/utils';
 import { suggestions } from '@/routes/habits/smallest-step';
 import type {
@@ -141,6 +142,18 @@ export function HabitWizard({
           )
         : null;
 
+    // Was an dieser Stelle schon liegt — mit der Viertelstunde Luft, die
+    // der Server verlangt. Der Hinweis steht im Picker; hier hält er den
+    // Schritt an, damit die Absage nicht erst nach dem letzten Knopf kommt.
+    const blocked = isFixed
+        ? findConflict(
+              data.scheduled_time,
+              data.scheduled_days,
+              busySlots,
+              data.target_amount,
+          )
+        : null;
+
     const canContinue = {
         1: category !== '',
         2: data.template_key !== '',
@@ -148,7 +161,9 @@ export function HabitWizard({
             data.schedule_type === 'chained'
                 ? data.chained_to_habit_id !== null
                 : isFixed
-                  ? data.scheduled_days.length > 0 && asleep === null
+                  ? data.scheduled_days.length > 0 &&
+                    asleep === null &&
+                    blocked === null
                   : data.trigger_situation.trim().length > 0,
         // Der kleinste Schritt ist überspringbar — bei ø 3,92 Schuldgefühl
         // darf hier kein weiteres Pflichtfeld entstehen.
@@ -207,9 +222,40 @@ export function HabitWizard({
         }));
     }
 
+    /**
+     * Wohin ein Fehler des Servers gehört — der Schritt, in dem das Feld steht.
+     *
+     * Der Wizard steht beim Abschicken auf dem letzten Schritt, die Uhrzeit
+     * aber auf dem dritten. Käme die Absage dort an, wo niemand hinschaut,
+     * sähe es aus, als ginge der Knopf einfach nicht.
+     */
+    const STEP_OF_FIELD: Record<string, number> = {
+        template_key: 2,
+        target_amount: 2,
+        schedule_type: 3,
+        trigger_situation: 3,
+        scheduled_time: 3,
+        scheduled_days: 3,
+        chained_to_habit_id: 3,
+        smallest_step: 4,
+        motivation: 5,
+    };
+
     function submit(event: React.FormEvent) {
         event.preventDefault();
-        post(action);
+        post(action, {
+            onError: (failed) => {
+                const target = Math.min(
+                    ...Object.keys(failed).map(
+                        (field) => STEP_OF_FIELD[field] ?? step,
+                    ),
+                );
+
+                if (steps.includes(target)) {
+                    setStep(target);
+                }
+            },
+        });
     }
 
     return (
@@ -391,6 +437,8 @@ export function HabitWizard({
                     <InputError message={errors.trigger_situation} />
                     <InputError message={errors.scheduled_time} />
                     <InputError message={errors.scheduled_days} />
+                    <InputError message={errors.chained_to_habit_id} />
+                    <InputError message={errors.schedule_type} />
                 </fieldset>
             )}
 
