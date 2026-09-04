@@ -32,7 +32,7 @@ import type { NavItem } from '@/types';
 // Der Semesterplan steht bewusst NICHT hier: Er ist die zweite Ansicht des
 // Kalenders und nicht eine sechste Ecke der App. Wer wissen will, wann im Tag
 // nichts geht, sucht das dort, wo der Tag steht.
-const mainNavItems: NavItem[] = [
+export const mainNavItems: NavItem[] = [
     {
         title: 'Übersicht',
         href: dashboard(),
