@@ -72,14 +72,24 @@ test('a habit on a weekday without lectures is planned as before', function () {
     expect($user->habits()->count())->toBe(1);
 });
 
-test('a habit that starts when the lecture ends is allowed', function () {
+test('a habit needs a quarter hour of air after the lecture', function () {
+    // Die Viertelstunde Luft gilt für jede Hand, nicht nur für die KI: Was
+    // ein Vorschlag nie täte — Rücken an Rücken mit der Vorlesung —, soll
+    // sich auch von Hand nicht eintragen lassen. Sonst hätte der Tag zwei
+    // Maßstäbe.
     $user = studentWithCourse('10:00', '11:30');
 
     $this->actingAs($user)
         ->post(route('habits.store'), fixedHabitPayload('11:30', [1]))
+        ->assertSessionHasErrors('scheduled_time');
+
+    expect(session('errors')->first('scheduled_time'))->toContain('eine Viertelstunde Luft');
+
+    $this->actingAs($user)
+        ->post(route('habits.store'), fixedHabitPayload('11:45', [1]))
         ->assertSessionHasNoErrors();
 
-    expect($user->habits()->sole()->scheduled_time->format('H:i'))->toBe('11:30');
+    expect($user->habits()->sole()->scheduled_time->format('H:i'))->toBe('11:45');
 });
 
 test('one colliding weekday out of five is enough to refuse', function () {
@@ -511,4 +521,36 @@ test('a course in a semester that has not started yet already blocks its slot', 
     $this->actingAs($user)
         ->post(route('habits.store'), fixedHabitPayload('10:45', [2]))
         ->assertSessionHasNoErrors();
+});
+
+test('a habit needs a quarter hour of air next to another habit', function () {
+    $user = User::factory()->create();
+    Habit::factory()->for($user)->fixedSchedule('14:00', [1])->withMeasure(30)
+        ->create(['title' => 'Essen vorkochen']);
+
+    $this->actingAs($user)
+        ->post(route('habits.store'), fixedHabitPayload('14:30', [1]))
+        ->assertSessionHasErrors('scheduled_time');
+
+    expect(session('errors')->first('scheduled_time'))
+        ->toContain('„Essen vorkochen" liegt montags schon um 14:00 bis 14:30')
+        ->toContain('eine Viertelstunde Luft');
+
+    $this->actingAs($user)
+        ->post(route('habits.store'), fixedHabitPayload('14:45', [1]))
+        ->assertSessionHasNoErrors();
+});
+
+test('two courses may follow each other without air', function () {
+    $user = studentWithCourse('10:00', '11:30');
+
+    $this->actingAs($user)->post(route('calendar.semester.courses.store'), [
+        'title' => 'Statistik',
+        'kind' => CourseKind::Vorlesung->value,
+        'weekday' => 1,
+        'starts_at' => '11:30',
+        'ends_at' => '13:00',
+    ])->assertSessionHasNoErrors();
+
+    expect($user->currentSemester()?->courses()->count())->toBe(2);
 });

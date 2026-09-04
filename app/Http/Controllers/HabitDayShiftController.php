@@ -222,24 +222,17 @@ class HabitDayShiftController extends Controller
             $conflict = $plan->collisionWith($span['from'], $span['to']);
 
             if ($conflict !== null) {
+                // Derselbe Satz wie überall sonst — nur das Ende ist hier ein
+                // anderes, weil es um eine dauerhafte Uhrzeit geht. Ein Kurs
+                // lässt sich nicht wegschieben; der Satz bietet das nicht an.
                 throw ValidationException::withMessages([
-                    'start_minute' => Timetable::isCourseBlock($conflict)
-                        // Ein Kurs lässt sich nicht wegschieben — er kommt von
-                        // der Uni. Der Ausweg ist eine andere Zeit, nicht eine
-                        // andere Reihenfolge; der Satz darf nichts anderes
-                        // anbieten.
-                        ? sprintf(
-                            '%s läuft „%s" um %s aus deinem Semesterplan. Such der Gewohnheit eine andere Zeit — der Kurs rückt nicht.',
-                            ucfirst($this->weekdayLabel($date)),
-                            $conflict['title'],
-                            DayPlan::toTime($conflict['from']),
-                        )
-                        : sprintf(
-                            '„%s" liegt %s schon um %s. Verschiebe die zuerst, dann lässt sich die Zeit hier umstellen.',
-                            $conflict['title'],
-                            $this->weekdayLabel($date),
-                            DayPlan::toTime($conflict['from']),
-                        ),
+                    'start_minute' => SlotConflict::message(
+                        $conflict,
+                        $date,
+                        Timetable::isCourseBlock($conflict)
+                            ? 'Such der Gewohnheit eine andere Zeit — der Kurs rückt nicht.'
+                            : 'Verschiebe die zuerst, dann lässt sich die Zeit hier umstellen.',
+                    ),
                 ]);
             }
         }
@@ -269,20 +262,5 @@ class HabitDayShiftController extends Controller
             ->filter(fn (Habit $other): bool => $other->isScheduledOn($date))
             ->reject(fn (Habit $other): bool => in_array($other->id, $moving, strict: true))
             ->values();
-    }
-
-    /**
-     * „montags", „heute" — je nachdem, wie weit der Tag weg ist.
-     */
-    private function weekdayLabel(Carbon $date): string
-    {
-        if ($date->isSameDay(Carbon::today())) {
-            return 'heute';
-        }
-
-        $localised = $date->copy();
-        $localised->locale('de');
-
-        return mb_strtolower($localised->isoFormat('dddd')).'s';
     }
 }

@@ -105,11 +105,13 @@ export function ShiftSheet({
                             <>
                                 Während „{conflict.title}" geht das nicht — der
                                 Kurs kommt von der Uni und rückt nicht. Such der
-                                Gewohnheit eine Zeit davor oder danach.
+                                Gewohnheit eine Zeit davor oder danach, mit
+                                einer Viertelstunde Luft.
                             </>
                         ) : (
                             <>
-                                „{conflict.title}" liegt heute schon dort.
+                                „{conflict.title}" liegt heute schon dort, und
+                                dazwischen braucht es eine Viertelstunde Luft.
                                 Verschiebe die zuerst, dann ist hier Platz.
                             </>
                         )}

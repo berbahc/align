@@ -1118,18 +1118,18 @@ class Habit extends Model
     }
 
     /**
-     * Was heute ohne Platz dasteht.
+     * Was einen Vermerk trägt — heute platzlos oder ab Semesterbeginn.
      *
-     * Nicht jeder Vermerk gilt schon: Bis das Semester anfängt, läuft die
-     * Gewohnheit weiter, und wer sie jetzt schon als platzlos meldete, fragte
-     * nach einer Entscheidung, die noch keine Frist hat.
+     * Beides gehört gesagt: Wer im September einträgt, dass im Oktober ein
+     * Kurs auf dem Spaziergang liegt, soll das nicht erst am 1. Oktober
+     * erfahren. Ob der Vermerk *heute* schon gilt, sagt {@see isDisplaced()}.
      *
      * @param  Builder<$this>  $query
      */
     #[Scope]
     protected function displaced(Builder $query): void
     {
-        $query->whereNotNull('displaced_at')->where('displaced_at', '<=', now());
+        $query->whereNotNull('displaced_at');
     }
 
     /**

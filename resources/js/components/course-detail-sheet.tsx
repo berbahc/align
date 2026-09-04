@@ -10,7 +10,7 @@ import {
 import { OUTLINE_BUTTON, QUIET_BUTTON } from '@/lib/interaction';
 import { destroy } from '@/routes/calendar/semester/courses';
 import { destroy as undoException } from '@/routes/calendar/semester/courses/exceptions';
-import type { CourseRow, Weekday } from '@/types';
+import type { CourseBlock, Weekday } from '@/types';
 
 const WEEKDAY_NAMES: Record<Weekday, string> = {
     1: 'Montag',
@@ -38,13 +38,13 @@ export function CourseDetailSheet({
     onCancelDate,
 }: {
     /** Null heißt zu. */
-    course: CourseRow | null;
+    course: CourseBlock | null;
     onOpenChange: (open: boolean) => void;
-    onEdit: (course: CourseRow) => void;
-    onCancelDate: (course: CourseRow) => void;
+    onEdit: (course: CourseBlock) => void;
+    onCancelDate: (course: CourseBlock) => void;
 }) {
     /** Ein Weg aus dem Sheet heraus in das nächste — erst zu, dann auf. */
-    function leaveFor(next: (course: CourseRow) => void) {
+    function leaveFor(next: (course: CourseBlock) => void) {
         if (course === null) {
             return;
         }
@@ -112,7 +112,9 @@ export function CourseDetailSheet({
                                         type="button"
                                         onClick={() =>
                                             router.delete(
-                                                undoException.url(course.id),
+                                                undoException.url(
+                                                    course.courseId,
+                                                ),
                                                 {
                                                     data: {
                                                         on_date:
@@ -160,7 +162,7 @@ export function CourseDetailSheet({
                             }
 
                             onOpenChange(false);
-                            router.delete(destroy.url(course.id), {
+                            router.delete(destroy.url(course.courseId), {
                                 preserveScroll: true,
                             });
                         }}

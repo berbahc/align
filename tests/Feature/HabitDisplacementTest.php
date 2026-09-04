@@ -344,15 +344,15 @@ test('before the semester starts, the habit keeps its place and the mark waits f
         ->and($habit->dayStartMinute($firstLectureMonday))->toBeNull()
         ->and($habit->isDisplaced($firstLectureMonday))->toBeTrue();
 
-    // Der Monat zeigt das Band noch nicht — die Frage hat noch keine Frist.
+    // Der Monat kündigt es an — mit dem Tag, ab dem es gilt. So kommt die
+    // Änderung nicht über Nacht.
     $this->actingAs($user)
         ->get(route('calendar'))
-        ->assertInertia(fn (AssertableInertia $page) => $page->where('displaced', [])->etc());
-
-    // Und die neuen Plätze haben noch nichts zu tun.
-    $this->actingAs($user)
-        ->postJson(route('calendar.semester.places.suggestions'))
-        ->assertStatus(422);
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('displaced.0.title', '20 Minuten spazieren')
+            ->where('displaced.0.from', $semester->starts_on->toDateString())
+            ->where('displaced.0.fromLabel', $semester->starts_on->settings(['locale' => 'de'])->isoFormat('D. MMMM'))
+            ->etc());
 });
 
 test('once the semester has started, the mark takes effect and the band appears', function () {
@@ -367,7 +367,46 @@ test('once the semester has started, the mark takes effect and the band appears'
         ->get(route('calendar'))
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->where('displaced.0.title', '20 Minuten spazieren')
+            ->where('displaced.0.from', null)
             ->etc());
 
     $this->travelBack();
+});
+
+/**
+ * Ist das Semester vorbei, gilt der Stundenplan nicht mehr — und was er
+ * verdrängt hatte, kommt zurück, ohne dass jemand einen Kurs löschen müsste.
+ */
+test('once the semester is over, the parked habit comes back on its own', function () {
+    $user = User::factory()->create();
+    $semester = Semester::factory()->for($user)->past()->create();
+    Course::factory()->for($semester)->onWeekday(1)->at('10:00', '11:30')->create(['title' => 'Mathe 1']);
+    $habit = Habit::factory()->for($user)->fixedSchedule('10:45', [1])->withMeasure(20)
+        ->create(['title' => '20 Minuten spazieren', 'displaced_at' => Carbon::today()->subMonths(4)]);
+
+    $this->artisan('habits:restore-displaced')->assertSuccessful();
+
+    expect($habit->fresh()->displaced_at)->toBeNull();
+});
+
+test('opening the calendar brings a parked habit back once its place is free again', function () {
+    $user = User::factory()->create();
+    $semester = Semester::factory()->for($user)->past()->create();
+    Course::factory()->for($semester)->onWeekday(1)->at('10:00', '11:30')->create(['title' => 'Mathe 1']);
+    $habit = Habit::factory()->for($user)->fixedSchedule('10:45', [1])->withMeasure(20)
+        ->create(['title' => '20 Minuten spazieren', 'displaced_at' => Carbon::today()->subMonths(4)]);
+
+    $this->actingAs($user)
+        ->get(route('calendar'))
+        ->assertInertia(fn (AssertableInertia $page) => $page->where('displaced', [])->etc());
+
+    expect($habit->fresh()->displaced_at)->toBeNull();
+});
+
+test('a parked habit stays parked while the semester still covers its course', function () {
+    [$user, $habit] = studentWhoseHabitGetsCovered();
+
+    $this->artisan('habits:restore-displaced')->assertSuccessful();
+
+    expect($habit->fresh()->displaced_at)->not->toBeNull();
 });

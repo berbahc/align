@@ -24,23 +24,6 @@ export interface CourseExceptionRow {
     timeRange: string | null;
 }
 
-/** Ein Kurs als Zeile im Semesterplan. */
-export interface CourseRow {
-    id: number;
-    title: string;
-    kind: CourseKind;
-    /** „Vorlesung", „Übung" … — fertig formatiert. */
-    kindLabel: string;
-    weekday: Weekday;
-    /** „10:00" — für das Formular. */
-    startsAt: string;
-    endsAt: string;
-    /** „10:00 – 11:30" — für die Anzeige. */
-    timeRange: string;
-    location: string | null;
-    exceptions: CourseExceptionRow[];
-}
-
 /** Der Zeitraum, in dem der Plan gilt. */
 export interface SemesterPlan {
     title: string;
@@ -67,17 +50,24 @@ export interface CourseBlock {
     kind: 'course';
     /** Negativ — Gewohnheiten tragen positive Kennungen, die Verabredung die 0. */
     id: number;
+    /** Die echte Kennung — für Ändern, Ausfall und Löschen. */
+    courseId: number;
     title: string;
     courseKind: CourseKind;
     /** „Vorlesung", „Übung" … — fertig formatiert. */
     kindLabel: string;
+    weekday: Weekday;
+    /** „10:00" — für das Formular. */
+    startsAt: string;
+    endsAt: string;
     startMinute: number;
     durationMinutes: number;
-    /** „08:00 – 09:30". */
+    /** „08:00 – 09:30" — die Spanne an diesem Tag. */
     timeRange: string;
     location: string | null;
     /** Liegt der Kurs an diesem Tag ausnahmsweise hier? */
     moved: boolean;
+    exceptions: CourseExceptionRow[];
 }
 
 /**
@@ -93,6 +83,10 @@ export interface DisplacedHabit {
     previousTime: string | null;
     /** Die fertige Zeile: „braucht einen neuen Platz · lief bisher 10:15". */
     previousLabel: string;
+    /** „YYYY-MM-DD", ab wann der Platz weg ist — null, wenn schon jetzt. */
+    from: string | null;
+    /** „1. Oktober" — fertig formatiert. */
+    fromLabel: string | null;
 }
 
 /** Ein neuer Platz, den die KI für eine verdrängte Gewohnheit gefunden hat. */

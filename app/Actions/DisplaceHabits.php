@@ -46,7 +46,7 @@ class DisplaceHabits
         $from = null;
 
         for ($round = 0; $round < Habit::MaxActivePerUser; $round++) {
-            $conflict = SlotConflict::find($user, $spans, $days, [], $withTimetable);
+            $conflict = SlotConflict::find($user, $spans, $days, [], $withTimetable, spanIsCourse: true);
 
             if ($conflict === null) {
                 break;

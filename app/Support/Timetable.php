@@ -154,9 +154,13 @@ final class Timetable
     }
 
     /**
-     * Dieselbe Belegung für die Oberfläche — mit Art, Ort und lesbarer Spanne.
+     * Dieselbe Belegung für die Oberfläche — der ganze Kurs, mit Lage im Tag.
      *
-     * @return list<array{kind: 'course', id: int, title: string, courseKind: string, kindLabel: string, startMinute: int, durationMinutes: int, timeRange: string, location: string|null, moved: bool}>
+     * Der Block trägt alles, was die Sheets zum Ändern brauchen
+     * ({@see Course::toRow()}), dazu seine Stelle an diesem Datum. Eine Form
+     * statt zweier: Was man im Raster antippt, ist das, was man bearbeitet.
+     *
+     * @return list<array{kind: 'course', id: int, courseId: int, title: string, courseKind: string, kindLabel: string, weekday: int, startsAt: string, endsAt: string, timeRange: string, location: string|null, exceptions: list<array{onDate: string, dateLabel: string, cancelled: bool, timeRange: string|null}>, startMinute: int, durationMinutes: int, moved: bool}>
      */
     public function coursesOn(CarbonInterface $date): array
     {
@@ -164,23 +168,23 @@ final class Timetable
             $course = $occurrence['course'];
 
             return [
+                ...$course->toRow(),
                 // Sagt dem Raster, welcher Art dieser Block ist. Das Gegenstück
                 // steht in `CalendarController::block()`; fehlt es hier, hält
                 // die Zeichnung den Kurs für eine Gewohnheit und sucht ein
                 // Symbol, das es für ihn nicht gibt.
                 'kind' => 'course',
+                // Negativ, damit die Kennung im Raster keiner Gewohnheit gehört.
                 'id' => -$course->id,
-                'title' => $course->title,
-                'courseKind' => $course->kind->value,
-                'kindLabel' => $course->kind->label(),
                 'startMinute' => $occurrence['from'],
                 'durationMinutes' => $occurrence['to'] - $occurrence['from'],
+                // Die Spanne dieses Tages — an einem verlegten Tag eine andere
+                // als die der Woche.
                 'timeRange' => sprintf(
                     '%s – %s',
                     DayPlan::toTime($occurrence['from']),
                     DayPlan::toTime($occurrence['to']),
                 ),
-                'location' => $course->location,
                 'moved' => $occurrence['moved'],
             ];
         }, $this->occurrencesOn($date));

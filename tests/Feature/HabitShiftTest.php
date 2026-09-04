@@ -186,7 +186,12 @@ test('a collision on another weekday stops the permanent move', function () {
             'start_minute' => 14 * 60,
             'scope' => 'always',
         ])
-        ->assertSessionHasErrors(['start_minute' => '„Essen vorkochen" liegt montags schon um 14:00. Verschiebe die zuerst, dann lässt sich die Zeit hier umstellen.']);
+        ->assertSessionHasErrors('start_minute');
+
+    expect(session('errors')->first('start_minute'))
+        ->toStartWith('„Essen vorkochen" liegt montags schon um 14:00')
+        ->toContain('eine Viertelstunde Luft')
+        ->toContain('Verschiebe die zuerst, dann lässt sich die Zeit hier umstellen.');
 
     expect($habit->fresh()->scheduled_time->format('H:i'))->toBe('09:00');
 });

@@ -29,7 +29,7 @@ import type {
     CalendarBlock as Block,
     CourseBlock as Course,
     CourseKindOption,
-    CourseRow,
+    CourseBlock,
     SemesterPlan,
 } from '@/types';
 
@@ -50,7 +50,6 @@ interface CalendarDayProps {
     /** Die Veranstaltungen dieses Tages als Blöcke — sie belegen Zeit. */
     courseBlocks: Course[];
     /** Dieselben als Zeilen, zum Anfassen: Ändern, Ausfall, Löschen. */
-    courses: CourseRow[];
     kinds: CourseKindOption[];
     /** Der Zeitraum — für die Grenzen eines Ausfalls. Null ohne Semester. */
     semester: SemesterPlan | null;
@@ -90,7 +89,6 @@ export default function CalendarDay({
     month,
     blocks,
     courseBlocks,
-    courses,
     kinds,
     semester,
     wakeTime,
@@ -102,19 +100,14 @@ export default function CalendarDay({
     /** Welcher Block gerade aufgeschlagen ist; null heißt zu. */
     const [opened, setOpened] = useState<Block | null>(null);
     /** Welcher Kurs gerade aufgeschlagen ist; null heißt zu. */
-    const [openedCourse, setOpenedCourse] = useState<CourseRow | null>(null);
-    const [editingCourse, setEditingCourse] = useState<CourseRow | null>(null);
-    const [courseSheetOpen, setCourseSheetOpen] = useState(false);
-    const [cancellingCourse, setCancellingCourse] = useState<CourseRow | null>(
+    const [openedCourse, setOpenedCourse] = useState<CourseBlock | null>(null);
+    const [editingCourse, setEditingCourse] = useState<CourseBlock | null>(
         null,
     );
+    const [courseSheetOpen, setCourseSheetOpen] = useState(false);
+    const [cancellingCourse, setCancellingCourse] =
+        useState<CourseBlock | null>(null);
 
-    /** Vom Block im Raster zur Zeile — die Kennung im Raster ist negativ. */
-    function openCourse(block: Course) {
-        setOpenedCourse(
-            courses.find((course) => course.id === -block.id) ?? null,
-        );
-    }
     /** Welcher Block gerade im Anpassungs-Sheet steht; null heißt zu. */
     const [adjusting, setAdjusting] = useState<Block | null>(null);
     /** Welcher Block gerade in der Starthilfe steht; null heißt zu. */
@@ -291,7 +284,7 @@ export default function CalendarDay({
                         <DayGrid
                             blocks={blocks}
                             courseBlocks={courseBlocks}
-                            onOpenCourse={openCourse}
+                            onOpenCourse={setOpenedCourse}
                             frameFrom={frameFrom}
                             frameTo={frameTo}
                             wakeTime={wakeTime}

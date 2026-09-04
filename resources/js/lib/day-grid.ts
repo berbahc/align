@@ -44,6 +44,14 @@ const BLOCK_GAP = 2;
  */
 export const ASSUMED_MINUTES = 15;
 
+/**
+ * Die Luft zwischen zwei Blöcken — dieselbe wie `DayPlan::BreatherMinutes`.
+ *
+ * Gilt für jede Hand, nicht nur für die KI: Was sie nie vorschlüge, soll sich
+ * auch nicht hinziehen lassen. Zwei Blöcke direkt hintereinander sind zu eng.
+ */
+export const BREATHER_MINUTES = 15;
+
 /** Der Ausschnitt des Tages, den das Raster zeigt — volle Stunden. */
 export interface GridBounds {
     /** Minute seit Mitternacht, abgerundet auf die volle Stunde. */
@@ -346,10 +354,10 @@ export interface BlockConflict {
 /**
  * Was dem Zug an diesem Tag im Weg liegt — oder nichts.
  *
- * Geprüft wird echte Überschneidung ohne Atempause, genau wie in
- * `DayPlan::collisionWith()`: Zwei Blöcke direkt hintereinander sind eine
- * Planung, keine Doppelbuchung. Die Antwort steht dadurch sofort im Pop-up,
- * statt erst nach einem Rundweg über den Server.
+ * Geprüft wird mit der Viertelstunde Luft, genau wie in
+ * `DayPlan::collisionWith()`: Ein Block braucht davor und danach Platz zum
+ * Atmen. Die Antwort steht dadurch sofort im Pop-up, statt erst nach einem
+ * Rundweg über den Server.
  *
  * Die Art kommt mit, weil sie den Ausweg bestimmt: Eine Gewohnheit lässt sich
  * verschieben, eine Vorlesung nicht — sie kommt von der Uni.
@@ -393,7 +401,10 @@ export function collisionOf(
             const otherTo =
                 other.startMinute + (other.durationMinutes ?? ASSUMED_MINUTES);
 
-            if (from < otherTo && to > other.startMinute) {
+            if (
+                from < otherTo + BREATHER_MINUTES &&
+                to + BREATHER_MINUTES > other.startMinute
+            ) {
                 return { title: other.title, kind: other.kind };
             }
         }
