@@ -5,6 +5,7 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
+import type { BlockConflict } from '@/lib/day-grid';
 import { timeLabel } from '@/lib/day-grid';
 import { OUTLINE_BUTTON, PRIMARY_BUTTON } from '@/lib/interaction';
 import type { CalendarBlock } from '@/types';
@@ -43,7 +44,7 @@ export function ShiftSheet({
     minute: number;
     followers: Follower[];
     /** Was heute schon an dieser Stelle liegt — dann geht gar nichts. */
-    conflict: string | null;
+    conflict: BlockConflict | null;
     /** Was der Server abgewiesen hat, nachdem geklickt wurde. */
     error: string | null;
     onOpenChange: (open: boolean) => void;
@@ -90,14 +91,28 @@ export function ShiftSheet({
                     </ul>
                 )}
 
-                {/* §1.5 — benennt, was gilt, und sagt, was zu tun ist. */}
+                {/* §1.5 — benennt, was gilt, und sagt, was zu tun ist.
+                    Zwei Sätze, weil es zwei Fälle sind: Eine Gewohnheit hat
+                    man sich selbst vorgenommen und kann sie verschieben. Eine
+                    Vorlesung kommt von der Uni — ihr einen Ausweg anzubieten,
+                    den es nicht gibt, wäre schlimmer als keiner. */}
                 {conflict !== null && (
                     <p
                         role="alert"
                         className="mt-4 rounded-[14px] border border-primary/25 bg-accent px-4 py-3 text-sm leading-relaxed"
                     >
-                        „{conflict}" liegt heute schon dort. Verschiebe die
-                        zuerst, dann ist hier Platz.
+                        {conflict.kind === 'course' ? (
+                            <>
+                                Dort liegt heute „{conflict.title}" aus deinem
+                                Semesterplan. Such der Gewohnheit eine andere
+                                Zeit — der Kurs rückt nicht.
+                            </>
+                        ) : (
+                            <>
+                                „{conflict.title}" liegt heute schon dort.
+                                Verschiebe die zuerst, dann ist hier Platz.
+                            </>
+                        )}
                     </p>
                 )}
 

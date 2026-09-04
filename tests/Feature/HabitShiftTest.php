@@ -432,6 +432,7 @@ test('a lecture blocks the move and says so without offering to move it', functi
     $message = session('errors')->first('start_minute');
 
     expect($message)->toContain('Analysis I')
+        ->and($message)->toContain('der Kurs rückt nicht')
         ->and($message)->not->toContain('Verschiebe die zuerst')
         ->and($habit->dayShifts()->count())->toBe(0);
 
