@@ -16,10 +16,11 @@ const LANE_GAP = 4;
  * als andere Art zu erkennen sein — deshalb eine eigene Fläche statt nur einer
  * anderen Kante:
  *
- * - **Sandfarben gefüllt.** `bg-sand` gegen das helle `bg-track` der
- *   Gewohnheit: der wärmste Ton der Palette, deutlich genug, um im Raster
- *   sofort aufzufallen, und trotzdem aus derselben Familie. Eine zweite
- *   Farbfamilie hätte den Tag in zwei Kalender zerlegt.
+ * - **Sandfarben gefüllt.** `bg-sand` ist die oberste Stufe der Flächenleiter
+ *   (siehe `app.css`): eine Stufe über der erledigten Gewohnheit, zwei über
+ *   der offenen. In beiden Modi heller als der Block darunter — was vorn
+ *   liegt, ist heller, im Hellen wie im Dunkeln. Derselbe warme Ton wie
+ *   überall; eine zweite Farbfamilie hätte den Tag in zwei Kalender zerlegt.
  * - **Keine Hakenspalte.** Die 44 Pixel rechts entfallen ganz. Das allein
  *   liest sich als „hier ist nichts abzuhaken", bevor irgendetwas anderes
  *   verstanden ist.
@@ -54,14 +55,16 @@ export function CourseBlock({ placed }: { placed: PlacedBlock<Course> }) {
                     spacious ? 'py-2' : 'py-1',
                 )}
             >
+                {/* Ohne eigene Kachel: Eine Fläche unter dem Symbol müsste
+                    heller sein als der Block — und was im Hellen heller ist,
+                    ist im Dunkeln dunkler. Der gefüllte Block trägt die
+                    Zugehörigkeit ohnehin; das Symbol steht direkt darauf. */}
                 {spacious && (
-                    <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-canvas/70 text-primary">
-                        <GraduationCap
-                            className="size-4"
-                            strokeWidth={1.5}
-                            aria-hidden="true"
-                        />
-                    </span>
+                    <GraduationCap
+                        className="size-5 shrink-0 text-olive-mid"
+                        strokeWidth={1.5}
+                        aria-hidden="true"
+                    />
                 )}
 
                 <span className="min-w-0 flex-1">
