@@ -3,10 +3,11 @@ import { GraduationCap, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { CalendarViews } from '@/components/calendar-views';
 import { CourseCancellationSheet } from '@/components/course-cancellation-sheet';
-import { CourseRow } from '@/components/course-row';
+import { CourseDetailSheet } from '@/components/course-detail-sheet';
 import { CourseSheet } from '@/components/course-sheet';
 import { Card, CardContent } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
+import { WeekGrid } from '@/components/week-grid';
 import {
     OUTLINE_BUTTON,
     PRIMARY_BUTTON,
@@ -22,18 +23,7 @@ import type {
     CourseRow as Course,
     DisplacedHabit,
     SemesterPlan,
-    Weekday,
 } from '@/types';
-
-const WEEKDAY_NAMES: Record<Weekday, string> = {
-    1: 'Montag',
-    2: 'Dienstag',
-    3: 'Mittwoch',
-    4: 'Donnerstag',
-    5: 'Freitag',
-    6: 'Samstag',
-    7: 'Sonntag',
-};
 
 interface CalendarSemesterProps {
     /** Null, solange niemand einen Zeitraum eingetragen hat. */
@@ -55,6 +45,11 @@ interface CalendarSemesterProps {
  *
  * Erst der Zeitraum, dann die Kurse. Ohne Anfang und Ende wüsste niemand, ab
  * wann die Vorlesungen im Kalender stehen und ab wann nicht mehr.
+ *
+ * Die Kurse stehen als Wochenraster, nicht als Liste: Zwölf Karten
+ * untereinander verlangten Scrollen und zeigten die Woche nicht. Das Raster
+ * zeigt sie auf einen Blick — so, wie jedes Uni-Portal sie zeigt. Was man mit
+ * einem Kurs tun kann, steht im Sheet, das sich beim Antippen öffnet.
  */
 export default function CalendarSemester({
     semester,
@@ -66,14 +61,7 @@ export default function CalendarSemester({
     const [editing, setEditing] = useState<Course | null>(null);
     const [sheetOpen, setSheetOpen] = useState(false);
     const [cancelling, setCancelling] = useState<Course | null>(null);
-
-    const byWeekday = (Object.keys(WEEKDAY_NAMES) as unknown as string[])
-        .map((key) => Number(key) as Weekday)
-        .map((weekday) => ({
-            weekday,
-            courses: courses.filter((course) => course.weekday === weekday),
-        }))
-        .filter((day) => day.courses.length > 0);
+    const [opened, setOpened] = useState<Course | null>(null);
 
     function openNew() {
         setEditing(null);
@@ -184,28 +172,14 @@ export default function CalendarSemester({
                                 </CardContent>
                             </Card>
                         ) : (
-                            <div className="flex flex-col gap-5">
-                                {byWeekday.map((day) => (
-                                    <section
-                                        key={day.weekday}
-                                        className="flex flex-col gap-2"
-                                    >
-                                        <h2 className="type-eyebrow text-muted-foreground">
-                                            {WEEKDAY_NAMES[day.weekday]}
-                                        </h2>
-                                        <ul className="flex flex-col gap-2">
-                                            {day.courses.map((course) => (
-                                                <CourseRow
-                                                    key={course.id}
-                                                    course={course}
-                                                    onEdit={openEdit}
-                                                    onCancelDate={setCancelling}
-                                                />
-                                            ))}
-                                        </ul>
-                                    </section>
-                                ))}
-                            </div>
+                            <Card className="gap-0 py-4">
+                                <CardContent className="px-3 sm:px-5">
+                                    <WeekGrid
+                                        courses={courses}
+                                        onOpen={setOpened}
+                                    />
+                                </CardContent>
+                            </Card>
                         )}
 
                         {courses.length > 0 && (
@@ -242,6 +216,13 @@ export default function CalendarSemester({
                             course={cancelling}
                             semester={semester}
                             onOpenChange={() => setCancelling(null)}
+                        />
+
+                        <CourseDetailSheet
+                            course={opened}
+                            onOpenChange={() => setOpened(null)}
+                            onEdit={openEdit}
+                            onCancelDate={setCancelling}
                         />
                     </>
                 )}
