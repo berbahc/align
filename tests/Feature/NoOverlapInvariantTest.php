@@ -149,7 +149,37 @@ function attemptOverlap(object $test, User $user, string $way): void
                 'weekday' => 1,
                 'starts_at' => '14:00',
                 'ends_at' => '15:30',
+            ])->assertSessionHasNoErrors();
+
+            // Der Kurs ist wirklich da — der Fall wäre sonst leer, weil nichts
+            // geschrieben wurde. Kein Überlapp heißt hier: Die Gewohnheit ist
+            // geparkt, nicht der Kurs abgewiesen.
+            expect(Course::where('title', 'Statistik')->exists())->toBeTrue();
+        })(),
+
+        'neue-plaetze-uebernehmen' => (function () use ($test, $user) {
+            $habit = Habit::factory()->for($user)->fixedSchedule('10:15', [1])->withMeasure(30)->create();
+            $habit->forceFill(['displaced_at' => Carbon::now()])->save();
+            Habit::factory()->for($user)->fixedSchedule('12:00', [1])->withMeasure(30)->create(['title' => 'Belegt']);
+
+            // Der Platz um zwölf ist vergeben — das Übernehmen muss das sehen.
+            $test->actingAs($user)->post(route('calendar.semester.places.store'), [
+                'places' => [['id' => $habit->id, 'time' => '12:15', 'days' => [1]]],
             ]);
+        })(),
+
+        'kette-aufloesen-nach-verdraengung' => (function () use ($test, $user) {
+            $anchor = Habit::factory()->for($user)->fixedSchedule('10:15', [1])->withMeasure(30)->create();
+            Habit::factory()->for($user)->withMeasure(20)->create([
+                'schedule_type' => ScheduleType::Chained,
+                'trigger_situation' => null,
+                'chained_to_habit_id' => $anchor->id,
+            ]);
+            $anchor->forceFill(['displaced_at' => Carbon::now()])->save();
+
+            // Der Anker geht — der Nachfolger darf seine Zeit nicht als
+            // lebendige erben, sie liegt unter Mathe.
+            $test->actingAs($user)->post(route('habits.graduation.store', $anchor));
         })(),
 
         'wiederaufnehmen' => (function () use ($test, $user) {
@@ -193,6 +223,8 @@ test('no path leaves two things on the same minute', function (string $way) {
     'Kurs über eine Gewohnheit legen' => 'kurs-auf-gewohnheit',
     'beendete Gewohnheit wieder aufnehmen' => 'wiederaufnehmen',
     'Kette an dieselbe Gewohnheit hängen' => 'kette-verzweigen',
+    'neue Plätze übernehmen' => 'neue-plaetze-uebernehmen',
+    'Kette auflösen nach Verdrängung' => 'kette-aufloesen-nach-verdraengung',
 ]);
 
 /**
@@ -215,7 +247,10 @@ test('moving the semester range leaves no overlap either', function () {
         'title' => $semester->title,
         'starts_on' => Carbon::today()->subDay()->toDateString(),
         'ends_on' => Carbon::today()->addMonths(4)->toDateString(),
-    ]);
+    ])->assertSessionHasNoErrors();
 
-    expect(overlapOn($user, invariantMonday()))->toBeNull();
+    // Der Zeitraum ist wirklich umgezogen — sonst prüfte der Fall nichts.
+    expect($semester->fresh()->starts_on->toDateString())
+        ->toBe(Carbon::today()->subDay()->toDateString())
+        ->and(overlapOn($user, invariantMonday()))->toBeNull();
 });
