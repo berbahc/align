@@ -7,6 +7,7 @@ use App\Models\AiSuggestion;
 use App\Models\Habit;
 use App\Models\Semester;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 use Laravel\Ai\Prompts\AgentPrompt;
 
 /**
@@ -286,4 +287,45 @@ test('a late riser still gets a breakfast, with the band as a hint', function ()
         ->assertJsonPath('places.0.time', '12:15');
 
     SuggestNewPlaces::assertPrompted(fn (AgentPrompt $prompt): bool => $prompt->contains('nimm es als Richtung'));
+});
+
+test('the suggestion looks at the first lecture day, not just next week', function () {
+    // Das Semester beginnt erst nächsten Monat. Nächsten Montag ist 10:45 frei —
+    // am ersten Vorlesungsmontag liegt dort Mathe. Ein Vorschlag, der nur
+    // nächste Woche kennt, fiele beim Übernehmen an genau diesem Kurs durch.
+    $user = User::factory()->create();
+    Semester::factory()->for($user)->between(
+        Carbon::today()->addMonth()->toDateString(),
+        Carbon::today()->addMonths(5)->toDateString(),
+    )->create();
+    $walk = parkedHabit($user, '20 Minuten spazieren', '10:45', minutes: 20);
+    enterCourse($user, 1, '10:00', '11:30');
+
+    expect($walk->fresh()->displaced_at)->not->toBeNull();
+
+    SuggestNewPlaces::fake([[
+        'places' => [
+            ['id' => $walk->id, 'time' => '10:45', 'days' => [1], 'reason' => 'Gleiche Uhrzeit.'],
+        ],
+    ]]);
+
+    // Die alte Zeit steht in keinem angebotenen Fenster — der Vorschlag fällt
+    // durch, und ohne einen bleibt nur die Absage.
+    $this->actingAs($user)
+        ->postJson(route('calendar.semester.places.suggestions'))
+        ->assertStatus(503);
+
+    SuggestNewPlaces::assertPrompted(fn (AgentPrompt $prompt): bool => $prompt->contains('11:45 bis')
+        && ! $prompt->contains('10:45 bis'));
+
+    SuggestNewPlaces::fake([[
+        'places' => [
+            ['id' => $walk->id, 'time' => '11:45', 'days' => [1], 'reason' => 'Direkt nach Mathe.'],
+        ],
+    ]]);
+
+    $this->actingAs($user)
+        ->postJson(route('calendar.semester.places.suggestions'))
+        ->assertOk()
+        ->assertJsonPath('places.0.timeRange', '11:45 – 12:05');
 });

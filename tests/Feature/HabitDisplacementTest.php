@@ -254,3 +254,46 @@ test('only the words that name a time of day carry a band', function () {
     expect(HabitTemplate::Mittagessen->dayBand())->toBe(['from' => 660, 'to' => 900])
         ->and(Habit::factory()->make(['template_key' => null])->dayBand())->toBeNull();
 });
+
+test('a course entered for a semester that has not started yet parks the habit already', function () {
+    $user = User::factory()->create();
+    Semester::factory()->for($user)->between(
+        Carbon::today()->addMonth()->toDateString(),
+        Carbon::today()->addMonths(5)->toDateString(),
+    )->create();
+    $habit = Habit::factory()->for($user)->fixedSchedule('10:45', [1])->withMeasure(20)
+        ->create(['title' => '20 Minuten spazieren']);
+
+    $this->actingAs($user)->post(route('calendar.semester.courses.store'), [
+        'title' => 'Mathe 1',
+        'kind' => CourseKind::Vorlesung->value,
+        'weekday' => 1,
+        'starts_at' => '10:00',
+        'ends_at' => '11:30',
+    ])->assertSessionHasNoErrors();
+
+    // Geparkt, obwohl der nächste Montag noch vor dem Semester liegt: Am ersten
+    // Vorlesungsmontag läge sie sonst mitten im Kurs.
+    expect($habit->fresh()->displaced_at)->not->toBeNull();
+});
+
+test('moving a course inside a future semester parks what lies under its new time', function () {
+    $user = User::factory()->create();
+    $semester = Semester::factory()->for($user)->between(
+        Carbon::today()->addMonth()->toDateString(),
+        Carbon::today()->addMonths(5)->toDateString(),
+    )->create();
+    $course = Course::factory()->for($semester)->onWeekday(1)->at('08:00', '09:30')->create(['title' => 'Mathe 1']);
+    $habit = Habit::factory()->for($user)->fixedSchedule('11:00', [1])->withMeasure(45)
+        ->create(['title' => 'Krafttraining']);
+
+    $this->actingAs($user)->put(route('calendar.semester.courses.update', $course), [
+        'title' => 'Mathe 1',
+        'kind' => CourseKind::Vorlesung->value,
+        'weekday' => 1,
+        'starts_at' => '10:00',
+        'ends_at' => '11:30',
+    ])->assertSessionHasNoErrors();
+
+    expect($habit->fresh()->displaced_at)->not->toBeNull();
+});

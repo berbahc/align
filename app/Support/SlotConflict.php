@@ -47,7 +47,14 @@ final class SlotConflict
             return null;
         }
 
-        $dates = array_map(self::nextWeekday(...), $days);
+        // Wer den Stundenplan selbst prüft, darf ihn nicht als Gegner haben —
+        // sonst kollidierte ein Kurs mit sich. Die Daten kommen trotzdem vom
+        // Semester: Auch ein Kurs, der geändert wird, muss am ersten
+        // Vorlesungstag frei sein, nicht nur nächste Woche.
+        $semester = Timetable::for($user);
+        $timetable = $withTimetable ? $semester : Timetable::none();
+
+        $dates = self::datesFor($days, $semester);
 
         // Einmal laden, für alle gefragten Tage. Die Tagesausnahmen kommen in
         // derselben Abfrage mit, damit die Platzierung sie sieht, ohne je Tag
@@ -64,10 +71,6 @@ final class SlotConflict
             ->get();
 
         $habits->each(fn (Habit $habit) => $habit->setRelation('user', $user));
-
-        // Wer den Stundenplan selbst prüft, darf ihn nicht als Gegner haben —
-        // sonst kollidierte ein Kurs mit sich.
-        $timetable = $withTimetable ? Timetable::for($user) : Timetable::none();
 
         foreach ($dates as $date) {
             $plan = DayPlan::forDate(
@@ -123,6 +126,33 @@ final class SlotConflict
             DayPlan::toTime($block['from']),
             $remedy ?? 'Verschiebe die zuerst, dann ist hier Platz.',
         );
+    }
+
+    /**
+     * An welchen Daten geprüft wird.
+     *
+     * Der nächste Termin jedes Wochentags — und, liegt das Semester noch vor
+     * uns, zusätzlich sein erster Termin darin. Ein Kurs im Oktober ist im
+     * September unsichtbar; die Gewohnheit, die man heute auf Montag zehn
+     * legt, läge am ersten Vorlesungstag trotzdem mitten in ihm. Zwei Daten,
+     * ein Wochentag: Beide müssen frei sein.
+     *
+     * @param  list<int>  $days
+     * @return list<Carbon>
+     */
+    public static function datesFor(array $days, Timetable $timetable): array
+    {
+        $dates = [];
+
+        foreach ($days as $day) {
+            foreach ([self::nextWeekday($day), $timetable->firstDateOf($day)] as $date) {
+                if ($date !== null && ! isset($dates[$date->toDateString()])) {
+                    $dates[$date->toDateString()] = $date;
+                }
+            }
+        }
+
+        return array_values($dates);
     }
 
     /**

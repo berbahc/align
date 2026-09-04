@@ -193,6 +193,50 @@ class DayPlan
     }
 
     /**
+     * Die Fenster, die an **allen** Tagen frei sind.
+     *
+     * Ein Wochentag, zwei Daten: der nächste Termin und der erste im Semester,
+     * wenn das noch vor uns liegt. Was nächste Woche frei ist, aber am ersten
+     * Vorlesungsmontag unter einem Kurs liegt, ist kein Fenster — der
+     * Vorschlag fiele sonst beim Übernehmen an genau dem Kurs durch, den er
+     * nicht sah. Dieselbe Datumswahl wie {@see SlotConflict::datesFor()}.
+     *
+     * @param  list<self>  $plans
+     * @return list<array{from: int, to: int}>
+     */
+    public static function commonFreeWindows(array $plans, int $minutes, ?Habit $except = null): array
+    {
+        $common = null;
+
+        foreach ($plans as $plan) {
+            $windows = $plan->freeWindows($minutes, $except);
+
+            if ($common === null) {
+                $common = $windows;
+
+                continue;
+            }
+
+            $next = [];
+
+            foreach ($common as $window) {
+                foreach ($windows as $other) {
+                    $from = max($window['from'], $other['from']);
+                    $to = min($window['to'], $other['to']);
+
+                    if ($to - $from >= $minutes) {
+                        $next[] = ['from' => $from, 'to' => $to];
+                    }
+                }
+            }
+
+            $common = $next;
+        }
+
+        return $common ?? [];
+    }
+
+    /**
      * Die freien Fenster als lesbare Zeilen — für den Prompt der KI.
      *
      * @return list<string>

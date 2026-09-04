@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useDayOrder } from '@/hooks/use-day-order';
+import { spanLabel } from '@/lib/day-grid';
 import { store, suggestions } from '@/routes/calendar/order';
 import type { CalendarBlock } from '@/types';
 
@@ -54,7 +55,7 @@ export function DayOrderSheet({
     function previousAnchor(id: number): string | null {
         const block = blocks.find((candidate) => candidate.id === id);
 
-        return block ? (block.timeRange ?? block.anchor) : null;
+        return block ? spanLabel(block) : null;
     }
 
     function apply() {

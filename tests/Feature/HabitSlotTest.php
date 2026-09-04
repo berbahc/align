@@ -489,3 +489,26 @@ test('releasing a chain lays its followers in a row, not on each other', functio
         ->and($second->fresh()->chained_to_habit_id)->toBe($first->id)
         ->and($second->fresh()->startsAt()->format('H:i'))->toBe('10:30');
 });
+
+test('a course in a semester that has not started yet already blocks its slot', function () {
+    // Das Semester beginnt erst nächsten Monat. Der nächste Montag liegt davor
+    // und ist frei — der erste Vorlesungsmontag ist es nicht, und der zählt.
+    $user = User::factory()->create();
+    $semester = Semester::factory()->for($user)->between(
+        Carbon::today()->addMonth()->toDateString(),
+        Carbon::today()->addMonths(5)->toDateString(),
+    )->create();
+    Course::factory()->for($semester)->onWeekday(1)->at('10:00', '11:30')->create(['title' => 'Mathe 1']);
+
+    $this->actingAs($user)
+        ->post(route('habits.store'), fixedHabitPayload('10:45', [1]))
+        ->assertSessionHasErrors('scheduled_time');
+
+    expect(session('errors')->first('scheduled_time'))->toContain('Mathe 1')
+        ->and($user->habits()->count())->toBe(0);
+
+    // Dienstags gilt derselbe Stundenplan nicht — dort geht es.
+    $this->actingAs($user)
+        ->post(route('habits.store'), fixedHabitPayload('10:45', [2]))
+        ->assertSessionHasNoErrors();
+});
