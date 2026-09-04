@@ -90,6 +90,39 @@ class Course extends Model
         );
     }
 
+    /**
+     * Der Kurs als Zeile für die Oberfläche — samt seiner Ausnahmen.
+     *
+     * @return array{id: int, title: string, kind: string, kindLabel: string, weekday: int, startsAt: string, endsAt: string, timeRange: string, location: string|null, exceptions: list<array{onDate: string, dateLabel: string, cancelled: bool, timeRange: string|null}>}
+     */
+    public function toRow(): array
+    {
+        return [
+            'id' => $this->id,
+            'title' => $this->title,
+            'kind' => $this->kind->value,
+            'kindLabel' => $this->kind->label(),
+            'weekday' => $this->weekday,
+            'startsAt' => $this->starts_at->format('H:i'),
+            'endsAt' => $this->ends_at->format('H:i'),
+            'timeRange' => $this->timeRangeLabel(),
+            'location' => $this->location,
+            'exceptions' => array_values($this->exceptions
+                ->sortBy(fn (CourseException $exception): string => $exception->on_date->toDateString())
+                ->map(fn (CourseException $exception): array => [
+                    'onDate' => $exception->on_date->toDateString(),
+                    'dateLabel' => $exception->dateLabel(),
+                    'cancelled' => $exception->isCancellation(),
+                    'timeRange' => $exception->isCancellation() ? null : sprintf(
+                        '%s – %s',
+                        $exception->starts_at?->format('H:i'),
+                        $exception->ends_at?->format('H:i'),
+                    ),
+                ])
+                ->all()),
+        ];
+    }
+
     protected function casts(): array
     {
         return [

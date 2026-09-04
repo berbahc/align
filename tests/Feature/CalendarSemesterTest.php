@@ -89,12 +89,12 @@ it('markiert im Monat die Tage mit Vorlesung und sonst keine', function () {
         });
 });
 
-it('sagt dem Monat, ob ein Semesterplan steht — mehr braucht die Zeile darunter nicht', function () {
+it('gibt dem Monat den Stundenplan mit — für den Knopf oben rechts', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user)
         ->get(route('calendar'))
-        ->assertInertia(fn (AssertableInertia $page) => $page->where('hasSemester', false)->etc());
+        ->assertInertia(fn (AssertableInertia $page) => $page->where('semester', null)->etc());
 
     $semester = Semester::factory()->for($user)->create(['title' => 'Wintersemester 25/26']);
     Course::factory()->count(3)->for($semester)->onWeekday(1)->sequence(
@@ -106,7 +106,8 @@ it('sagt dem Monat, ob ein Semesterplan steht — mehr braucht die Zeile darunte
     $this->actingAs($user)
         ->get(route('calendar'))
         ->assertInertia(fn (AssertableInertia $page) => $page
-            ->where('hasSemester', true)
+            ->where('semester.title', 'Wintersemester 25/26')
+            ->where('courseCount', 3)
             ->etc());
 });
 
@@ -127,27 +128,4 @@ it('zeigt einem Nutzer ohne Semester denselben Kalender wie zuvor', function () 
 
             expect(collect($days)->every(fn (array $day): bool => $day['hasLectures'] === false))->toBeTrue();
         });
-});
-
-/**
- * Die Woche zeigt beides. Eine Gewohnheit steht dort an ihrem Wochentag mit
- * ihrer Stelle — und was keine hat, steht nicht im Raster, sondern darüber.
- */
-it('lays the habits into the week beside the courses', function () {
-    $user = User::factory()->create();
-    Semester::factory()->for($user)->create();
-    Course::factory()->for(Semester::first())->onWeekday(1)->at('10:00', '11:30')->create();
-    $habit = Habit::factory()->for($user)->fixedSchedule('14:00', [1, 3])->withMeasure(30)->create(['title' => 'Lesen']);
-
-    $this->actingAs($user)
-        ->get(route('calendar.week'))
-        ->assertOk()
-        ->assertInertia(fn (AssertableInertia $page) => $page
-            ->component('calendar-week')
-            ->where('habitBlocks.1.0.title', 'Lesen')
-            ->where('habitBlocks.1.0.startMinute', 840)
-            ->where('habitBlocks.1.0.exact', true)
-            ->where('habitBlocks.2', [])
-            ->where('habitBlocks.3.0.id', $habit->id)
-            ->etc());
 });

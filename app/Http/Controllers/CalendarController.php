@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\CourseKind;
+use App\Models\Course;
 use App\Models\Habit;
 use App\Models\HabitCompletion;
+use App\Models\Semester;
 use App\Models\User;
 use App\Support\DayPlan;
 use App\Support\Timetable;
@@ -94,10 +97,14 @@ class CalendarController extends Controller
             'isCurrentMonth' => $month->isSameMonth($today),
             'today' => $today->toDateString(),
             'days' => $days,
-            // Nur ob, nicht was: Steht ein Plan, führt der Umschalter im Kopf
-            // hin; steht keiner, braucht die Einladung darunter einen Grund.
-            // Alles Weitere steht in der Semesteransicht.
-            'hasSemester' => $timetable->semester() !== null,
+            // Der Stundenplan hat keine eigene Ansicht — Kurse werden hier
+            // eingetragen und im Tag angefasst. Der Monat trägt deshalb, was
+            // das Sheet oben rechts braucht, und was der Plan verdrängt hat.
+            'semester' => $this->semesterProps($timetable->semester(), $today),
+            'kinds' => CourseKind::options(),
+            'maxCourses' => Course::MaxPerSemester,
+            'courseCount' => $timetable->courseCount(),
+            'displaced' => $this->displaced($request->user()),
         ]);
     }
 
@@ -180,6 +187,11 @@ class CalendarController extends Controller
             // hätten jede Stelle, die einen Block anfasst, gegen eine Art
             // verteidigen müssen, die sie nicht behandeln kann.
             'courseBlocks' => $timetable->coursesOn($day),
+            // Dieselben Kurse als Zeilen, damit sich ein Block im Tag antippen
+            // und bearbeiten lässt — hier liegen sie, hier fasst man sie an.
+            'courses' => $this->courseRows($timetable->semester(), $day),
+            'kinds' => CourseKind::options(),
+            'semester' => $this->semesterProps($timetable->semester(), $today),
             // Nur was noch kommt, lässt sich verlegen: Ein vergangener Tag ist
             // vorbei, und ihn umzuräumen änderte nichts mehr an ihm.
             'canShift' => $day->greaterThanOrEqualTo($today),
@@ -188,6 +200,72 @@ class CalendarController extends Controller
             'frameFrom' => $frame['from'],
             'frameTo' => $frame['to'],
         ]);
+    }
+
+    /**
+     * Der Zeitraum des Semesters für das Sheet — null ohne Semester.
+     *
+     * @return array{title: string, startsOn: string, endsOn: string, rangeLabel: string, isCurrent: bool, startsInFuture: bool, startsOnLabel: string}|null
+     */
+    private function semesterProps(?Semester $semester, Carbon $today): ?array
+    {
+        if ($semester === null) {
+            return null;
+        }
+
+        return [
+            'title' => $semester->title,
+            'startsOn' => $semester->starts_on->toDateString(),
+            'endsOn' => $semester->ends_on->toDateString(),
+            'rangeLabel' => $semester->rangeLabel(),
+            // Ein Semester, das nicht läuft, bleibt bearbeitbar, sagt aber,
+            // dass es nichts blockiert — und ab wann wieder.
+            'isCurrent' => $semester->covers($today),
+            'startsInFuture' => $semester->starts_on->toDateString() > $today->toDateString(),
+            'startsOnLabel' => $semester->starts_on->settings(['locale' => 'de'])->isoFormat('D. MMMM YYYY'),
+        ];
+    }
+
+    /**
+     * Die Kurse dieses Wochentags als Zeilen — für das Sheet hinter dem Block.
+     *
+     * @return list<array{id: int, title: string, kind: string, kindLabel: string, weekday: int, startsAt: string, endsAt: string, timeRange: string, location: string|null, exceptions: list<array{onDate: string, dateLabel: string, cancelled: bool, timeRange: string|null}>}>
+     */
+    private function courseRows(?Semester $semester, Carbon $day): array
+    {
+        if ($semester === null) {
+            return [];
+        }
+
+        return array_values($semester->courses()
+            ->with('exceptions')
+            ->where('weekday', $day->dayOfWeekIso)
+            ->orderBy('starts_at')
+            ->get()
+            ->map(fn (Course $course): array => $course->toRow())
+            ->all());
+    }
+
+    /**
+     * Was der Stundenplan verdrängt hat — die Liste, um die es beim
+     * Semesterwechsel eigentlich geht.
+     *
+     * @return list<array{id: int, title: string, previousTime: string|null, previousLabel: string}>
+     */
+    private function displaced(User $user): array
+    {
+        return array_values($user->habits()
+            ->active()
+            ->whereNotNull('displaced_at')
+            ->orderBy('position')
+            ->get()
+            ->map(fn (Habit $habit): array => [
+                'id' => $habit->id,
+                'title' => $habit->title,
+                'previousTime' => $habit->scheduled_time?->format('H:i'),
+                'previousLabel' => $habit->scheduleLabel(),
+            ])
+            ->all());
     }
 
     /**

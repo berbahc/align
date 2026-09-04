@@ -51,18 +51,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('calendar/order', [DayOrderController::class, 'store'])
             ->name('calendar.order.store');
 
-        // Die Woche ist die mittlere Ebene des Kalenders: Kurse und
-        // Gewohnheiten auf einem Raster, und der Ort, an dem Kurse eingetragen
-        // werden — dort, wo man sie sieht. Das Semester selbst (der Zeitraum)
-        // bleibt unter `calendar/semester`, ohne Kennung, weil es je Person
-        // genau eins gibt, um das es geht.
+        // Der Stundenplan hat keine eigene Ansicht: Kurse werden im Monat
+        // eingetragen und im Tag angefasst. Hier stehen nur die Daten — das
+        // Semester ohne Kennung, weil es je Person genau eins gibt.
         //
         // Vor `calendar/{date}`, wie überall in dieser Datei die festen Worte
         // vor den Platzhaltern. Das Datumsmuster dort ließe „semester" ohnehin
         // nicht durch — die Reihenfolge steht trotzdem, damit sie nicht von
         // einer Regel abhängt, die jemand später lockert.
-        Route::get('calendar/week', [SemesterController::class, 'show'])
-            ->name('calendar.week');
         Route::post('calendar/semester', [SemesterController::class, 'store'])
             ->name('calendar.semester.store');
         Route::put('calendar/semester', [SemesterController::class, 'update'])

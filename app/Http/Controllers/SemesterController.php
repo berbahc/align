@@ -4,115 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Actions\DisplaceHabits;
 use App\Actions\RestoreDisplacedHabits;
-use App\Enums\CourseKind;
 use App\Http\Requests\StoreSemesterRequest;
-use App\Models\Course;
-use App\Models\CourseException;
 use App\Models\Habit;
 use App\Models\Semester;
 use App\Models\User;
-use App\Support\DayPlan;
-use App\Support\SlotConflict;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Inertia\Inertia;
-use Inertia\Response;
 
 class SemesterController extends Controller
 {
-    /**
-     * Die Woche — Kurse und Gewohnheiten auf einem Raster.
-     *
-     * Ein Semester je Person, sichtbar auch außerhalb seines Zeitraums: Wer im
-     * März auf die Seite kommt, soll seinen alten Plan als Vorlage vorfinden
-     * und nicht ein leeres Formular. Ob die Kurse gerade Zeit belegen,
-     * entscheidet allein der Zeitraum — nicht, ob sie hier stehen.
-     */
-    public function show(Request $request): Response
-    {
-        $semester = $request->user()->currentSemester();
-
-        $courses = $semester === null
-            ? collect()
-            : $semester->courses()->with('exceptions')->orderBy('weekday')->orderBy('starts_at')->get();
-
-        $today = Carbon::today();
-
-        return Inertia::render('calendar-week', [
-            'semester' => $semester === null ? null : [
-                'title' => $semester->title,
-                'startsOn' => $semester->starts_on->toDateString(),
-                'endsOn' => $semester->ends_on->toDateString(),
-                'rangeLabel' => $semester->rangeLabel(),
-                // Ein Semester, das nicht läuft, bleibt bearbeitbar, sagt aber,
-                // dass es nichts blockiert — und ab wann wieder. Ohne diesen
-                // Satz sucht jemand den Fehler im Kalender, obwohl seine
-                // Vorlesungszeit schlicht noch nicht angefangen hat.
-                'isCurrent' => $semester->covers($today),
-                'startsInFuture' => $semester->starts_on->toDateString() > $today->toDateString(),
-                // „am 1. Oktober" — fertig formatiert, wie jedes Datum in
-                // dieser App.
-                'startsOnLabel' => $semester->starts_on->settings(['locale' => 'de'])->isoFormat('D. MMMM YYYY'),
-            ],
-            'courses' => $courses->map(fn (Course $course): array => $this->course($course))->all(),
-            'kinds' => CourseKind::options(),
-            'maxCourses' => Course::MaxPerSemester,
-            // Was durch den Plan seinen Platz verloren hat — die Liste, um die
-            // es beim Semesterwechsel eigentlich geht.
-            'displaced' => $request->user()->habits()
-                ->active()
-                ->whereNotNull('displaced_at')
-                ->orderBy('position')
-                ->get()
-                ->map(fn (Habit $habit): array => [
-                    'id' => $habit->id,
-                    'title' => $habit->title,
-                    'previousTime' => $habit->scheduled_time?->format('H:i'),
-                    'previousLabel' => $habit->scheduleLabel(),
-                ])
-                ->all(),
-            // Die Gewohnheiten je Wochentag, mit ihrer Stelle — damit die Woche
-            // beides zeigt und nicht nur den Stundenplan. Genommen wird der
-            // nächste Tag je Wochentag: Dort greifen Schlafrahmen und
-            // Ausnahmen, und dorthin führt das Antippen.
-            'habitBlocks' => $this->habitBlocks($request->user()),
-            'weekdayDates' => array_combine(
-                range(1, 7),
-                array_map(fn (int $weekday): string => SlotConflict::nextWeekday($weekday)->toDateString(), range(1, 7)),
-            ),
-        ]);
-    }
-
-    /**
-     * @return array<int, list<array{id: int, title: string, startMinute: int, durationMinutes: int, exact: bool}>>
-     */
-    private function habitBlocks(User $user): array
-    {
-        $habits = $user->habits()->active()->with('chainedTo.chainedTo')->orderBy('position')->get();
-        $habits->each(fn (Habit $habit) => $habit->setRelation('user', $user));
-
-        $blocks = [];
-
-        foreach (range(1, 7) as $weekday) {
-            $date = SlotConflict::nextWeekday($weekday);
-
-            $blocks[$weekday] = array_values($habits
-                ->filter(fn (Habit $habit): bool => $habit->isScheduledOn($date))
-                ->map(fn (Habit $habit): ?array => ($start = $habit->dayStartMinute($date)) === null ? null : [
-                    'id' => $habit->id,
-                    'title' => $habit->title,
-                    'startMinute' => $start,
-                    'durationMinutes' => $habit->durationMinutes() ?? DayPlan::AssumedMinutes,
-                    'exact' => $habit->startsAt($date) !== null,
-                ])
-                ->filter()
-                ->all());
-        }
-
-        return $blocks;
-    }
-
     public function store(StoreSemesterRequest $request): RedirectResponse
     {
         $request->user()->semesters()->create($request->validated());
@@ -196,38 +97,5 @@ class SemesterController extends Controller
         }
 
         return $displaced;
-    }
-
-    /**
-     * Ein Kurs als Zeile im Plan.
-     *
-     * @return array{id: int, title: string, kind: string, kindLabel: string, weekday: int, startsAt: string, endsAt: string, timeRange: string, location: string|null, exceptions: list<array{onDate: string, dateLabel: string, cancelled: bool, timeRange: string|null}>}
-     */
-    private function course(Course $course): array
-    {
-        return [
-            'id' => $course->id,
-            'title' => $course->title,
-            'kind' => $course->kind->value,
-            'kindLabel' => $course->kind->label(),
-            'weekday' => $course->weekday,
-            'startsAt' => $course->starts_at->format('H:i'),
-            'endsAt' => $course->ends_at->format('H:i'),
-            'timeRange' => $course->timeRangeLabel(),
-            'location' => $course->location,
-            'exceptions' => array_values($course->exceptions
-                ->sortBy(fn (CourseException $exception): string => $exception->on_date->toDateString())
-                ->map(fn (CourseException $exception): array => [
-                    'onDate' => $exception->on_date->toDateString(),
-                    'dateLabel' => $exception->dateLabel(),
-                    'cancelled' => $exception->isCancellation(),
-                    'timeRange' => $exception->isCancellation() ? null : sprintf(
-                        '%s – %s',
-                        $exception->starts_at?->format('H:i'),
-                        $exception->ends_at?->format('H:i'),
-                    ),
-                ])
-                ->all()),
-        ];
     }
 }
