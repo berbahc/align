@@ -205,7 +205,7 @@ class HabitDayShiftController extends Controller
         // keine Minute weiter.
         $latest = min($frame['to'], self::MinutesPerDay);
 
-        foreach ($this->spans($habit, $start) as $span) {
+        foreach ($habit->spansFrom($start) as $span) {
             if ($span['from'] < $frame['from'] || $span['to'] > $latest) {
                 throw ValidationException::withMessages([
                     'start_minute' => sprintf(
@@ -243,48 +243,6 @@ class HabitDayShiftController extends Controller
     }
 
     /**
-     * Die Spannen, die der Zug belegt: die Gewohnheit selbst und alles, was an
-     * ihr hängt.
-     *
-     * Gerechnet wie {@see Habit::placementOn()} es täte — nur eben mit der
-     * neuen Minute statt der alten. Die Kette selbst zu durchlaufen ist hier
-     * nötig, weil die Gewohnheit die neue Zeit noch gar nicht trägt.
-     *
-     * @return list<array{id: int, title: string, from: int, to: int}>
-     */
-    private function spans(Habit $habit, int $start): array
-    {
-        $spans = [];
-        $current = $habit;
-        $cursor = $start;
-
-        for ($depth = 0; $depth < Habit::MaxChainDepth; $depth++) {
-            $minutes = $current->durationMinutes() ?? DayPlan::AssumedMinutes;
-
-            $spans[] = [
-                'id' => $current->id,
-                'title' => $current->title,
-                'from' => $cursor,
-                'to' => $cursor + $minutes,
-            ];
-            $cursor += $minutes;
-
-            $next = $current->chainedHabits()
-                ->whereNull('graduated_at')
-                ->orderBy('position')
-                ->first();
-
-            if ($next === null) {
-                break;
-            }
-
-            $current = $next;
-        }
-
-        return $spans;
-    }
-
-    /**
      * Die anderen Gewohnheiten dieses Tages — ohne die verschobene und ohne
      * das, was an ihr hängt.
      *
@@ -295,7 +253,7 @@ class HabitDayShiftController extends Controller
      */
     private function othersOn(User $user, Habit $habit, Carbon $date): Collection
     {
-        $moving = array_column($this->spans($habit, 0), 'id');
+        $moving = array_column($habit->spansFrom(0), 'id');
 
         $habits = $user->habits()
             ->active()

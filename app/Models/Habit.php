@@ -8,6 +8,7 @@ use App\Enums\HabitTemplate;
 use App\Enums\MeasureUnit;
 use App\Enums\ScheduleType;
 use App\Http\Requests\Concerns\ChecksSituation;
+use App\Support\DayPlan;
 use Carbon\CarbonInterface;
 use Database\Factories\HabitFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -284,6 +285,52 @@ class Habit extends Model
     public function chainedHabits(): HasMany
     {
         return $this->hasMany(Habit::class, 'chained_to_habit_id');
+    }
+
+    /**
+     * Was diese Gewohnheit und alles, was an ihr hängt, ab `$start` belegen.
+     *
+     * Eine Kette heißt „danach": Rückt das erste Glied, rücken die übrigen
+     * mit. Wer prüfen will, ob eine Uhrzeit frei ist, muss deshalb nicht eine
+     * Spanne prüfen, sondern alle — sonst landet der Nachfolger in etwas, das
+     * er beim Ziehen nie hätte betreten dürfen.
+     *
+     * Steht hier und nicht im Aufrufer, weil zwei Wege dieselbe Antwort
+     * brauchen: das Ziehen im Raster und das Formular. Zwei Rechnungen wären
+     * zwei Wahrheiten über denselben Tag.
+     *
+     * @return list<array{id: int, title: string, from: int, to: int}>
+     */
+    public function spansFrom(int $start): array
+    {
+        $spans = [];
+        $current = $this;
+        $cursor = $start;
+
+        for ($depth = 0; $depth < self::MaxChainDepth; $depth++) {
+            $minutes = $current->durationMinutes() ?? DayPlan::AssumedMinutes;
+
+            $spans[] = [
+                'id' => $current->id,
+                'title' => $current->title,
+                'from' => $cursor,
+                'to' => $cursor + $minutes,
+            ];
+            $cursor += $minutes;
+
+            $next = $current->chainedHabits()
+                ->whereNull('graduated_at')
+                ->orderBy('position')
+                ->first();
+
+            if ($next === null) {
+                break;
+            }
+
+            $current = $next;
+        }
+
+        return $spans;
     }
 
     /**

@@ -11,6 +11,7 @@ use App\Http\Requests\StoreHabitRequest;
 use App\Http\Requests\UpdateHabitRequest;
 use App\Models\Appointment;
 use App\Models\AppointmentNotice;
+use App\Models\Course;
 use App\Models\Habit;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -61,7 +62,7 @@ class HabitController extends Controller
      */
     private function busySlots(User $user, ?Habit $except = null): array
     {
-        return array_values($user->habits()
+        $habits = $user->habits()
             ->active()
             ->get()
             ->reject(fn (Habit $habit): bool => $except !== null && $habit->is($except))
@@ -72,6 +73,41 @@ class HabitController extends Controller
                 'days' => $habit->scheduled_days ?? [1, 2, 3, 4, 5, 6, 7],
                 'from' => $habit->startsAt()?->format('H:i') ?? '',
                 'to' => ($habit->endsAt() ?? $habit->startsAt())?->format('H:i') ?? '',
+            ])
+            ->all();
+
+        return [...$habits, ...$this->courseSlots($user)];
+    }
+
+    /**
+     * Der Stundenplan als belegte Fenster — in derselben Form wie die
+     * Gewohnheiten.
+     *
+     * Der Hinweis im Formular muss dasselbe sehen wie die Prüfung auf dem
+     * Server, sonst sagt er „frei" und das Speichern weist ab. Genommen wird
+     * die reguläre Woche: Ausfälle und Nachholtermine gelten für ein Datum,
+     * das Formular plant aber jeden Montag.
+     *
+     * @return list<array{id: int, title: string, days: list<int>, from: string, to: string}>
+     */
+    private function courseSlots(User $user): array
+    {
+        $semester = $user->currentSemester();
+
+        if ($semester === null) {
+            return [];
+        }
+
+        return array_values($semester->courses()
+            ->orderBy('weekday')
+            ->get()
+            ->map(fn (Course $course): array => [
+                // Negativ wie überall, damit keine Kennung zweimal vorkommt.
+                'id' => -$course->id,
+                'title' => $course->title,
+                'days' => [$course->weekday],
+                'from' => $course->starts_at->format('H:i'),
+                'to' => $course->ends_at->format('H:i'),
             ])
             ->all());
     }
