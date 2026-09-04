@@ -410,3 +410,26 @@ test('a parked habit stays parked while the semester still covers its course', f
 
     expect($habit->fresh()->displaced_at)->not->toBeNull();
 });
+
+test('a course for a future semester parks every habit beneath it, not just the first', function () {
+    $user = User::factory()->create();
+    Semester::factory()->for($user)->between(
+        Carbon::today()->addMonth()->toDateString(),
+        Carbon::today()->addMonths(5)->toDateString(),
+    )->create();
+    $walk = Habit::factory()->for($user)->fixedSchedule('10:15', [1])->withMeasure(20)->create(['title' => 'Spazieren']);
+    $gym = Habit::factory()->for($user)->fixedSchedule('11:30', [1])->withMeasure(45)->create(['title' => 'Krafttraining']);
+
+    $this->actingAs($user)->post(route('calendar.semester.courses.store'), [
+        'title' => 'Mathe 1',
+        'kind' => CourseKind::Vorlesung->value,
+        'weekday' => 1,
+        'starts_at' => '10:00',
+        'ends_at' => '11:30',
+    ])->assertSessionHasNoErrors();
+
+    // Beide: die eine liegt im Kurs, die andere direkt dahinter — ohne die
+    // Viertelstunde Luft, die jeder Hand gilt.
+    expect($walk->fresh()->displaced_at)->not->toBeNull()
+        ->and($gym->fresh()->displaced_at)->not->toBeNull();
+});

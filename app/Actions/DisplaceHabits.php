@@ -44,9 +44,14 @@ class DisplaceHabits
     {
         $displaced = [];
         $from = null;
+        // Was schon geparkt ist, zählt in der nächsten Runde nicht mehr mit.
+        // Nötig, weil ein Vermerk erst ab Semesterbeginn gilt: Bis dahin
+        // belegt die Gewohnheit ihren alten Platz weiter — und die Suche
+        // fände sie sonst jede Runde aufs Neue, statt zur nächsten zu kommen.
+        $ignore = [];
 
         for ($round = 0; $round < Habit::MaxActivePerUser; $round++) {
-            $conflict = SlotConflict::find($user, $spans, $days, [], $withTimetable, spanIsCourse: true);
+            $conflict = SlotConflict::find($user, $spans, $days, $ignore, $withTimetable, spanIsCourse: true);
 
             if ($conflict === null) {
                 break;
@@ -71,6 +76,9 @@ class DisplaceHabits
 
             $anchor->forceFill(['displaced_at' => $from ??= self::effectiveFrom($user)])->save();
             $displaced[] = $anchor;
+            // Samt Kette — die Nachfolger hängen am Anker und fielen sonst
+            // ebenfalls jede Runde aufs Neue auf.
+            $ignore = [...$ignore, ...array_column($anchor->spansFrom(0), 'id')];
         }
 
         return $displaced;
