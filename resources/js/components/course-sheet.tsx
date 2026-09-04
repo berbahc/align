@@ -18,12 +18,7 @@ import {
 } from '@/lib/interaction';
 import { cn } from '@/lib/utils';
 import { store, update } from '@/routes/calendar/semester/courses';
-import type {
-    CourseKind,
-    CourseKindOption,
-    CourseBlock,
-    Weekday,
-} from '@/types';
+import type { CourseKind, CourseKindOption, CourseRow, Weekday } from '@/types';
 
 /** Montag zuerst — dieselbe Zählung wie überall in der App. */
 const WEEKDAYS: { value: Weekday; short: string; long: string }[] = [
@@ -74,7 +69,7 @@ export function CourseSheet({
 }: {
     open: boolean;
     /** Null heißt: ein neuer Kurs. */
-    course: CourseBlock | null;
+    course: CourseRow | null;
     kinds: CourseKindOption[];
     onOpenChange: (open: boolean) => void;
 }) {

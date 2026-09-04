@@ -6,7 +6,10 @@ import {
     Sparkles,
 } from 'lucide-react';
 import { useState } from 'react';
+import { CourseCancellationSheet } from '@/components/course-cancellation-sheet';
+import { CourseDetailSheet } from '@/components/course-detail-sheet';
 import { CourseSheet } from '@/components/course-sheet';
+import { CoursesSheet } from '@/components/courses-sheet';
 import { MonthGrid } from '@/components/month-grid';
 import { NewPlacesSheet } from '@/components/new-places-sheet';
 import { SemesterSheet } from '@/components/semester-sheet';
@@ -16,6 +19,7 @@ import { calendar } from '@/routes';
 import { day as calendarDay } from '@/routes/calendar';
 import type {
     CourseKindOption,
+    CourseRow,
     DisplacedHabit,
     MonthDay,
     SemesterPlan,
@@ -38,6 +42,8 @@ interface CalendarProps {
     kinds: CourseKindOption[];
     maxCourses: number;
     courseCount: number;
+    /** Alle Kurse des Semesters — für die Übersicht hinter dem Knopf. */
+    courses: CourseRow[];
     /** Was der Stundenplan verdrängt hat — leer, solange nichts wartet. */
     displaced: DisplacedHabit[];
 }
@@ -67,11 +73,19 @@ export default function Calendar({
     kinds,
     maxCourses,
     courseCount,
+    courses,
     displaced,
 }: CalendarProps) {
     const [semesterOpen, setSemesterOpen] = useState(false);
+    const [coursesOpen, setCoursesOpen] = useState(false);
     const [courseOpen, setCourseOpen] = useState(false);
     const [placesOpen, setPlacesOpen] = useState(false);
+    /** Der Kurs aus der Übersicht: aufgeschlagen, im Formular, im Ausfall. */
+    const [openedCourse, setOpenedCourse] = useState<CourseRow | null>(null);
+    const [editingCourse, setEditingCourse] = useState<CourseRow | null>(null);
+    const [cancellingCourse, setCancellingCourse] = useState<CourseRow | null>(
+        null,
+    );
 
     // Steht schon etwas ohne Platz da — oder kündigt sich das erst an? Beides
     // steht im Band, aber nicht mit demselben Satz: Was kommt, ist eine
@@ -211,17 +225,47 @@ export default function Calendar({
                     onOpenChange={setSemesterOpen}
                     onAddCourse={() => {
                         setSemesterOpen(false);
+                        setEditingCourse(null);
                         setCourseOpen(true);
+                    }}
+                    onShowCourses={() => {
+                        setSemesterOpen(false);
+                        setCoursesOpen(true);
                     }}
                 />
 
                 {semester !== null && (
                     <>
+                        <CoursesSheet
+                            open={coursesOpen}
+                            courses={courses}
+                            onOpenChange={setCoursesOpen}
+                            onOpen={setOpenedCourse}
+                        />
+
+                        {/* Dieselben Sheets wie im Tag — ein Kurs wird hier
+                            nicht anders geändert als dort. */}
+                        <CourseDetailSheet
+                            course={openedCourse}
+                            onOpenChange={() => setOpenedCourse(null)}
+                            onEdit={(course) => {
+                                setEditingCourse(course);
+                                setCourseOpen(true);
+                            }}
+                            onCancelDate={setCancellingCourse}
+                        />
+
                         <CourseSheet
                             open={courseOpen}
-                            course={null}
+                            course={editingCourse}
                             kinds={kinds}
                             onOpenChange={setCourseOpen}
+                        />
+
+                        <CourseCancellationSheet
+                            course={cancellingCourse}
+                            semester={semester}
+                            onOpenChange={() => setCancellingCourse(null)}
                         />
 
                         <NewPlacesSheet

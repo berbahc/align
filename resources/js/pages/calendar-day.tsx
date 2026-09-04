@@ -29,7 +29,7 @@ import type {
     CalendarBlock as Block,
     CourseBlock as Course,
     CourseKindOption,
-    CourseBlock,
+    CourseRow,
     SemesterPlan,
 } from '@/types';
 
@@ -100,13 +100,12 @@ export default function CalendarDay({
     /** Welcher Block gerade aufgeschlagen ist; null heißt zu. */
     const [opened, setOpened] = useState<Block | null>(null);
     /** Welcher Kurs gerade aufgeschlagen ist; null heißt zu. */
-    const [openedCourse, setOpenedCourse] = useState<CourseBlock | null>(null);
-    const [editingCourse, setEditingCourse] = useState<CourseBlock | null>(
+    const [openedCourse, setOpenedCourse] = useState<CourseRow | null>(null);
+    const [editingCourse, setEditingCourse] = useState<CourseRow | null>(null);
+    const [courseSheetOpen, setCourseSheetOpen] = useState(false);
+    const [cancellingCourse, setCancellingCourse] = useState<CourseRow | null>(
         null,
     );
-    const [courseSheetOpen, setCourseSheetOpen] = useState(false);
-    const [cancellingCourse, setCancellingCourse] =
-        useState<CourseBlock | null>(null);
 
     /** Welcher Block gerade im Anpassungs-Sheet steht; null heißt zu. */
     const [adjusting, setAdjusting] = useState<Block | null>(null);

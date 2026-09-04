@@ -129,3 +129,22 @@ it('zeigt einem Nutzer ohne Semester denselben Kalender wie zuvor', function () 
             expect(collect($days)->every(fn (array $day): bool => $day['hasLectures'] === false))->toBeTrue();
         });
 });
+
+it('gibt dem Monat alle Kurse für die Übersicht mit — nach Wochentag und Uhrzeit', function () {
+    $user = User::factory()->create();
+    $semester = Semester::factory()->for($user)->create();
+    Course::factory()->for($semester)->onWeekday(3)->at('14:00', '15:30')->create(['title' => 'Mathe Übung']);
+    Course::factory()->for($semester)->onWeekday(1)->at('10:00', '11:30')->create(['title' => 'Mathe 1']);
+    Course::factory()->for($semester)->onWeekday(1)->at('08:00', '09:00')->create(['title' => 'EC-Hauptseminar']);
+
+    $this->actingAs($user)
+        ->get(route('calendar'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('courses', 3)
+            ->where('courses.0.title', 'EC-Hauptseminar')
+            ->where('courses.1.title', 'Mathe 1')
+            ->where('courses.2.title', 'Mathe Übung')
+            ->where('courses.2.weekday', 3)
+            ->where('courses.0.timeRange', '08:00 – 09:00')
+            ->etc());
+});

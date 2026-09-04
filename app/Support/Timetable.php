@@ -128,6 +128,30 @@ final class Timetable
         return null;
     }
 
+    /**
+     * Alle Kurse des Semesters als Zeilen — Wochentag für Wochentag, in der
+     * Reihenfolge des Tages. Für die Übersicht hinter dem Stundenplan-Knopf:
+     * Wer sechs Kurse hat, will sie auch einmal alle sehen, nicht nur je Tag.
+     *
+     * @return list<array{courseId: int, title: string, courseKind: string, kindLabel: string, weekday: int, startsAt: string, endsAt: string, timeRange: string, location: string|null, exceptions: list<array{onDate: string, dateLabel: string, cancelled: bool, timeRange: string|null}>}>
+     */
+    public function courseRows(): array
+    {
+        $rows = [];
+
+        foreach (range(1, 7) as $weekday) {
+            $courses = $this->byWeekday[$weekday] ?? [];
+
+            usort($courses, fn (Course $a, Course $b): int => $a->startMinute() <=> $b->startMinute());
+
+            foreach ($courses as $course) {
+                $rows[] = $course->toRow();
+            }
+        }
+
+        return $rows;
+    }
+
     public function courseCount(): int
     {
         return array_sum(array_map(count(...), $this->byWeekday));

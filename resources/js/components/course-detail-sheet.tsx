@@ -10,7 +10,7 @@ import {
 import { OUTLINE_BUTTON, QUIET_BUTTON } from '@/lib/interaction';
 import { destroy } from '@/routes/calendar/semester/courses';
 import { destroy as undoException } from '@/routes/calendar/semester/courses/exceptions';
-import type { CourseBlock, Weekday } from '@/types';
+import type { CourseRow, Weekday } from '@/types';
 
 const WEEKDAY_NAMES: Record<Weekday, string> = {
     1: 'Montag',
@@ -38,13 +38,13 @@ export function CourseDetailSheet({
     onCancelDate,
 }: {
     /** Null heißt zu. */
-    course: CourseBlock | null;
+    course: CourseRow | null;
     onOpenChange: (open: boolean) => void;
-    onEdit: (course: CourseBlock) => void;
-    onCancelDate: (course: CourseBlock) => void;
+    onEdit: (course: CourseRow) => void;
+    onCancelDate: (course: CourseRow) => void;
 }) {
     /** Ein Weg aus dem Sheet heraus in das nächste — erst zu, dann auf. */
-    function leaveFor(next: (course: CourseBlock) => void) {
+    function leaveFor(next: (course: CourseRow) => void) {
         if (course === null) {
             return;
         }
