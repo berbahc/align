@@ -230,6 +230,21 @@ class AdjustHabitRequest extends FormRequest
 
         if ($previous->is($habit) || $this->chainReaches($previous, $habit)) {
             $validator->errors()->add('chained_to_habit_id', 'Damit hinge die Gewohnheit an sich selbst.');
+
+            return;
+        }
+
+        // Eine Kette ist eine Reihe, kein Fächer. Hängen zwei Gewohnheiten an
+        // derselben, beginnen beide, wenn die vorige endet — zwei Dinge auf
+        // einer Minute. {@see Habit::spansFrom()} folgt ohnehin nur der ersten;
+        // die Regel schreibt also fest, wovon die Rechnung längst ausgeht.
+        if ($previous->chainedHabits()->active()->whereKeyNot($habit->id)->exists()) {
+            $validator->errors()->add(
+                'chained_to_habit_id',
+                sprintf('An „%s" hängt schon eine Gewohnheit. Häng deine an die letzte der Reihe.', $previous->title),
+            );
+
+            return;
         }
     }
 
