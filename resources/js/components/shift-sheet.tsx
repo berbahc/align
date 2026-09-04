@@ -7,7 +7,11 @@ import {
 } from '@/components/ui/sheet';
 import type { BlockConflict } from '@/lib/day-grid';
 import { BREATHER_MINUTES, timeLabel } from '@/lib/day-grid';
-import { OUTLINE_BUTTON, PRIMARY_BUTTON } from '@/lib/interaction';
+import {
+    BOTTOM_SHEET,
+    OUTLINE_BUTTON,
+    PRIMARY_BUTTON,
+} from '@/lib/interaction';
 import type { CalendarBlock } from '@/types';
 
 const ACTION_BUTTON =
@@ -54,10 +58,7 @@ export function ShiftSheet({
 
     return (
         <Sheet open={block !== null} onOpenChange={onOpenChange}>
-            <SheetContent
-                side="bottom"
-                className="mx-auto max-h-[85vh] max-w-lg gap-0 overflow-y-auto rounded-t-2xl px-5 pt-6 pb-8"
-            >
+            <SheetContent side="bottom" className={BOTTOM_SHEET}>
                 <SheetHeader className="gap-2 p-0">
                     <SheetTitle className="type-eyebrow text-left text-muted-foreground">
                         Neuer Platz im Tag

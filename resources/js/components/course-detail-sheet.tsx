@@ -7,7 +7,7 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
-import { OUTLINE_BUTTON, QUIET_BUTTON } from '@/lib/interaction';
+import { BOTTOM_SHEET, OUTLINE_BUTTON, QUIET_BUTTON } from '@/lib/interaction';
 import { destroy } from '@/routes/calendar/semester/courses';
 import { destroy as undoException } from '@/routes/calendar/semester/courses/exceptions';
 import type { CourseRow, Weekday } from '@/types';
@@ -55,10 +55,7 @@ export function CourseDetailSheet({
 
     return (
         <Sheet open={course !== null} onOpenChange={onOpenChange}>
-            <SheetContent
-                side="bottom"
-                className="mx-auto max-h-[85vh] max-w-lg gap-0 overflow-y-auto rounded-t-2xl px-5 pt-6 pb-8"
-            >
+            <SheetContent side="bottom" className={BOTTOM_SHEET}>
                 <SheetHeader className="gap-2 p-0">
                     <SheetTitle className="type-eyebrow text-left text-muted-foreground">
                         {course &&

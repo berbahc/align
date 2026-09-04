@@ -8,7 +8,7 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { Spinner } from '@/components/ui/spinner';
-import { PRIMARY_BUTTON, QUIET_BUTTON } from '@/lib/interaction';
+import { BOTTOM_SHEET, PRIMARY_BUTTON, QUIET_BUTTON } from '@/lib/interaction';
 import { store } from '@/routes/calendar/semester/courses/exceptions';
 import type { CourseRow, SemesterPlan } from '@/types';
 
@@ -65,10 +65,7 @@ export function CourseCancellationSheet({
 
     return (
         <Sheet open={course !== null} onOpenChange={onOpenChange}>
-            <SheetContent
-                side="bottom"
-                className="mx-auto max-h-[85vh] max-w-lg gap-0 overflow-y-auto rounded-t-2xl px-5 pt-6 pb-8"
-            >
+            <SheetContent side="bottom" className={BOTTOM_SHEET}>
                 <SheetHeader className="gap-2 p-0">
                     <SheetTitle className="type-eyebrow text-left text-muted-foreground">
                         Fällt aus

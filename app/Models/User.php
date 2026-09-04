@@ -181,26 +181,6 @@ class User extends Authenticatable implements PasskeyUser
     }
 
     /**
-     * Anfragen, die diese Person gestellt hat — offen wie bestätigt.
-     *
-     * @return HasMany<Friendship, $this>
-     */
-    public function sentFriendships(): HasMany
-    {
-        return $this->hasMany(Friendship::class, 'requester_id');
-    }
-
-    /**
-     * Anfragen, die an diese Person gingen.
-     *
-     * @return HasMany<Friendship, $this>
-     */
-    public function receivedFriendships(): HasMany
-    {
-        return $this->hasMany(Friendship::class, 'addressee_id');
-    }
-
-    /**
      * Die bestätigten Freundinnen und Freunde, alphabetisch.
      *
      * Bewusst keine Eloquent-Beziehung: Eine Freundschaft ist symmetrisch, die

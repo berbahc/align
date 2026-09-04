@@ -6,6 +6,7 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
+import { BOTTOM_SHEET } from '@/lib/interaction';
 import type { CourseRow, Weekday } from '@/types';
 
 const WEEKDAYS: Record<Weekday, string> = {
@@ -46,10 +47,7 @@ export function CoursesSheet({
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent
-                side="bottom"
-                className="mx-auto max-h-[85vh] max-w-lg gap-0 overflow-y-auto rounded-t-2xl px-5 pt-6 pb-8"
-            >
+            <SheetContent side="bottom" className={BOTTOM_SHEET}>
                 <SheetHeader className="gap-2 p-0">
                     <SheetTitle className="type-eyebrow text-left text-muted-foreground">
                         Alle Kurse

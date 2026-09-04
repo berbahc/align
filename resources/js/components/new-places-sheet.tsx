@@ -11,7 +11,12 @@ import {
 } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNewPlaces } from '@/hooks/use-new-places';
-import { OUTLINE_BUTTON, PRIMARY_BUTTON, QUIET_LINK } from '@/lib/interaction';
+import {
+    BOTTOM_SHEET,
+    OUTLINE_BUTTON,
+    PRIMARY_BUTTON,
+    QUIET_LINK,
+} from '@/lib/interaction';
 import { cn } from '@/lib/utils';
 import { day as calendarDay } from '@/routes/calendar';
 import { store, suggestions } from '@/routes/calendar/semester/places';
@@ -113,10 +118,7 @@ export function NewPlacesSheet({
 
     return (
         <Sheet open={open} onOpenChange={close}>
-            <SheetContent
-                side="bottom"
-                className="mx-auto max-h-[85vh] max-w-lg gap-0 overflow-y-auto rounded-t-2xl px-5 pt-6 pb-8"
-            >
+            <SheetContent side="bottom" className={BOTTOM_SHEET}>
                 <SheetHeader className="gap-2 p-0">
                     <SheetTitle className="type-eyebrow flex items-center gap-2 text-left text-primary">
                         <Sparkles
