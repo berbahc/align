@@ -122,3 +122,13 @@ export interface UnplacedHabit {
     /** Warum nicht — kein Fenster, oder vom Modell weggelassen. */
     message: string;
 }
+
+/** Eine Gewohnheit im Wochenraster — nur ihre Stelle, keine Handlung. */
+export interface WeekHabitBlock {
+    id: number;
+    title: string;
+    startMinute: number;
+    durationMinutes: number;
+    /** Uhrzeit (durchgezogen) oder Situation (gestrichelt)? */
+    exact: boolean;
+}

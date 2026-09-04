@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { QUIET_LINK } from '@/lib/interaction';
 import { calendar } from '@/routes';
 import { day as calendarDay } from '@/routes/calendar';
-import { semester as calendarSemester } from '@/routes/calendar';
+import { week as calendarWeek } from '@/routes/calendar';
 import type { MonthDay } from '@/types';
 
 interface CalendarProps {
@@ -116,7 +116,7 @@ export default function Calendar({
                     bleibt der Satz hier, bis er beantwortet ist. */}
                 {!hasSemester && (
                     <p className="text-center text-sm text-muted-foreground">
-                        <Link href={calendarSemester()} className={QUIET_LINK}>
+                        <Link href={calendarWeek()} className={QUIET_LINK}>
                             Semester eintragen
                         </Link>
                         {' — dann plant Align um deine Kurse herum.'}
