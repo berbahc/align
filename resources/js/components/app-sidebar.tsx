@@ -1,12 +1,5 @@
 import { Link } from '@inertiajs/react';
-import {
-    CalendarDays,
-    GraduationCap,
-    LayoutGrid,
-    Moon,
-    Repeat,
-    Users,
-} from 'lucide-react';
+import { CalendarDays, LayoutGrid, Moon, Repeat, Users } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -22,7 +15,6 @@ import {
 } from '@/components/ui/sidebar';
 import { calendar, community, dashboard } from '@/routes';
 import { index as habitsIndex } from '@/routes/habits';
-import { show as semesterShow } from '@/routes/semester';
 import { show as sleepShow } from '@/routes/sleep';
 import type { NavItem } from '@/types';
 
@@ -37,9 +29,9 @@ import type { NavItem } from '@/types';
 // hinter dem Kalender, weil er dieselbe Frage von der anderen Seite stellt —
 // nicht „was steht an", sondern „wie lang ist der Tag".
 //
-// „Semester" steht zwischen beiden, weil es derselben Art ist: ein Rahmen, der
-// sagt, wann nichts geht. Der Schlafplan begrenzt den Tag von außen, der
-// Stundenplan von innen.
+// Der Semesterplan steht bewusst NICHT hier: Er ist die zweite Ansicht des
+// Kalenders und nicht eine sechste Ecke der App. Wer wissen will, wann im Tag
+// nichts geht, sucht das dort, wo der Tag steht.
 const mainNavItems: NavItem[] = [
     {
         title: 'Übersicht',
@@ -55,11 +47,6 @@ const mainNavItems: NavItem[] = [
         title: 'Kalender',
         href: calendar(),
         icon: CalendarDays,
-    },
-    {
-        title: 'Semester',
-        href: semesterShow(),
-        icon: GraduationCap,
     },
     {
         title: 'Schlaf',

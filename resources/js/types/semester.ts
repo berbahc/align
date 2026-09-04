@@ -50,8 +50,12 @@ export interface SemesterPlan {
     endsOn: string;
     /** „13.10. – 07.02." */
     rangeLabel: string;
-    /** Läuft er gerade? Sonst belegen seine Kurse keine Zeit mehr. */
+    /** Läuft er gerade? Sonst belegen seine Kurse im Kalender keine Zeit. */
     isCurrent: boolean;
+    /** Fängt er erst noch an? Dann steht der Plan schon, wirkt aber noch nicht. */
+    startsInFuture: boolean;
+    /** „1. Oktober 2026" — fertig formatiert. */
+    startsOnLabel: string;
 }
 
 /**

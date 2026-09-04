@@ -78,12 +78,12 @@ it('markiert im Monat die Tage mit Vorlesung und sonst keine', function () {
         });
 });
 
-it('nennt den Semesterplan unter dem Monat — und lädt sonst dazu ein', function () {
+it('sagt dem Monat, ob ein Semesterplan steht — mehr braucht die Zeile darunter nicht', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user)
         ->get(route('calendar'))
-        ->assertInertia(fn (AssertableInertia $page) => $page->where('semester', null));
+        ->assertInertia(fn (AssertableInertia $page) => $page->where('hasSemester', false)->etc());
 
     $semester = Semester::factory()->for($user)->create(['title' => 'Wintersemester 25/26']);
     Course::factory()->count(3)->for($semester)->onWeekday(1)->sequence(
@@ -95,8 +95,7 @@ it('nennt den Semesterplan unter dem Monat — und lädt sonst dazu ein', functi
     $this->actingAs($user)
         ->get(route('calendar'))
         ->assertInertia(fn (AssertableInertia $page) => $page
-            ->where('semester.title', 'Wintersemester 25/26')
-            ->where('semester.courseCount', 3)
+            ->where('hasSemester', true)
             ->etc());
 });
 

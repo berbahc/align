@@ -12,14 +12,17 @@ const LANE_GAP = 4;
 /**
  * Eine Veranstaltung im Stundenraster.
  *
- * Sie liegt auf derselben Achse wie die Gewohnheiten, sagt aber mit jedem
- * ihrer Merkmale, dass sie eine andere Art ist — und zwar durch Weglassen:
+ * Sie liegt auf derselben Achse wie die Gewohnheiten und soll auf einen Blick
+ * als andere Art zu erkennen sein — deshalb eine eigene Fläche statt nur einer
+ * anderen Kante:
  *
+ * - **Sandfarben gefüllt.** `bg-sand` gegen das helle `bg-track` der
+ *   Gewohnheit: der wärmste Ton der Palette, deutlich genug, um im Raster
+ *   sofort aufzufallen, und trotzdem aus derselben Familie. Eine zweite
+ *   Farbfamilie hätte den Tag in zwei Kalender zerlegt.
  * - **Keine Hakenspalte.** Die 44 Pixel rechts entfallen ganz. Das allein
  *   liest sich als „hier ist nichts abzuhaken", bevor irgendetwas anderes
  *   verstanden ist.
- * - **Hohl statt gefüllt.** `bg-canvas` mit vollem Rahmen, gegen das gefüllte
- *   `bg-track` der Gewohnheit.
  * - **Durchgezogene linke Kante in `olive-mid`.** Durchgezogen, weil eine
  *   Vorlesung eine echte Uhrzeit hat — gestrichelt heißt in diesem Kalender
  *   „ungefähr hier". `olive-mid` statt `primary`, weil `primary` an einer
@@ -47,12 +50,12 @@ export function CourseBlock({ placed }: { placed: PlacedBlock<Course> }) {
             <div
                 aria-label={`${block.kindLabel} ${block.title}, ${block.timeRange.replace('–', 'bis')}`}
                 className={cn(
-                    'flex h-full w-full cursor-default items-center gap-2.5 overflow-hidden rounded-xl border border-l-[3px] border-sand border-l-olive-mid bg-canvas px-2.5',
+                    'flex h-full w-full cursor-default items-center gap-2.5 overflow-hidden rounded-xl border-l-[3px] border-l-olive-mid bg-sand px-2.5',
                     spacious ? 'py-2' : 'py-1',
                 )}
             >
                 {spacious && (
-                    <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-track text-olive-mid">
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-canvas/70 text-primary">
                         <GraduationCap
                             className="size-4"
                             strokeWidth={1.5}
@@ -62,15 +65,15 @@ export function CourseBlock({ placed }: { placed: PlacedBlock<Course> }) {
                 )}
 
                 <span className="min-w-0 flex-1">
-                    <span className="type-eyebrow block truncate text-muted-foreground">
+                    <span className="type-eyebrow block truncate text-olive-mid">
                         {block.timeRange}
                         {block.moved && ' · heute verlegt'}
                     </span>
-                    <span className="block truncate text-sm font-medium text-foreground">
+                    <span className="block truncate text-sm font-semibold text-foreground">
                         {block.title}
                     </span>
                     {spacious && block.location && (
-                        <span className="block truncate text-xs text-muted-foreground">
+                        <span className="block truncate text-xs text-olive-mid">
                             {block.kindLabel} · {block.location}
                         </span>
                     )}
