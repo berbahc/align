@@ -4,10 +4,12 @@ namespace App\Http\Requests;
 
 use App\Enums\ScheduleType;
 use App\Enums\SuggestionKind;
+use App\Http\Requests\Concerns\ChecksDayPlan;
 use App\Http\Requests\Concerns\ChecksSituation;
 use App\Http\Requests\Concerns\ChecksSleepWindow;
 use App\Models\AiSuggestion;
 use App\Models\Habit;
+use App\Support\DayPlan;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -35,7 +37,7 @@ use Illuminate\Validation\Validator;
  */
 class AdjustHabitRequest extends FormRequest
 {
-    use ChecksSituation, ChecksSleepWindow;
+    use ChecksDayPlan, ChecksSituation, ChecksSleepWindow;
 
     public function authorize(): bool
     {
@@ -70,7 +72,7 @@ class AdjustHabitRequest extends FormRequest
                 }
 
                 match ($type) {
-                    ScheduleType::Fixed => $this->validateSleepWindow($validator),
+                    ScheduleType::Fixed => $this->validateFixed($validator),
                     // Auch ein Vorschlag der KI darf keinen Moment doppelt
                     // belegen — die eigene Gewohnheit zählt dabei nicht mit.
                     ScheduleType::Dynamic => $this->validateSituationIsFree($validator, $this->habit()),
@@ -253,6 +255,34 @@ class AdjustHabitRequest extends FormRequest
         }
 
         return true;
+    }
+
+    /**
+     * Eine feste Uhrzeit aus einem KI-Vorschlag ist auch nur eine Uhrzeit.
+     *
+     * Der Agent bekommt seine freien Fenster aus {@see DayPlan} und schlägt
+     * deshalb nichts vor, was belegt wäre. Geprüft wird trotzdem: Zwischen dem
+     * Vorschlag und dem Übernehmen liegt eine Entscheidung, und in der Zeit
+     * kann ein Kurs dazugekommen oder eine andere Gewohnheit gerückt sein. Ein
+     * Vorschlag ist ein Vorschlag, keine Vollmacht.
+     */
+    private function validateFixed(Validator $validator): void
+    {
+        $this->validateSleepWindow($validator);
+
+        $habit = $this->habit();
+
+        /** @var list<int> $days */
+        $days = array_values(array_unique(array_map(intval(...), $this->array('scheduled_days'))));
+
+        $this->validateSlotIsFree(
+            $validator,
+            'scheduled_time',
+            $this->string('scheduled_time')->toString(),
+            $days,
+            $habit->durationMinutes() ?? DayPlan::AssumedMinutes,
+            $habit,
+        );
     }
 
     private function habit(): Habit

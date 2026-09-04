@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Enums\MeasureUnit;
 use App\Enums\ScheduleType;
+use App\Http\Requests\Concerns\ChecksDayPlan;
 use App\Http\Requests\Concerns\ChecksSituation;
 use App\Http\Requests\Concerns\ChecksSleepWindow;
 use App\Models\Habit;
@@ -23,7 +24,7 @@ use Illuminate\Validation\Validator;
  */
 abstract class HabitFormRequest extends FormRequest
 {
-    use ChecksSituation, ChecksSleepWindow;
+    use ChecksDayPlan, ChecksSituation, ChecksSleepWindow;
 
     public function authorize(): bool
     {
@@ -101,6 +102,7 @@ abstract class HabitFormRequest extends FormRequest
             $this->validateChain(...),
             $this->validateFrame(...),
             $this->validateSituation(...),
+            $this->validateSlot(...),
         ];
     }
 
@@ -117,6 +119,34 @@ abstract class HabitFormRequest extends FormRequest
         }
 
         $this->validateSituationIsFree($validator, $this->editedHabit());
+    }
+
+    /**
+     * An der gewählten Uhrzeit muss Platz sein — an jedem gewählten Tag.
+     *
+     * Nur für feste Uhrzeiten: Eine Situation hat keinen Zeitpunkt, mit dem
+     * sich kollidieren ließe, und eine Kette hat ihren erst, wenn ihr Vorgänger
+     * einen hat. Beide werden im Raster an ihre ungefähre Stelle gezeichnet —
+     * daraus eine Sperre zu machen hieße, eine Genauigkeit zu behaupten, die
+     * sie nicht haben.
+     */
+    private function validateSlot(Validator $validator): void
+    {
+        if (! $this->scheduleType()->hasClockTime() || ! $this->filled('scheduled_time')) {
+            return;
+        }
+
+        /** @var list<int> $days */
+        $days = array_values(array_unique(array_map(intval(...), $this->array('scheduled_days'))));
+
+        $this->validateSlotIsFree(
+            $validator,
+            'scheduled_time',
+            $this->string('scheduled_time')->toString(),
+            $days,
+            (int) round($this->float('target_amount')),
+            $this->editedHabit(),
+        );
     }
 
     /**
