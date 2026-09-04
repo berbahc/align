@@ -335,3 +335,25 @@ test('the suggestion looks at the first lecture day, not just next week', functi
 
     $this->travelBack();
 });
+
+test('two places may share a weekday when applied together', function () {
+    $user = studentWithSemester();
+    $walk = parkedHabit($user, 'Spazieren', '10:45', days: [1, 3], minutes: 20);
+    $gym = parkedHabit($user, 'Krafttraining', '11:15', days: [1, 3], minutes: 45);
+    enterCourse($user, 1, '10:00', '11:30');
+
+    // Beide am Mittwoch — die Regel darf Tage nur innerhalb eines Platzes
+    // vergleichen, nicht über alle Plätze hinweg.
+    $this->actingAs($user)
+        ->post(route('calendar.semester.places.store'), [
+            'places' => [
+                ['id' => $walk->id, 'time' => '10:45', 'days' => [3]],
+                ['id' => $gym->id, 'time' => '11:45', 'days' => [1, 3]],
+            ],
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect($walk->fresh()->displaced_at)->toBeNull()
+        ->and($gym->fresh()->displaced_at)->toBeNull()
+        ->and($gym->fresh()->scheduled_time->format('H:i'))->toBe('11:45');
+});
