@@ -1,4 +1,4 @@
-import type { Weekday } from './habit';
+import type { CalendarBlock, Weekday } from './habit';
 
 /** Die Art einer Veranstaltung — für das Auge, nicht für die Rechnung. */
 export type CourseKind = 'vorlesung' | 'uebung' | 'seminar' | 'sonstiges';
@@ -116,6 +116,26 @@ export interface NewPlace {
     /** „11:45 – 12:15". */
     timeRange: string;
     reason: string;
+    /** „YYYY-MM-DD" — der Tag, an dem man den Vorschlag im Raster ansieht. */
+    previewDate: string;
+}
+
+/**
+ * Ein Vorschlag der KI, in den Tag gelegt — gestrichelt, noch nicht
+ * entschieden. Kommt über `?suggestion=` aus dem Sheet „Neue Plätze".
+ */
+export interface PlaceProposal {
+    suggestionId: number;
+    habitId: number;
+    title: string;
+    /** „11:45". */
+    time: string;
+    days: Weekday[];
+    /** „11:45 · Mo, Mi". */
+    label: string;
+    reason: string;
+    /** Der Block an seiner vorgeschlagenen Stelle — für den Ghost im Raster. */
+    block: CalendarBlock;
 }
 
 /** Eine verdrängte Gewohnheit, für die es keinen Vorschlag gibt. */

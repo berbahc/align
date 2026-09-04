@@ -206,6 +206,9 @@ class CalendarController extends Controller
             // Nur was noch kommt, lässt sich verlegen: Ein vergangener Tag ist
             // vorbei, und ihn umzuräumen änderte nichts mehr an ihm.
             'canShift' => $day->greaterThanOrEqualTo($today),
+            // Ein Vorschlag der KI, gestrichelt ins Raster gelegt — wenn die
+            // Adresse einen nennt und er an diesem Wochentag gilt.
+            'proposal' => $this->proposal($request, $habits, $day),
             'wakeTime' => $window['wakeTime'],
             'bedtime' => $window['bedtime'],
             'frameFrom' => $frame['from'],
@@ -322,6 +325,59 @@ class CalendarController extends Controller
             // Nicht wie viel, nur ob: Der Monat sagt, dass dieser Tag an der
             // Uni stattfindet, nicht wie voll er ist. Wie voll, steht im Tag.
             'hasLectures' => isset($lectureDays[$day->toDateString()]),
+        ];
+    }
+
+    /**
+     * Der Vorschlag aus `?suggestion=` als Ghost — oder null.
+     *
+     * Der Weg aus dem Sheet „Neue Plätze" in den Tag: Dort steht der Vorschlag
+     * gestrichelt neben den Kursen, um die es geht, und lässt sich übernehmen
+     * oder verwerfen. Nur eigene, noch nicht übernommene Vorschläge, und nur
+     * an einem Tag, an dem sie überhaupt gälten — sonst zeigte der Ghost etwas,
+     * das an diesem Datum nie läge.
+     *
+     * @param  Collection<int, Habit>  $habits
+     * @return array{suggestionId: int, habitId: int, title: string, time: string, days: list<int>, label: string, reason: string, block: array<string, mixed>}|null
+     */
+    private function proposal(Request $request, Collection $habits, Carbon $day): ?array
+    {
+        $id = $request->integer('suggestion');
+
+        if ($id < 1) {
+            return null;
+        }
+
+        $suggestion = $request->user()->aiSuggestions()->notTaken()->find($id);
+        $habit = $suggestion === null ? null : $habits->firstWhere('id', $suggestion->habit_id);
+        $time = $suggestion?->payload['time'] ?? null;
+        $days = $suggestion?->payload['days'] ?? null;
+
+        if ($habit === null || ! is_string($time) || ! is_array($days) || ! in_array($day->dayOfWeekIso, $days, strict: true)) {
+            return null;
+        }
+
+        $start = DayPlan::toMinutes($time);
+        $minutes = $habit->durationMinutes() ?? DayPlan::AssumedMinutes;
+
+        return [
+            'suggestionId' => $suggestion->id,
+            'habitId' => $habit->id,
+            'title' => $habit->title,
+            'time' => $time,
+            'days' => array_values(array_map(intval(...), $days)),
+            'label' => $suggestion->label,
+            'reason' => (string) ($suggestion->payload['reason'] ?? ''),
+            'block' => [
+                ...$this->block($habit, $day),
+                'anchor' => $suggestion->label,
+                'anchorHour' => intdiv($start, 60),
+                'startMinute' => $start,
+                'exact' => true,
+                'shifted' => false,
+                'completed' => false,
+                'timeRange' => $time.' – '.DayPlan::toTime($start + $minutes),
+            ],
         ];
     }
 
