@@ -143,7 +143,10 @@ class NewPlaceController extends Controller
             'places.*.id' => ['required', 'integer'],
             'places.*.time' => ['required', 'date_format:H:i'],
             'places.*.days' => ['required', 'array', 'min:1', 'max:7'],
-            'places.*.days.*' => ['integer', 'between:1,7', 'distinct'],
+            // Kein `distinct`: Die Regel vergliche über alle Plätze hinweg,
+            // und zwei Gewohnheiten dürfen denselben Wochentag haben. Doppelte
+            // Tage innerhalb eines Platzes fallen unten ohnehin zusammen.
+            'places.*.days.*' => ['integer', 'between:1,7'],
             'places.*.suggestion_id' => ['nullable', 'integer'],
         ]);
 
