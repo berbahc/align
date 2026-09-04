@@ -128,7 +128,7 @@ final class Timetable
     /**
      * Dieselbe Belegung für die Oberfläche — mit Art, Ort und lesbarer Spanne.
      *
-     * @return list<array{id: int, title: string, courseKind: string, kindLabel: string, startMinute: int, durationMinutes: int, timeRange: string, location: string|null, moved: bool}>
+     * @return list<array{kind: 'course', id: int, title: string, courseKind: string, kindLabel: string, startMinute: int, durationMinutes: int, timeRange: string, location: string|null, moved: bool}>
      */
     public function coursesOn(CarbonInterface $date): array
     {
@@ -136,6 +136,11 @@ final class Timetable
             $course = $occurrence['course'];
 
             return [
+                // Sagt dem Raster, welcher Art dieser Block ist. Das Gegenstück
+                // steht in `CalendarController::block()`; fehlt es hier, hält
+                // die Zeichnung den Kurs für eine Gewohnheit und sucht ein
+                // Symbol, das es für ihn nicht gibt.
+                'kind' => 'course',
                 'id' => -$course->id,
                 'title' => $course->title,
                 'courseKind' => $course->kind->value,
