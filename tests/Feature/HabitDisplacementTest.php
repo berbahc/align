@@ -231,7 +231,7 @@ test('the semester page lists what lost its place', function () {
     [$user, $habit] = studentWhoseHabitGetsCovered();
 
     $this->actingAs($user)
-        ->get(route('calendar.semester'))
+        ->get(route('calendar.week'))
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->where('displaced.0.id', $habit->id)
             ->where('displaced.0.previousTime', '10:15')

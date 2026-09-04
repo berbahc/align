@@ -11,6 +11,8 @@ use App\Models\CourseException;
 use App\Models\Habit;
 use App\Models\Semester;
 use App\Models\User;
+use App\Support\DayPlan;
+use App\Support\SlotConflict;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -20,7 +22,7 @@ use Inertia\Response;
 class SemesterController extends Controller
 {
     /**
-     * Der Stundenplan einer Woche — die zweite Ansicht des Kalenders.
+     * Die Woche — Kurse und Gewohnheiten auf einem Raster.
      *
      * Ein Semester je Person, sichtbar auch außerhalb seines Zeitraums: Wer im
      * März auf die Seite kommt, soll seinen alten Plan als Vorlage vorfinden
@@ -37,7 +39,7 @@ class SemesterController extends Controller
 
         $today = Carbon::today();
 
-        return Inertia::render('calendar-semester', [
+        return Inertia::render('calendar-week', [
             'semester' => $semester === null ? null : [
                 'title' => $semester->title,
                 'startsOn' => $semester->starts_on->toDateString(),
@@ -70,7 +72,45 @@ class SemesterController extends Controller
                     'previousLabel' => $habit->scheduleLabel(),
                 ])
                 ->all(),
+            // Die Gewohnheiten je Wochentag, mit ihrer Stelle — damit die Woche
+            // beides zeigt und nicht nur den Stundenplan. Genommen wird der
+            // nächste Tag je Wochentag: Dort greifen Schlafrahmen und
+            // Ausnahmen, und dorthin führt das Antippen.
+            'habitBlocks' => $this->habitBlocks($request->user()),
+            'weekdayDates' => array_combine(
+                range(1, 7),
+                array_map(fn (int $weekday): string => SlotConflict::nextWeekday($weekday)->toDateString(), range(1, 7)),
+            ),
         ]);
+    }
+
+    /**
+     * @return array<int, list<array{id: int, title: string, startMinute: int, durationMinutes: int, exact: bool}>>
+     */
+    private function habitBlocks(User $user): array
+    {
+        $habits = $user->habits()->active()->with('chainedTo.chainedTo')->orderBy('position')->get();
+        $habits->each(fn (Habit $habit) => $habit->setRelation('user', $user));
+
+        $blocks = [];
+
+        foreach (range(1, 7) as $weekday) {
+            $date = SlotConflict::nextWeekday($weekday);
+
+            $blocks[$weekday] = array_values($habits
+                ->filter(fn (Habit $habit): bool => $habit->isScheduledOn($date))
+                ->map(fn (Habit $habit): ?array => ($start = $habit->dayStartMinute($date)) === null ? null : [
+                    'id' => $habit->id,
+                    'title' => $habit->title,
+                    'startMinute' => $start,
+                    'durationMinutes' => $habit->durationMinutes() ?? DayPlan::AssumedMinutes,
+                    'exact' => $habit->startsAt($date) !== null,
+                ])
+                ->filter()
+                ->all());
+        }
+
+        return $blocks;
     }
 
     public function store(StoreSemesterRequest $request): RedirectResponse

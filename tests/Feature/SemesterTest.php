@@ -33,9 +33,9 @@ it('legt ein Semester an und zeigt es auf der Seite', function () {
         ->assertRedirect();
 
     $this->actingAs($user)
-        ->get(route('calendar.semester'))
+        ->get(route('calendar.week'))
         ->assertInertia(fn (AssertableInertia $page) => $page
-            ->component('calendar-semester')
+            ->component('calendar-week')
             ->where('semester.title', 'Wintersemester 25/26')
             ->where('semester.isCurrent', true)
             ->where('courses', []));
@@ -58,7 +58,7 @@ it('trägt einen Kurs ein und liefert ihn mit seiner Spanne zurück', function (
         ->assertSessionHasNoErrors();
 
     $this->actingAs($user)
-        ->get(route('calendar.semester'))
+        ->get(route('calendar.week'))
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->where('courses.0.title', 'Analysis I')
             ->where('courses.0.weekday', 2)
@@ -326,7 +326,7 @@ it('zeigt ein abgelaufenes Semester weiter an, aber nicht mehr als laufendes', f
     Semester::factory()->for($user)->past()->create();
 
     $this->actingAs($user)
-        ->get(route('calendar.semester'))
+        ->get(route('calendar.week'))
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->where('semester.title', 'Sommersemester 25')
             ->where('semester.isCurrent', false));

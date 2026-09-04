@@ -1,15 +1,14 @@
 import { Link } from '@inertiajs/react';
 import { cn } from '@/lib/utils';
 import { calendar } from '@/routes';
-import { semester as calendarSemester } from '@/routes/calendar';
+import { week as calendarWeek } from '@/routes/calendar';
 
 /**
- * Die zwei Ansichten des Kalenders.
+ * Die Ebenen des Kalenders, zwischen denen man wechselt.
  *
- * Der Monat zeigt, was an einem Tag ansteht; das Semester, was jede Woche
- * ohnehin feststeht. Beides gehört unter dieselbe Überschrift, weil es
- * dieselbe Frage von zwei Seiten ist — und nicht in zwei Ecken der App, die
- * nichts voneinander wissen.
+ * Der Monat zeigt, ob ein Tag voll war; die Woche, wie Kurse und
+ * Gewohnheiten zueinander liegen. Der Tag hat keinen Knopf hier — er hat eine
+ * eigene Adresse und wird aus beiden heraus geöffnet.
  *
  * Zwei Adressen und kein Client-Zustand: Die Ansicht übersteht ein Neuladen
  * und lässt sich teilen, genau wie der einzelne Tag.
@@ -17,7 +16,7 @@ import { semester as calendarSemester } from '@/routes/calendar';
  * Die Auswahl ist ein 2px-Rahmen und keine Füllung — dasselbe leise Muster wie
  * bei jeder anderen Einfachauswahl in dieser App (Designsprache §5.5).
  */
-export function CalendarViews({ active }: { active: 'month' | 'semester' }) {
+export function CalendarViews({ active }: { active: 'month' | 'week' }) {
     return (
         <nav
             aria-label="Ansicht des Kalenders"
@@ -26,8 +25,8 @@ export function CalendarViews({ active }: { active: 'month' | 'semester' }) {
             <ViewLink href={calendar()} active={active === 'month'}>
                 Monat
             </ViewLink>
-            <ViewLink href={calendarSemester()} active={active === 'semester'}>
-                Semester
+            <ViewLink href={calendarWeek()} active={active === 'week'}>
+                Woche
             </ViewLink>
         </nav>
     );
