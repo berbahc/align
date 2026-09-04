@@ -144,3 +144,16 @@ test('a habit of another user cannot be deleted', function () {
 
     expect(Habit::find($habit->id))->not->toBeNull();
 });
+
+test('the create page says the places are full instead of hiding it behind the last step', function () {
+    $user = User::factory()->create();
+    Habit::factory()->for($user)->count(Habit::MaxActivePerUser)->create();
+
+    $this->actingAs($user)
+        ->get(route('habits.create'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('habits/create')
+            ->where('activeCount', Habit::MaxActivePerUser)
+            ->where('maxActive', Habit::MaxActivePerUser)
+            ->etc());
+});

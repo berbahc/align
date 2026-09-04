@@ -231,6 +231,10 @@ class HabitController extends Controller
     public function create(Request $request): Response
     {
         return Inertia::render('habits/create', [
+            // Die Grenze vorneweg: Wer fünf laufen hat, soll das hier lesen —
+            // nicht erst als Absage hinter dem letzten Schritt.
+            'activeCount' => $request->user()->habits()->active()->count(),
+            'maxActive' => Habit::MaxActivePerUser,
             'categories' => HabitCategory::options(),
             // Nur gesetzt, wenn der Weg aus einer Anfrage oder einer Absage
             // kommt. Der Assistent überspringt dann die Wahl aus dem Katalog.
