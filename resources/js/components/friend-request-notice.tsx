@@ -48,8 +48,8 @@ export function FriendRequestNotice({
         <section role="status" className={cn('flex flex-col gap-3', className)}>
             <h2 className="type-eyebrow text-muted-foreground">
                 {requests.length === 1
-                    ? 'Eine Anfrage'
-                    : `${requests.length} Anfragen`}
+                    ? 'Eine Freundschaftsanfrage'
+                    : `${requests.length} Freundschaftsanfragen`}
             </h2>
 
             {/* Gestrichelt `sand`: designsprache.md §7.3 — vom Menschen
@@ -65,10 +65,16 @@ export function FriendRequestNotice({
                             <PersonCircle initial={person.initial} />
                             <PersonCircle pending />
                         </div>
-                        <p className="min-w-0 text-[15px] font-semibold">
-                            {person.name}
-                            <span className="ml-1.5 font-normal text-muted-foreground">
-                                fragt dich
+                        {/* Was gefragt wird, steht in der Frage. „Fragt dich"
+                            allein ließ offen, worum es geht — und die Antwort
+                            darauf ist ein Ja oder ein Nein, keine Frage des
+                            Passens. Ob eine Verabredung passt, entscheidet der
+                            Kalender; ob man befreundet sein will, nicht. */}
+                        <p className="min-w-0 text-[15px] leading-snug">
+                            <span className="font-semibold">{person.name}</span>
+                            <span className="text-muted-foreground">
+                                {' '}
+                                will mit dir befreundet sein
                             </span>
                         </p>
                     </div>
@@ -81,14 +87,14 @@ export function FriendRequestNotice({
                             onClick={() => answer(person.id, true)}
                             className="h-11 flex-1 cursor-pointer rounded-xl"
                         >
-                            Passt mir
+                            Ja
                         </Button>
                         <Button
                             variant="outline"
                             onClick={() => answer(person.id, false)}
                             className="h-11 flex-1 cursor-pointer rounded-xl border-primary text-primary"
                         >
-                            Lieber nicht
+                            Nein
                         </Button>
                     </div>
                 </div>
