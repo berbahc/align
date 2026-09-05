@@ -578,7 +578,7 @@ test('releasing a chain lays its followers in a row, not on each other', functio
 
     expect($first->fresh()->scheduled_time->format('H:i'))->toBe('10:00')
         ->and($second->fresh()->chained_to_habit_id)->toBe($first->id)
-        ->and($second->fresh()->startsAt()->format('H:i'))->toBe('10:45');
+        ->and($second->fresh()->startsAt()->format('H:i'))->toBe('10:35');
 });
 
 test('a course in a semester that has not started yet already blocks its slot', function () {

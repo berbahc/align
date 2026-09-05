@@ -37,15 +37,26 @@ function overlapOn(User $user, Carbon $date): ?string
         Timetable::for($user)->blocksOn($date),
     )->occupied();
 
+    // Wer zu wem gehört: Glieder derselben Kette dürfen enger liegen, weil
+    // zwischen ihnen kein Weg und kein Wechsel steht.
+    $chain = $habits->mapWithKeys(fn (Habit $habit): array => [
+        $habit->id => $habit->anchorHabit()?->id ?? $habit->id,
+    ])->all();
+
     foreach ($blocks as $index => $block) {
         foreach (array_slice($blocks, $index + 1) as $other) {
             // Mit der Viertelstunde Luft, die überall gilt: Zwei Blöcke Rücken
             // an Rücken sind zu eng, und ein Weg, der das durchlässt, ist ein
             // Loch in derselben Regel. Nur Kurse untereinander dürfen sich
             // berühren — so legt die Uni sie.
-            $air = Timetable::isCourseBlock($block) && Timetable::isCourseBlock($other)
-                ? 0
-                : DayPlan::BreatherMinutes;
+            $sameChain = isset($chain[$block['id']], $chain[$other['id']])
+                && $chain[$block['id']] === $chain[$other['id']];
+
+            $air = match (true) {
+                Timetable::isCourseBlock($block) && Timetable::isCourseBlock($other) => 0,
+                $sameChain => DayPlan::ChainBreatherMinutes,
+                default => DayPlan::BreatherMinutes,
+            };
 
             if ($block['from'] < $other['to'] + $air && $other['from'] < $block['to'] + $air) {
                 return sprintf(

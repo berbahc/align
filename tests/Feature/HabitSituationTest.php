@@ -386,8 +386,8 @@ test('a chain follows the situation it hangs on', function () {
     $plan = DayPlan::forDate($habits, $monday, $user->sleepWindows());
 
     expect($plan->startOf($anchor))->toBe(9 * 60)
-        // Zwanzig Minuten später plus die Viertelstunde Luft.
-        ->and($plan->startOf($follower))->toBe(9 * 60 + 35);
+        // Zwanzig Minuten später plus das kurze Atemholen der Kette.
+        ->and($plan->startOf($follower))->toBe(9 * 60 + 25);
 
     $blocks = $plan->occupied();
 

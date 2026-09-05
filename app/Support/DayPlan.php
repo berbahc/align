@@ -43,6 +43,15 @@ class DayPlan
     public const int AssumedMinutes = 15;
 
     /**
+     * Die Luft innerhalb einer Kette — kürzer als zwischen zwei Blöcken.
+     *
+     * Wer „danach" plant, ist schon dabei: Er muss nirgends hinkommen und
+     * nichts umschalten, nur weiterlaufen. Die Viertelstunde zwischen zwei
+     * unabhängigen Blöcken ist Weg und Wechsel; hier reicht das Atemholen.
+     */
+    public const int ChainBreatherMinutes = 5;
+
+    /**
      * @param  Collection<int, Habit>  $habits  Die Gewohnheiten, die an diesem Tag anstehen
      * @param  array{weekday: int, wakeTime: string, bedtime: string, alarmEnabled: bool}  $window  Der Rahmen des Tages
      * @param  Carbon|null  $date  Der konkrete Tag — nur mit ihm gelten Tagesverschiebungen

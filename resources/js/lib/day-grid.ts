@@ -58,6 +58,14 @@ export const ASSUMED_MINUTES = 15;
  */
 export const BREATHER_MINUTES = 15;
 
+/**
+ * Und die Luft innerhalb einer Kette — dieselbe wie
+ * `DayPlan::ChainBreatherMinutes`.
+ *
+ * Kürzer, weil man schon dabei ist: kein Weg, kein Wechsel, nur Atemholen.
+ */
+export const CHAIN_BREATHER_MINUTES = 5;
+
 /** Der Ausschnitt des Tages, den das Raster zeigt — volle Stunden. */
 export interface GridBounds {
     /** Minute seit Mitternacht, abgerundet auf die volle Stunde. */
@@ -361,13 +369,13 @@ export function withDrag(
 
             const previous = byId.get(block.chainedToId);
 
-            // „Danach" heißt: nach dem Ende plus der Viertelstunde Luft —
+            // „Danach" heißt: nach dem Ende plus der kurzen Luft der Kette —
             // dieselbe Rechnung wie `Habit::resolveStart()`.
             moved.set(
                 block.id,
                 start +
                     (previous?.durationMinutes ?? ASSUMED_MINUTES) +
-                    BREATHER_MINUTES,
+                    CHAIN_BREATHER_MINUTES,
             );
         }
     }
