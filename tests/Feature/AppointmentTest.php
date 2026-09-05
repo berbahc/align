@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\ScheduleType;
 use App\Models\Appointment;
 use App\Models\Friendship;
 use App\Models\Habit;
@@ -99,7 +100,7 @@ test('someone who switched appointments off cannot be asked', function () {
         ->assertSessionHasErrors('friend_id');
 });
 
-test('only the three offered days are accepted', function (int $offset, bool $allowed) {
+test('a day is accepted as far as the week reaches', function (int $offset, bool $allowed) {
     [$me, $friend, $habit] = pair();
 
     $response = $this->actingAs($me)
@@ -118,7 +119,15 @@ test('only the three offered days are accepted', function (int $offset, bool $al
     'today' => [0, true],
     'tomorrow' => [1, true],
     'the day after' => [2, true],
-    'in three days' => [3, false],
+    // Die Oberfläche stellt drei Tage zur Wahl, zulässig ist die ganze Woche
+    // ({@see Appointment::DayHorizon}). Die beiden Zahlen dürfen nicht
+    // dieselbe sein: „Nochmal ausmachen?" fängt einen Tag später an, und sein
+    // dritter Vorschlag läge sonst jenseits der Prüfung — die Oberfläche böte
+    // einen Tag an, der beim Tippen durchfiele.
+    'in three days' => [3, true],
+    'the far end of the week' => [Appointment::DayHorizon - 1, true],
+    // Und dahinter beginnt das Vorausplanen.
+    'a week out' => [Appointment::DayHorizon, false],
 ]);
 
 test('a habit carries at most one appointment per day', function () {
@@ -274,6 +283,252 @@ test('a request you sent stays visible until it is answered', function () {
                 ->where('iAsked', true)
                 ->etc())
             ->etc());
+});
+
+/**
+ * Die eigene offene Anfrage von heute steht in der Zeile, nicht daneben.
+ *
+ * Vorher stand dieselbe Gewohnheit zweimal auf der Übersicht: einmal unter
+ * „Heutige Gewohnheiten" und zwei Zentimeter darunter noch einmal als Karte
+ * unter „Zusammen". Die Karte sagte nichts, was die Zeile nicht schon sagte.
+ */
+/**
+ * Der Tag in einer Woche heißt nicht wie heute.
+ *
+ * Die Auswahl reicht sieben Tage weit, und der siebte trägt denselben
+ * Wochentagsnamen wie heute. Wer samstags gefragt wurde, las „Samstag" — und
+ * direkt daneben stand eine zweite Anfrage mit „Heute". Zwei Namen für
+ * denselben Wochentag, und keiner sagte, welcher gemeint ist.
+ */
+test('a day one week out is not called like today', function () {
+    $saturday = Carbon::today()->startOfWeek()->addDays(5);
+    Carbon::setTestNow($saturday);
+
+    expect(Appointment::dayLabel($saturday))->toBe('heute')
+        ->and(Appointment::dayLabel($saturday->copy()->addDay()))->toBe('morgen')
+        ->and(Appointment::dayLabel($saturday->copy()->addDays(2)))->toBe('Montag')
+        ->and(Appointment::dayLabel($saturday->copy()->addDays(7)))->toBe('nächsten Samstag');
+
+    Carbon::setTestNow();
+});
+
+/**
+ * Fragt dieselbe Person zweimal, steht ihr Name einmal darüber.
+ *
+ * Die Oberfläche bündelt nur die Kopfzeile — die Fragen bleiben getrennt, denn
+ * es sind verschiedene Gewohnheiten an verschiedenen Tagen. Damit sie sich
+ * bündeln lassen, muss die fragende Person mitreisen; über den Namen ginge es
+ * auch, aber zwei Freunde dürfen gleich heißen.
+ */
+test('every request says who asked, as an id', function () {
+    [$me, $friend, $habit] = pair();
+
+    $second = Habit::factory()->for($me)->create([
+        'title' => 'Vorlesung nachbereiten',
+        'trigger_situation' => 'nach dem Mittagessen',
+    ]);
+
+    foreach ([$habit, $second] as $index => $subject) {
+        Appointment::factory()->create([
+            'habit_id' => $subject->id,
+            'requester_id' => $me->id,
+            'invitee_id' => $friend->id,
+            'scheduled_for' => Carbon::today()->addDays($index),
+        ]);
+    }
+
+    $this->actingAs($friend)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('appointmentRequests', 2, fn (AssertableInertia $row) => $row
+                ->where('requesterId', $me->id)
+                ->etc())
+            ->etc());
+});
+
+/**
+ * Das Nächste steht oben — auch wenn es später angelegt wurde.
+ *
+ * Vorher stand die Reihenfolge der Anlage da: Wer am Montag für nächste Woche
+ * gefragt wurde und am Samstag noch einmal für denselben Tag, las die ferne
+ * Frage zuerst. Heute ist aber die einzige, die keinen Aufschub duldet.
+ */
+test('the nearest request stands first, whatever the order it was made in', function () {
+    [$me, $friend, $habit] = pair();
+
+    $second = Habit::factory()->for($me)->create([
+        'title' => 'Vorlesung nachbereiten',
+        'trigger_situation' => 'nach dem Mittagessen',
+    ]);
+
+    // Zuerst angelegt, aber der fernere Tag.
+    Appointment::factory()->create([
+        'habit_id' => $second->id,
+        'requester_id' => $me->id,
+        'invitee_id' => $friend->id,
+        'scheduled_for' => Carbon::today()->addDays(7),
+    ]);
+
+    // Danach angelegt, aber heute.
+    Appointment::factory()->create([
+        'habit_id' => $habit->id,
+        'requester_id' => $me->id,
+        'invitee_id' => $friend->id,
+        'scheduled_for' => Carbon::today(),
+    ]);
+
+    $this->actingAs($friend)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('appointmentRequests', 2)
+            ->where('appointmentRequests.0.title', 'Laufen gehen')
+            ->where('appointmentRequests.0.day', 'heute')
+            ->where('appointmentRequests.1.title', 'Vorlesung nachbereiten')
+            ->etc());
+});
+
+/**
+ * Die Wochentage des Fragers gehen die gefragte Person nichts an.
+ *
+ * Eine Verabredung gilt für **einen** Tag, und der steht daneben („heute").
+ * „17:00 · Mo, Mi" daneben las sich wie eine Verpflichtung für Montag und
+ * Mittwoch — es ist aber nur der Rhythmus der anderen Person. Was bleibt, ist
+ * der Moment im Tag: die Uhrzeit oder die Situation. Der eigene Rhythmus
+ * entsteht erst beim Übernehmen, und den wählt man dort selbst.
+ */
+test('an appointment names the moment, never the other persons weekdays', function () {
+    $me = User::factory()->create(['name' => 'Berkay']);
+    $friend = User::factory()->create(['name' => 'Silas']);
+
+    Friendship::factory()->accepted()->create([
+        'requester_id' => $me->id,
+        'addressee_id' => $friend->id,
+    ]);
+
+    $habit = Habit::factory()->for($me)
+        ->fixedSchedule('17:00', [1, 3])
+        ->create(['title' => 'Fokussiert lernen']);
+
+    // Die Gewohnheit selbst nennt ihre Tage weiterhin — dort gehören sie hin.
+    expect($habit->scheduleLabel())->toBe('17:00 · Mo, Mi')
+        ->and($habit->momentLabel())->toBe('17:00');
+
+    $appointment = Appointment::factory()->create([
+        'habit_id' => $habit->id,
+        'requester_id' => $me->id,
+        'invitee_id' => $friend->id,
+        'scheduled_for' => Carbon::today(),
+    ]);
+
+    // Die offene Anfrage bei der gefragten Person …
+    $this->actingAs($friend)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('appointmentRequests.0.anchor', '17:00')
+            ->etc());
+
+    // … und dieselbe Verabredung, nachdem sie zugesagt hat. Nicht über
+    // `update()`: `accepted_at` steht bewusst nicht in `#[Fillable]`, und die
+    // Zusage liefe still ins Leere.
+    $appointment->accepted_at = now();
+    $appointment->save();
+
+    $this->actingAs($friend)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('upcomingAppointments.0.anchor', '17:00')
+            ->etc());
+});
+
+/** Eine Situation ist der Moment — sie bleibt unverändert stehen. */
+test('a situational habit keeps its situation as the moment', function () {
+    $habit = Habit::factory()->make([
+        'trigger_situation' => 'nach der Vorlesung',
+    ]);
+
+    expect($habit->momentLabel())->toBe('nach der Vorlesung');
+});
+
+test('an open request you sent for today merges into the habit row', function () {
+    [$me, $friend, $habit] = pair();
+
+    Appointment::factory()->create([
+        'habit_id' => $habit->id,
+        'requester_id' => $me->id,
+        'invitee_id' => $friend->id,
+        'scheduled_for' => Carbon::today(),
+    ]);
+
+    $this->actingAs($me)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('habits', 1, fn (AssertableInertia $row) => $row
+                ->where('companion.name', 'Silas')
+                ->where('companion.initial', 'S')
+                // Gefragt, nicht zugesagt — die Zeile zeichnet daraus einen
+                // gestrichelten zweiten Kreis ohne Initiale.
+                ->where('companion.pending', true)
+                ->etc())
+            // Und keine zweite Nennung darunter.
+            ->has('upcomingAppointments', 0)
+            ->etc());
+});
+
+test('an accepted appointment for today says so in the row', function () {
+    [$me, $friend, $habit] = pair();
+
+    Appointment::factory()->accepted()->create([
+        'habit_id' => $habit->id,
+        'requester_id' => $me->id,
+        'invitee_id' => $friend->id,
+        'scheduled_for' => Carbon::today(),
+    ]);
+
+    $this->actingAs($me)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('habits', 1, fn (AssertableInertia $row) => $row
+                ->where('companion.pending', false)
+                ->etc())
+            ->etc());
+});
+
+/**
+ * Die Grenze der Zusammenführung: Ohne Zeile kein Platz, in dem etwas stehen
+ * könnte.
+ *
+ * Eine Mo–Fr-Gewohnheit steht am Samstag in keiner Tagesliste. Verschwände die
+ * Verabredung trotzdem aus „Zusammen", wäre sie nirgends mehr — genau die
+ * Lücke, die das Zusammenführen schließen sollte.
+ */
+test('a request for a habit that is not due today keeps its own card', function () {
+    // Ein fester Samstag, damit der Test nicht vom Wochentag des Laufs abhängt.
+    $saturday = Carbon::today()->startOfWeek()->addDays(5);
+    Carbon::setTestNow($saturday);
+
+    [$me, $friend, $habit] = pair();
+    $habit->update([
+        'schedule_type' => ScheduleType::Fixed,
+        'trigger_situation' => null,
+        'scheduled_time' => '17:00',
+        'scheduled_days' => [1, 2, 3, 4, 5],
+    ]);
+
+    Appointment::factory()->create([
+        'habit_id' => $habit->id,
+        'requester_id' => $me->id,
+        'invitee_id' => $friend->id,
+        'scheduled_for' => $saturday,
+    ]);
+
+    $this->actingAs($me)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('habits', 0)
+            ->has('upcomingAppointments', 1)
+            ->etc());
+
+    Carbon::setTestNow();
 });
 
 test('an accepted appointment for tomorrow is visible on both sides today', function () {

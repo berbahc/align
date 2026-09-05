@@ -90,6 +90,59 @@ test('adopting a habit creates an own one with the chosen days', function () {
         ->and($adopted->completions()->count())->toBe(0);
 });
 
+/**
+ * Die andere Hälfte der Anforderung: Wer übernimmt, sieht die Gewohnheit
+ * danach so oft im Kalender, wie er selbst gewählt hat.
+ *
+ * Die Verabredung gilt für einen einzigen Tag ({@see CalendarAppointmentTest}).
+ * Wer sie dauerhaft will, übernimmt — und dann ist es eine ganz gewöhnliche
+ * eigene Gewohnheit mit eigenem Rhythmus. Der Test hält fest, dass zwischen
+ * „übernehmen" und „steht im Kalender" nichts verlorengeht.
+ */
+test('an adopted habit stands in the calendar on every day that was chosen', function () {
+    [, $guest, $habit] = invitation();
+
+    $this->actingAs($guest)
+        ->post(route('habits.adoptions.store'), [
+            'template_key' => $habit->template()?->value,
+            'target_amount' => 30,
+            'schedule_type' => ScheduleType::Fixed->value,
+            'scheduled_time' => '18:30',
+            // Dienstag und Donnerstag — der eigene Rhythmus, nicht der fremde.
+            'scheduled_days' => [2, 4],
+        ])
+        ->assertRedirect();
+
+    // Die nächste Woche: Vor dem Anlegen stand die Gewohnheit an keinem Tag,
+    // und eine angebrochene Woche träfe je nach Laufzeitpunkt anders.
+    $monday = Carbon::today()->startOfWeek()->addWeek();
+
+    foreach ([1 => false, 2 => true, 3 => false, 4 => true, 5 => false] as $weekday => $due) {
+        $day = $monday->copy()->addDays($weekday - 1);
+
+        $this->actingAs($guest)
+            ->get(route('calendar.day', $day->toDateString()))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->has('blocks', $due ? 1 : 0)
+                ->etc()
+            );
+    }
+
+    // Und derselbe Rhythmus im Monat: zwei Tage der Woche, nicht fünf.
+    $this->actingAs($guest)
+        ->get(route('calendar', ['month' => $monday->format('Y-m')]))
+        ->assertInertia(function (AssertableInertia $page) use ($monday) {
+            $days = collect($page->toArray()['props']['days'])
+                ->keyBy('date');
+
+            foreach ([1 => 0, 2 => 1, 3 => 0, 4 => 1, 5 => 0] as $weekday => $planned) {
+                $date = $monday->copy()->addDays($weekday - 1)->toDateString();
+
+                expect($days[$date]['planned'])->toBe($planned);
+            }
+        });
+});
+
 test('the reason and the first step stay with the person who wrote them', function () {
     [, $guest, $habit] = invitation();
 

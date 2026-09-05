@@ -1,4 +1,4 @@
-import type { HabitBlueprint } from './habit';
+import type { BehaviorType, HabitBlueprint } from './habit';
 
 /**
  * Eine Person, wie sie im Community-Bereich erscheint.
@@ -35,6 +35,12 @@ export type AppointmentDay = {
  */
 export type AppointmentRequest = {
     id: number;
+    /**
+     * Wer fragt — als Kennung, damit sich mehrere Fragen derselben Person
+     * unter einer Kopfzeile bündeln lassen. Über den Namen ginge das auch,
+     * aber zwei Freunde dürfen gleich heißen.
+     */
+    requesterId: number;
     name: string;
     initial: string;
     title: string;
@@ -119,4 +125,70 @@ export type UpcomingAppointment = {
     accepted: boolean;
     /** Wahr, wenn die Anfrage von einem selbst kam. */
     iAsked: boolean;
+    /**
+     * Der **eigene** Haken — null auf der fragenden Seite.
+     *
+     * Wer selbst gefragt hat, hakt seine eigene Gewohnheit ab; für ihn gibt
+     * es hier nichts. Und was die andere Person getan hat, steht bewusst
+     * nirgends: Das wäre der Dauerstatus, den community_feature3.md §6
+     * ausschließt.
+     */
+    completed: boolean | null;
+    /** Nur am Tag selbst und im Nachtragefenster danach. */
+    canComplete: boolean;
+    /**
+     * Die **eigene** Gewohnheit, auf der sich das wiederholen ließe.
+     *
+     * Null heißt: nichts zu wiederholen — entweder ist der eigene Anteil noch
+     * offen, oder man führt die Gewohnheit gar nicht. Wer gefragt wurde und
+     * nicht übernommen hat, wird gefragt, statt zu fragen.
+     *
+     * Sagt nichts über die andere Person: Es ist die eigene Gewohnheit mit
+     * ihren eigenen Tagen (community_feature3.md §6).
+     */
+    repeatHabitId: number | null;
+    /** Die Tage, an denen genau diese Gewohnheit als Nächstes ansteht. */
+    repeatDays: AppointmentDay[];
+};
+
+/**
+ * Eine zugesagte Verabredung an ihrer Stelle im Tag — die Kalenderansicht.
+ *
+ * Die Gewohnheit gehört jemand anderem. Sie liegt im Raster wie eine eigene,
+ * lässt sich aber weder abhaken noch ziehen noch anpassen — wie ein Kurs, und
+ * aus demselben Grund: Sie ist kein eigener Vorsatz.
+ *
+ * Bewusst ohne Fortschritt der anderen Person (community_feature3.md §6): Der
+ * Block sagt, dass etwas gemeinsam ansteht, nicht wie es läuft.
+ */
+export type AppointmentBlock = {
+    /** Unterscheidet sie im Raster von Gewohnheit und Kurs. */
+    kind: 'appointment';
+    /** Die Kennung der Verabredung — nicht die der fremden Gewohnheit. */
+    id: number;
+    habitId: number;
+    title: string;
+    /** Der Anker der fremden Gewohnheit: „nach dem Aufstehen". */
+    anchor: string;
+    /** Die fragende Person. */
+    name: string;
+    initial: string;
+    /** Wo der Block im Stundenraster liegt, als Minute seit Mitternacht. */
+    startMinute: number;
+    durationMinutes: number | null;
+    /** Ist die Stelle eine Uhrzeit oder nur eine Näherung? */
+    exact: boolean;
+    /** „17:00 – 17:20", wo es eine echte Spanne gibt. */
+    timeRange: string | null;
+    behaviorType: BehaviorType;
+    /**
+     * Der **eigene** Haken an dieser Zusage.
+     *
+     * Er hängt an der Verabredung, nicht an der fremden Gewohnheit: Wer
+     * gefragt wurde, führt sie nicht, und ein Haken dort meldete die
+     * Erfüllung der anderen Person.
+     */
+    completed: boolean;
+    /** Nur am Tag selbst und im Nachtragefenster danach. */
+    canComplete: boolean;
 };

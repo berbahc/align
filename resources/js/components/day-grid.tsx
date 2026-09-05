@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react';
 import { Moon, Sun } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { AppointmentBlock } from '@/components/appointment-block';
 import { CalendarBlock } from '@/components/calendar-block';
 import { CourseBlock } from '@/components/course-block';
 import { useBlockDrag } from '@/hooks/use-block-drag';
@@ -17,7 +18,11 @@ import {
 } from '@/lib/day-grid';
 import { cn } from '@/lib/utils';
 import { show as sleepShow } from '@/routes/sleep';
-import type { CalendarBlock as Block, CourseBlock as Course } from '@/types';
+import type {
+    AppointmentBlock as Appointment,
+    CalendarBlock as Block,
+    CourseBlock as Course,
+} from '@/types';
 
 /** Die Breite der Stundenspalte links — „07:00" plus Luft. */
 const GUTTER = 'calc(var(--spacing) * 13)';
@@ -39,6 +44,8 @@ const GUTTER = 'calc(var(--spacing) * 13)';
 export function DayGrid({
     blocks,
     courseBlocks,
+    appointmentBlocks,
+    selfInitial,
     frameFrom,
     frameTo,
     wakeTime,
@@ -49,12 +56,22 @@ export function DayGrid({
     onToggle,
     onOpen,
     onOpenCourse,
+    onToggleAppointment,
     onDrop,
     ghost,
 }: {
     blocks: Block[];
     /** Was der Stundenplan an diesem Tag belegt — liegt fest, reagiert nicht. */
     courseBlocks: Course[];
+    /**
+     * Fremde Gewohnheiten, für diesen Tag zugesagt.
+     *
+     * Wie ein Kurs: Sie liegen fest, lassen sich nicht abhaken und nicht
+     * ziehen. Die Gewohnheit gehört jemand anderem.
+     */
+    appointmentBlocks: Appointment[];
+    /** Die eigene Initiale — für das Doppel-Zeichen der Verabredung. */
+    selfInitial: string;
     frameFrom: number;
     frameTo: number;
     wakeTime: string;
@@ -67,6 +84,8 @@ export function DayGrid({
     onOpen: (block: Block) => void;
     /** Ein Kurs wurde angetippt — seine Handlungen liegen im Sheet dahinter. */
     onOpenCourse: (block: Course) => void;
+    /** Den eigenen Haken an einer zugesagten Verabredung umlegen. */
+    onToggleAppointment: (block: Appointment) => void;
     /** Ein Block wurde losgelassen — jetzt kommt die Frage nach der Reichweite. */
     onDrop: (drag: BlockDrag) => void;
     /** Der Vorschlag der KI: sein Block, und wessen Platz er vorwegnimmt. */
@@ -82,6 +101,7 @@ export function DayGrid({
     const bounds = boundsFor(frameFrom, frameTo, [
         ...blocks,
         ...courseBlocks,
+        ...appointmentBlocks,
         ...(ghost ? [ghost.block] : []),
     ]);
 
@@ -127,7 +147,11 @@ export function DayGrid({
     // `frameTo` als Grenze: Ein kurzer Block, der auf die Mindesthöhe wächst,
     // soll nicht über die Schlafenszeit ragen, an der er enden sollte.
     const placed = placeBlocks<GridBlock>(
-        [...(ghost ? [...resting, ghost.block] : resting), ...courseBlocks],
+        [
+            ...(ghost ? [...resting, ghost.block] : resting),
+            ...courseBlocks,
+            ...appointmentBlocks,
+        ],
         bounds,
         frameTo,
     );
@@ -144,7 +168,13 @@ export function DayGrid({
     // bevor man loslässt. Ein Kurs rückt nicht; das soll man sehen, nicht
     // erst im Pop-up lesen.
     const blockedBy = drag.drag
-        ? collisionOf(blocks, courseBlocks, drag.drag.id, drag.drag.minute)
+        ? collisionOf(
+              blocks,
+              courseBlocks,
+              appointmentBlocks,
+              drag.drag.id,
+              drag.drag.minute,
+          )
         : null;
 
     // Was gar keine Stelle im Tag hat, verschwindet nicht — es steht unter dem
@@ -217,21 +247,32 @@ export function DayGrid({
                     className="absolute inset-y-0 right-0"
                     style={{ left: GUTTER }}
                 >
+                    {/* Der Schlüssel trägt die Art mit: Eine Verabredung
+                        führt ihre eigene Kennung, und die kann dieselbe Zahl
+                        sein wie die einer Gewohnheit. */}
                     {entries.map((entry) =>
                         entry.block.kind === 'course' ? (
                             <CourseBlock
-                                key={entry.block.id}
+                                key={`course-${entry.block.id}`}
                                 placed={{ ...entry, block: entry.block }}
                                 onOpen={onOpenCourse}
+                            />
+                        ) : entry.block.kind === 'appointment' ? (
+                            <AppointmentBlock
+                                key={`appointment-${entry.block.id}`}
+                                placed={{ ...entry, block: entry.block }}
+                                selfInitial={selfInitial}
+                                onToggle={onToggleAppointment}
                             />
                         ) : (
                             <CalendarBlock
                                 placed={{ ...entry, block: entry.block }}
+                                selfInitial={selfInitial}
                                 key={
                                     entry.block.id === ghost?.block.id &&
                                     entry.block === ghost.block
-                                        ? `${entry.block.id}-ghost`
-                                        : entry.block.id
+                                        ? `habit-${entry.block.id}-ghost`
+                                        : `habit-${entry.block.id}`
                                 }
                                 canComplete={canComplete}
                                 onToggle={onToggle}
@@ -286,9 +327,9 @@ export function DayGrid({
                         />
                         {blockedBy !== null && (
                             <span className="shrink-0 rounded-full bg-foreground px-2 py-0.5 text-[11px] leading-none font-semibold text-background">
-                                {blockedBy.kind === 'course'
-                                    ? `nicht während „${blockedBy.title}"`
-                                    : `dort liegt „${blockedBy.title}"`}
+                                {blockedBy.kind === 'habit'
+                                    ? `dort liegt „${blockedBy.title}"`
+                                    : `nicht während „${blockedBy.title}"`}
                             </span>
                         )}
                     </div>
@@ -314,15 +355,17 @@ export function DayGrid({
                     </div>
                 )}
 
-                {blocks.length === 0 && courseBlocks.length === 0 && (
-                    /* §1.5 — benannt wird, was gilt, nicht was fehlt. */
-                    <p
-                        className="absolute inset-x-0 top-6 text-center text-sm leading-relaxed text-muted-foreground"
-                        style={{ paddingLeft: GUTTER }}
-                    >
-                        Für diesen Tag war nichts vorgesehen.
-                    </p>
-                )}
+                {blocks.length === 0 &&
+                    courseBlocks.length === 0 &&
+                    appointmentBlocks.length === 0 && (
+                        /* §1.5 — benannt wird, was gilt, nicht was fehlt. */
+                        <p
+                            className="absolute inset-x-0 top-6 text-center text-sm leading-relaxed text-muted-foreground"
+                            style={{ paddingLeft: GUTTER }}
+                        >
+                            Für diesen Tag war nichts vorgesehen.
+                        </p>
+                    )}
             </div>
 
             {/* Was im Tag keine Stelle hat: die verdrängten, und die seltene

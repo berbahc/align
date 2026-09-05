@@ -381,3 +381,199 @@
         text-transform: uppercase;
     }
 }
+
+/*
+ * Das Maskottchen der KI.
+ *
+ * Die erste eigene Bewegung dieser Datei — alles andere ist ein Übergang, hier
+ * läuft etwas von selbst. Deshalb steht sie geschlossen an einer Stelle und
+ * nicht verteilt in den Komponenten.
+ *
+ * Sie greift ausschließlich auf die Tokens oben zu: `--ease-fluid` ist die
+ * kritisch gedämpfte Grundbewegung und trägt das Atmen, `--ease-pop` ist die
+ * eine Feder im System (bisher genau einmal benutzt, beim Abhaken) und darf
+ * deshalb nur das Antworten tragen. Ein Vorschlag rastet ein wie ein Haken;
+ * alles andere schwingt nicht.
+ *
+ * **Der ganze Block steht unter `prefers-reduced-motion: no-preference`.** Was
+ * hier fehlt, wenn jemand Bewegung abstellt, ist nur die Bewegung: Neigung,
+ * Blickrichtung und Augenform stehen in den Zustandsklassen darunter und
+ * gelten immer. Ein Zustand, den man nur an einer Animation erkennt, ist für
+ * einen Teil der Nutzer kein Zustand.
+ */
+@layer components {
+    .mascot {
+        /* Alles dreht und atmet um die Mitte, nicht um die linke obere Ecke. */
+        transform-origin: 50% 50%;
+        overflow: visible;
+    }
+
+    .mascot-rays,
+    .mascot-body {
+        transform-origin: 50% 50%;
+        transform-box: view-box;
+    }
+
+    /*
+     * Die Augen drehen sich um ihre eigene Linie, nicht um die Bildmitte:
+     * Ein Lid, das um 50 % zusammenfährt, schöbe die Augen sonst beim
+     * Blinzeln nach unten weg. 10.8 von 24 — die Höhe, auf der sie liegen.
+     */
+    .mascot-eyes {
+        transform-origin: 50% 45%;
+        transform-box: view-box;
+    }
+
+    /* Die Striche gelten nur im Fehlzustand, die Punkte überall sonst. */
+    .mascot-dash {
+        display: none;
+    }
+
+    .mascot-stumped .mascot-eye {
+        display: none;
+    }
+
+    .mascot-stumped .mascot-dash {
+        display: initial;
+    }
+
+    /*
+     * Kommt gerade nicht durch: der Kranz fällt in sich zusammen und die
+     * Figur neigt sich. Kein Rot, kein Ausrufezeichen — die Haltung sagt
+     * „gerade nicht", nicht „schiefgelaufen".
+     */
+    .mascot-stumped {
+        transform: rotate(-12deg);
+    }
+
+    .mascot-stumped .mascot-rays {
+        opacity: 0.18;
+        transform: scale(0.7);
+    }
+
+    /* Beim Überlegen wandert der Blick zur Seite — auch im Stillstand. */
+    .mascot-thinking .mascot-eyes {
+        transform: translateX(0.9px);
+    }
+
+    /*
+     * Und beim Antworten leuchtet der Kranz auf. Er ist der einzige
+     * Unterschied zwischen „Ruhe" und „Antwortet", der ohne Bewegung
+     * bestehen bleibt — ohne ihn wären die beiden Zustände für jeden, der
+     * Bewegung abgestellt hat, dasselbe Bild.
+     */
+    .mascot-speaking .mascot-rays {
+        opacity: 0.75;
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+        /*
+         * Ruhe: die Figur atmet. Vier Sekunden, damit sie im Augenwinkel
+         * bleibt — schneller wäre ein Pulsieren, und das liest sich als
+         * Warnung.
+         */
+        .mascot-idle .mascot-body {
+            animation: mascot-breathe 4s var(--ease-fluid) infinite;
+        }
+
+        .mascot-idle .mascot-rays {
+            animation: mascot-breathe 4s var(--ease-fluid) infinite;
+            animation-delay: 0.35s;
+        }
+
+        /*
+         * Überlegen: der Kranz dreht sich, der Körper bleibt stehen. Linear
+         * und langsam — eine beschleunigende Drehung wirkte angestrengt, und
+         * angestrengt soll hier nichts wirken.
+         */
+        .mascot-thinking .mascot-rays {
+            animation: mascot-turn 12s linear infinite;
+        }
+
+        .mascot-thinking .mascot-eyes {
+            animation: mascot-glance 3s var(--ease-fluid) infinite;
+        }
+
+        /*
+         * Antworten: ein einziger Hüpfer auf der Feder. Er läuft genau einmal
+         * — eine Antwort, die dauernd hüpfte, wäre ein Zappeln.
+         */
+        .mascot-speaking .mascot-body {
+            animation: mascot-pop var(--duration-pop) var(--ease-pop) 1;
+        }
+
+        .mascot-speaking .mascot-rays {
+            animation: mascot-pop var(--duration-pop) var(--ease-pop) 1;
+            animation-delay: 60ms;
+        }
+
+        /* Und danach blinzelt sie weiter, wie im Ruhezustand. */
+        .mascot-idle .mascot-eyes,
+        .mascot-speaking .mascot-eyes {
+            /*
+             * Linear, nicht auf der Grundkurve: Ein Lid beschleunigt nicht,
+             * es fällt und geht wieder hoch. Mit `--ease-fluid` verschmierten
+             * die beiden Enden, und die Augen standen einen Wimpernschlag zu
+             * lange halb offen — das sah müde aus statt wach.
+             */
+            animation: mascot-blink 3.2s linear infinite;
+        }
+    }
+
+    @keyframes mascot-breathe {
+        0%,
+        100% {
+            transform: scale(1);
+        }
+        50% {
+            transform: scale(1.06);
+        }
+    }
+
+    @keyframes mascot-turn {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    @keyframes mascot-pop {
+        0% {
+            transform: scale(0.9);
+        }
+        100% {
+            transform: scale(1);
+        }
+    }
+
+    /*
+     * Blinzeln: Fast die ganze Zeit passiert nichts. Das Lid fällt und geht
+     * sofort wieder hoch — deshalb liegen die Bilder so dicht beieinander.
+     *
+     * Alle 3,2 Sekunden, also etwa neunzehnmal in der Minute — die Frequenz
+     * eines ruhig blickenden Menschen. Der Schlag selbst dauert vier Prozent
+     * davon, rund 130 Millisekunden: kürzer, und man sähe ihn nicht mehr;
+     * länger, und die Figur wirkte schläfrig.
+     */
+    @keyframes mascot-blink {
+        0%,
+        94%,
+        98%,
+        100% {
+            transform: scaleY(1);
+        }
+        96% {
+            transform: scaleY(0.08);
+        }
+    }
+
+    /* Der wandernde Blick: zur Seite und zurück, nie ganz still. */
+    @keyframes mascot-glance {
+        0%,
+        100% {
+            transform: translateX(0.9px);
+        }
+        50% {
+            transform: translateX(-0.9px);
+        }
+    }
+}

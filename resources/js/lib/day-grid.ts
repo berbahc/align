@@ -1,4 +1,4 @@
-import type { CalendarBlock, CourseBlock } from '@/types';
+import type { AppointmentBlock, CalendarBlock, CourseBlock } from '@/types';
 
 /**
  * Die Rechnung hinter dem Stundenraster — getrennt von seiner Zeichnung.
@@ -80,11 +80,16 @@ export interface GridBounds {
  * Alles, was das Raster tragen kann.
  *
  * Unterschieden über `kind`: Eine Gewohnheit lässt sich abhaken und ziehen,
- * ein Kurs nicht. Beide brauchen aber dieselbe Spaltenverteilung — läge eine
- * Gewohnheit auf einer Vorlesung, müssten sie sich die Breite teilen wie zwei
+ * ein Kurs nicht, eine Verabredung ebenso wenig — sie gehört jemand anderem.
+ * Alle drei brauchen aber dieselbe Spaltenverteilung — läge eine Gewohnheit
+ * auf einer Vorlesung, müssten sie sich die Breite teilen wie zwei
  * Gewohnheiten auch.
+ *
+ * Die Kennungen überschneiden sich zwischen den Arten: Eine Verabredung trägt
+ * ihre eigene, und die kann dieselbe Zahl sein wie die einer Gewohnheit. Wer
+ * einen Block wiedererkennen muss, nimmt deshalb `kind` dazu.
  */
-export type GridBlock = CalendarBlock | CourseBlock;
+export type GridBlock = CalendarBlock | CourseBlock | AppointmentBlock;
 
 /**
  * Das Wenigste, was ein Block zum Platzieren mitbringen muss.
@@ -414,7 +419,7 @@ export function followersOf(
 /** Was im Weg liegt: sein Titel und ob es sich überhaupt bewegen lässt. */
 export interface BlockConflict {
     title: string;
-    kind: 'habit' | 'course';
+    kind: 'habit' | 'course' | 'appointment';
     /** Wo das Hindernis liegt — für den Satz, bis wann und ab wann Platz ist. */
     from: number;
     to: number;
@@ -429,11 +434,13 @@ export interface BlockConflict {
  * Rundweg über den Server.
  *
  * Die Art kommt mit, weil sie den Ausweg bestimmt: Eine Gewohnheit lässt sich
- * verschieben, eine Vorlesung nicht — sie kommt von der Uni.
+ * verschieben, eine Vorlesung nicht — sie kommt von der Uni. Eine Verabredung
+ * auch nicht: Sie ist zugesagt, und die Zeit gehört der anderen Person.
  */
 export function collisionOf(
     blocks: CalendarBlock[],
     courses: CourseBlock[],
+    appointments: AppointmentBlock[],
     draggedId: number,
     minute: number,
 ): BlockConflict | null {
@@ -456,6 +463,7 @@ export function collisionOf(
             (block) => !moving.some((other) => other.id === block.id),
         ),
         ...courses,
+        ...appointments,
     ];
 
     for (const block of moving) {

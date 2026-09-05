@@ -6,6 +6,7 @@ import { AppointmentRequestNotice } from '@/components/appointment-request-notic
 import { AppointmentSheet } from '@/components/appointment-sheet';
 import { FriendRequestNotice } from '@/components/friend-request-notice';
 import { HabitRow } from '@/components/habit-row';
+import { SectionHeading } from '@/components/section-heading';
 import { SleepCard } from '@/components/sleep-card';
 import type { SleepCardData } from '@/components/sleep-card';
 import { StartingHelpSheet } from '@/components/starting-help-sheet';
@@ -17,6 +18,7 @@ import { useCountedNumber } from '@/hooks/use-counted-number';
 import { OUTLINE_BUTTON, PRIMARY_BUTTON, QUIET_LINK } from '@/lib/interaction';
 import { dashboard } from '@/routes';
 import { destroy as dismissNotice } from '@/routes/appointment-notices';
+import { destroy as dissolve } from '@/routes/appointments';
 import { create, index as habitsIndex } from '@/routes/habits';
 import { destroy, store } from '@/routes/habits/completions';
 import type {
@@ -93,6 +95,19 @@ export default function Dashboard({
     // Welche Gewohnheit gerade im Verabredungs-Sheet steht; null heißt zu.
     const [askingFor, setAskingFor] = useState<Habit | null>(null);
 
+    /**
+     * Die Wiederholung: dieselbe Person, eine neue Frage — §7.
+     *
+     * Getrennt vom Fall oben, weil zwei Dinge anders sind: Die Person ist
+     * vorgewählt, und die Tage kommen aus der Gewohnheit, auf der wiederholt
+     * wird — bei der gefragten Seite ist das die übernommene, nicht die
+     * fremde, auf der die alte Verabredung hing.
+     */
+    const [repeating, setRepeating] = useState<{
+        habit: Habit;
+        friendId: number;
+    } | null>(null);
+
     // Die Zeile, auf die eine Absage gerade verwiesen hat.
     const [highlighted, setHighlighted] = useState<number | null>(null);
     const fadeHighlight = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -150,6 +165,83 @@ export default function Dashboard({
                 );
             },
         });
+    }
+
+    /**
+     * Die Verabredung dieser Zeile auflösen.
+     *
+     * Zurückziehen und Absagen sind derselbe Weg — beides löscht den Eintrag
+     * und hinterlässt keine Notiz. Er steht jetzt in der Zeile, weil die
+     * Verabredung dort steht: Eine eigene Karte darunter sagte zweimal
+     * dasselbe.
+     */
+    function withdraw(habit: Habit) {
+        if (habit.appointmentId === null) {
+            return;
+        }
+
+        router.delete(dissolve.url(habit.appointmentId), {
+            preserveScroll: true,
+        });
+    }
+
+    /**
+     * „Nochmal ausmachen?" aus der erledigten Zeile.
+     *
+     * Die Zeile trägt die Gewohnheit schon; sie ist auch die, auf der
+     * wiederholt wird, denn sie gehört einem selbst.
+     */
+    function repeatFromRow(habit: Habit) {
+        if (
+            habit.companion === null ||
+            habit.companion.repeatHabitId === null
+        ) {
+            return;
+        }
+
+        setRepeating({
+            habit: {
+                ...habit,
+                appointmentDays: habit.companion.repeatDays,
+            },
+            friendId: friendIdOf(habit.companion.name),
+        });
+    }
+
+    /**
+     * Dasselbe aus der Karte unter „Zusammen".
+     *
+     * Hier gehört die alte Verabredung einer fremden Gewohnheit — wiederholt
+     * wird auf der eigenen, die der Server als `repeatHabitId` nennt.
+     */
+    function repeatFromCard(appointment: UpcomingAppointment) {
+        if (appointment.repeatHabitId === null) {
+            return;
+        }
+
+        const own = habits.find(
+            (candidate) => candidate.id === appointment.repeatHabitId,
+        );
+
+        if (own === undefined) {
+            return;
+        }
+
+        setRepeating({
+            habit: { ...own, appointmentDays: appointment.repeatDays },
+            friendId: friendIdOf(appointment.name),
+        });
+    }
+
+    /**
+     * Die Kennung zum Namen aus dem eigenen Kreis.
+     *
+     * Die Verabredung trägt Name und Initiale, das Sheet wählt über die
+     * Kennung. Findet sich niemand, bleibt die Vorwahl leer — dann ist es
+     * derselbe Weg wie beim ersten Mal, nur ohne Abkürzung.
+     */
+    function friendIdOf(name: string): number {
+        return friends.find((friend) => friend.name === name)?.id ?? 0;
     }
 
     function toggle(habit: Habit) {
@@ -295,27 +387,35 @@ export default function Dashboard({
                 {streak !== null && <StreakCard streak={streak} />}
 
                 <section aria-labelledby="heutige-gewohnheiten">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                        <h2
-                            id="heutige-gewohnheiten"
-                            className="type-subheading"
-                        >
-                            Heutige Gewohnheiten
-                        </h2>
-
-                        {/* §5.6 Outline-Variante: transparent, 1px primary.
-                            Entfällt im leeren Zustand — dort steht schon der
-                            gefüllte Knopf, und zwei Wege zum selben Ziel
-                            lassen den Nutzer wählen, wo es nichts zu wählen
-                            gibt. Ab fünf Gewohnheiten entfällt er ebenfalls,
-                            weil das Anlegen dann ohnehin abgewiesen würde. */}
-                        {activeCount > 0 && activeCount < maxActive && (
-                            <Link href={create()} className={OUTLINE_BUTTON}>
-                                <Plus className="size-4" aria-hidden="true" />
-                                Neu hinzufügen
-                            </Link>
-                        )}
-                    </div>
+                    {/* Die Zeile unter dem Titel erklärt die Uhrspalte links:
+                        Die Liste ist keine Sammlung, sie ist der Verlauf des
+                        Tages. Ohne diesen Satz sah man die Sortierung, ohne
+                        sie zu erkennen. */}
+                    <SectionHeading
+                        id="heutige-gewohnheiten"
+                        title="Heutige Gewohnheiten"
+                        hint="Was heute ansteht, von früh nach spät."
+                        action={
+                            /* §5.6 Outline-Variante: transparent, 1px primary.
+                               Entfällt im leeren Zustand — dort steht schon der
+                               gefüllte Knopf, und zwei Wege zum selben Ziel
+                               lassen den Nutzer wählen, wo es nichts zu wählen
+                               gibt. Ab fünf Gewohnheiten entfällt er ebenfalls,
+                               weil das Anlegen dann ohnehin abgewiesen würde. */
+                            activeCount > 0 && activeCount < maxActive ? (
+                                <Link
+                                    href={create()}
+                                    className={OUTLINE_BUTTON}
+                                >
+                                    <Plus
+                                        className="size-4"
+                                        aria-hidden="true"
+                                    />
+                                    Neu hinzufügen
+                                </Link>
+                            ) : undefined
+                        }
+                    />
 
                     {/* Flach: die Arbeitsfläche des Tages, nicht seine
                         Kopfzeile. Der Unterschied zur Tageskarte ist die
@@ -324,7 +424,7 @@ export default function Dashboard({
                         <CardContent className="px-5">
                             {habits.length > 0 ? (
                                 // §5.1 — keine Trennlinien, Struktur über Abstand.
-                                <ul className="flex flex-col gap-5">
+                                <ul className="flex flex-col gap-6">
                                     {habits.map((habit) => (
                                         <HabitRow
                                             key={habit.id}
@@ -337,6 +437,8 @@ export default function Dashboard({
                                                     ? setAskingFor
                                                     : null
                                             }
+                                            onWithdraw={withdraw}
+                                            onRepeat={repeatFromRow}
                                             highlighted={
                                                 highlighted === habit.id
                                             }
@@ -388,6 +490,7 @@ export default function Dashboard({
                 <UpcomingAppointments
                     appointments={upcomingAppointments}
                     selfInitial={selfInitial}
+                    onRepeat={repeatFromCard}
                 />
 
                 {/* Ganz unten, wo der Tag endet: Der Rahmen ist der ruhigste
@@ -401,11 +504,24 @@ export default function Dashboard({
                 onOpenChange={(open) => !open && setStuckOn(null)}
             />
 
+            {/* Ein Sheet für zwei Wege: neu fragen und nochmal fragen. Der
+                Unterschied ist nur die Vorwahl — derselbe Weg, dieselben drei
+                Taps, und die Entscheidung bleibt jedes Mal eine eigene. */}
             <AppointmentSheet
-                habit={askingFor}
+                habit={repeating?.habit ?? askingFor}
                 friends={friends}
-                days={askingFor?.appointmentDays ?? []}
-                onOpenChange={(open) => !open && setAskingFor(null)}
+                days={
+                    repeating?.habit.appointmentDays ??
+                    askingFor?.appointmentDays ??
+                    []
+                }
+                preselect={repeating?.friendId ?? null}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setAskingFor(null);
+                        setRepeating(null);
+                    }
+                }}
             />
         </>
     );

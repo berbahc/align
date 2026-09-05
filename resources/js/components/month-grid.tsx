@@ -106,14 +106,28 @@ export function MonthGrid({
                                 die Vorlesungszeit aufhört.
 
                                 Das Band steht auch leer, damit die Punktreihe
-                                in allen Zellen auf einer Linie bleibt. */}
+                                in allen Zellen auf einer Linie bleibt.
+
+                                Daneben, wenn etwas mit jemandem ansteht: ein
+                                offener Ring. Kein Punkt, weil er sonst
+                                mitgezählt würde, und keine zweite Linie, weil
+                                die beiden sich dann nur in der Farbe
+                                unterschieden — Linie gegen Ring ist ein
+                                Unterschied in der Form. */}
                             <span
                                 aria-hidden="true"
-                                className={cn(
-                                    'h-px w-4 rounded-full',
-                                    day.hasLectures && 'bg-olive-mid/40',
+                                className="flex h-1.5 items-center justify-center gap-1"
+                            >
+                                <span
+                                    className={cn(
+                                        'h-px w-4 rounded-full',
+                                        day.hasLectures && 'bg-olive-mid/40',
+                                    )}
+                                />
+                                {day.hasAppointment && (
+                                    <span className="size-1.5 rounded-full border border-primary/70" />
                                 )}
-                            />
+                            </span>
                         </Link>
                     </li>
                 ))}
@@ -138,14 +152,15 @@ function dayLabel(day: MonthDay, today: string): string {
     const prefix = day.date === today ? 'Heute, ' : '';
 
     const lectures = day.hasLectures ? ' · Vorlesungstag' : '';
+    const together = day.hasAppointment ? ' · zusammen verabredet' : '';
 
     if (day.planned === 0) {
-        return `${prefix}${date} — nichts vorgesehen${lectures}`;
+        return `${prefix}${date} — nichts vorgesehen${lectures}${together}`;
     }
 
     if (day.isFuture) {
-        return `${prefix}${date} — ${day.planned} vorgesehen${lectures}`;
+        return `${prefix}${date} — ${day.planned} vorgesehen${lectures}${together}`;
     }
 
-    return `${prefix}${date} — ${day.done} von ${day.planned} erledigt${lectures}`;
+    return `${prefix}${date} — ${day.done} von ${day.planned} erledigt${lectures}${together}`;
 }

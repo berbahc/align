@@ -64,13 +64,20 @@ final class AppointmentFit
 
         $habits = self::habitsOn($invitee, $date);
 
+        // Mit derselben Viertelstunde Luft wie überall sonst
+        // ({@see DayPlan::collisionWith()}). Ohne sie ließ sich eine
+        // Verabredung fünf Minuten hinter die eigene Gewohnheit legen: keine
+        // Überschneidung, aber enger, als der Tagesplan es je zuließe — und
+        // seit die Verabredung im Kalender liegt, meldet die
+        // Überlappungs-Invariante genau das als Verstoß. Zwei Maßstäbe für
+        // denselben Tag sind einer zu viel.
         $clash = $habits
             ->first(function (Habit $habit) use ($date, $window): bool {
                 $span = self::spanOf($habit, $date);
 
                 return $span !== null
-                    && $span['from'] < $window['to']
-                    && $span['to'] > $window['from'];
+                    && $span['from'] < $window['to'] + DayPlan::BreatherMinutes
+                    && $window['from'] < $span['to'] + DayPlan::BreatherMinutes;
             });
 
         return $clash === null ? null : new self($clash, $window, $date, $invitee, $habits);

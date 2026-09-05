@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\RestoreDisplacedHabits;
 use App\Enums\CourseKind;
+use App\Models\Appointment;
 use App\Models\Course;
 use App\Models\Habit;
 use App\Models\HabitCompletion;
@@ -92,10 +93,14 @@ class CalendarController extends Controller
         $timetable = Timetable::for($request->user());
         $lectureDays = $timetable->lectureDays($from, $to);
 
+        // Und dasselbe für das Gemeinsame: einmal gefragt statt zweiundvierzig
+        // Mal, in derselben Form wie die Vorlesungstage.
+        $appointmentDays = Appointment::acceptedDaysBetween($request->user(), $from, $to);
+
         $days = [];
 
         for ($day = $from->copy(); $day->lessThanOrEqualTo($to); $day->addDay()) {
-            $days[] = $this->day($habits, $day, $month, $today, $lectureDays);
+            $days[] = $this->day($habits, $day, $month, $today, $lectureDays, $appointmentDays);
         }
 
         return Inertia::render('calendar', [
@@ -176,7 +181,24 @@ class CalendarController extends Controller
         // Minute jenseits von 1440 weiter — sonst risse die Achse am Tagesrand.
         $timetable = Timetable::for($request->user());
         $courseBlocks = $timetable->blocksOn($day);
-        $plan = new DayPlan($scheduled, $window, $day, $courseBlocks);
+
+        // Was heute mit jemandem ansteht. Dieselbe Zeile trägt zwei Fälle:
+        // Bei einer fremden Gewohnheit gibt es nichts Eigenes, an das sich
+        // etwas hängen ließe — sie braucht einen eigenen Block. Bei der
+        // eigenen steht der Block längst da und es fehlt nur das Zeichen,
+        // dass jemand mitmacht.
+        $appointments = Appointment::acceptedOn($request->user(), $day);
+        $companions = $this->companions($appointments, $request->user());
+        $appointmentBlocks = $this->appointmentBlocks($appointments, $request->user());
+
+        // Die Verabredung belegt den Tag wie ein Kurs: Ohne sie im Plan
+        // rutschte eine eigene Situation genau dorthin, wo gleich gemeinsam
+        // gelaufen wird. Die Form ist dieselbe, durch die schon der
+        // Stundenplan kommt ({@see DayPlan::__construct()}).
+        $plan = new DayPlan($scheduled, $window, $day, [
+            ...$courseBlocks,
+            ...$this->appointmentSpans($appointmentBlocks),
+        ]);
         $frame = $plan->frame();
 
         // Der Tag wird von oben nach unten gelesen: Morgen zuerst, Abend
@@ -202,7 +224,14 @@ class CalendarController extends Controller
             'nextDate' => $day->copy()->addDay()->toDateString(),
             // Damit der Weg zurück in den Monat führt, aus dem man kam.
             'month' => $day->format('Y-m'),
-            'blocks' => $scheduled->map(fn (Habit $habit): array => $this->block($habit, $day, $plan))->all(),
+            'blocks' => $scheduled
+                ->map(fn (Habit $habit): array => $this->block($habit, $day, $plan, $companions[$habit->id] ?? null))
+                ->all(),
+            // Fremde Gewohnheiten, für heute zugesagt. Eigene Liste wie bei den
+            // Kursen und aus demselben Grund: Sie lassen sich nicht abhaken und
+            // nicht ziehen, und jede Stelle, die einen Block anfasst, müsste
+            // sich sonst gegen eine Art verteidigen, die sie nicht behandelt.
+            'appointmentBlocks' => $appointmentBlocks,
             // Kurse liegen auf derselben Achse, sind aber keine Gewohnheiten:
             // Sie werden nicht abgehakt, nicht gezogen und nicht angepasst.
             // Deshalb eine eigene Liste — zehn nullbare Felder an `blocks`
@@ -309,9 +338,10 @@ class CalendarController extends Controller
      *
      * @param  Collection<int, Habit>  $habits
      * @param  array<string, true>  $lectureDays  Die Tage, an denen etwas an der Uni läuft
-     * @return array{date: string, dayOfMonth: int, inMonth: bool, isToday: bool, isFuture: bool, planned: int, done: int, hasLectures: bool}
+     * @param  array<string, true>  $appointmentDays  Die Tage, an denen etwas mit jemandem ansteht
+     * @return array{date: string, dayOfMonth: int, inMonth: bool, isToday: bool, isFuture: bool, planned: int, done: int, hasLectures: bool, hasAppointment: bool}
      */
-    private function day(Collection $habits, Carbon $day, Carbon $month, Carbon $today, array $lectureDays): array
+    private function day(Collection $habits, Carbon $day, Carbon $month, Carbon $today, array $lectureDays, array $appointmentDays): array
     {
         $scheduled = $habits
             ->filter(fn (Habit $habit): bool => $this->existedOn($habit, $day))
@@ -335,6 +365,13 @@ class CalendarController extends Controller
             // Nicht wie viel, nur ob: Der Monat sagt, dass dieser Tag an der
             // Uni stattfindet, nicht wie voll er ist. Wie voll, steht im Tag.
             'hasLectures' => isset($lectureDays[$day->toDateString()]),
+            // Die Verabredung zählt bewusst **nicht** in `planned` mit: Wer
+            // gefragt wurde, führt die Gewohnheit nicht und kann sie deshalb
+            // nie abhaken — der Tag sähe für immer unerledigt aus. Das wäre
+            // genau der Vorwurf, den ein Rückblick bei ø 3,92 Schuldgefühl
+            // nicht erheben darf. Also wie beim Stundenplan: nicht wie viel,
+            // nur ob.
+            'hasAppointment' => isset($appointmentDays[$day->toDateString()]),
         ];
     }
 
@@ -392,13 +429,108 @@ class CalendarController extends Controller
     }
 
     /**
+     * Die Begleitung je eigener Gewohnheit — für das Doppel-Zeichen an der Zeile.
+     *
+     * Nur die Verabredungen, bei denen die Gewohnheit einem selbst gehört.
+     * Bei den anderen gibt es keine eigene Zeile, an die sich etwas hängen
+     * ließe; die werden zu einem Block ({@see appointmentBlocks()}).
+     *
+     * @param  Collection<int, Appointment>  $appointments
+     * @return array<int, array{name: string, initial: string}>
+     */
+    private function companions(Collection $appointments, User $user): array
+    {
+        return $appointments
+            ->filter(fn (Appointment $appointment): bool => $appointment->requester_id === $user->id)
+            ->mapWithKeys(fn (Appointment $appointment): array => [
+                $appointment->habit_id => $appointment->companion($user),
+            ])
+            ->all();
+    }
+
+    /**
+     * Die fremden Gewohnheiten, die man für diesen Tag zugesagt hat.
+     *
+     * Sie liegen im Raster wie eine eigene, gehören aber jemand anderem: kein
+     * Haken, kein Ziehen, kein Anpassen. Deshalb `kind`, wie schon bei den
+     * Kursen — das Raster fragt danach, bevor es etwas anbietet.
+     *
+     * Die Stelle im Tag kommt aus der fremden Gewohnheit, nicht aus einer
+     * eigenen Rechnung: Die Verabredung erfindet keine Zeit, sie teilt einen
+     * Anker (community_feature3.md §4). Hat der Anker keine Uhr, liegt der
+     * Block dort ungefähr — genau wie eine eigene Situation, und `exact` sagt
+     * das.
+     *
+     * @param  Collection<int, Appointment>  $appointments
+     * @return list<array{kind: string, id: int, habitId: int, title: string, anchor: string, name: string, initial: string, startMinute: int, durationMinutes: int|null, exact: bool, timeRange: string|null, behaviorType: string, completed: bool, canComplete: bool}>
+     */
+    private function appointmentBlocks(Collection $appointments, User $user): array
+    {
+        return $appointments
+            ->filter(fn (Appointment $appointment): bool => $appointment->requester_id !== $user->id)
+            ->map(function (Appointment $appointment) use ($user): array {
+                $habit = $appointment->habit;
+
+                return [
+                    'kind' => 'appointment',
+                    'id' => $appointment->id,
+                    'habitId' => $habit->id,
+                    'title' => $habit->title,
+                    // Nur der Moment, nicht die Wiederholung: Die Wochentage
+                    // gehören der Gewohnheit der anderen Person, und die
+                    // Verabredung gilt für diesen einen Tag.
+                    'anchor' => $habit->momentLabel(),
+                    ...$appointment->companion($user),
+                    'startMinute' => $habit->dayStartMinute() ?? Habit::UnknownAnchorHour * 60,
+                    'durationMinutes' => $habit->durationMinutes(),
+                    'exact' => $habit->startsAt() !== null,
+                    'timeRange' => $habit->timeRangeLabel(),
+                    'behaviorType' => $habit->behavior_type->value,
+                    // Der eigene Haken an der Zusage. Er hängt an der
+                    // Verabredung, nicht an der fremden Gewohnheit — die
+                    // gehört der anderen Person.
+                    'completed' => $appointment->completed_at !== null,
+                    'canComplete' => $appointment->isCompletableBy($user),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Dieselben Blöcke, wie der Tagesplan sie liest.
+     *
+     * Die Kennung ist `0` und nicht die der Verabredung: Positive Zahlen sind
+     * Gewohnheiten, negative sind Kurse ({@see Timetable::isCourseBlock()}).
+     * Dieselbe Null benutzt {@see AppointmentFit::options()} schon, wenn sie
+     * eine Verabredung in einen Plan legt.
+     *
+     * @param  list<array{title: string, startMinute: int, durationMinutes: int|null, ...}>  $blocks
+     * @return list<array{id: int, title: string, from: int, to: int}>
+     */
+    private function appointmentSpans(array $blocks): array
+    {
+        return array_map(fn (array $block): array => [
+            'id' => 0,
+            'title' => $block['title'],
+            'from' => $block['startMinute'],
+            'to' => $block['startMinute'] + ($block['durationMinutes'] ?? DayPlan::AssumedMinutes),
+        ], $blocks);
+    }
+
+    /**
      * Eine Gewohnheit als Block auf der Achse.
      *
-     * @return array{kind: 'habit', id: int, title: string, anchor: string, anchorHour: int, scheduleType: string, startMinute: int|null, durationMinutes: int|null, exact: bool, shifted: bool, measureLabel: string|null, timeRange: string|null, behaviorType: string, smallestStep: string|null, motivation: string|null, completed: bool, graduated: bool, chainedToId: int|null}
+     * @param  array{name: string, initial: string}|null  $companion  Wer heute mitmacht
+     * @return array{kind: 'habit', companion: array{name: string, initial: string}|null, id: int, title: string, anchor: string, anchorHour: int, scheduleType: string, startMinute: int|null, durationMinutes: int|null, exact: bool, shifted: bool, measureLabel: string|null, timeRange: string|null, behaviorType: string, smallestStep: string|null, motivation: string|null, completed: bool, graduated: bool, chainedToId: int|null}
      */
-    private function block(Habit $habit, Carbon $day, ?DayPlan $plan = null): array
+    private function block(Habit $habit, Carbon $day, ?DayPlan $plan = null, ?array $companion = null): array
     {
         return [
+            // Wer heute mitmacht — dasselbe Feld, das die Übersicht liefert,
+            // und derselbe Doppel-Kreis. Ohne es zeigte der Kalender an
+            // demselben Tag weniger als die Zeile auf der Startseite.
+            'companion' => $companion,
             // Sagt dem Raster, welcher Art dieser Block ist — daneben liegen
             // Kurse, und die lassen sich weder abhaken noch ziehen.
             'kind' => 'habit',

@@ -1,6 +1,8 @@
 import { router } from '@inertiajs/react';
-import { Check, Sparkles } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { useEffect } from 'react';
+import { AiMascot } from '@/components/ai-mascot';
+import type { MascotState } from '@/components/ai-mascot';
 import { AiSuggestionFailure } from '@/components/ai-suggestion';
 import {
     Sheet,
@@ -49,6 +51,17 @@ export function StartingHelpSheet({
     onOpenChange: (open: boolean) => void;
 }) {
     const suggestion = useSmallestStep();
+    /**
+     * Was die Figur im Kopf gerade tut.
+     *
+     * Kein eigener Zustand — dieselben zwei Flags, die auch die Skelette und
+     * die Absage steuern. Was die KI tut, steht damit an genau einer Stelle.
+     */
+    const mascotState: MascotState = suggestion.loading
+        ? 'thinking'
+        : suggestion.failed
+          ? 'stumped'
+          : 'speaking';
 
     /**
      * Was im Sheet steht: der zuletzt geholte Schritt, sonst der vorbereitete.
@@ -118,19 +131,26 @@ export function StartingHelpSheet({
                 side="bottom"
                 className="mx-auto max-w-lg gap-0 rounded-t-2xl px-5 pt-6 pb-8"
             >
-                <SheetHeader className="gap-2 p-0">
-                    <SheetTitle className="type-eyebrow flex items-center gap-2 text-primary">
-                        <Sparkles
-                            className="size-3.5"
-                            strokeWidth={2}
-                            aria-hidden="true"
-                        />
-                        Fang ganz klein an
-                    </SheetTitle>
-                    <SheetDescription className="text-left text-sm leading-relaxed">
-                        {habit?.title} fühlt sich gerade nach viel an. Mach nur
-                        das:
-                    </SheetDescription>
+                <SheetHeader className="flex-row items-start gap-3 p-0">
+                    {/* Die Figur steht neben dem Text, nicht davor:
+                        Sie ist hier kein Aufzählungszeichen, sondern
+                        der Gegenüber, der gerade überlegt oder
+                        antwortet. Der Zustand kommt aus demselben
+                        `loading`/`failed`, das die Skelette steuert. */}
+                    <AiMascot
+                        state={mascotState}
+                        className="mt-0.5 size-9 shrink-0 text-primary"
+                    />
+
+                    <div className="flex min-w-0 flex-col gap-2">
+                        <SheetTitle className="type-eyebrow text-primary">
+                            Fang ganz klein an
+                        </SheetTitle>
+                        <SheetDescription className="text-left text-sm leading-relaxed">
+                            {habit?.title} fühlt sich gerade nach viel an. Mach
+                            nur das:
+                        </SheetDescription>
+                    </div>
                 </SheetHeader>
 
                 <div className="mt-5 min-h-24 rounded-[14px] bg-sand/60 p-5">

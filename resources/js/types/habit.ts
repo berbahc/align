@@ -133,6 +133,17 @@ export interface Habit {
     title: string;
     /** Der Wann-Teil, fertig formatiert: „nach dem Aufstehen" oder „17:00 · Mo–Fr". */
     scheduleLabel: string;
+    /**
+     * Dieselbe Auskunft, aufgeteilt — die Übersicht braucht beide Hälften
+     * getrennt: Die Uhrzeit steht dort in einer eigenen Spalte, damit der Tag
+     * von oben nach unten als Plan lesbar ist.
+     *
+     * Null, wo es keine Uhr gibt („nach dem Aufstehen"). Dann trägt
+     * `repeatLabel` den Zeitpunkt.
+     */
+    timeLabel: string | null;
+    /** Die Wiederholung: „Mo–Fr", „täglich", „nur an diesem Tag". */
+    repeatLabel: string | null;
     behaviorType: BehaviorType;
     /** Die Dauer als fertige Zeile („20 Min"), sonst null. */
     measureLabel: string | null;
@@ -148,10 +159,24 @@ export interface Habit {
     /**
      * Wer heute mitmacht — null, wenn die Gewohnheit allein ansteht.
      *
+     * `pending` heißt: gefragt, aber noch nicht zugesagt. Auch dieser Fall
+     * gehört in die Zeile, sonst stünde die Gewohnheit zweimal auf der Seite
+     * — einmal hier und einmal als Karte unter „Zusammen".
+     *
      * Bewusst ohne Fortschritt der anderen Person: Das wäre durch die
      * Hintertür doch ein Dauerstatus (community_feature3.md §6).
      */
-    companion: { name: string; initial: string } | null;
+    companion: {
+        name: string;
+        initial: string;
+        pending: boolean;
+        /**
+         * Die **eigene** Gewohnheit für „Nochmal ausmachen?" — null, solange
+         * der eigene Anteil offen ist. Sagt nichts über die andere Person.
+         */
+        repeatHabitId: number | null;
+        repeatDays: AppointmentDay[];
+    } | null;
     /** Die zugesagte Verabredung von heute, zum Auflösen. */
     appointmentId: number | null;
     /**
@@ -281,6 +306,14 @@ export interface AnchorAlternative {
 export interface CalendarBlock {
     /** Unterscheidet die Gewohnheit vom Kurs, wenn beide im Raster liegen. */
     kind: 'habit';
+    /**
+     * Wer an diesem Tag mitmacht — null, wenn die Gewohnheit allein ansteht.
+     *
+     * Dasselbe Feld wie in {@see Habit}, damit der Kalender an einem Tag nicht
+     * weniger zeigt als die Zeile auf der Übersicht. Und wie dort bewusst ohne
+     * den Fortschritt der anderen Person (community_feature3.md §6).
+     */
+    companion: { name: string; initial: string } | null;
     id: number;
     title: string;
     /** Der Anker als Kopfzeile: „nach dem Aufstehen" oder „17:00 · Mo–Fr". */
@@ -362,6 +395,15 @@ export interface MonthDay {
     done: number;
     /** Läuft an diesem Tag etwas aus dem Semesterplan? */
     hasLectures: boolean;
+    /**
+     * Steht an diesem Tag etwas mit jemandem an?
+     *
+     * Bewusst kein Punkt in `planned`: Wer gefragt wurde, führt die
+     * Gewohnheit nicht und kann sie nie abhaken — der Tag sähe für immer
+     * unerledigt aus, und das wäre der Vorwurf, den ein Rückblick nicht
+     * erheben darf. Wie beim Vorlesungstag also: nicht wie viel, nur ob.
+     */
+    hasAppointment: boolean;
 }
 
 /**

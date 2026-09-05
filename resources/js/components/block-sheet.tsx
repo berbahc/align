@@ -1,4 +1,5 @@
 import { Check } from 'lucide-react';
+import { AiMascot } from '@/components/ai-mascot';
 import {
     Sheet,
     SheetContent,
@@ -9,6 +10,7 @@ import {
 import { BEHAVIOR_ICONS } from '@/lib/behavior-icons';
 import { ASSUMED_MINUTES, spanLabel } from '@/lib/day-grid';
 import {
+    AI_LINK,
     BOTTOM_SHEET,
     OUTLINE_BUTTON,
     PRIMARY_BUTTON,
@@ -16,9 +18,6 @@ import {
 } from '@/lib/interaction';
 import { cn } from '@/lib/utils';
 import type { CalendarBlock as Block } from '@/types';
-
-/** Der Weg zu einer KI-Funktion — ✦ steht nur hier (§8). */
-const AI_LINK = `${QUIET_LINK} text-sm`;
 
 /**
  * Der aufgeschlagene Block.
@@ -177,17 +176,25 @@ export function BlockSheet({
                         <button
                             type="button"
                             onClick={() => leaveFor(onAdjust)}
-                            className={AI_LINK}
+                            className={`${AI_LINK} text-sm`}
                         >
-                            ✦ Anderer Zeitpunkt?
+                            <AiMascot
+                                variant="mark"
+                                className="size-4 shrink-0"
+                            />
+                            Anderer Zeitpunkt?
                         </button>
                         {!block.completed && (
                             <button
                                 type="button"
                                 onClick={() => leaveFor(onStuck)}
-                                className={AI_LINK}
+                                className={`${AI_LINK} text-sm`}
                             >
-                                ✦ Kleinen ersten Schritt
+                                <AiMascot
+                                    variant="mark"
+                                    className="size-4 shrink-0"
+                                />
+                                Kleinen ersten Schritt
                             </button>
                         )}
                     </div>

@@ -34,6 +34,16 @@ export const OUTLINE_BUTTON = `inline-flex h-11 items-center gap-1.5 rounded-ful
 /** Der leise Weg: Text, unterstrichen, ohne Fläche. */
 export const QUIET_LINK = `font-semibold text-primary underline underline-offset-4 transition-colors duration-[var(--duration-press)] ease-out hover:text-primary/80 active:text-primary/60 cursor-pointer ${FOCUS}`;
 
+/**
+ * Der Weg zu einer KI-Funktion — Designsprache §8.
+ *
+ * Wie {@see QUIET_LINK}, nur mit Platz für die Figur davor. Sie stand hier
+ * lange als Buchstabe `✦` im Text; als eigenes Element braucht sie eine
+ * eigene Lücke, sonst klebt sie am ersten Wort. Das Zeichen ist der KI
+ * vorbehalten und wird für nichts anderes verwendet.
+ */
+export const AI_LINK = `inline-flex items-center gap-1.5 ${QUIET_LINK}`;
+
 /** Der Abbruch daneben — kein Rahmen, keine Farbe, gleiches Gewicht wie Text. */
 export const QUIET_BUTTON = `text-sm text-muted-foreground transition-colors duration-[var(--duration-press)] ease-out hover:text-foreground cursor-pointer ${FOCUS}`;
 

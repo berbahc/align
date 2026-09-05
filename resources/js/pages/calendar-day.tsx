@@ -1,10 +1,11 @@
-import { Head, Link, router } from '@inertiajs/react';
-import { ChevronLeft, ChevronRight, LayoutGrid, Sparkles } from 'lucide-react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import { ChevronLeft, ChevronRight, LayoutGrid } from 'lucide-react';
 import { useState } from 'react';
 import {
     AdjustmentSheet,
     alternativeLabel,
 } from '@/components/adjustment-sheet';
+import { AiMascot } from '@/components/ai-mascot';
 import { BlockSheet } from '@/components/block-sheet';
 import { CourseCancellationSheet } from '@/components/course-cancellation-sheet';
 import { CourseDetailSheet } from '@/components/course-detail-sheet';
@@ -17,12 +18,17 @@ import { Card, CardContent } from '@/components/ui/card';
 import type { BlockDrag } from '@/hooks/use-block-drag';
 import { collisionOf, followersOf } from '@/lib/day-grid';
 import {
+    AI_LINK,
     OUTLINE_BUTTON,
     PRIMARY_BUTTON,
     QUIET_BUTTON,
     QUIET_LINK,
 } from '@/lib/interaction';
 import { calendar } from '@/routes';
+import {
+    destroy as appointmentUndone,
+    store as appointmentDone,
+} from '@/routes/appointments/completion';
 import { day as calendarDay } from '@/routes/calendar';
 import { store as placesStore } from '@/routes/calendar/semester/places';
 import { edit as editHabit } from '@/routes/habits';
@@ -33,6 +39,7 @@ import {
 } from '@/routes/habits/shifts';
 import type {
     AnchorAlternative,
+    AppointmentBlock as Appointment,
     CalendarBlock as Block,
     CourseBlock as Course,
     CourseKindOption,
@@ -57,6 +64,14 @@ interface CalendarDayProps {
     blocks: Block[];
     /** Die Veranstaltungen dieses Tages als Blöcke — sie belegen Zeit. */
     courseBlocks: Course[];
+    /**
+     * Fremde Gewohnheiten, die man für diesen Tag zugesagt hat.
+     *
+     * Eigene Liste wie die Kurse und aus demselben Grund: Sie lassen sich
+     * weder abhaken noch ziehen, und jede Stelle, die einen Block anfasst,
+     * müsste sich sonst gegen eine Art verteidigen, die sie nicht behandelt.
+     */
+    appointmentBlocks: Appointment[];
     /** Dieselben als Zeilen, zum Anfassen: Ändern, Ausfall, Löschen. */
     kinds: CourseKindOption[];
     /** Der Zeitraum — für die Grenzen eines Ausfalls. Null ohne Semester. */
@@ -99,6 +114,7 @@ export default function CalendarDay({
     month,
     blocks,
     courseBlocks,
+    appointmentBlocks,
     kinds,
     semester,
     wakeTime,
@@ -108,12 +124,35 @@ export default function CalendarDay({
     canShift,
     proposal,
 }: CalendarDayProps) {
+    const { auth } = usePage().props;
+    /** Die linke Hälfte des Doppel-Zeichens aus §3.2 — wie auf der Übersicht. */
+    const selfInitial = (auth.user?.name.charAt(0) ?? '').toUpperCase();
+
     /** Der Vorschlag ist verworfen — man legt selbst. */
     const [proposalDismissed, setProposalDismissed] = useState(false);
     const [proposalError, setProposalError] = useState<string | null>(null);
     const [applyingProposal, setApplyingProposal] = useState(false);
     const shownProposal =
         proposal !== null && !proposalDismissed ? proposal : null;
+
+    /**
+     * Den eigenen Haken an einer zugesagten Verabredung umlegen.
+     *
+     * Eigener Weg und nicht `habits.completions`: Die Gewohnheit gehört der
+     * anderen Person, und ein Haken dort meldete ihre Erfüllung statt der
+     * eigenen.
+     */
+    function toggleAppointment(block: Appointment) {
+        const options = { preserveScroll: true };
+
+        if (block.completed) {
+            router.delete(appointmentUndone.url(block.id), options);
+
+            return;
+        }
+
+        router.post(appointmentDone.url(block.id), {}, options);
+    }
 
     function applyProposal() {
         if (shownProposal === null) {
@@ -333,18 +372,19 @@ export default function CalendarDay({
                 </div>
 
                 {/* Der Vorschlag über dem Raster: Was er ist, warum, und die
-                    zwei Wege — übernehmen oder selbst einordnen. ✦ steht nur
-                    hier, weil hier die KI spricht. */}
+                    zwei Wege — übernehmen oder selbst einordnen. Die Figur
+                    steht nur hier, weil hier die KI spricht. */}
                 {shownProposal !== null && (
                     <div
                         role="status"
                         className="flex flex-col gap-3 rounded-xl border border-primary/25 bg-accent px-4 py-3"
                     >
                         <p className="type-eyebrow flex items-center gap-2 text-primary">
-                            <Sparkles
-                                className="size-3.5"
-                                strokeWidth={2}
-                                aria-hidden="true"
+                            {/* Kein Einstieg, sondern eine Antwort — deshalb
+                                die ganze Figur und nicht nur das Zeichen. */}
+                            <AiMascot
+                                state="speaking"
+                                className="size-7 shrink-0"
                             />
                             Vorschlag der KI
                         </p>
@@ -399,7 +439,10 @@ export default function CalendarDay({
                         <DayGrid
                             blocks={blocks}
                             courseBlocks={courseBlocks}
+                            appointmentBlocks={appointmentBlocks}
+                            selfInitial={selfInitial}
                             onOpenCourse={setOpenedCourse}
+                            onToggleAppointment={toggleAppointment}
                             frameFrom={frameFrom}
                             frameTo={frameTo}
                             wakeTime={wakeTime}
@@ -424,9 +467,13 @@ export default function CalendarDay({
                             <button
                                 type="button"
                                 onClick={() => setOrdering(true)}
-                                className={`${QUIET_LINK} mt-5 block text-xs`}
+                                className={`${AI_LINK} mt-5 text-xs`}
                             >
-                                ✦ Tag neu ordnen
+                                <AiMascot
+                                    variant="mark"
+                                    className="size-4 shrink-0"
+                                />
+                                Tag neu ordnen
                             </button>
                         )}
 
@@ -469,6 +516,7 @@ export default function CalendarDay({
                         ? collisionOf(
                               blocks,
                               courseBlocks,
+                              appointmentBlocks,
                               dropped.id,
                               dropped.minute,
                           )

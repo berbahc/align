@@ -1256,8 +1256,34 @@ class Habit extends Model
      * Der Wann-Teil als fertige Zeile für die Oberfläche.
      *
      * Beispiele: „nach dem Aufstehen", „17:00 · Mo–Fr", „08:30 · täglich".
+     *
+     * Die Zeile ist nur die Zusammensetzung von {@see schedulePieces()} — wer
+     * die beiden Hälften einzeln braucht, holt sie dort. So kann die kurze
+     * Form nicht von der langen abweichen.
      */
     public function scheduleLabel(?Carbon $on = null): string
+    {
+        return collect($this->schedulePieces($on))
+            ->filter()
+            ->implode(' · ');
+    }
+
+    /**
+     * Derselbe Wann-Teil in seinen zwei Hälften: die Uhr und die Wiederholung.
+     *
+     * Die Übersicht liest den Tag als Plan von früh nach spät und stellt die
+     * Uhrzeit dafür in eine eigene Spalte. Als Teil einer Kette aus Punkten
+     * ging sie unter: „mit Test2 · 09:00 · nur an diesem Tag · 90 Min" sind
+     * vier verschiedene Auskünfte in einem Gewicht, und zwei gleichnamige
+     * Gewohnheiten am selben Tag ließen sich darin nicht auseinanderhalten.
+     *
+     * `time` steht nur da, wo es wirklich eine Uhr gibt. „nach dem Aufstehen"
+     * ist ein Zeitpunkt, aber keine Uhrzeit — die abgeleitete Stunde in die
+     * Spalte zu schreiben wäre eine Festlegung, die niemand getroffen hat.
+     *
+     * @return array{timeLabel: string|null, repeatLabel: string|null}
+     */
+    public function schedulePieces(?Carbon $on = null): array
     {
         // An einem verschobenen Tag gilt die Ausnahme, nicht der Plan. Sie sagt
         // dazu, dass sie nur für diesen Tag gilt — sonst sähe die Zeile aus,
@@ -1265,18 +1291,22 @@ class Habit extends Model
         $shifted = $this->shiftedTimeOn($on);
 
         if ($shifted !== null) {
-            return $shifted.' · nur an diesem Tag';
+            return ['timeLabel' => $shifted, 'repeatLabel' => 'nur an diesem Tag'];
         }
 
         // Verdrängt, aber nicht vergessen: Die Zeile nennt, wann die Gewohnheit
         // lief — das ist der Anhaltspunkt für den neuen Platz, für die Person
-        // wie für die KI.
+        // wie für die KI. In die Uhrspalte gehört das nicht: Die alte Zeit gilt
+        // ja gerade nicht mehr.
         if ($this->isDisplaced($on)) {
             $previous = $this->anchorHabit()?->scheduled_time?->format('H:i');
 
-            return $previous === null
-                ? 'braucht einen neuen Platz'
-                : 'braucht einen neuen Platz · lief bisher '.$previous;
+            return [
+                'timeLabel' => null,
+                'repeatLabel' => $previous === null
+                    ? 'braucht einen neuen Platz'
+                    : 'braucht einen neuen Platz · lief bisher '.$previous,
+            ];
         }
 
         // Der Vorgänger ist der Auslöser, also heißt er auch so: „nach dem
@@ -1286,14 +1316,52 @@ class Habit extends Model
         if (! $this->schedule_type->hasOwnAnchor()) {
             $previous = $this->chainedTo;
 
+            return [
+                'timeLabel' => null,
+                'repeatLabel' => $previous === null
+                    ? 'noch ohne Anschluss'
+                    : 'nach „'.$previous->title.'"',
+            ];
+        }
+
+        if (! $this->schedule_type->hasClockTime()) {
+            return ['timeLabel' => null, 'repeatLabel' => $this->trigger_situation];
+        }
+
+        $time = $this->scheduled_time?->format('H:i');
+
+        // Ohne Uhrzeit steht auch die Wochentag-Aufzählung nicht: Sie beschriebe
+        // die Wiederholung eines Zeitpunkts, den es nicht gibt.
+        return $time === null
+            ? ['timeLabel' => null, 'repeatLabel' => null]
+            : ['timeLabel' => $time, 'repeatLabel' => self::weekdayLabel($this->scheduled_days ?? [])];
+    }
+
+    /**
+     * Wann im Tag — ohne die Wiederholung.
+     *
+     * Der Unterschied zu {@see scheduleLabel()} sind die Wochentage. Sie
+     * gehören zur Gewohnheit ihres Besitzers, und in einer Verabredung hat
+     * niemand etwas von ihnen: Die gilt für **einen** Tag, und der steht schon
+     * daneben. Wer gefragt wurde, ob er heute mitmacht, las bisher „17:00 · Mo,
+     * Mi" und musste annehmen, er verpflichte sich für Montag und Mittwoch.
+     *
+     * Der eigene Rhythmus entsteht erst beim Übernehmen, und dort wählt ihn
+     * der Übernehmende selbst im Assistenten.
+     */
+    public function momentLabel(): string
+    {
+        if (! $this->schedule_type->hasOwnAnchor()) {
+            $previous = $this->chainedTo;
+
             return $previous === null
                 ? 'noch ohne Anschluss'
                 : 'nach „'.$previous->title.'"';
         }
 
         return $this->schedule_type->hasClockTime()
-            ? self::anchorLabel(time: $this->scheduled_time?->format('H:i'), days: $this->scheduled_days)
-            : self::anchorLabel(situation: $this->trigger_situation);
+            ? (string) $this->scheduled_time?->format('H:i')
+            : (string) $this->trigger_situation;
     }
 
     /**

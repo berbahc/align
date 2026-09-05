@@ -66,11 +66,13 @@ class ProposeAppointmentRequest extends FormRequest
 
                 $date = Carbon::createFromFormat('Y-m-d', $this->string('scheduled_for')->value())->startOfDay();
 
-                // Geprüft wird gegen genau die Liste, die die Oberfläche
-                // anbietet — nicht gegen eine zweite Rechnung daneben. Die
-                // Tage hängen an der Gewohnheit, und zwei Stellen, die das
-                // getrennt herleiten, driften früher oder später auseinander.
-                $offered = array_column(Appointment::dayChoicesFor($this->habit()), 'value');
+                // Geprüft wird gegen dieselbe Quelle, aus der die Oberfläche
+                // schöpft — nicht gegen eine zweite Rechnung daneben. Gegen
+                // die **ganze** Menge und nicht gegen die angebotenen drei:
+                // Wo die Auswahl anfängt, hängt vom Weg ab („Nochmal
+                // ausmachen?" beginnt am Tag danach), was zulässig ist
+                // dagegen nicht.
+                $offered = Appointment::possibleDaysFor($this->habit());
 
                 if (! in_array($date->toDateString(), $offered, strict: true)) {
                     $validator->errors()->add('scheduled_for', 'Dieser Tag steht nicht zur Wahl.');

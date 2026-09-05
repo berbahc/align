@@ -100,8 +100,11 @@ class RestoreDisplacedHabits
                 continue;
             }
 
+            // Das Datum als Carbon: Der `date`-Cast legt „2026-09-05 00:00:00"
+            // ab, ein Vergleich gegen „2026-09-05" fände die eigene Zeile nicht
+            // und liefe in den eindeutigen Schlüssel.
             $habit->dayShifts()->updateOrCreate(
-                ['shifted_on' => $date->toDateString()],
+                ['shifted_on' => $date],
                 ['scheduled_time' => DayPlan::toTime($start)],
             );
 

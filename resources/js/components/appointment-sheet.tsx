@@ -34,15 +34,35 @@ export function AppointmentSheet({
     habit,
     friends,
     days,
+    preselect = null,
     onOpenChange,
 }: {
     habit: Habit | null;
     friends: FriendshipPerson[];
     days: AppointmentDay[];
+    /**
+     * Wer schon vorgewählt ist — der Weg „Nochmal ausmachen?".
+     *
+     * Ein Startwert, keine Setzung: Die Auswahl bleibt änderbar wie immer.
+     * `community_feature3.md` §7 will die Wiederholung als neue
+     * Einzelentscheidung, nicht als Abo — deshalb wird hier nur der Weg
+     * verkürzt, nicht die Entscheidung abgenommen.
+     */
+    preselect?: number | null;
     onOpenChange: (open: boolean) => void;
 }) {
-    const [friendId, setFriendId] = useState<number | null>(null);
+    const [friendId, setFriendId] = useState<number | null>(preselect);
     const [day, setDay] = useState<string | null>(null);
+
+    // Beim Wechsel der Gewohnheit gilt die neue Vorwahl. Ohne das bliebe die
+    // Person der zuvor geöffneten Verabredung stehen.
+    const [seen, setSeen] = useState<number | null>(habit?.id ?? null);
+
+    if (habit !== null && habit.id !== seen) {
+        setSeen(habit.id);
+        setFriendId(preselect);
+        setDay(null);
+    }
 
     const chosenFriend = friends.find((friend) => friend.id === friendId);
     const chosenDay = days.find((option) => option.value === day);
@@ -59,7 +79,7 @@ export function AppointmentSheet({
             {
                 preserveScroll: true,
                 onSuccess: () => {
-                    setFriendId(null);
+                    setFriendId(preselect);
                     setDay(null);
                     onOpenChange(false);
                 },

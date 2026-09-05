@@ -52,8 +52,13 @@ class HabitDayShiftController extends Controller
         /** @var Carbon $date */
         $date = $request->shiftedOn();
 
+        // Das Datum als Carbon und nicht als Zeichenkette: Der `date`-Cast legt
+        // „2026-09-05 00:00:00" ab, und ein Vergleich gegen „2026-09-05" fände
+        // die eigene Zeile nicht — `updateOrCreate` legte dann eine zweite an
+        // und liefe in den eindeutigen Schlüssel. Dieselbe Falle wie in
+        // {@see CourseExceptionController::store()}.
         HabitDayShift::query()->updateOrCreate(
-            ['habit_id' => $habit->id, 'shifted_on' => $date->toDateString()],
+            ['habit_id' => $habit->id, 'shifted_on' => $date],
             ['scheduled_time' => $request->string('scheduled_time')->toString()],
         );
 
@@ -137,8 +142,13 @@ class HabitDayShiftController extends Controller
     {
         $this->guard($user, $habit, $date, $start);
 
+        // Das Datum als Carbon und nicht als Zeichenkette: Der `date`-Cast legt
+        // „2026-09-05 00:00:00" ab, und ein Vergleich gegen „2026-09-05" fände
+        // die eigene Zeile nicht — `updateOrCreate` legte dann eine zweite an
+        // und liefe in den eindeutigen Schlüssel. Dieselbe Falle wie in
+        // {@see CourseExceptionController::store()}.
         HabitDayShift::query()->updateOrCreate(
-            ['habit_id' => $habit->id, 'shifted_on' => $date->toDateString()],
+            ['habit_id' => $habit->id, 'shifted_on' => $date],
             ['scheduled_time' => DayPlan::toTime($start)],
         );
     }

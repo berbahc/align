@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AppointmentAvailabilityController;
+use App\Http\Controllers\AppointmentCompletionController;
 use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\AppointmentNoticeController;
 use App\Http\Controllers\CalendarController;
@@ -128,6 +129,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('appointments.update');
         Route::delete('appointments/{appointment}', [AppointmentController::class, 'destroy'])
             ->name('appointments.destroy');
+
+        // Der Haken der gefragten Seite. Er hängt an der Verabredung und nicht
+        // an der Gewohnheit: Die gehört der fragenden Person, und ein Haken
+        // dort meldete deren Erfüllung statt der eigenen.
+        Route::post('appointments/{appointment}/completion', [AppointmentCompletionController::class, 'store'])
+            ->name('appointments.completion.store');
+        Route::delete('appointments/{appointment}/completion', [AppointmentCompletionController::class, 'destroy'])
+            ->name('appointments.completion.destroy');
 
         // Die Notiz über eine Absage kennt nur einen Weg: weg. Gelesen heißt
         // gelöscht — ein „gesehen"-Feld wäre der Anfang einer Historie (§9).

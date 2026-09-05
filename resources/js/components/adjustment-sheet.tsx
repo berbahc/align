@@ -1,6 +1,7 @@
 import { router } from '@inertiajs/react';
-import { Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { AiMascot } from '@/components/ai-mascot';
+import type { MascotState } from '@/components/ai-mascot';
 import { AiSuggestionFailure } from '@/components/ai-suggestion';
 import { formatWeekdays } from '@/components/schedule-picker';
 import {
@@ -51,6 +52,17 @@ export function AdjustmentSheet({
     onPreview: (alternative: AnchorAlternative | null) => void;
 }) {
     const suggestion = useAnchorSuggestions();
+    /**
+     * Was die Figur im Kopf gerade tut.
+     *
+     * Kein eigener Zustand — dieselben zwei Flags, die auch die Skelette und
+     * die Absage steuern. Was die KI tut, steht damit an genau einer Stelle.
+     */
+    const mascotState: MascotState = suggestion.loading
+        ? 'thinking'
+        : suggestion.failed
+          ? 'stumped'
+          : 'speaking';
     // Die Wahl hängt an ihrem Block, nicht an einem Index für sich. So gilt sie
     // beim Wechsel zu einer anderen Gewohnheit von selbst nicht mehr — statt
     // nachträglich zurückgesetzt zu werden.
@@ -151,23 +163,30 @@ export function AdjustmentSheet({
             onOpenChange={(open) => !open && dismiss()}
         >
             <SheetContent side="bottom" className={BOTTOM_SHEET}>
-                <SheetHeader className="gap-2 p-0">
-                    <SheetTitle className="type-eyebrow flex items-center gap-2 text-primary">
-                        <Sparkles
-                            className="size-3.5"
-                            strokeWidth={2}
-                            aria-hidden="true"
-                        />
-                        Mir ist was aufgefallen
-                    </SheetTitle>
-                    <SheetDescription className="text-left text-[15px] leading-relaxed text-foreground">
-                        {suggestion.observation ?? (
-                            <Skeleton
-                                as="span"
-                                className="inline-block h-5 w-3/4 align-middle"
-                            />
-                        )}
-                    </SheetDescription>
+                <SheetHeader className="flex-row items-start gap-3 p-0">
+                    {/* Die Figur steht neben dem Text, nicht davor:
+                        Sie ist hier kein Aufzählungszeichen, sondern
+                        der Gegenüber, der gerade überlegt oder
+                        antwortet. Der Zustand kommt aus demselben
+                        `loading`/`failed`, das die Skelette steuert. */}
+                    <AiMascot
+                        state={mascotState}
+                        className="mt-0.5 size-9 shrink-0 text-primary"
+                    />
+
+                    <div className="flex min-w-0 flex-col gap-2">
+                        <SheetTitle className="type-eyebrow text-primary">
+                            Mir ist was aufgefallen
+                        </SheetTitle>
+                        <SheetDescription className="text-left text-[15px] leading-relaxed text-foreground">
+                            {suggestion.observation ?? (
+                                <Skeleton
+                                    as="span"
+                                    className="inline-block h-5 w-3/4 align-middle"
+                                />
+                            )}
+                        </SheetDescription>
+                    </div>
                 </SheetHeader>
 
                 <p className="mt-5 text-sm leading-relaxed text-muted-foreground">

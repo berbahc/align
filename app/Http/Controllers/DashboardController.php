@@ -30,9 +30,15 @@ class DashboardController extends Controller
             ->habits()
             ->active()
             ->with(['completions' => fn (Relation $query) => $query->whereDate('completed_on', $today)])
-            // Screen A3: die zugesagte Verabredung sitzt in der Habit-Zeile,
-            // als Doppel-Zeichen an der Stelle der Icon-Kachel.
-            ->with(['appointments' => fn (Relation $query) => $query->accepted()->onDate($today)->with('invitee')])
+            // Screen A3: die Verabredung sitzt in der Habit-Zeile, als
+            // Doppel-Zeichen an der Stelle der Icon-Kachel.
+            //
+            // Auch die noch offene: Sie steht sonst zweimal auf der Seite —
+            // einmal als Gewohnheit und einmal als Karte unter „Zusammen" —,
+            // und die Karte sagt nichts, was die Zeile nicht schon sagt. Nur
+            // eigene Gewohnheiten werden hier geladen, die Anfrage ist also
+            // immer die eigene; was andere fragen, steht weiter oben.
+            ->with(['appointments' => fn (Relation $query) => $query->onDate($today)->with('invitee')])
             // Die Serie braucht die ganze Historie, `completions` ist oben aber
             // auf heute eingegrenzt — deshalb die zweite, schmale Relation.
             ->with('completionDates')
@@ -90,7 +96,11 @@ class DashboardController extends Controller
             // Was jemand abgesagt hat — einmal, bis es weggeklickt ist (§5).
             'appointmentNotices' => AppointmentNotice::forUser($request->user()),
             // Alles Verabredete, was noch bevorsteht — für beide Seiten.
-            'upcomingAppointments' => $this->upcomingAppointments($request->user(), $today),
+            'upcomingAppointments' => $this->upcomingAppointments(
+                $request->user(),
+                $today,
+                $todaysHabits->pluck('id')->all(),
+            ),
             'friends' => $request->user()->friends()->map(fn (User $friend): array => [
                 'id' => $friend->id,
                 'name' => $friend->name,
@@ -111,6 +121,11 @@ class DashboardController extends Controller
                 'id' => $habit->id,
                 'title' => $habit->title,
                 'scheduleLabel' => $habit->scheduleLabel($today),
+                // Dieselbe Auskunft in ihren zwei Hälften: Die Übersicht liest
+                // den Tag als Plan und stellt die Uhr in eine eigene Spalte,
+                // die Wiederholung bleibt in der Nebenzeile. Die ganze Zeile
+                // steht daneben, weil das Verabredungs-Sheet sie braucht.
+                ...$habit->schedulePieces($today),
                 'behaviorType' => $habit->behavior_type->value,
                 'measureLabel' => $habit->measureLabel(),
                 'smallestStep' => $habit->smallest_step,
@@ -123,7 +138,7 @@ class DashboardController extends Controller
                 // §6: Zwei Häkchen? Nein — eines. Der Fortschritt der anderen
                 // Person steht hier bewusst nicht, sonst wäre die Verabredung
                 // durch die Hintertür doch ein Dauerstatus.
-                'companion' => $habit->appointments->first()?->companion($request->user()),
+                'companion' => $this->companion($habit, $request->user()),
                 'appointmentId' => $habit->appointments->first()?->id,
                 // Die Tage, an denen sich genau diese Gewohnheit zu zweit
                 // angehen lässt. Sie stehen an der Zeile und nicht einmal für
@@ -147,23 +162,101 @@ class DashboardController extends Controller
      *
      * Zwei Fälle fehlen bewusst, weil sie anderswo schon stehen: offene
      * Anfragen an mich (die Karte mit den Knöpfen darüber) und was heute an
-     * meiner eigenen Gewohnheit hängt (das Doppel-Zeichen in der Habit-Zeile).
+     * einer Gewohnheit hängt, die in der Tagesliste steht — dort trägt es das
+     * Doppel-Zeichen in der Zeile. Das gilt für die Zusage wie für die noch
+     * offene Frage: Beide Male sagte die Karte nur noch einmal, was zwei
+     * Zentimeter darüber schon steht.
+     *
+     * Entscheidend ist, dass die Zeile wirklich da ist. Eine verdrängte oder
+     * für heute nicht vorgesehene Gewohnheit steht in keiner Tagesliste — ihre
+     * Verabredung verschwände sonst ersatzlos. Deshalb kommen die Kennungen
+     * der gezeigten Zeilen herein und nicht nur das Datum.
+     *
      * Der Community-Bereich lässt nur den ersten Fall weg — dort gibt es keine
      * Habit-Zeile, die den zweiten tragen könnte.
      *
-     * @return list<array{id: int, name: string, initial: string, title: string, anchor: string, day: string, accepted: bool, iAsked: bool}>
+     * @param  list<int>  $shownHabitIds  Die Gewohnheiten, die heute in der Liste stehen
+     * @return list<array{id: int, name: string, initial: string, title: string, anchor: string, day: string, accepted: bool, iAsked: bool, completed: bool|null, canComplete: bool, repeatHabitId: int|null, repeatDays: list<array{value: string, label: string}>}>
      */
-    private function upcomingAppointments(User $user, Carbon $today): array
+    private function upcomingAppointments(User $user, Carbon $today, array $shownHabitIds): array
     {
         return Appointment::upcomingFor($user, $today)
             ->reject(fn (Appointment $appointment): bool => $appointment->awaitsAnswerFrom($user) || (
-                $appointment->accepted_at !== null
-                && $appointment->requester_id === $user->id
+                $appointment->requester_id === $user->id
                 && $appointment->scheduled_for->isToday()
+                && in_array($appointment->habit_id, $shownHabitIds, true)
             ))
-            ->map(fn (Appointment $appointment): array => $appointment->present($user))
+            ->map(fn (Appointment $appointment): array => [
+                ...$appointment->present($user),
+                ...$this->repeat($appointment, $user),
+            ])
             ->values()
             ->all();
+    }
+
+    /**
+     * Der Weg zur nächsten Verabredung — „Nochmal ausmachen?".
+     *
+     * `community_feature3.md` §7: der ganze Wiederholungs-Mechanismus, „immer
+     * als neue Einzelentscheidung, nie als Abo". Felix' gemeinsamer Sport
+     * scheiterte an der losen Absicht; jede Wiederholung wird deshalb frisch
+     * hergestellt, statt einmal vereinbart und dann zu erodieren.
+     *
+     * **Nur nach dem eigenen Anteil.** Erschiene der Weg erst, wenn beide
+     * abgehakt haben, verriete allein seine Anwesenheit, dass die andere
+     * Person fertig ist — genau der Fremdfortschritt, den §6 ausschließt.
+     *
+     * @return array{repeatHabitId: int|null, repeatDays: list<array{value: string, label: string}>}
+     */
+    private function repeat(Appointment $appointment, User $user): array
+    {
+        $habit = $appointment->wasDoneBy($user)
+            ? $appointment->repeatableHabitFor($user)
+            : null;
+
+        return [
+            'repeatHabitId' => $habit?->id,
+            // Die Tage kommen aus der Gewohnheit, nicht aus dem Kalender —
+            // dieselbe Wahl wie beim ersten Mal, nur ab dem Tag **nach** dem
+            // gemeinsamen. Für den gemeinsamen selbst steht schon eine
+            // Verabredung; ihn noch einmal anzubieten führte in die Abweisung
+            // und wäre ohnehin die Wiederholung von etwas, das gerade war.
+            'repeatDays' => $habit === null ? [] : Appointment::dayChoicesFor(
+                $habit,
+                Carbon::parse($appointment->scheduled_for)->startOfDay()->addDay(),
+            ),
+        ];
+    }
+
+    /**
+     * Wer heute mitmacht — zugesagt oder erst gefragt.
+     *
+     * Geladen werden nur eigene Gewohnheiten, die Verabredung hängt also immer
+     * an einer eigenen Frage. `pending` unterscheidet die beiden Fälle, und die
+     * Zeile zeichnet daraus einen durchgezogenen oder einen gestrichelten
+     * zweiten Kreis — gestrichelt heißt im ganzen System „noch nicht
+     * festgelegt" (designsprache.md §7.3).
+     *
+     * Bewusst ohne Fortschritt der anderen Person: Das wäre durch die Hintertür
+     * doch ein Dauerstatus (community_feature3.md §6).
+     *
+     * @return array{name: string, initial: string, pending: bool, repeatHabitId: int|null, repeatDays: list<array{value: string, label: string}>}|null
+     */
+    private function companion(Habit $habit, User $user): ?array
+    {
+        $appointment = $habit->appointments->first();
+
+        if ($appointment === null) {
+            return null;
+        }
+
+        return [
+            ...$appointment->companion($user),
+            'pending' => $appointment->accepted_at === null,
+            // Für „Nochmal ausmachen?" im erledigten Zustand der Zeile. Steht
+            // erst da, wenn der eigene Anteil erledigt ist — siehe repeat().
+            ...$this->repeat($appointment, $user),
+        ];
     }
 
     /**
@@ -210,6 +303,12 @@ class DashboardController extends Controller
      */
     private function todayProgress(Collection $habits): array
     {
+        // Nur eigene Gewohnheiten. Eine zugesagte Verabredung zählt bewusst
+        // nicht mit — sie ist die Gewohnheit einer anderen Person, und der
+        // Nenner der Quote ist „was ich mir vorgenommen habe". Wer sie
+        // dauerhaft will, übernimmt sie; dann ist sie eine eigene und zählt
+        // wie jede andere. Festgehalten in `AppointmentCompletionTest`.
+
         $total = $habits->count();
         $completed = $habits->filter(
             fn (Habit $habit): bool => $habit->completions->isNotEmpty(),

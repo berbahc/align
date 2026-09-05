@@ -1,7 +1,9 @@
 import { Check, Undo2 } from 'lucide-react';
+import { AiMascot } from '@/components/ai-mascot';
 import { PersonCircle } from '@/components/person-circle';
 import { useSwipeToggle } from '@/hooks/use-swipe-toggle';
 import { BEHAVIOR_ICONS } from '@/lib/behavior-icons';
+import { AI_LINK, QUIET_LINK } from '@/lib/interaction';
 import { cn } from '@/lib/utils';
 import type { Habit } from '@/types';
 
@@ -12,6 +14,16 @@ import type { Habit } from '@/types';
  * ändern sich gemeinsam, damit der Zustand auch ohne Farbwahrnehmung
  * unterscheidbar bleibt. Der offene Kreis ist gestrichelt („wartet"), nie
  * leer-durchgezogen („fehlt"). Kein Durchstreichen, kein Ausgrauen.
+ *
+ * **Die Uhrzeit steht links in einer eigenen Spalte.** Vorher lief sie in
+ * einer Kette aus Punkten mit: „mit Test2 · 09:00 · nur an diesem Tag · 90
+ * Min" — vier verschiedene Auskünfte in einem Gewicht. Wer zwei gleichnamige
+ * Gewohnheiten am selben Tag hat, konnte sie darin nicht auseinanderhalten.
+ * Die Liste ist ohnehin nach der Stunde sortiert; die Spalte macht diese
+ * Ordnung sichtbar und liest den Tag als Plan von früh nach spät — dieselbe
+ * Stundenspalte wie im Kalender. Sie bleibt leer, wo es keine Uhr gibt („nach
+ * dem Aufstehen"): Eine abgeleitete Stunde dorthin zu schreiben wäre eine
+ * Festlegung, die niemand getroffen hat.
  */
 export function HabitRow({
     habit,
@@ -19,6 +31,8 @@ export function HabitRow({
     onToggle,
     onStuck,
     onAskCompany,
+    onWithdraw,
+    onRepeat,
     highlighted = false,
 }: {
     habit: Habit;
@@ -28,6 +42,20 @@ export function HabitRow({
     onStuck: (habit: Habit) => void;
     /** Null blendet den Weg zur Verabredung aus — Screen A5. */
     onAskCompany: ((habit: Habit) => void) | null;
+    /**
+     * Die Verabredung wieder auflösen — zurückziehen oder absagen.
+     *
+     * Sie steht jetzt in dieser Zeile statt in einer eigenen Karte, also muss
+     * auch der Weg zurück hier liegen. Null, wo es ihn nicht gibt.
+     */
+    onWithdraw: ((habit: Habit) => void) | null;
+    /**
+     * Dieselbe Person nochmal fragen — `community_feature3.md` §7.
+     *
+     * Der ganze Wiederholungs-Mechanismus des Features: jedes Mal eine neue
+     * Einzelentscheidung, nie ein Abo. Null blendet ihn aus.
+     */
+    onRepeat: ((habit: Habit) => void) | null;
     /**
      * Kurz betont, nachdem eine Absage hierher verwiesen hat.
      *
@@ -63,11 +91,19 @@ export function HabitRow({
     /** Wie weit die Fläche hinter der Zeile freiliegt, 0…1. */
     const revealed = Math.min(Math.abs(swipeOffset) / swipeThreshold, 1);
 
+    /**
+     * Die Nebenzeile — alles außer der Uhrzeit, die links in der Spalte steht.
+     *
+     * Die Reihenfolge ist die der Fragen: mit wem, wie oft, wie lange.
+     */
     const subtitle = isDone
         ? `Abgeschlossen · ${habit.completedAt} Uhr`
         : [
-              companion && `mit ${companion.name}`,
-              habit.scheduleLabel,
+              companion &&
+                  (companion.pending
+                      ? `${companion.name} ist gefragt`
+                      : `mit ${companion.name}`),
+              habit.repeatLabel,
               habit.measureLabel,
           ]
               .filter(Boolean)
@@ -141,20 +177,57 @@ export function HabitRow({
                     }}
                 >
                     <div className="flex items-center gap-3">
+                        {/* Die Uhrspalte. Feste Breite, damit die Zeilen
+                            untereinander eine Achse bilden — sonst wandert der
+                            Titel mit der Länge der Uhrzeit und die Liste liest
+                            sich nicht mehr als Plan. Tabellenziffern halten die
+                            Spalte auch dann ruhig, wenn 09:00 über 15:00 steht.
+
+                            Leer, wo es keine Uhr gibt: Der Zeitpunkt („nach dem
+                            Aufstehen") steht dann in der Nebenzeile. Die Lücke
+                            ist die Aussage — diese Gewohnheit hängt an einer
+                            Situation, nicht an einer Stunde. */}
+                        <span
+                            aria-hidden={habit.timeLabel === null}
+                            className="w-10 shrink-0 text-right text-[13px] leading-none font-semibold text-muted-foreground tabular-nums"
+                        >
+                            {habit.timeLabel}
+                        </span>
+
                         {/* §3.2 — die dritte Ausprägung der Icon-Kachel: zwei Kreise
                     statt einem. Kein neues Element, keine neue Farbe, kein
                     neues Symbol. Form *und* Anzahl unterscheiden sich, die
                     Information hängt also nicht an der Farbe. */}
                         {companion !== null && !isDone ? (
                             <span
-                                className="flex shrink-0 -space-x-2"
-                                aria-label={`Zusammen mit ${companion.name}`}
+                                className="flex w-11 shrink-0 justify-center -space-x-1"
+                                aria-label={
+                                    companion.pending
+                                        ? `${companion.name} ist gefragt`
+                                        : `Zusammen mit ${companion.name}`
+                                }
                             >
-                                <PersonCircle initial={selfInitial} />
                                 <PersonCircle
-                                    initial={companion.initial}
-                                    className="ring-2 ring-background"
+                                    initial={selfInitial}
+                                    className="size-6 text-[10px]"
                                 />
+                                {/* Gestrichelt, solange die Antwort aussteht —
+                                    dieselbe Bedeutung wie beim offenen
+                                    Habit-Kreis (§7.3). Die Initiale steht erst
+                                    da, wenn zugesagt ist: Vorher wäre sie eine
+                                    Behauptung über jemanden, der noch nichts
+                                    gesagt hat. */}
+                                {companion.pending ? (
+                                    <PersonCircle
+                                        pending
+                                        className="size-6 bg-card text-[10px] ring-2 ring-background"
+                                    />
+                                ) : (
+                                    <PersonCircle
+                                        initial={companion.initial}
+                                        className="size-6 text-[10px] ring-2 ring-background"
+                                    />
+                                )}
                             </span>
                         ) : (
                             /* Die Kachel wechselt nicht, sie verformt sich: Radius und
@@ -180,7 +253,13 @@ export function HabitRow({
                         <span className="min-w-0 flex-1">
                             <span
                                 className={cn(
-                                    'block truncate text-[15px] leading-snug font-semibold transition-colors duration-[var(--duration-fluid)] ease-[var(--ease-fluid)]',
+                                    // Der Titel bricht um, statt abgeschnitten
+                                    // zu werden: Er ist der Name der Sache. Die
+                                    // Uhrspalte nimmt schmalen Bildschirmen
+                                    // Platz weg, und „Tagebuch schrei…" nennt
+                                    // die Gewohnheit nicht mehr. Die Nebenzeile
+                                    // darunter darf kürzen — sie beschreibt nur.
+                                    'block text-[15px] leading-snug font-semibold break-words transition-colors duration-[var(--duration-fluid)] ease-[var(--ease-fluid)]',
                                     // §2.3 empfiehlt für erledigte Titel `olive-mid` statt
                                     // Gold — Gold erreicht auf `surface` nur 2.46:1.
                                     isDone
@@ -244,37 +323,102 @@ export function HabitRow({
 
                 Eingerückt auf Höhe des Titels, damit die Zeile als Fortsetzung
                 der Gewohnheit gelesen wird und nicht als eigener Eintrag. */}
+                    {/* Der erledigte Zustand ist sonst bewusst leer — ein
+                        stehengebliebener Anstoß läse sich wie eine
+                        Nachforderung. Hier fordert nichts nach: Es ist das
+                        Angebot, etwas zu wiederholen, das gerade gelungen ist,
+                        und es steht nur, wenn wirklich jemand dabei war. §7
+                        nennt das den ganzen Wiederholungs-Mechanismus —
+                        „immer als neue Einzelentscheidung, nie als Abo". */}
+                    {isDone &&
+                        companion !== null &&
+                        companion.repeatHabitId !== null &&
+                        onRepeat !== null && (
+                            <div className="pl-[3.25rem]">
+                                {/* Mit Namen, anders als in der Karte unter
+                                    „Zusammen": Dort steht das Doppel-Zeichen
+                                    daneben, hier ist es im erledigten Zustand
+                                    dem gefüllten Haken gewichen. „Nochmal
+                                    ausmachen?" allein sagte nicht, mit wem —
+                                    und die Vorwahl im Sheet käme dann
+                                    unangekündigt. */}
+                                <button
+                                    type="button"
+                                    onClick={() => onRepeat(habit)}
+                                    className={`${QUIET_LINK} text-xs`}
+                                >
+                                    Nochmal mit {companion.name}?
+                                </button>
+                            </div>
+                        )}
+
                     {!isDone && (
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pl-14">
+                        <div className="flex flex-col gap-1.5 pl-[3.25rem]">
+                            {/* Der vorbereitete Schritt steht für sich, die
+                                Angebote darunter. Vorher lagen alle drei in
+                                einer umbrechenden Reihe: Ein längerer Schritt
+                                schob die Knöpfe in die nächste Zeile, und je
+                                nach Satzlänge stand die Reihe mal so und mal
+                                so. Zwei feste Zeilen sind ruhiger — der Satz
+                                sagt, was zu tun ist, die Zeile darunter, was
+                                man sonst noch kann. */}
                             {habit.smallestStep && (
                                 <span className="text-xs leading-relaxed text-muted-foreground">
                                     → {habit.smallestStep}
                                 </span>
                             )}
+
                             {/* Der Weg zur Verabredung steht neben der Starthilfe:
                         beides sind Angebote für denselben Moment, in dem eine
                         Gewohnheit noch offen ist. Er verschwindet, sobald
                         jemand mitmacht — eine zweite Person pro Verabredung
                         ist die Obergrenze (§4). */}
-                            {onAskCompany !== null && companion === null && (
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                                {onAskCompany !== null &&
+                                    companion === null && (
+                                        <button
+                                            type="button"
+                                            onClick={() => onAskCompany(habit)}
+                                            className={`${QUIET_LINK} text-xs`}
+                                        >
+                                            Mit jemandem zusammen?
+                                        </button>
+                                    )}
+                                {/* Der Rückweg steht an der Stelle, an der
+                                    eben noch der Hinweg stand — und im selben
+                                    Ton wie die Wege daneben. Er war vorher
+                                    grau, damit die Korrektur nicht wie ein
+                                    Vorschlag aussieht; in einer Zeile mit zwei
+                                    olivfarbenen Knöpfen las sich das aber als
+                                    zweite Art von Element und nicht als
+                                    Zurückhaltung. Was ihn weiterhin von einem
+                                    Angebot unterscheidet, ist sein Wort. */}
+                                {companion !== null && onWithdraw !== null && (
+                                    <button
+                                        type="button"
+                                        onClick={() => onWithdraw(habit)}
+                                        className={`${QUIET_LINK} text-xs`}
+                                    >
+                                        {companion.pending
+                                            ? 'Zurückziehen'
+                                            : 'Absagen'}
+                                    </button>
+                                )}
+                                {/* Derselbe Wortlaut wie im Kalender: Es ist
+                            dieselbe Hilfe, und zwei Namen dafür wären zwei
+                            Angebote. Die Figur davor steht für die KI dahinter. */}
                                 <button
                                     type="button"
-                                    onClick={() => onAskCompany(habit)}
-                                    className="cursor-pointer text-xs font-semibold text-primary underline underline-offset-4 transition-colors duration-[var(--duration-press)] ease-out hover:text-primary/80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring active:text-primary/60"
+                                    onClick={() => onStuck(habit)}
+                                    className={`${AI_LINK} text-xs`}
                                 >
-                                    Mit jemandem zusammen?
+                                    <AiMascot
+                                        variant="mark"
+                                        className="size-4 shrink-0"
+                                    />
+                                    Kleinen ersten Schritt
                                 </button>
-                            )}
-                            {/* Derselbe Wortlaut wie im Kalender: Es ist
-                        dieselbe Hilfe, und zwei Namen dafür wären zwei
-                        Angebote. Das ✦ steht für die KI dahinter. */}
-                            <button
-                                type="button"
-                                onClick={() => onStuck(habit)}
-                                className="cursor-pointer text-xs font-semibold text-primary underline underline-offset-4 transition-colors duration-[var(--duration-press)] ease-out hover:text-primary/80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring active:text-primary/60"
-                            >
-                                ✦ Kleinen ersten Schritt
-                            </button>
+                            </div>
                         </div>
                     )}
                 </div>

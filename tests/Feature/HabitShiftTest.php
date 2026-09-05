@@ -48,6 +48,62 @@ test('a shift for today leaves the habit itself alone', function () {
         ->and($habit->dayShifts()->sole()->scheduled_time->format('H:i'))->toBe('14:00');
 });
 
+/**
+ * Denselben Tag zweimal verschieben ersetzt, es legt nicht daneben.
+ *
+ * Hier brach die App mit einem 500er ab: Der `date`-Cast legt
+ * „2026-09-05 00:00:00" ab, die Suche von `updateOrCreate` verglich aber gegen
+ * „2026-09-05" und fand die eigene Zeile nicht. Also legte sie eine zweite an
+ * — und lief in genau den eindeutigen Schlüssel, den die Migration setzt.
+ * Dieselbe Falle steht schon in `CourseExceptionController` beschrieben.
+ */
+test('shifting the same day twice replaces the exception instead of crashing', function () {
+    $user = User::factory()->create();
+    $habit = shiftable($user);
+    $today = Carbon::today()->toDateString();
+
+    foreach ([14 * 60, 8 * 60] as $minute) {
+        $this->actingAs($user)
+            ->put(route('habits.shifts.move', $habit), [
+                'date' => $today,
+                'start_minute' => $minute,
+                'scope' => 'today',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+    }
+
+    expect($habit->dayShifts()->count())->toBe(1)
+        ->and($habit->dayShifts()->sole()->scheduled_time->format('H:i'))->toBe('08:00');
+});
+
+/**
+ * Derselbe Weg über `POST`, den die Verabredungs-Karte benutzt.
+ *
+ * Mit fester Uhrzeit: Platz machen verrückt eine Uhrzeit, und eine Situation
+ * hat keine, die sich verrücken ließe.
+ */
+test('making room twice on the same day replaces the exception as well', function () {
+    $user = User::factory()->create();
+    $habit = Habit::factory()->for($user)->withMeasure(30)
+        ->fixedSchedule('17:00', [1, 2, 3, 4, 5, 6, 7])
+        ->create(['title' => 'Lesen']);
+    $today = Carbon::today()->toDateString();
+
+    foreach (['14:00', '08:00'] as $time) {
+        $this->actingAs($user)
+            ->post(route('habits.shifts.store', $habit), [
+                'date' => $today,
+                'scheduled_time' => $time,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+    }
+
+    expect($habit->dayShifts()->count())->toBe(1)
+        ->and($habit->dayShifts()->sole()->scheduled_time->format('H:i'))->toBe('08:00');
+});
+
 test('the shifted block lies at its new place — and only on that day', function () {
     $user = User::factory()->create();
     $habit = shiftable($user);
@@ -381,6 +437,10 @@ test('the overview shows the shifted time, not the regular one', function () {
             // heute gilt — sonst läse sich die Zeile wie eine dauerhafte
             // Änderung.
             ->where('habits.0.scheduleLabel', '14:00 · nur an diesem Tag')
+            // Getrennt gilt dasselbe: Die verschobene Uhrzeit steht in der
+            // Spalte, die Ausnahme in der Nebenzeile.
+            ->where('habits.0.timeLabel', '14:00')
+            ->where('habits.0.repeatLabel', 'nur an diesem Tag')
         );
 });
 

@@ -1,4 +1,5 @@
 import { Check } from 'lucide-react';
+import { PersonCircle } from '@/components/person-circle';
 import { BEHAVIOR_ICONS } from '@/lib/behavior-icons';
 import { MIN_BLOCK_HEIGHT, spanLabel } from '@/lib/day-grid';
 import type { PlacedBlock } from '@/lib/day-grid';
@@ -34,6 +35,7 @@ const LANE_GAP = 4;
  */
 export function CalendarBlock({
     placed,
+    selfInitial,
     canComplete,
     onToggle,
     onOpen,
@@ -44,6 +46,8 @@ export function CalendarBlock({
     dragHandlers,
 }: {
     placed: PlacedBlock<Block>;
+    /** Die eigene Initiale — für das Doppel-Zeichen, wenn jemand mitmacht. */
+    selfInitial: string;
     canComplete: boolean;
     onToggle: (block: Block) => void;
     /** Öffnet den Block — dort stehen Anpassung, Starthilfe und der Rest. */
@@ -133,6 +137,7 @@ export function CalendarBlock({
                             block={block}
                             Icon={Icon}
                             spacious={spacious}
+                            selfInitial={selfInitial}
                         />
                     </button>
                 ) : (
@@ -141,6 +146,7 @@ export function CalendarBlock({
                             block={block}
                             Icon={Icon}
                             spacious={spacious}
+                            selfInitial={selfInitial}
                         />
                     </div>
                 )}
@@ -185,29 +191,53 @@ function BlockBody({
     block,
     Icon,
     spacious,
+    selfInitial,
 }: {
     block: Block;
     Icon: (typeof BEHAVIOR_ICONS)[keyof typeof BEHAVIOR_ICONS];
     spacious: boolean;
+    /** Die eigene Initiale — die linke Hälfte des Doppel-Zeichens aus §3.2. */
+    selfInitial: string;
 }) {
     return (
         <span className="flex h-full items-start gap-2">
-            {spacious && (
-                <span
-                    className={cn(
-                        'mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-lg',
-                        block.completed
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-sand text-primary',
-                    )}
-                >
-                    <Icon
-                        className="size-3.5"
-                        strokeWidth={1.5}
-                        aria-hidden="true"
-                    />
-                </span>
-            )}
+            {/* §3.2 — die dritte Ausprägung der Kachel: zwei Kreise statt
+                einem, wenn heute jemand mitmacht. Wortgleich zur Zeile auf der
+                Übersicht; ohne sie zeigte der Kalender an demselben Tag
+                weniger als die Startseite. Erledigt fällt sie weg — dann sagt
+                der gefüllte Haken schon alles, und zwei Zeichen für einen
+                Zustand sind eines zu viel. */}
+            {spacious &&
+                (block.companion !== null && !block.completed ? (
+                    <span
+                        aria-label={`Zusammen mit ${block.companion.name}`}
+                        className="mt-0.5 flex shrink-0 -space-x-1.5"
+                    >
+                        <PersonCircle
+                            initial={selfInitial}
+                            className="size-6 text-[10px]"
+                        />
+                        <PersonCircle
+                            initial={block.companion.initial}
+                            className="size-6 text-[10px] ring-2 ring-track"
+                        />
+                    </span>
+                ) : (
+                    <span
+                        className={cn(
+                            'mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-lg',
+                            block.completed
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-sand text-primary',
+                        )}
+                    >
+                        <Icon
+                            className="size-3.5"
+                            strokeWidth={1.5}
+                            aria-hidden="true"
+                        />
+                    </span>
+                ))}
 
             <span className="min-w-0 flex-1">
                 <span className="type-eyebrow block truncate text-muted-foreground">

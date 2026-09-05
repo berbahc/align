@@ -1,11 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
-import {
-    ChevronLeft,
-    ChevronRight,
-    GraduationCap,
-    Sparkles,
-} from 'lucide-react';
+import { ChevronLeft, ChevronRight, GraduationCap } from 'lucide-react';
 import { useState } from 'react';
+import { AiMascot } from '@/components/ai-mascot';
 import { CourseCancellationSheet } from '@/components/course-cancellation-sheet';
 import { CourseDetailSheet } from '@/components/course-detail-sheet';
 import { CourseSheet } from '@/components/course-sheet';
@@ -187,13 +183,16 @@ export default function Calendar({
                                 </li>
                             ))}
                         </ul>
-                        {/* Der Weg zur KI — ✦ steht nur hier (§8). */}
+                        {/* Der Weg zur KI — die Figur steht nur hier (§8). */}
                         <button
                             type="button"
                             onClick={() => setPlacesOpen(true)}
                             className={`${OUTLINE_BUTTON} self-start`}
                         >
-                            <Sparkles className="size-4" aria-hidden="true" />
+                            <AiMascot
+                                variant="mark"
+                                className="size-4 shrink-0"
+                            />
                             Neue Zeiten vorschlagen
                         </button>
                     </div>

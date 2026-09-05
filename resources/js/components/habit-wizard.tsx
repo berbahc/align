@@ -456,7 +456,7 @@ export function HabitWizard({
                     </p>
 
                     {suggestion.loading ? (
-                        <AiSuggestion>
+                        <AiSuggestion state="thinking">
                             <div className="flex flex-col gap-2">
                                 <Skeleton className="h-12 rounded-xl" />
                                 <Skeleton className="h-12 rounded-xl" />
@@ -467,7 +467,7 @@ export function HabitWizard({
                         <AiSuggestionFailure onRetry={loadSuggestions} />
                     ) : (
                         suggestion.steps.length > 0 && (
-                            <AiSuggestion>
+                            <AiSuggestion state="speaking">
                                 <div className="flex flex-col gap-2">
                                     {suggestion.steps.map((candidate) => {
                                         const isSelected =

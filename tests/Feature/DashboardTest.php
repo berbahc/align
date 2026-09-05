@@ -237,5 +237,29 @@ test('the schedule label carries the time and days of a fixed habit', function (
         ->get(route('dashboard'))
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->where('habits.0.scheduleLabel', '07:30 · Mo–Fr')
+            // Dieselbe Auskunft getrennt: Die Uhr steht auf der Übersicht in
+            // einer eigenen Spalte, die Wiederholung in der Nebenzeile. Ohne
+            // die Trennung lief beides in derselben Kette aus Punkten mit und
+            // zwei gleichnamige Gewohnheiten am selben Tag waren nicht
+            // auseinanderzuhalten.
+            ->where('habits.0.timeLabel', '07:30')
+            ->where('habits.0.repeatLabel', 'Mo–Fr')
+        );
+});
+
+test('a habit anchored to a situation leaves the clock column empty', function () {
+    Carbon::setTestNow(Carbon::parse('2026-08-03'));
+
+    $user = User::factory()->create();
+    Habit::factory()->for($user)->create(['trigger_situation' => 'nach dem Aufstehen']);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            // Die abgeleitete Stunde gehört nicht in die Spalte: Sie wäre eine
+            // Festlegung, die niemand getroffen hat. Der Zeitpunkt steht
+            // stattdessen in der Nebenzeile.
+            ->where('habits.0.timeLabel', null)
+            ->where('habits.0.repeatLabel', 'nach dem Aufstehen')
         );
 });

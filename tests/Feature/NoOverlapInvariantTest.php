@@ -3,6 +3,7 @@
 use App\Enums\CourseKind;
 use App\Enums\HabitTemplate;
 use App\Enums\ScheduleType;
+use App\Models\Appointment;
 use App\Models\Course;
 use App\Models\Habit;
 use App\Models\Semester;
@@ -30,11 +31,30 @@ function overlapOn(User $user, Carbon $date): ?string
     $habits = $user->habits()->active()->with('chainedTo.chainedTo')->get();
     $habits->each(fn (Habit $habit) => $habit->setRelation('user', $user));
 
+    // Der Stundenplan **und** das Zugesagte: Eine Verabredung belegt den Tag
+    // genau wie ein Kurs, und ein Weg, der sie übersieht, ist dasselbe Loch in
+    // derselben Regel. Dieselbe Null als Kennung wie im Kalender — positive
+    // Zahlen sind Gewohnheiten, negative Kurse.
+    $appointments = Appointment::acceptedOn($user, $date)
+        ->filter(fn (Appointment $appointment): bool => $appointment->requester_id !== $user->id)
+        ->map(function (Appointment $appointment): array {
+            $start = $appointment->habit->dayStartMinute() ?? Habit::UnknownAnchorHour * 60;
+
+            return [
+                'id' => 0,
+                'title' => $appointment->habit->title,
+                'from' => $start,
+                'to' => $start + ($appointment->habit->durationMinutes() ?? DayPlan::AssumedMinutes),
+            ];
+        })
+        ->values()
+        ->all();
+
     $blocks = DayPlan::forDate(
         $habits->filter(fn (Habit $habit): bool => $habit->isScheduledOn($date))->values(),
         $date,
         $user->sleepWindows(),
-        Timetable::for($user)->blocksOn($date),
+        [...Timetable::for($user)->blocksOn($date), ...$appointments],
     )->occupied();
 
     // Wer zu wem gehört: Glieder derselben Kette dürfen enger liegen, weil
@@ -270,6 +290,78 @@ function attemptOverlap(object $test, User $user, string $way): void
             ]);
         })(),
 
+        'verabredung-zusagen' => (function () use ($test, $user) {
+            // Zusagen ist ein Weg, auf dem eine Zeit im eigenen Tag belegt
+            // wird — nur steht sie in einer fremden Gewohnheit. Genau darum
+            // gehört er hierher: Der Kalender zeigt sie jetzt, und was er
+            // zeigt, muss auch der Rechnung standhalten.
+            Habit::factory()->for($user)->fixedSchedule('14:00', [1])->withMeasure(30)->create();
+
+            $other = User::factory()->create();
+            $theirs = Habit::factory()->for($other)
+                ->fixedSchedule('14:00', [1])
+                ->withMeasure(30)
+                ->create();
+
+            $appointment = Appointment::factory()->create([
+                'habit_id' => $theirs->id,
+                'requester_id' => $other->id,
+                'invitee_id' => $user->id,
+                'scheduled_for' => invariantMonday(),
+            ]);
+
+            $test->actingAs($user)->patch(route('appointments.update', $appointment));
+        })(),
+
+        'verabredung-zusagen-knapp' => (function () use ($test, $user) {
+            // Kein Überlapp, aber nur fünf Minuten Abstand. `AppointmentFit`
+            // verglich lange nur die Spannen und ließ das durch — der
+            // Tagesplan verlangt überall sonst eine Viertelstunde. Der Fall
+            // hält fest, dass beide jetzt denselben Maßstab benutzen.
+            Habit::factory()->for($user)->fixedSchedule('14:00', [1])->withMeasure(30)->create();
+
+            $other = User::factory()->create();
+            $theirs = Habit::factory()->for($other)
+                ->fixedSchedule('14:35', [1])
+                ->withMeasure(30)
+                ->create();
+
+            $appointment = Appointment::factory()->create([
+                'habit_id' => $theirs->id,
+                'requester_id' => $other->id,
+                'invitee_id' => $user->id,
+                'scheduled_for' => invariantMonday(),
+            ]);
+
+            $test->actingAs($user)->patch(route('appointments.update', $appointment));
+        })(),
+
+        'verabredung-zusagen-im-freien' => (function () use ($test, $user) {
+            // Und dieselbe Zusage dort, wo wirklich Platz ist: Sie geht durch,
+            // und danach darf trotzdem nichts übereinanderliegen.
+            Habit::factory()->for($user)->fixedSchedule('14:00', [1])->withMeasure(30)->create();
+
+            $other = User::factory()->create();
+            $theirs = Habit::factory()->for($other)
+                ->fixedSchedule('19:00', [1])
+                ->withMeasure(30)
+                ->create();
+
+            $appointment = Appointment::factory()->create([
+                'habit_id' => $theirs->id,
+                'requester_id' => $other->id,
+                'invitee_id' => $user->id,
+                'scheduled_for' => invariantMonday(),
+            ]);
+
+            $test->actingAs($user)
+                ->patch(route('appointments.update', $appointment))
+                ->assertSessionHasNoErrors();
+
+            // Sonst prüfte der Fall nichts: ohne Zusage kein belegter Platz.
+            expect($appointment->fresh()->accepted_at)->not->toBeNull();
+        })(),
+
         'verabredung-mit-kette' => (function () use ($test, $user) {
             // Die verschobene Gewohnheit passt, ihre Nachfolgerin nicht: Sie
             // rutscht mit und landet in der Vorlesung.
@@ -310,6 +402,9 @@ test('no path leaves two things on the same minute', function (string $way) {
     'Kette an einer ausweichenden Situation' => 'kette-an-situation',
     'Kurs an einem Datum verlegen' => 'kurs-verlegen',
     'für eine Verabredung Platz machen, mit Kette' => 'verabredung-mit-kette',
+    'eine Verabredung zusagen' => 'verabredung-zusagen',
+    'eine Verabredung ins Freie zusagen' => 'verabredung-zusagen-im-freien',
+    'eine Verabredung knapp dahinter zusagen' => 'verabredung-zusagen-knapp',
 ]);
 
 /**
