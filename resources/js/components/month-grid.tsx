@@ -56,7 +56,7 @@ export function MonthGrid({
                             aria-label={dayLabel(day, today)}
                             aria-current={day.isToday ? 'date' : undefined}
                             className={cn(
-                                'flex h-14 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl transition-[background-color,scale] duration-[var(--duration-press)] ease-out hover:bg-accent focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring motion-safe:active:scale-[0.94]',
+                                'flex h-14 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl transition-[background-color,scale] duration-[var(--duration-press)] ease-out hover:bg-accent focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring motion-safe:active:scale-[0.94]',
                                 // Tage aus dem Nachbarmonat füllen nur die
                                 // Woche auf. Sie bleiben erreichbar — nur eben
                                 // leiser, damit der Monat seine Kante behält.
@@ -94,6 +94,26 @@ export function MonthGrid({
                                     ),
                                 )}
                             </span>
+
+                            {/* Ein Vorlesungstag. Eine Linie und kein Punkt,
+                                damit sie nicht mitgezählt wird; leiser als der
+                                offene Punkt, damit sie den Inhalt des Monats
+                                nie überstimmt. Sie wird auch für die Zukunft
+                                nicht gedämpft: Ein künftiger Tag hat noch kein
+                                Ergebnis, eine Vorlesung in drei Wochen ist
+                                aber genauso Tatsache wie eine von gestern. So
+                                zeigt der Monat, was er sonst nicht kann — wo
+                                die Vorlesungszeit aufhört.
+
+                                Das Band steht auch leer, damit die Punktreihe
+                                in allen Zellen auf einer Linie bleibt. */}
+                            <span
+                                aria-hidden="true"
+                                className={cn(
+                                    'h-px w-4 rounded-full',
+                                    day.hasLectures && 'bg-olive-mid/40',
+                                )}
+                            />
                         </Link>
                     </li>
                 ))}
@@ -117,13 +137,15 @@ function dayLabel(day: MonthDay, today: string): string {
 
     const prefix = day.date === today ? 'Heute, ' : '';
 
+    const lectures = day.hasLectures ? ' · Vorlesungstag' : '';
+
     if (day.planned === 0) {
-        return `${prefix}${date} — nichts vorgesehen`;
+        return `${prefix}${date} — nichts vorgesehen${lectures}`;
     }
 
     if (day.isFuture) {
-        return `${prefix}${date} — ${day.planned} vorgesehen`;
+        return `${prefix}${date} — ${day.planned} vorgesehen${lectures}`;
     }
 
-    return `${prefix}${date} — ${day.done} von ${day.planned} erledigt`;
+    return `${prefix}${date} — ${day.done} von ${day.planned} erledigt${lectures}`;
 }

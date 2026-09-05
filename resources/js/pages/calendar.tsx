@@ -1,11 +1,29 @@
 import { Head, Link } from '@inertiajs/react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+    ChevronLeft,
+    ChevronRight,
+    GraduationCap,
+    Sparkles,
+} from 'lucide-react';
+import { useState } from 'react';
+import { CourseCancellationSheet } from '@/components/course-cancellation-sheet';
+import { CourseDetailSheet } from '@/components/course-detail-sheet';
+import { CourseSheet } from '@/components/course-sheet';
+import { CoursesSheet } from '@/components/courses-sheet';
 import { MonthGrid } from '@/components/month-grid';
+import { NewPlacesSheet } from '@/components/new-places-sheet';
+import { SemesterSheet } from '@/components/semester-sheet';
 import { Card, CardContent } from '@/components/ui/card';
-import { QUIET_LINK } from '@/lib/interaction';
+import { OUTLINE_BUTTON, QUIET_LINK } from '@/lib/interaction';
 import { calendar } from '@/routes';
 import { day as calendarDay } from '@/routes/calendar';
-import type { MonthDay } from '@/types';
+import type {
+    CourseKindOption,
+    CourseRow,
+    DisplacedHabit,
+    MonthDay,
+    SemesterPlan,
+} from '@/types';
 
 interface CalendarProps {
     /** Der gezeigte Monat als „YYYY-MM". */
@@ -19,22 +37,30 @@ interface CalendarProps {
     today: string;
     /** Volle Wochen, Montag bis Sonntag — auch über die Monatskante hinaus. */
     days: MonthDay[];
+    /** Der Zeitraum des Semesters — null, solange keiner eingetragen ist. */
+    semester: SemesterPlan | null;
+    kinds: CourseKindOption[];
+    maxCourses: number;
+    courseCount: number;
+    /** Alle Kurse des Semesters — für die Übersicht hinter dem Knopf. */
+    courses: CourseRow[];
+    /** Was der Stundenplan verdrängt hat — leer, solange nichts wartet. */
+    displaced: DisplacedHabit[];
 }
 
 const NAV_BUTTON =
     'flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-primary transition-[background-color,scale] duration-[var(--duration-press)] ease-out hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-safe:active:scale-[0.94]';
 
 /**
- * Der Monat — die Ebene, auf der man im Kalender ankommt.
+ * Der Monat — die Ebene, auf der man ankommt.
  *
- * Bis hierher führte der Kalender direkt in einen einzelnen Tag. Man konnte
- * sich durch ihn blättern, aber nie sehen, wie die Wochen davor gelaufen sind.
- * Der Monat beantwortet die Frage, die ein einzelner Tag nicht beantworten
- * kann — „wie läuft das gerade eigentlich?" — und zwar ohne Zahl: Punkte, die
- * man von weitem als Muster liest.
+ * Zwei Ebenen, nicht drei: Der Monat zeigt, ob ein Tag voll war, der Tag
+ * zeigt, was darin liegt — Gewohnheiten und Kurse auf einer Achse. Der
+ * Stundenplan hat keine eigene Ansicht: Kurse werden hier oben rechts
+ * eingetragen und im Tag angefasst, dort, wo sie liegen. Eine Wochen- oder
+ * Semesterseite daneben zeigte dasselbe noch einmal, nur weniger.
  *
- * Von hier führt jeder Tag in seine Achse. Der Weg ist eine Adresse, kein
- * Zustand: `/calendar/2026-09-07` lässt sich neu laden und teilen.
+ * Die Zelle ist der Weg in den Tag.
  */
 export default function Calendar({
     heading,
@@ -43,7 +69,32 @@ export default function Calendar({
     isCurrentMonth,
     today,
     days,
+    semester,
+    kinds,
+    maxCourses,
+    courseCount,
+    courses,
+    displaced,
 }: CalendarProps) {
+    const [semesterOpen, setSemesterOpen] = useState(false);
+    const [coursesOpen, setCoursesOpen] = useState(false);
+    const [courseOpen, setCourseOpen] = useState(false);
+    const [placesOpen, setPlacesOpen] = useState(false);
+    /** Der Kurs aus der Übersicht: aufgeschlagen, im Formular, im Ausfall. */
+    const [openedCourse, setOpenedCourse] = useState<CourseRow | null>(null);
+    const [editingCourse, setEditingCourse] = useState<CourseRow | null>(null);
+    const [cancellingCourse, setCancellingCourse] = useState<CourseRow | null>(
+        null,
+    );
+
+    // Steht schon etwas ohne Platz da — oder kündigt sich das erst an? Beides
+    // steht im Band, aber nicht mit demselben Satz: Was kommt, ist eine
+    // Ankündigung, keine Bitte um eine Entscheidung.
+    const upcoming = displaced.filter((habit) => habit.from !== null);
+    const onlyUpcoming =
+        displaced.length > 0 && upcoming.length === displaced.length;
+    const firstFrom = upcoming[0]?.fromLabel ?? null;
+
     return (
         <>
             <Head title="Kalender" />
@@ -71,6 +122,26 @@ export default function Calendar({
                     >
                         <ChevronRight className="size-5" aria-hidden="true" />
                     </Link>
+
+                    {/* Der Stundenplan, oben rechts: ein Knopf, kein Tab. Wer
+                        ihn drückt, trägt Kurse ein oder setzt den Zeitraum —
+                        beides im Sheet, beides ohne die Seite zu verlassen. */}
+                    <button
+                        type="button"
+                        onClick={() => setSemesterOpen(true)}
+                        aria-label={
+                            semester === null
+                                ? 'Semester und Kurse eintragen'
+                                : `Kurse verwalten — ${courseCount} eingetragen`
+                        }
+                        className={NAV_BUTTON}
+                    >
+                        <GraduationCap
+                            className="size-5"
+                            strokeWidth={1.75}
+                            aria-hidden="true"
+                        />
+                    </button>
                 </header>
 
                 {!isCurrentMonth && (
@@ -81,6 +152,50 @@ export default function Calendar({
                         >
                             Zurück zu diesem Monat
                         </Link>
+                    </div>
+                )}
+
+                {/* Was der Stundenplan verdrängt hat. Steht über dem Raster,
+                    weil es eine Entscheidung braucht. Kein Warnton: Nichts ist
+                    verloren, es wartet nur. */}
+                {displaced.length > 0 && (
+                    <div
+                        role="status"
+                        className="flex flex-col gap-2 rounded-xl border border-primary/25 bg-accent px-4 py-3"
+                    >
+                        <p className="text-sm text-foreground">
+                            {onlyUpcoming
+                                ? `${displaced.length === 1 ? 'Eine Gewohnheit verliert' : `${displaced.length} Gewohnheiten verlieren`} ab dem ${firstFrom} durch deinen Stundenplan ihren Platz. Bis dahin läuft alles wie bisher — ein neuer Platz lässt sich schon jetzt finden.`
+                                : `${displaced.length === 1 ? 'Eine Gewohnheit hat' : `${displaced.length} Gewohnheiten haben`} durch deinen Stundenplan ihren Platz verloren. Sie bleiben, bis sie einen neuen haben.`}
+                        </p>
+                        <ul className="flex flex-col gap-1">
+                            {displaced.map((habit) => (
+                                <li
+                                    key={habit.id}
+                                    className="flex items-baseline justify-between gap-3 text-sm"
+                                >
+                                    <span className="font-semibold">
+                                        {habit.title}
+                                    </span>
+                                    {habit.previousTime !== null && (
+                                        <span className="shrink-0 text-muted-foreground">
+                                            {habit.from === null
+                                                ? `lief bisher ${habit.previousTime}`
+                                                : `${habit.previousTime} · bis ${habit.fromLabel}`}
+                                        </span>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
+                        {/* Der Weg zur KI — ✦ steht nur hier (§8). */}
+                        <button
+                            type="button"
+                            onClick={() => setPlacesOpen(true)}
+                            className={`${OUTLINE_BUTTON} self-start`}
+                        >
+                            <Sparkles className="size-4" aria-hidden="true" />
+                            Neue Zeiten vorschlagen
+                        </button>
                     </div>
                 )}
 
@@ -101,6 +216,64 @@ export default function Calendar({
                         Heutigen Tag öffnen
                     </Link>
                 </div>
+
+                <SemesterSheet
+                    open={semesterOpen}
+                    semester={semester}
+                    courseCount={courseCount}
+                    maxCourses={maxCourses}
+                    onOpenChange={setSemesterOpen}
+                    onAddCourse={() => {
+                        setSemesterOpen(false);
+                        setEditingCourse(null);
+                        setCourseOpen(true);
+                    }}
+                    onShowCourses={() => {
+                        setSemesterOpen(false);
+                        setCoursesOpen(true);
+                    }}
+                />
+
+                {semester !== null && (
+                    <>
+                        <CoursesSheet
+                            open={coursesOpen}
+                            courses={courses}
+                            onOpenChange={setCoursesOpen}
+                            onOpen={setOpenedCourse}
+                        />
+
+                        {/* Dieselben Sheets wie im Tag — ein Kurs wird hier
+                            nicht anders geändert als dort. */}
+                        <CourseDetailSheet
+                            course={openedCourse}
+                            onOpenChange={() => setOpenedCourse(null)}
+                            onEdit={(course) => {
+                                setEditingCourse(course);
+                                setCourseOpen(true);
+                            }}
+                            onCancelDate={setCancellingCourse}
+                        />
+
+                        <CourseSheet
+                            open={courseOpen}
+                            course={editingCourse}
+                            kinds={kinds}
+                            onOpenChange={setCourseOpen}
+                        />
+
+                        <CourseCancellationSheet
+                            course={cancellingCourse}
+                            semester={semester}
+                            onOpenChange={() => setCancellingCourse(null)}
+                        />
+
+                        <NewPlacesSheet
+                            open={placesOpen}
+                            onOpenChange={setPlacesOpen}
+                        />
+                    </>
+                )}
             </div>
         </>
     );

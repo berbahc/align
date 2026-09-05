@@ -128,14 +128,6 @@ export interface BusySlot {
     to: string;
 }
 
-/**
- * Die Einheit, in der der Umfang einer Gewohnheit gemessen wird.
- *
- * Neu vergeben wird nur noch `minutes` — der Katalog kennt nur Aktivitäten
- * mit Dauer. Die übrigen Werte existieren in alten Gewohnheiten weiter.
- */
-export type MeasureUnit = 'minutes' | 'pages' | 'liters' | 'times';
-
 export interface Habit {
     id: number;
     title: string;
@@ -172,7 +164,11 @@ export interface Habit {
 }
 
 /** Der Block der Gewohnheiten-Liste: steht heute an oder später. */
-export type HabitGroup = 'today' | 'later';
+/**
+ * `displaced` steht zuerst: Was seinen Platz verloren hat, wartet auf eine
+ * Entscheidung — und gehört damit vor das, was nur ansteht.
+ */
+export type HabitGroup = 'displaced' | 'today' | 'later';
 
 /** Eine Gewohnheit in der Verwaltungsansicht — dort zählt die Planung, nicht der heutige Tag. */
 export interface ManagedHabit {
@@ -283,6 +279,8 @@ export interface AnchorAlternative {
  * Datum, nicht zu „heute": `completed` meint den angezeigten Tag.
  */
 export interface CalendarBlock {
+    /** Unterscheidet die Gewohnheit vom Kurs, wenn beide im Raster liegen. */
+    kind: 'habit';
     id: number;
     title: string;
     /** Der Anker als Kopfzeile: „nach dem Aufstehen" oder „17:00 · Mo–Fr". */
@@ -362,6 +360,8 @@ export interface MonthDay {
     isFuture: boolean;
     planned: number;
     done: number;
+    /** Läuft an diesem Tag etwas aus dem Semesterplan? */
+    hasLectures: boolean;
 }
 
 /**

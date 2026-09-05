@@ -4,6 +4,8 @@ use App\Http\Controllers\AppointmentAvailabilityController;
 use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\AppointmentNoticeController;
 use App\Http\Controllers\CalendarController;
+use App\Http\Controllers\CourseController;
+use App\Http\Controllers\CourseExceptionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DayOrderController;
 use App\Http\Controllers\FriendshipController;
@@ -14,7 +16,9 @@ use App\Http\Controllers\HabitController;
 use App\Http\Controllers\HabitDayShiftController;
 use App\Http\Controllers\HabitGraduationController;
 use App\Http\Controllers\HabitReminderController;
+use App\Http\Controllers\NewPlaceController;
 use App\Http\Controllers\OnboardingController;
+use App\Http\Controllers\SemesterController;
 use App\Http\Controllers\SleepScheduleController;
 use App\Http\Controllers\SmallestStepController;
 use App\Http\Middleware\EnsureOnboarded;
@@ -46,6 +50,44 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('calendar.order.suggestions');
         Route::post('calendar/order', [DayOrderController::class, 'store'])
             ->name('calendar.order.store');
+
+        // Der Stundenplan hat keine eigene Ansicht: Kurse werden im Monat
+        // eingetragen und im Tag angefasst. Hier stehen nur die Daten — das
+        // Semester ohne Kennung, weil es je Person genau eins gibt.
+        //
+        // Vor `calendar/{date}`, wie überall in dieser Datei die festen Worte
+        // vor den Platzhaltern. Das Datumsmuster dort ließe „semester" ohnehin
+        // nicht durch — die Reihenfolge steht trotzdem, damit sie nicht von
+        // einer Regel abhängt, die jemand später lockert.
+        Route::post('calendar/semester', [SemesterController::class, 'store'])
+            ->name('calendar.semester.store');
+        Route::put('calendar/semester', [SemesterController::class, 'update'])
+            ->name('calendar.semester.update');
+        Route::delete('calendar/semester', [SemesterController::class, 'destroy'])
+            ->name('calendar.semester.destroy');
+
+        // Neue Plätze für das, was der Stundenplan verdrängt hat. Der Vorschlag
+        // kostet einen KI-Aufruf und wird gedrosselt; das Übernehmen nicht.
+        // Die feste Strecke vor `courses/{course}`, wie überall in dieser Datei.
+        Route::post('calendar/semester/places/suggestions', [NewPlaceController::class, 'suggestions'])
+            ->middleware('throttle:20,1')
+            ->name('calendar.semester.places.suggestions');
+        Route::post('calendar/semester/places', [NewPlaceController::class, 'store'])
+            ->name('calendar.semester.places.store');
+
+        Route::post('calendar/semester/courses', [CourseController::class, 'store'])
+            ->name('calendar.semester.courses.store');
+        Route::put('calendar/semester/courses/{course}', [CourseController::class, 'update'])
+            ->name('calendar.semester.courses.update');
+        Route::delete('calendar/semester/courses/{course}', [CourseController::class, 'destroy'])
+            ->name('calendar.semester.courses.destroy');
+
+        // Ausfall und Ersatztermin sind eine Tabelle: `POST` setzt die Ausnahme
+        // für ein Datum, `DELETE` nimmt sie zurück.
+        Route::post('calendar/semester/courses/{course}/exceptions', [CourseExceptionController::class, 'store'])
+            ->name('calendar.semester.courses.exceptions.store');
+        Route::delete('calendar/semester/courses/{course}/exceptions', [CourseExceptionController::class, 'destroy'])
+            ->name('calendar.semester.courses.exceptions.destroy');
 
         // Zuletzt, wie überall in dieser Datei: Die Strecke ohne festes Wort
         // dahinter würde jedes `calendar/…` darüber schlucken. Das Muster

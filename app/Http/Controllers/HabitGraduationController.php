@@ -4,6 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Actions\ReleaseChainedHabits;
 use App\Models\Habit;
+use App\Models\User;
+use App\Support\DayPlan;
+use App\Support\SlotConflict;
+use App\Support\Timetable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -62,9 +66,57 @@ class HabitGraduationController extends Controller
             ]);
         }
 
+        // Der Platz von damals kann inzwischen vergeben sein — ein Kurs ist
+        // dazugekommen oder eine andere Gewohnheit ist dorthin gerückt. Sie
+        // stillschweigend wieder aufzunehmen hieße, zwei Dinge auf eine Minute
+        // zu legen; deshalb sagt die App, was zuerst zu tun ist.
+        $this->guardOldSlot($request->user(), $habit);
+
         $habit->graduated_at = null;
         $habit->save();
 
         return back();
+    }
+
+    /**
+     * Weist ab, was an seiner alten Stelle nicht mehr hinpasst.
+     *
+     * Nur für feste Uhrzeiten: Eine Situation und eine Kette haben keinen
+     * Zeitpunkt, den man prüfen könnte — sie finden ihre Stelle ohnehin neu.
+     */
+    private function guardOldSlot(User $user, Habit $habit): void
+    {
+        if (! $habit->schedule_type->hasClockTime() || $habit->scheduled_time === null) {
+            return;
+        }
+
+        // Eine geparkte Gewohnheit belegt nichts — es gibt keinen Platz, den
+        // man ihr verwehren könnte. Sie kommt geparkt zurück. Geprüft wird der
+        // Vermerk für heute: Einer, der erst zum Semesterbeginn gilt, hält den
+        // alten Platz bis dahin noch besetzt.
+        if ($habit->isDisplaced()) {
+            return;
+        }
+
+        $conflict = SlotConflict::find(
+            $user,
+            $habit->spansFrom(DayPlan::toMinutes($habit->scheduled_time->format('H:i'))),
+            $habit->scheduled_days ?? [1, 2, 3, 4, 5, 6, 7],
+            [$habit->id],
+        );
+
+        if ($conflict === null) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'habit' => SlotConflict::message(
+                $conflict['block'],
+                $conflict['date'],
+                Timetable::isCourseBlock($conflict['block'])
+                    ? 'Gib der Gewohnheit erst eine andere Zeit, dann lässt sie sich wieder aufnehmen — der Kurs rückt nicht.'
+                    : 'Verschiebe eine der beiden, dann lässt sich diese wieder aufnehmen.',
+            ),
+        ]);
     }
 }

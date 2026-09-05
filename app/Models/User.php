@@ -76,6 +76,32 @@ class User extends Authenticatable implements PasskeyUser
     }
 
     /**
+     * @return HasMany<Semester, $this>
+     */
+    public function semesters(): HasMany
+    {
+        return $this->hasMany(Semester::class);
+    }
+
+    /**
+     * Das Semester, um das es gerade geht.
+     *
+     * Das laufende, wenn heute in einem liegt; sonst das zuletzt begonnene.
+     * So bleibt der Plan in der vorlesungsfreien Zeit sichtbar und bearbeitbar,
+     * ohne dass seine Kurse dann noch Zeit belegen — darüber entscheidet
+     * {@see Semester::covers()}, nicht diese Auswahl.
+     */
+    public function currentSemester(): ?Semester
+    {
+        $today = Carbon::today()->toDateString();
+
+        return $this->semesters()
+            ->orderByRaw('(starts_on <= ? and ends_on >= ?) desc', [$today, $today])
+            ->orderByDesc('starts_on')
+            ->first();
+    }
+
+    /**
      * Der Rahmen aller sieben Wochentage, Lücken mit der Voreinstellung gefüllt.
      *
      * Der Rahmen existiert immer — auch wer nie etwas eingestellt hat, hat
@@ -152,26 +178,6 @@ class User extends Authenticatable implements PasskeyUser
         return Attribute::make(
             set: fn (string $value): string => Str::lower(trim($value)),
         );
-    }
-
-    /**
-     * Anfragen, die diese Person gestellt hat — offen wie bestätigt.
-     *
-     * @return HasMany<Friendship, $this>
-     */
-    public function sentFriendships(): HasMany
-    {
-        return $this->hasMany(Friendship::class, 'requester_id');
-    }
-
-    /**
-     * Anfragen, die an diese Person gingen.
-     *
-     * @return HasMany<Friendship, $this>
-     */
-    public function receivedFriendships(): HasMany
-    {
-        return $this->hasMany(Friendship::class, 'addressee_id');
     }
 
     /**

@@ -63,6 +63,32 @@ declare module '@inertiajs/core' {
                     chained_to_habit_id?: number;
                 };
             };
+            /**
+             * Ein Kurs (oder ein verschobenes Semester) hat Gewohnheiten von
+             * ihrem Platz gedrängt. Gesagt wird es hier, auf jeder Seite —
+             * nicht nur als Band auf einer, die man vielleicht gerade verlässt.
+             */
+            coursePlaced?: {
+                title: string;
+                displaced: {
+                    id: number;
+                    title: string;
+                    previousTime: string;
+                }[];
+            };
+            /** Ein Kurs ist weg, und was er verdrängt hatte, ist zurück. */
+            habitsRestored?: {
+                titles: string[];
+            };
+            /**
+             * Neue Plätze übernommen. Ohne Rückweg: Die alten Zeiten waren
+             * vergeben, dorthin führt nichts zurück.
+             */
+            placesApplied?: {
+                titles: string[];
+                /** Wie viele noch warten. */
+                remaining: number;
+            };
         };
     }
 }

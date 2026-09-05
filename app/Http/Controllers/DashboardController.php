@@ -60,7 +60,10 @@ class DashboardController extends Controller
         // entscheidet nur noch bei gleicher Stunde; als alleinige Sortierung
         // stellte sie das Abendritual über die Gewohnheit nach dem Aufstehen.
         $todaysHabits = $habits
-            ->filter(fn (Habit $habit): bool => $habit->isScheduledOn($today))
+            // Was gerade keinen Platz hat, steht nicht an — es wartet auf
+            // einen neuen. Unter „heute" wäre es eine Aufgabe, die niemand
+            // erfüllen kann.
+            ->filter(fn (Habit $habit): bool => $habit->isDueOn($today))
             ->sortBy(fn (Habit $habit): array => [
                 $habit->dayAnchorHour($today) ?? PHP_INT_MAX,
                 $habit->position,

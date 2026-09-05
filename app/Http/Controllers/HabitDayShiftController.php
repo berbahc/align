@@ -8,6 +8,8 @@ use App\Models\Habit;
 use App\Models\HabitDayShift;
 use App\Models\User;
 use App\Support\DayPlan;
+use App\Support\SlotConflict;
+use App\Support\Timetable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -28,6 +30,9 @@ class HabitDayShiftController extends Controller
 
     /** Wo der Kalendertag endet — jenseits davon gibt es keine Uhrzeit mehr. */
     private const int MinutesPerDay = 1440;
+
+    /** Der geladene Stundenplan, damit `always()` ihn nicht siebenmal holt. */
+    private ?Timetable $timetable = null;
 
     /**
      * Eine Gewohnheit für einen einzigen Tag woanders hinlegen.
@@ -153,7 +158,7 @@ class HabitDayShiftController extends Controller
         $days = $habit->scheduled_days ?? [1, 2, 3, 4, 5, 6, 7];
 
         foreach ($days as $weekday) {
-            $this->guard($user, $habit, $this->nextWeekday($weekday), $start);
+            $this->guard($user, $habit, SlotConflict::nextWeekday($weekday), $start);
         }
 
         $habit->update([
@@ -167,6 +172,18 @@ class HabitDayShiftController extends Controller
         // Die dauerhafte Zeit hebt die Einzelfall-Regel auf: Zwei Antworten für
         // denselben Tag wären eine zu viel.
         $habit->dayShifts()->delete();
+        $habit->takeAPlace();
+    }
+
+    /**
+     * Der Stundenplan dieses Nutzers — einmal je Anfrage.
+     *
+     * `always()` prüft bis zu sieben Wochentage. Ohne dieses Merken wären das
+     * sieben Ladevorgänge desselben Plans.
+     */
+    private function timetable(User $user): Timetable
+    {
+        return $this->timetable ??= Timetable::for($user);
     }
 
     /**
@@ -181,7 +198,7 @@ class HabitDayShiftController extends Controller
     {
         $others = $this->othersOn($user, $habit, $date);
         $window = $user->sleepWindowFor($date->dayOfWeekIso);
-        $plan = DayPlan::forDate($others, $date, $user->sleepWindows());
+        $plan = DayPlan::forDate($others, $date, $user->sleepWindows(), $this->timetable($user)->blocksOn($date));
         $frame = $plan->frame();
 
         // Die Ausnahme wird als Uhrzeit gespeichert. Alles jenseits von
@@ -190,7 +207,7 @@ class HabitDayShiftController extends Controller
         // keine Minute weiter.
         $latest = min($frame['to'], self::MinutesPerDay);
 
-        foreach ($this->spans($habit, $start) as $span) {
+        foreach ($habit->spansFrom($start) as $span) {
             if ($span['from'] < $frame['from'] || $span['to'] > $latest) {
                 throw ValidationException::withMessages([
                     'start_minute' => sprintf(
@@ -205,58 +222,20 @@ class HabitDayShiftController extends Controller
             $conflict = $plan->collisionWith($span['from'], $span['to']);
 
             if ($conflict !== null) {
+                // Derselbe Satz wie überall sonst — nur das Ende ist hier ein
+                // anderes, weil es um eine dauerhafte Uhrzeit geht. Ein Kurs
+                // lässt sich nicht wegschieben; der Satz bietet das nicht an.
                 throw ValidationException::withMessages([
-                    'start_minute' => sprintf(
-                        '„%s" liegt %s schon um %s. Verschiebe die zuerst, dann lässt sich die Zeit hier umstellen.',
-                        $conflict['title'],
-                        $this->weekdayLabel($date),
-                        DayPlan::toTime($conflict['from']),
+                    'start_minute' => SlotConflict::message(
+                        $conflict,
+                        $date,
+                        Timetable::isCourseBlock($conflict)
+                            ? 'Such der Gewohnheit eine andere Zeit — der Kurs rückt nicht.'
+                            : 'Verschiebe die zuerst, dann lässt sich die Zeit hier umstellen.',
                     ),
                 ]);
             }
         }
-    }
-
-    /**
-     * Die Spannen, die der Zug belegt: die Gewohnheit selbst und alles, was an
-     * ihr hängt.
-     *
-     * Gerechnet wie {@see Habit::placementOn()} es täte — nur eben mit der
-     * neuen Minute statt der alten. Die Kette selbst zu durchlaufen ist hier
-     * nötig, weil die Gewohnheit die neue Zeit noch gar nicht trägt.
-     *
-     * @return list<array{id: int, title: string, from: int, to: int}>
-     */
-    private function spans(Habit $habit, int $start): array
-    {
-        $spans = [];
-        $current = $habit;
-        $cursor = $start;
-
-        for ($depth = 0; $depth < Habit::MaxChainDepth; $depth++) {
-            $minutes = $current->durationMinutes() ?? DayPlan::AssumedMinutes;
-
-            $spans[] = [
-                'id' => $current->id,
-                'title' => $current->title,
-                'from' => $cursor,
-                'to' => $cursor + $minutes,
-            ];
-            $cursor += $minutes;
-
-            $next = $current->chainedHabits()
-                ->whereNull('graduated_at')
-                ->orderBy('position')
-                ->first();
-
-            if ($next === null) {
-                break;
-            }
-
-            $current = $next;
-        }
-
-        return $spans;
     }
 
     /**
@@ -270,7 +249,7 @@ class HabitDayShiftController extends Controller
      */
     private function othersOn(User $user, Habit $habit, Carbon $date): Collection
     {
-        $moving = array_column($this->spans($habit, 0), 'id');
+        $moving = array_column($habit->spansFrom(0), 'id');
 
         $habits = $user->habits()
             ->active()
@@ -283,41 +262,5 @@ class HabitDayShiftController extends Controller
             ->filter(fn (Habit $other): bool => $other->isScheduledOn($date))
             ->reject(fn (Habit $other): bool => in_array($other->id, $moving, strict: true))
             ->values();
-    }
-
-    /**
-     * Der nächste Tag mit diesem Wochentag, heute eingeschlossen.
-     *
-     * Geprüft wird an einem konkreten Datum, weil der Schlafrahmen und die
-     * Ausnahmen daran hängen — „montags" allein hat keinen Rahmen.
-     */
-    private function nextWeekday(int $weekday): Carbon
-    {
-        $day = Carbon::today();
-
-        for ($step = 0; $step < 7; $step++) {
-            if ($day->dayOfWeekIso === $weekday) {
-                return $day;
-            }
-
-            $day->addDay();
-        }
-
-        return $day;
-    }
-
-    /**
-     * „montags", „heute" — je nachdem, wie weit der Tag weg ist.
-     */
-    private function weekdayLabel(Carbon $date): string
-    {
-        if ($date->isSameDay(Carbon::today())) {
-            return 'heute';
-        }
-
-        $localised = $date->copy();
-        $localised->locale('de');
-
-        return mb_strtolower($localised->isoFormat('dddd')).'s';
     }
 }

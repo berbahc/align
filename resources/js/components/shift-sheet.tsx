@@ -5,15 +5,20 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
-import { timeLabel } from '@/lib/day-grid';
-import { OUTLINE_BUTTON, PRIMARY_BUTTON } from '@/lib/interaction';
+import type { BlockConflict } from '@/lib/day-grid';
+import { BREATHER_MINUTES, timeLabel } from '@/lib/day-grid';
+import {
+    BOTTOM_SHEET,
+    OUTLINE_BUTTON,
+    PRIMARY_BUTTON,
+} from '@/lib/interaction';
 import type { CalendarBlock } from '@/types';
 
 const ACTION_BUTTON =
     'inline-flex h-12 flex-1 items-center justify-center rounded-xl px-4 text-[15px] font-semibold disabled:pointer-events-none disabled:opacity-50';
 
 /** Was der Zug mitnimmt: Titel und neue Uhrzeit. */
-export interface Follower {
+interface Follower {
     title: string;
     minute: number;
 }
@@ -43,7 +48,7 @@ export function ShiftSheet({
     minute: number;
     followers: Follower[];
     /** Was heute schon an dieser Stelle liegt — dann geht gar nichts. */
-    conflict: string | null;
+    conflict: BlockConflict | null;
     /** Was der Server abgewiesen hat, nachdem geklickt wurde. */
     error: string | null;
     onOpenChange: (open: boolean) => void;
@@ -53,10 +58,7 @@ export function ShiftSheet({
 
     return (
         <Sheet open={block !== null} onOpenChange={onOpenChange}>
-            <SheetContent
-                side="bottom"
-                className="mx-auto max-h-[85vh] max-w-lg gap-0 overflow-y-auto rounded-t-2xl px-5 pt-6 pb-8"
-            >
+            <SheetContent side="bottom" className={BOTTOM_SHEET}>
                 <SheetHeader className="gap-2 p-0">
                     <SheetTitle className="type-eyebrow text-left text-muted-foreground">
                         Neuer Platz im Tag
@@ -90,14 +92,37 @@ export function ShiftSheet({
                     </ul>
                 )}
 
-                {/* §1.5 — benennt, was gilt, und sagt, was zu tun ist. */}
+                {/* §1.5 — benennt, was gilt, und sagt, was zu tun ist.
+                    Zwei Sätze, weil es zwei Fälle sind: Eine Gewohnheit hat
+                    man sich selbst vorgenommen und kann sie verschieben. Eine
+                    Vorlesung kommt von der Uni — ihr einen Ausweg anzubieten,
+                    den es nicht gibt, wäre schlimmer als keiner. */}
                 {conflict !== null && (
                     <p
                         role="alert"
                         className="mt-4 rounded-[14px] border border-primary/25 bg-accent px-4 py-3 text-sm leading-relaxed"
                     >
-                        „{conflict}" liegt heute schon dort. Verschiebe die
-                        zuerst, dann ist hier Platz.
+                        {conflict.kind === 'course' ? (
+                            <>
+                                Während „{conflict.title}" geht das nicht — der
+                                Kurs kommt von der Uni und rückt nicht. Davor
+                                und danach hält Align eine Viertelstunde Luft,
+                                zum Hinkommen und Umschalten: Platz ist bis{' '}
+                                {timeLabel(conflict.from - BREATHER_MINUTES)}{' '}
+                                und wieder ab{' '}
+                                {timeLabel(conflict.to + BREATHER_MINUTES)}.
+                            </>
+                        ) : (
+                            <>
+                                „{conflict.title}" liegt heute schon dort.
+                                Zwischen zwei Gewohnheiten hält Align eine
+                                Viertelstunde Luft — Platz ist bis{' '}
+                                {timeLabel(conflict.from - BREATHER_MINUTES)}{' '}
+                                und wieder ab{' '}
+                                {timeLabel(conflict.to + BREATHER_MINUTES)}.
+                                Verschiebe die zuerst, dann ist hier Platz.
+                            </>
+                        )}
                     </p>
                 )}
 

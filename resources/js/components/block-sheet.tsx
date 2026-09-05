@@ -7,7 +7,13 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { BEHAVIOR_ICONS } from '@/lib/behavior-icons';
-import { OUTLINE_BUTTON, PRIMARY_BUTTON, QUIET_LINK } from '@/lib/interaction';
+import { ASSUMED_MINUTES, spanLabel } from '@/lib/day-grid';
+import {
+    BOTTOM_SHEET,
+    OUTLINE_BUTTON,
+    PRIMARY_BUTTON,
+    QUIET_LINK,
+} from '@/lib/interaction';
 import { cn } from '@/lib/utils';
 import type { CalendarBlock as Block } from '@/types';
 
@@ -59,15 +65,12 @@ export function BlockSheet({
 
     return (
         <Sheet open={block !== null} onOpenChange={onOpenChange}>
-            <SheetContent
-                side="bottom"
-                className="mx-auto max-h-[85vh] max-w-lg gap-0 overflow-y-auto rounded-t-2xl px-5 pt-6 pb-8"
-            >
+            <SheetContent side="bottom" className={BOTTOM_SHEET}>
                 <SheetHeader className="gap-2 p-0">
                     <SheetTitle className="type-eyebrow text-left text-muted-foreground">
                         {/* Bei fester Uhrzeit die belegte Spanne, sonst der
                             Anker: beide sagen, warum die Gewohnheit hier liegt. */}
-                        {block?.timeRange ?? block?.anchor}
+                        {block === null ? null : spanLabel(block)}
                     </SheetTitle>
                     <SheetDescription asChild>
                         <div className="flex items-center gap-3 text-left">
@@ -97,6 +100,17 @@ export function BlockSheet({
                                     block.timeRange === null && (
                                         <span className="mt-0.5 block text-sm text-muted-foreground">
                                             {block.measureLabel}
+                                        </span>
+                                    )}
+                                {/* Die Annahme beim Namen nennen: Wer sie
+                                    nicht kennt, wundert sich, warum direkt
+                                    danach schon etwas liegen darf. */}
+                                {block?.durationMinutes === null &&
+                                    block.startMinute !== null && (
+                                        <span className="mt-0.5 block text-sm text-muted-foreground">
+                                            Ohne festgelegte Dauer rechnet Align
+                                            mit {ASSUMED_MINUTES} Minuten — die
+                                            Dauer legst du beim Anpassen fest.
                                         </span>
                                     )}
                             </span>

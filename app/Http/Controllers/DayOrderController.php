@@ -7,12 +7,15 @@ use App\Enums\ScheduleType;
 use App\Models\Habit;
 use App\Models\User;
 use App\Support\DayPlan;
+use App\Support\SlotConflict;
+use App\Support\Timetable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Throwable;
 
@@ -59,25 +62,29 @@ class DayOrderController extends Controller
             ], 422);
         }
 
-        $plan = DayPlan::for($due, $date->dayOfWeekIso, $request->user()->sleepWindows());
+        $busy = Timetable::for($request->user())->blocksOn($date);
+
+        $plan = DayPlan::for($due, $date->dayOfWeekIso, $request->user()->sleepWindows(), $date, $busy);
         $frame = $plan->frame();
 
         // Passt der Tag überhaupt? Die Summe aller Dauern plus die Luft
-        // dazwischen muss in den wachen Teil passen — sonst gibt es keine
-        // Ordnung, sondern zu viel für einen Tag. Das rechnet der Server, nicht
-        // die KI: Eine Absage aus einem Modell wäre eine Meinung, diese hier
-        // ist eine Tatsache.
+        // dazwischen muss in den wachen Teil passen — abzüglich dessen, was
+        // ohnehin belegt ist. Sonst gibt es keine Ordnung, sondern zu viel für
+        // einen Tag. Das rechnet der Server, nicht die KI: Eine Absage aus
+        // einem Modell wäre eine Meinung, diese hier ist eine Tatsache.
         $needed = $due->sum(fn (Habit $habit): int => $habit->durationMinutes() ?? 0)
             + (($due->count() - 1) * DayPlan::BreatherMinutes);
 
-        if ($needed > $frame['to'] - $frame['from']) {
+        $available = $frame['to'] - $frame['from'] - $this->busyMinutesWithin($busy, $frame);
+
+        if ($needed > $available) {
             return response()->json([
                 'message' => sprintf(
-                    'Deine Gewohnheiten brauchen zusammen %d Minuten — dein Tag hat zwischen %s und %s nur %d.',
+                    'Deine Gewohnheiten brauchen zusammen %d Minuten — dein Tag hat zwischen %s und %s nur %d frei.',
                     $needed,
                     DayPlan::toTime($frame['from']),
                     DayPlan::toTime($frame['to']),
-                    $frame['to'] - $frame['from'],
+                    max(0, $available),
                 ),
             ], 422);
         }
@@ -100,6 +107,14 @@ class DayOrderController extends Controller
                 weekdayName: $localised->isoFormat('dddd'),
                 frame: $frame,
                 habits: $habits,
+                // Der Stundenplan als Belegung: Ohne ihn legte die Ordnung
+                // eine Gewohnheit mitten in eine Vorlesung, und der Kalender
+                // wiese sie beim Übernehmen wieder ab.
+                busy: array_map(fn (array $block): array => [
+                    'title' => $block['title'],
+                    'from' => $block['from'],
+                    'to' => $block['to'],
+                ], $busy),
             ))->order();
         } catch (Throwable $exception) {
             Log::warning('Vorschlag für die Tagesordnung fehlgeschlagen.', [
@@ -144,6 +159,8 @@ class DayOrderController extends Controller
         $date = Carbon::parse($validated['date'])->startOfDay();
         $due = $this->habitsOn($request->user(), $date)->keyBy('id');
 
+        $this->guard($request->user(), $date, $validated['order'], $due);
+
         foreach ($validated['order'] as $row) {
             $habit = $due->get((int) $row['id']);
 
@@ -160,11 +177,117 @@ class DayOrderController extends Controller
                 'trigger_situation' => null,
                 'chained_to_habit_id' => null,
             ]);
+            $habit->takeAPlace();
         }
 
         Inertia::flash('dayReordered', ['count' => count($validated['order'])]);
 
         return back();
+    }
+
+    /**
+     * Weist ab, was sich beim Übernehmen überschneiden würde.
+     *
+     * Der Vorschlag wird geprüft, bevor er gezeigt wird — hier wird geprüft,
+     * was ankommt. Zwischen beidem liegt eine Entscheidung, und in der Zeit
+     * kann ein Kurs dazugekommen sein; und eine zusammengesetzte Anfrage kommt
+     * ohnehin nie durch einen Vorschlag.
+     *
+     * Zwei Vergleiche, weil es zwei Arten von Nachbarn gibt: die Blöcke, die
+     * der Tag ohnehin trägt — Kurse und Gewohnheiten, die nicht mitgeordnet
+     * werden —, und die geordneten untereinander.
+     *
+     * @param  list<array{id: int|string, time: string}>  $order
+     * @param  Collection<int, Habit>  $due
+     */
+    private function guard(User $user, Carbon $date, array $order, Collection $due): void
+    {
+        $spans = [];
+
+        foreach ($order as $row) {
+            $habit = $due->get((int) $row['id']);
+
+            if ($habit === null) {
+                continue;
+            }
+
+            $from = DayPlan::toMinutes($row['time']);
+
+            $spans[] = [
+                'id' => $habit->id,
+                'title' => $habit->title,
+                'from' => $from,
+                'to' => $from + ($habit->durationMinutes() ?? DayPlan::AssumedMinutes),
+            ];
+        }
+
+        $conflict = SlotConflict::find(
+            $user,
+            $spans,
+            [$date->dayOfWeekIso],
+            array_column($spans, 'id'),
+        );
+
+        if ($conflict !== null) {
+            throw ValidationException::withMessages([
+                'order' => SlotConflict::message(
+                    $conflict['block'],
+                    $conflict['date'],
+                    Timetable::isCourseBlock($conflict['block'])
+                        ? 'Die Ordnung lässt sich so nicht übernehmen — der Kurs rückt nicht.'
+                        : 'Die Ordnung lässt sich so nicht übernehmen.',
+                ),
+            ]);
+        }
+
+        $this->assertOrderDoesNotOverlapItself($spans);
+    }
+
+    /**
+     * Zwei geordnete Gewohnheiten zur selben Zeit sind keine Ordnung.
+     *
+     * {@see SlotConflict} kann das nicht sehen: Dort zählen die geordneten
+     * bewusst nicht mit, weil sie sich ja gerade bewegen.
+     *
+     * @param  list<array{id: int, title: string, from: int, to: int}>  $spans
+     */
+    private function assertOrderDoesNotOverlapItself(array $spans): void
+    {
+        usort($spans, fn (array $a, array $b): int => $a['from'] <=> $b['from']);
+
+        foreach ($spans as $index => $span) {
+            $next = $spans[$index + 1] ?? null;
+
+            if ($next !== null && $next['from'] < $span['to']) {
+                throw ValidationException::withMessages([
+                    'order' => sprintf(
+                        '„%s" und „%s" lägen übereinander. Die Ordnung lässt sich so nicht übernehmen.',
+                        $span['title'],
+                        $next['title'],
+                    ),
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Wie viele Minuten des wachen Tages schon vergeben sind.
+     *
+     * Nur der Teil innerhalb des Rahmens zählt: Eine Vorlesung, die vor dem
+     * Aufstehen läge, nähme dem Tag nichts weg, den er hätte.
+     *
+     * @param  list<array{id: int, title: string, from: int, to: int}>  $busy
+     * @param  array{from: int, to: int}  $frame
+     */
+    private function busyMinutesWithin(array $busy, array $frame): int
+    {
+        return array_sum(array_map(
+            fn (array $block): int => max(
+                0,
+                min($block['to'], $frame['to']) - max($block['from'], $frame['from']),
+            ),
+            $busy,
+        ));
     }
 
     /**
@@ -177,6 +300,12 @@ class DayOrderController extends Controller
         $habits = $user->habits()->active()->with('chainedTo')->orderBy('position')->get();
         $habits->each(fn (Habit $habit) => $habit->setRelation('user', $user));
 
-        return $habits->filter(fn (Habit $habit): bool => $habit->isScheduledOn($date))->values();
+        return $habits
+            ->filter(fn (Habit $habit): bool => $habit->isScheduledOn($date))
+            // Die Ordnung betrifft den Tag, wie er liegt. Was keinen Platz
+            // hat, bekommt ihn auf dem eigenen Weg — und nicht nebenbei mit
+            // einer Uhrzeit, die den Vermerk stehen ließe.
+            ->reject(fn (Habit $habit): bool => $habit->isDisplaced($date))
+            ->values();
     }
 }

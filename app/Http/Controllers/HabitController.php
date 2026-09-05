@@ -11,6 +11,7 @@ use App\Http\Requests\StoreHabitRequest;
 use App\Http\Requests\UpdateHabitRequest;
 use App\Models\Appointment;
 use App\Models\AppointmentNotice;
+use App\Models\Course;
 use App\Models\Habit;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -43,9 +44,10 @@ class HabitController extends Controller
                 'id' => $habit->id,
                 'title' => $habit->titleWithMeasure(),
                 'anchor' => $habit->scheduleLabel(),
-                // Wo der Anschluss läge — null, wenn die Kette an einer
-                // Situation hängt und niemand die Uhrzeit kennt.
-                'startsAt' => $habit->endsAt()?->format('H:i'),
+                // Wo der Anschluss läge — nach dem Ende plus der Viertelstunde
+                // Luft. Null, wenn die Kette an einer Situation hängt und
+                // niemand die Uhrzeit kennt.
+                'startsAt' => $habit->followerStartsAt()?->format('H:i'),
             ])
             ->all());
     }
@@ -61,7 +63,7 @@ class HabitController extends Controller
      */
     private function busySlots(User $user, ?Habit $except = null): array
     {
-        return array_values($user->habits()
+        $habits = $user->habits()
             ->active()
             ->get()
             ->reject(fn (Habit $habit): bool => $except !== null && $habit->is($except))
@@ -72,6 +74,41 @@ class HabitController extends Controller
                 'days' => $habit->scheduled_days ?? [1, 2, 3, 4, 5, 6, 7],
                 'from' => $habit->startsAt()?->format('H:i') ?? '',
                 'to' => ($habit->endsAt() ?? $habit->startsAt())?->format('H:i') ?? '',
+            ])
+            ->all();
+
+        return [...$habits, ...$this->courseSlots($user)];
+    }
+
+    /**
+     * Der Stundenplan als belegte Fenster — in derselben Form wie die
+     * Gewohnheiten.
+     *
+     * Der Hinweis im Formular muss dasselbe sehen wie die Prüfung auf dem
+     * Server, sonst sagt er „frei" und das Speichern weist ab. Genommen wird
+     * die reguläre Woche: Ausfälle und Nachholtermine gelten für ein Datum,
+     * das Formular plant aber jeden Montag.
+     *
+     * @return list<array{id: int, title: string, days: list<int>, from: string, to: string}>
+     */
+    private function courseSlots(User $user): array
+    {
+        $semester = $user->currentSemester();
+
+        if ($semester === null) {
+            return [];
+        }
+
+        return array_values($semester->courses()
+            ->orderBy('weekday')
+            ->get()
+            ->map(fn (Course $course): array => [
+                // Negativ wie überall, damit keine Kennung zweimal vorkommt.
+                'id' => -$course->id,
+                'title' => $course->title,
+                'days' => [$course->weekday],
+                'from' => $course->starts_at->format('H:i'),
+                'to' => $course->ends_at->format('H:i'),
             ])
             ->all());
     }
@@ -153,12 +190,19 @@ class HabitController extends Controller
     }
 
     /**
-     * In welchem Block der Liste die Gewohnheit steht: heute oder später.
+     * In welchem Block der Liste die Gewohnheit steht: ohne Platz, heute
+     * oder später.
      *
-     * @return 'today'|'later'
+     * @return 'displaced'|'today'|'later'
      */
     private function listGroup(Habit $habit, Carbon $today): string
     {
+        // Eine geparkte Gewohnheit stünde sonst unter „Steht heute an" — sie
+        // steht aber nirgends an, bis sie einen neuen Platz hat.
+        if ($habit->isDisplaced()) {
+            return 'displaced';
+        }
+
         return $habit->isScheduledOn($today) ? 'today' : 'later';
     }
 
@@ -187,6 +231,10 @@ class HabitController extends Controller
     public function create(Request $request): Response
     {
         return Inertia::render('habits/create', [
+            // Die Grenze vorneweg: Wer fünf laufen hat, soll das hier lesen —
+            // nicht erst als Absage hinter dem letzten Schritt.
+            'activeCount' => $request->user()->habits()->active()->count(),
+            'maxActive' => Habit::MaxActivePerUser,
             'categories' => HabitCategory::options(),
             // Nur gesetzt, wenn der Weg aus einer Anfrage oder einer Absage
             // kommt. Der Assistent überspringt dann die Wahl aus dem Katalog.
@@ -379,6 +427,8 @@ class HabitController extends Controller
         Gate::authorize('update', $habit);
 
         $habit->update($request->habitAttributes());
+        // Eine neue Zeit ist ein neuer Platz — der Vermerk fällt weg.
+        $habit->takeAPlace();
 
         // Wer von fester Uhrzeit auf eine Situation wechselt, nimmt der
         // Gewohnheit den Zeitpunkt, an dem eine Erinnerung hängen könnte. Bliebe

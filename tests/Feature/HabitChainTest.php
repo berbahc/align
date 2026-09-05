@@ -25,7 +25,9 @@ function chainedTo(Habit $previous, array $attributes = []): Habit
     ]);
 }
 
-test('a chained habit starts where the previous one ends', function () {
+test('a chained habit starts a quarter hour after the previous one ends', function () {
+    // „Danach" heißt nicht „in derselben Minute": Zwischen zwei Gewohnheiten
+    // hält der Tag eine Viertelstunde Luft — in der Kette wie überall sonst.
     $user = User::factory()->create();
     $walk = Habit::factory()->for($user)->fixedSchedule('17:00')->withMeasure(20)->create([
         'title' => 'Spazieren gehen',
@@ -33,9 +35,10 @@ test('a chained habit starts where the previous one ends', function () {
 
     $read = chainedTo($walk, ['title' => 'Lesen']);
 
-    expect($read->startsAt()?->format('H:i'))->toBe('17:20')
+    expect($read->startsAt()?->format('H:i'))->toBe('17:35')
         ->and($read->scheduleLabel())->toBe('nach „Spazieren gehen"')
-        ->and($read->timeRangeLabel())->toBe('ab 17:20');
+        ->and($read->timeRangeLabel())->toBe('ab 17:35')
+        ->and($walk->followerStartsAt()?->format('H:i'))->toBe('17:35');
 });
 
 test('the chain adds up over more than one link', function () {
@@ -45,18 +48,18 @@ test('the chain adds up over more than one link', function () {
     $second = chainedTo($first, ['target_amount' => 10, 'target_unit' => MeasureUnit::Minutes]);
     $third = chainedTo($second);
 
-    expect($second->startsAt()?->format('H:i'))->toBe('07:15')
-        ->and($second->timeRangeLabel())->toBe('07:15 – 07:25')
-        ->and($third->startsAt()?->format('H:i'))->toBe('07:25');
+    expect($second->startsAt()?->format('H:i'))->toBe('07:30')
+        ->and($second->timeRangeLabel())->toBe('07:30 – 07:40')
+        ->and($third->startsAt()?->format('H:i'))->toBe('07:55');
 });
 
-test('without a duration the chained habit inherits the plain start', function () {
+test('without a duration the chained habit assumes a quarter hour, plus air', function () {
     $user = User::factory()->create();
     $walk = Habit::factory()->for($user)->fixedSchedule('17:00')->withoutMeasure()->create();
 
-    // Gleichzeitig anzufangen ist falsch — aber weniger falsch als eine
-    // erfundene Länge.
-    expect(chainedTo($walk)->startsAt()?->format('H:i'))->toBe('17:00');
+    // Dieselbe Annahme wie im Tag (`DayPlan::AssumedMinutes`) — der Block
+    // ohne Dauer belegt eine Viertelstunde, dann kommt die Luft.
+    expect(chainedTo($walk)->startsAt()?->format('H:i'))->toBe('17:30');
 });
 
 test('a chained habit runs on the days of the one it hangs on', function () {

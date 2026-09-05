@@ -11,6 +11,8 @@ import {
 } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useDayOrder } from '@/hooks/use-day-order';
+import { spanLabel } from '@/lib/day-grid';
+import { BOTTOM_SHEET } from '@/lib/interaction';
 import { store, suggestions } from '@/routes/calendar/order';
 import type { CalendarBlock } from '@/types';
 
@@ -54,7 +56,7 @@ export function DayOrderSheet({
     function previousAnchor(id: number): string | null {
         const block = blocks.find((candidate) => candidate.id === id);
 
-        return block ? (block.timeRange ?? block.anchor) : null;
+        return block ? spanLabel(block) : null;
     }
 
     function apply() {
@@ -75,10 +77,7 @@ export function DayOrderSheet({
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent
-                side="bottom"
-                className="mx-auto max-h-[85vh] max-w-lg gap-0 overflow-y-auto rounded-t-2xl px-5 pt-6 pb-8"
-            >
+            <SheetContent side="bottom" className={BOTTOM_SHEET}>
                 <SheetHeader className="gap-2 p-0">
                     <SheetTitle className="type-eyebrow flex items-center gap-2 text-primary">
                         <Sparkles

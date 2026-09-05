@@ -1,11 +1,14 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { ChevronLeft, ChevronRight, LayoutGrid } from 'lucide-react';
+import { ChevronLeft, ChevronRight, LayoutGrid, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import {
     AdjustmentSheet,
     alternativeLabel,
 } from '@/components/adjustment-sheet';
 import { BlockSheet } from '@/components/block-sheet';
+import { CourseCancellationSheet } from '@/components/course-cancellation-sheet';
+import { CourseDetailSheet } from '@/components/course-detail-sheet';
+import { CourseSheet } from '@/components/course-sheet';
 import { DayGrid } from '@/components/day-grid';
 import { DayOrderSheet } from '@/components/day-order-sheet';
 import { ShiftSheet } from '@/components/shift-sheet';
@@ -13,15 +16,30 @@ import { StartingHelpSheet } from '@/components/starting-help-sheet';
 import { Card, CardContent } from '@/components/ui/card';
 import type { BlockDrag } from '@/hooks/use-block-drag';
 import { collisionOf, followersOf } from '@/lib/day-grid';
-import { QUIET_LINK } from '@/lib/interaction';
+import {
+    OUTLINE_BUTTON,
+    PRIMARY_BUTTON,
+    QUIET_BUTTON,
+    QUIET_LINK,
+} from '@/lib/interaction';
 import { calendar } from '@/routes';
 import { day as calendarDay } from '@/routes/calendar';
+import { store as placesStore } from '@/routes/calendar/semester/places';
+import { edit as editHabit } from '@/routes/habits';
 import { destroy, store } from '@/routes/habits/completions';
 import {
     destroy as destroyShift,
     move as moveShift,
 } from '@/routes/habits/shifts';
-import type { AnchorAlternative, CalendarBlock as Block } from '@/types';
+import type {
+    AnchorAlternative,
+    CalendarBlock as Block,
+    CourseBlock as Course,
+    CourseKindOption,
+    CourseRow,
+    PlaceProposal,
+    SemesterPlan,
+} from '@/types';
 
 interface CalendarDayProps {
     /** Der angezeigte Tag als „YYYY-MM-DD". */
@@ -37,6 +55,12 @@ interface CalendarDayProps {
     /** Der Monat, aus dem dieser Tag kommt — das Ziel des Wegs zurück. */
     month: string;
     blocks: Block[];
+    /** Die Veranstaltungen dieses Tages als Blöcke — sie belegen Zeit. */
+    courseBlocks: Course[];
+    /** Dieselben als Zeilen, zum Anfassen: Ändern, Ausfall, Löschen. */
+    kinds: CourseKindOption[];
+    /** Der Zeitraum — für die Grenzen eines Ausfalls. Null ohne Semester. */
+    semester: SemesterPlan | null;
     /** Der Rahmen des Tages als Uhrzeit … */
     wakeTime: string;
     bedtime: string;
@@ -45,6 +69,8 @@ interface CalendarDayProps {
     frameTo: number;
     /** Nur was noch kommt, lässt sich verlegen. */
     canShift: boolean;
+    /** Ein Vorschlag der KI, gestrichelt ins Raster gelegt — null ohne. */
+    proposal: PlaceProposal | null;
 }
 
 const NAV_BUTTON =
@@ -72,14 +98,65 @@ export default function CalendarDay({
     nextDate,
     month,
     blocks,
+    courseBlocks,
+    kinds,
+    semester,
     wakeTime,
     bedtime,
     frameFrom,
     frameTo,
     canShift,
+    proposal,
 }: CalendarDayProps) {
+    /** Der Vorschlag ist verworfen — man legt selbst. */
+    const [proposalDismissed, setProposalDismissed] = useState(false);
+    const [proposalError, setProposalError] = useState<string | null>(null);
+    const [applyingProposal, setApplyingProposal] = useState(false);
+    const shownProposal =
+        proposal !== null && !proposalDismissed ? proposal : null;
+
+    function applyProposal() {
+        if (shownProposal === null) {
+            return;
+        }
+
+        setApplyingProposal(true);
+        setProposalError(null);
+
+        router.post(
+            placesStore.url(),
+            {
+                places: [
+                    {
+                        id: shownProposal.habitId,
+                        time: shownProposal.time,
+                        days: shownProposal.days,
+                        suggestion_id: shownProposal.suggestionId,
+                    },
+                ],
+            },
+            {
+                preserveScroll: true,
+                onError: (errors) =>
+                    setProposalError(
+                        Object.values(errors)[0] ??
+                            'Das ließ sich gerade nicht übernehmen.',
+                    ),
+                onFinish: () => setApplyingProposal(false),
+            },
+        );
+    }
+
     /** Welcher Block gerade aufgeschlagen ist; null heißt zu. */
     const [opened, setOpened] = useState<Block | null>(null);
+    /** Welcher Kurs gerade aufgeschlagen ist; null heißt zu. */
+    const [openedCourse, setOpenedCourse] = useState<CourseRow | null>(null);
+    const [editingCourse, setEditingCourse] = useState<CourseRow | null>(null);
+    const [courseSheetOpen, setCourseSheetOpen] = useState(false);
+    const [cancellingCourse, setCancellingCourse] = useState<CourseRow | null>(
+        null,
+    );
+
     /** Welcher Block gerade im Anpassungs-Sheet steht; null heißt zu. */
     const [adjusting, setAdjusting] = useState<Block | null>(null);
     /** Welcher Block gerade in der Starthilfe steht; null heißt zu. */
@@ -101,26 +178,30 @@ export default function CalendarDay({
      * Nachher nebeneinander, bevor irgendetwas entschieden ist
      * (ki-assistent-design3.md §6).
      */
+    // Der Vorschlag aus dem Sheet „Neue Plätze" liegt genauso da wie der
+    // aus der Einzelanpassung — dieselbe gestrichelte Kontur, derselbe Weg.
     const ghost =
-        adjusting && preview
-            ? {
-                  replaces: adjusting.id,
-                  block: {
-                      ...adjusting,
-                      anchor: alternativeLabel(preview),
-                      anchorHour: preview.anchorHour,
-                      startMinute: previewStartMinute(preview),
-                      // Eine Uhrzeit ist eine Zusage, ein Moment eine Gegend —
-                      // der Ghost zeichnet den Unterschied schon mit.
-                      exact: Boolean(preview.time),
-                      // Die Spanne des bisherigen Platzes gilt am neuen nicht
-                      // mehr. Sie hier nachzurechnen hieße, die Server-Logik im
-                      // Browser zu wiederholen — sie kommt zurück, sobald der
-                      // Vorschlag übernommen ist.
-                      timeRange: null,
-                  },
-              }
-            : null;
+        shownProposal !== null && !adjusting
+            ? { replaces: shownProposal.habitId, block: shownProposal.block }
+            : adjusting && preview
+              ? {
+                    replaces: adjusting.id,
+                    block: {
+                        ...adjusting,
+                        anchor: alternativeLabel(preview),
+                        anchorHour: preview.anchorHour,
+                        startMinute: previewStartMinute(preview),
+                        // Eine Uhrzeit ist eine Zusage, ein Moment eine Gegend —
+                        // der Ghost zeichnet den Unterschied schon mit.
+                        exact: Boolean(preview.time),
+                        // Die Spanne des bisherigen Platzes gilt am neuen nicht
+                        // mehr. Sie hier nachzurechnen hieße, die Server-Logik im
+                        // Browser zu wiederholen — sie kommt zurück, sobald der
+                        // Vorschlag übernommen ist.
+                        timeRange: null,
+                    },
+                }
+              : null;
 
     /**
      * Abhaken für den angezeigten Tag, nicht für heute.
@@ -251,10 +332,74 @@ export default function CalendarDay({
                     )}
                 </div>
 
+                {/* Der Vorschlag über dem Raster: Was er ist, warum, und die
+                    zwei Wege — übernehmen oder selbst einordnen. ✦ steht nur
+                    hier, weil hier die KI spricht. */}
+                {shownProposal !== null && (
+                    <div
+                        role="status"
+                        className="flex flex-col gap-3 rounded-xl border border-primary/25 bg-accent px-4 py-3"
+                    >
+                        <p className="type-eyebrow flex items-center gap-2 text-primary">
+                            <Sparkles
+                                className="size-3.5"
+                                strokeWidth={2}
+                                aria-hidden="true"
+                            />
+                            Vorschlag der KI
+                        </p>
+                        <p className="text-sm leading-relaxed text-foreground">
+                            <span className="font-semibold">
+                                {shownProposal.title}
+                            </span>{' '}
+                            könnte um{' '}
+                            <span className="font-semibold">
+                                {shownProposal.label}
+                            </span>{' '}
+                            laufen — gestrichelt im Raster.{' '}
+                            {shownProposal.reason}
+                        </p>
+                        {proposalError !== null && (
+                            <p
+                                role="alert"
+                                className="rounded-[14px] border border-primary/25 bg-card px-3 py-2 text-sm leading-relaxed"
+                            >
+                                {proposalError}
+                            </p>
+                        )}
+                        <div className="flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                onClick={applyProposal}
+                                disabled={applyingProposal}
+                                className={`${PRIMARY_BUTTON} w-auto`}
+                            >
+                                Übernehmen
+                            </button>
+                            <Link
+                                href={editHabit(shownProposal.habitId)}
+                                onClick={() => setProposalDismissed(true)}
+                                className={OUTLINE_BUTTON}
+                            >
+                                Selbst einordnen
+                            </Link>
+                            <button
+                                type="button"
+                                onClick={() => setProposalDismissed(true)}
+                                className={`${QUIET_BUTTON} px-2`}
+                            >
+                                Ausblenden
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 <Card className="gap-0 py-5">
                     <CardContent className="px-4 sm:px-5">
                         <DayGrid
                             blocks={blocks}
+                            courseBlocks={courseBlocks}
+                            onOpenCourse={setOpenedCourse}
                             frameFrom={frameFrom}
                             frameTo={frameTo}
                             wakeTime={wakeTime}
@@ -321,7 +466,12 @@ export default function CalendarDay({
                 }
                 conflict={
                     dropped
-                        ? collisionOf(blocks, dropped.id, dropped.minute)
+                        ? collisionOf(
+                              blocks,
+                              courseBlocks,
+                              dropped.id,
+                              dropped.minute,
+                          )
                         : null
                 }
                 error={shiftError}
@@ -353,6 +503,33 @@ export default function CalendarDay({
                 blocks={blocks}
                 onOpenChange={setOrdering}
             />
+
+            {/* Die Kurse liegen hier, also werden sie hier angefasst — mit
+                denselben Sheets, die es dafür gibt, nicht mit eigenen. */}
+            <CourseDetailSheet
+                course={openedCourse}
+                onOpenChange={() => setOpenedCourse(null)}
+                onEdit={(course) => {
+                    setEditingCourse(course);
+                    setCourseSheetOpen(true);
+                }}
+                onCancelDate={setCancellingCourse}
+            />
+
+            <CourseSheet
+                open={courseSheetOpen}
+                course={editingCourse}
+                kinds={kinds}
+                onOpenChange={setCourseSheetOpen}
+            />
+
+            {semester !== null && (
+                <CourseCancellationSheet
+                    course={cancellingCourse}
+                    semester={semester}
+                    onOpenChange={() => setCancellingCourse(null)}
+                />
+            )}
         </>
     );
 }

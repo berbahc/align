@@ -1,9 +1,10 @@
-import { Head, usePage } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { CompanionStep } from '@/components/companion-step';
 import { HabitWizard } from '@/components/habit-wizard';
 import type { ScheduleTypeOption } from '@/components/schedule-picker';
+import { OUTLINE_BUTTON } from '@/lib/interaction';
 import { dashboard } from '@/routes';
-import { store } from '@/routes/habits';
+import { index as habitsIndex, store } from '@/routes/habits';
 import { store as adopt } from '@/routes/habits/adoptions';
 import type {
     BusySlot,
@@ -17,6 +18,9 @@ import type {
 } from '@/types';
 
 interface CreateHabitProps {
+    /** Wie viele gerade laufen — und wie viele höchstens dürfen. */
+    activeCount: number;
+    maxActive: number;
     categories: HabitCategoryOption[];
     triggerSuggestions: SituationChoice[];
     scheduleTypes: ScheduleTypeOption[];
@@ -36,6 +40,8 @@ interface CreateHabitProps {
 }
 
 export default function CreateHabit({
+    activeCount,
+    maxActive,
     categories,
     triggerSuggestions,
     scheduleTypes,
@@ -60,6 +66,10 @@ export default function CreateHabit({
 
     const heading = adoption === null ? 'Neue Gewohnheit' : 'Selbst übernehmen';
 
+    // Fünf sind die Grenze — und die steht hier, bevor jemand fünf Schritte
+    // durchläuft und die Absage erst hinter dem letzten Knopf bekommt.
+    const full = activeCount >= maxActive;
+
     return (
         <>
             <Head title={asking ? 'Zusammen angehen?' : heading} />
@@ -77,6 +87,27 @@ export default function CreateHabit({
                         friends={friends}
                         days={created.days}
                     />
+                ) : full ? (
+                    <div
+                        role="status"
+                        className="flex flex-col gap-4 rounded-xl border border-primary/25 bg-accent px-4 py-4"
+                    >
+                        <p className="text-sm leading-relaxed text-foreground">
+                            <span className="font-semibold">
+                                {activeCount} von {maxActive} aktiv
+                            </span>{' '}
+                            — alle Plätze sind belegt. Mehr als {maxActive} auf
+                            einmal trägt niemand durch; das ist ein Schutz, kein
+                            Verbot. Läuft eine schon von allein, markiere sie
+                            als gefestigt — dann ist hier Platz für eine neue.
+                        </p>
+                        <Link
+                            href={habitsIndex()}
+                            className={`${OUTLINE_BUTTON} self-start`}
+                        >
+                            Zu deinen Gewohnheiten
+                        </Link>
+                    </div>
                 ) : (
                     <HabitWizard
                         categories={categories}

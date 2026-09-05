@@ -2,10 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\RestoreDisplacedHabits;
+use App\Enums\CourseKind;
+use App\Models\Course;
 use App\Models\Habit;
 use App\Models\HabitCompletion;
+use App\Models\Semester;
 use App\Models\User;
 use App\Support\DayPlan;
+use App\Support\Timetable;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -50,8 +55,16 @@ class CalendarController extends Controller
     /**
      * Der Monat als Raster aus Wochen — die Ebene, auf der man ankommt.
      */
-    public function index(Request $request): Response
+    public function index(Request $request, RestoreDisplacedHabits $restore): Response
     {
+        // Ist der Stundenplan vorbei, kommt zurück, was er verdrängt hatte —
+        // hier, weil hier das Band steht, das es sonst weiter meldete. Nur
+        // ein Blick, wenn überhaupt etwas geparkt ist; geholt wird nur, was
+        // wirklich frei ist.
+        if ($request->user()->habits()->active()->displaced()->exists()) {
+            $restore->handle($request->user());
+        }
+
         $validated = $request->validate([
             'month' => ['nullable', 'date_format:Y-m'],
         ]);
@@ -74,10 +87,15 @@ class CalendarController extends Controller
 
         $habits = $this->habitsForRange($request->user(), $from, $to);
 
+        // Der Stundenplan einmal, die Vorlesungstage in einem Durchgang: Je
+        // Zelle zu fragen wären zweiundvierzig Fragen an dieselbe Auskunft.
+        $timetable = Timetable::for($request->user());
+        $lectureDays = $timetable->lectureDays($from, $to);
+
         $days = [];
 
         for ($day = $from->copy(); $day->lessThanOrEqualTo($to); $day->addDay()) {
-            $days[] = $this->day($habits, $day, $month, $today);
+            $days[] = $this->day($habits, $day, $month, $today, $lectureDays);
         }
 
         return Inertia::render('calendar', [
@@ -88,6 +106,17 @@ class CalendarController extends Controller
             'isCurrentMonth' => $month->isSameMonth($today),
             'today' => $today->toDateString(),
             'days' => $days,
+            // Der Stundenplan hat keine eigene Ansicht — Kurse werden hier
+            // eingetragen und im Tag angefasst. Der Monat trägt deshalb, was
+            // das Sheet oben rechts braucht, und was der Plan verdrängt hat.
+            'semester' => $this->semesterProps($timetable->semester(), $today),
+            'kinds' => CourseKind::options(),
+            'maxCourses' => Course::MaxPerSemester,
+            'courseCount' => $timetable->courseCount(),
+            // Alle Kurse für die Übersicht — Ändern und Löschen laufen über
+            // dieselben Sheets wie im Tag.
+            'courses' => $timetable->courseRows(),
+            'displaced' => $this->displaced($request->user()),
         ]);
     }
 
@@ -147,7 +176,9 @@ class CalendarController extends Controller
         $window = $request->user()->sleepWindowFor($day->dayOfWeekIso);
         // `frame()` kennt die Schlafenszeit nach Mitternacht und zählt sie als
         // Minute jenseits von 1440 weiter — sonst risse die Achse am Tagesrand.
-        $frame = (new DayPlan($scheduled, $window, $day))->frame();
+        $timetable = Timetable::for($request->user());
+        $courseBlocks = $timetable->blocksOn($day);
+        $frame = (new DayPlan($scheduled, $window, $day, $courseBlocks))->frame();
 
         return Inertia::render('calendar-day', [
             'date' => $day->toDateString(),
@@ -162,14 +193,78 @@ class CalendarController extends Controller
             // Damit der Weg zurück in den Monat führt, aus dem man kam.
             'month' => $day->format('Y-m'),
             'blocks' => $scheduled->map(fn (Habit $habit): array => $this->block($habit, $day))->all(),
+            // Kurse liegen auf derselben Achse, sind aber keine Gewohnheiten:
+            // Sie werden nicht abgehakt, nicht gezogen und nicht angepasst.
+            // Deshalb eine eigene Liste — zehn nullbare Felder an `blocks`
+            // hätten jede Stelle, die einen Block anfasst, gegen eine Art
+            // verteidigen müssen, die sie nicht behandeln kann.
+            // Der Block trägt den ganzen Kurs: Hier liegt er, hier fasst man
+            // ihn an — antippen öffnet das Sheet zum Ändern.
+            'courseBlocks' => $timetable->coursesOn($day),
+            'kinds' => CourseKind::options(),
+            'semester' => $this->semesterProps($timetable->semester(), $today),
             // Nur was noch kommt, lässt sich verlegen: Ein vergangener Tag ist
             // vorbei, und ihn umzuräumen änderte nichts mehr an ihm.
             'canShift' => $day->greaterThanOrEqualTo($today),
+            // Ein Vorschlag der KI, gestrichelt ins Raster gelegt — wenn die
+            // Adresse einen nennt und er an diesem Wochentag gilt.
+            'proposal' => $this->proposal($request, $habits, $day),
             'wakeTime' => $window['wakeTime'],
             'bedtime' => $window['bedtime'],
             'frameFrom' => $frame['from'],
             'frameTo' => $frame['to'],
         ]);
+    }
+
+    /**
+     * Der Zeitraum des Semesters für das Sheet — null ohne Semester.
+     *
+     * @return array{title: string, startsOn: string, endsOn: string, rangeLabel: string, isCurrent: bool, startsInFuture: bool, startsOnLabel: string}|null
+     */
+    private function semesterProps(?Semester $semester, Carbon $today): ?array
+    {
+        if ($semester === null) {
+            return null;
+        }
+
+        return [
+            'title' => $semester->title,
+            'startsOn' => $semester->starts_on->toDateString(),
+            'endsOn' => $semester->ends_on->toDateString(),
+            'rangeLabel' => $semester->rangeLabel(),
+            // Ein Semester, das nicht läuft, bleibt bearbeitbar, sagt aber,
+            // dass es nichts blockiert — und ab wann wieder.
+            'isCurrent' => $semester->covers($today),
+            'startsInFuture' => $semester->starts_on->toDateString() > $today->toDateString(),
+            'startsOnLabel' => $semester->starts_on->settings(['locale' => 'de'])->isoFormat('D. MMMM YYYY'),
+        ];
+    }
+
+    /**
+     * Was der Stundenplan verdrängt hat — die Liste, um die es beim
+     * Semesterwechsel eigentlich geht.
+     *
+     * @return list<array{id: int, title: string, previousTime: string|null, previousLabel: string, from: string|null, fromLabel: string|null}>
+     */
+    private function displaced(User $user): array
+    {
+        return array_values($user->habits()
+            ->active()
+            ->displaced()
+            ->orderBy('position')
+            ->get()
+            ->map(fn (Habit $habit): array => [
+                'id' => $habit->id,
+                'title' => $habit->title,
+                'previousTime' => $habit->scheduled_time?->format('H:i'),
+                'previousLabel' => $habit->scheduleLabel(),
+                // Ab wann der Platz weg ist — null, wenn schon jetzt. Ein
+                // Kurs im Oktober wird im September angekündigt, nicht
+                // verschwiegen: So kommt die Änderung nicht über Nacht.
+                'from' => $habit->isDisplaced() ? null : $habit->displaced_at?->toDateString(),
+                'fromLabel' => $habit->isDisplaced() ? null : $habit->displaced_at?->settings(['locale' => 'de'])->isoFormat('D. MMMM'),
+            ])
+            ->all());
     }
 
     /**
@@ -203,9 +298,10 @@ class CalendarController extends Controller
      * und ein Prozentwert über einem einzelnen Tag wäre eine Bewertung.
      *
      * @param  Collection<int, Habit>  $habits
-     * @return array{date: string, dayOfMonth: int, inMonth: bool, isToday: bool, isFuture: bool, planned: int, done: int}
+     * @param  array<string, true>  $lectureDays  Die Tage, an denen etwas an der Uni läuft
+     * @return array{date: string, dayOfMonth: int, inMonth: bool, isToday: bool, isFuture: bool, planned: int, done: int, hasLectures: bool}
      */
-    private function day(Collection $habits, Carbon $day, Carbon $month, Carbon $today): array
+    private function day(Collection $habits, Carbon $day, Carbon $month, Carbon $today, array $lectureDays): array
     {
         $scheduled = $habits
             ->filter(fn (Habit $habit): bool => $this->existedOn($habit, $day))
@@ -226,17 +322,76 @@ class CalendarController extends Controller
             'isFuture' => $day->greaterThan($today),
             'planned' => min($scheduled->count(), self::MaxDots),
             'done' => min($done, self::MaxDots),
+            // Nicht wie viel, nur ob: Der Monat sagt, dass dieser Tag an der
+            // Uni stattfindet, nicht wie voll er ist. Wie voll, steht im Tag.
+            'hasLectures' => isset($lectureDays[$day->toDateString()]),
+        ];
+    }
+
+    /**
+     * Der Vorschlag aus `?suggestion=` als Ghost — oder null.
+     *
+     * Der Weg aus dem Sheet „Neue Plätze" in den Tag: Dort steht der Vorschlag
+     * gestrichelt neben den Kursen, um die es geht, und lässt sich übernehmen
+     * oder verwerfen. Nur eigene, noch nicht übernommene Vorschläge, und nur
+     * an einem Tag, an dem sie überhaupt gälten — sonst zeigte der Ghost etwas,
+     * das an diesem Datum nie läge.
+     *
+     * @param  Collection<int, Habit>  $habits
+     * @return array{suggestionId: int, habitId: int, title: string, time: string, days: list<int>, label: string, reason: string, block: array<string, mixed>}|null
+     */
+    private function proposal(Request $request, Collection $habits, Carbon $day): ?array
+    {
+        $id = $request->integer('suggestion');
+
+        if ($id < 1) {
+            return null;
+        }
+
+        $suggestion = $request->user()->aiSuggestions()->notTaken()->find($id);
+        $habit = $suggestion === null ? null : $habits->firstWhere('id', $suggestion->habit_id);
+        $time = $suggestion?->payload['time'] ?? null;
+        $days = $suggestion?->payload['days'] ?? null;
+
+        if ($habit === null || ! is_string($time) || ! is_array($days) || ! in_array($day->dayOfWeekIso, $days, strict: true)) {
+            return null;
+        }
+
+        $start = DayPlan::toMinutes($time);
+        $minutes = $habit->durationMinutes() ?? DayPlan::AssumedMinutes;
+
+        return [
+            'suggestionId' => $suggestion->id,
+            'habitId' => $habit->id,
+            'title' => $habit->title,
+            'time' => $time,
+            'days' => array_values(array_map(intval(...), $days)),
+            'label' => $suggestion->label,
+            'reason' => (string) ($suggestion->payload['reason'] ?? ''),
+            'block' => [
+                ...$this->block($habit, $day),
+                'anchor' => $suggestion->label,
+                'anchorHour' => intdiv($start, 60),
+                'startMinute' => $start,
+                'exact' => true,
+                'shifted' => false,
+                'completed' => false,
+                'timeRange' => $time.' – '.DayPlan::toTime($start + $minutes),
+            ],
         ];
     }
 
     /**
      * Eine Gewohnheit als Block auf der Achse.
      *
-     * @return array{id: int, title: string, anchor: string, anchorHour: int, scheduleType: string, startMinute: int|null, durationMinutes: int|null, exact: bool, shifted: bool, measureLabel: string|null, timeRange: string|null, behaviorType: string, smallestStep: string|null, motivation: string|null, completed: bool, graduated: bool, chainedToId: int|null}
+     * @return array{kind: 'habit', id: int, title: string, anchor: string, anchorHour: int, scheduleType: string, startMinute: int|null, durationMinutes: int|null, exact: bool, shifted: bool, measureLabel: string|null, timeRange: string|null, behaviorType: string, smallestStep: string|null, motivation: string|null, completed: bool, graduated: bool, chainedToId: int|null}
      */
     private function block(Habit $habit, Carbon $day): array
     {
         return [
+            // Sagt dem Raster, welcher Art dieser Block ist — daneben liegen
+            // Kurse, und die lassen sich weder abhaken noch ziehen.
+            'kind' => 'habit',
             'id' => $habit->id,
             'title' => $habit->title,
             // Mit dem Tag: An einem verschobenen Tag gilt die Ausnahme, und

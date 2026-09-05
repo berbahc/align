@@ -28,7 +28,11 @@ import type { NavItem } from '@/types';
 // Schlafenszeit begrenzen, wann Gewohnheiten überhaupt Platz haben. Er steht
 // hinter dem Kalender, weil er dieselbe Frage von der anderen Seite stellt —
 // nicht „was steht an", sondern „wie lang ist der Tag".
-const mainNavItems: NavItem[] = [
+//
+// Der Semesterplan steht bewusst NICHT hier: Er ist die zweite Ansicht des
+// Kalenders und nicht eine sechste Ecke der App. Wer wissen will, wann im Tag
+// nichts geht, sucht das dort, wo der Tag steht.
+export const mainNavItems: NavItem[] = [
     {
         title: 'Übersicht',
         href: dashboard(),

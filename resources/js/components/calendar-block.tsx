@@ -1,6 +1,6 @@
 import { Check } from 'lucide-react';
 import { BEHAVIOR_ICONS } from '@/lib/behavior-icons';
-import { MIN_BLOCK_HEIGHT } from '@/lib/day-grid';
+import { MIN_BLOCK_HEIGHT, spanLabel } from '@/lib/day-grid';
 import type { PlacedBlock } from '@/lib/day-grid';
 import { cn } from '@/lib/utils';
 import type { CalendarBlock as Block } from '@/types';
@@ -40,9 +40,10 @@ export function CalendarBlock({
     ghost = false,
     faded = false,
     dragging = false,
+    lifted = false,
     dragHandlers,
 }: {
-    placed: PlacedBlock;
+    placed: PlacedBlock<Block>;
     canComplete: boolean;
     onToggle: (block: Block) => void;
     /** Öffnet den Block — dort stehen Anpassung, Starthilfe und der Rest. */
@@ -53,6 +54,8 @@ export function CalendarBlock({
     faded?: boolean;
     /** Wird dieser Block gerade getragen? */
     dragging?: boolean;
+    /** Rutscht er gerade mit — an der Kette des Getragenen? Dann liegt er mit obenauf. */
+    lifted?: boolean;
     /** Die Geste — sie hängt an der Fläche, die auch ins Sheet führt. */
     dragHandlers?: {
         onPointerDown: (event: React.PointerEvent, block: Block) => void;
@@ -77,6 +80,7 @@ export function CalendarBlock({
                 dragging
                     ? 'z-30 transition-none'
                     : 'transition-[top] duration-[var(--duration-fluid)] ease-[var(--ease-fluid)]',
+                lifted && !dragging && 'z-20',
             )}
             style={{
                 top,
@@ -207,7 +211,7 @@ function BlockBody({
 
             <span className="min-w-0 flex-1">
                 <span className="type-eyebrow block truncate text-muted-foreground">
-                    {block.timeRange ?? block.anchor}
+                    {spanLabel(block)}
                     {/* Nur heute hierher gelegt — die Marke sagt, dass morgen
                         wieder der reguläre Zeitpunkt gilt. */}
                     {block.shifted && (

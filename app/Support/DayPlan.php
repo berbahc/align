@@ -166,17 +166,23 @@ class DayPlan
     /**
      * Was einer Spanne im Weg liegt — oder nichts.
      *
-     * Anders als {@see freeWindows()} ohne die 15 Minuten Atempause: Zwei
-     * Blöcke direkt hintereinander sind eine Planung, keine Doppelbuchung. Die
-     * Atempause ist ein Rat für einen Vorschlag, keine Grenze für eine
-     * Entscheidung, die jemand selbst trifft.
+     * Mit derselben Viertelstunde Luft wie {@see freeWindows()}: Was die KI
+     * nie vorschlüge, geht auch von Hand nicht — sonst hätte der Tag zwei
+     * Maßstäbe, und ein Vorschlag sähe strenger aus als die eigene Hand. Zwei
+     * Blöcke direkt hintereinander sind darum keine Planung, sondern zu eng.
      *
+     * Die eine Ausnahme sind Kurse untereinander: Die Uni legt sie Rücken an
+     * Rücken, und daran ist nichts zu prüfen.
+     *
+     * @param  bool  $spanIsCourse  Ist die Spanne selbst ein Kurs? Dann braucht sie zu anderen Kursen keine Luft
      * @return array{id: int, title: string, from: int, to: int}|null
      */
-    public function collisionWith(int $from, int $to, ?Habit $except = null): ?array
+    public function collisionWith(int $from, int $to, ?Habit $except = null, bool $spanIsCourse = false): ?array
     {
         foreach ($this->occupied($except) as $block) {
-            if ($from < $block['to'] && $to > $block['from']) {
+            $air = $spanIsCourse && Timetable::isCourseBlock($block) ? 0 : self::BreatherMinutes;
+
+            if ($from < $block['to'] + $air && $to + $air > $block['from']) {
                 return $block;
             }
         }
@@ -193,15 +199,70 @@ class DayPlan
     }
 
     /**
+     * Die Fenster, die an **allen** Tagen frei sind.
+     *
+     * Ein Wochentag, zwei Daten: der nächste Termin und der erste im Semester,
+     * wenn das noch vor uns liegt. Was nächste Woche frei ist, aber am ersten
+     * Vorlesungsmontag unter einem Kurs liegt, ist kein Fenster — der
+     * Vorschlag fiele sonst beim Übernehmen an genau dem Kurs durch, den er
+     * nicht sah. Dieselbe Datumswahl wie {@see SlotConflict::datesFor()}.
+     *
+     * @param  list<self>  $plans
+     * @return list<array{from: int, to: int}>
+     */
+    public static function commonFreeWindows(array $plans, int $minutes, ?Habit $except = null): array
+    {
+        $common = null;
+
+        foreach ($plans as $plan) {
+            $windows = $plan->freeWindows($minutes, $except);
+
+            if ($common === null) {
+                $common = $windows;
+
+                continue;
+            }
+
+            $next = [];
+
+            foreach ($common as $window) {
+                foreach ($windows as $other) {
+                    $from = max($window['from'], $other['from']);
+                    $to = min($window['to'], $other['to']);
+
+                    if ($to - $from >= $minutes) {
+                        $next[] = ['from' => $from, 'to' => $to];
+                    }
+                }
+            }
+
+            $common = $next;
+        }
+
+        return $common ?? [];
+    }
+
+    /**
      * Die freien Fenster als lesbare Zeilen — für den Prompt der KI.
      *
      * @return list<string>
      */
     public function freeWindowLabels(int $minutes, ?Habit $except = null): array
     {
+        return self::windowLabels($this->freeWindows($minutes, $except));
+    }
+
+    /**
+     * Fenster als Zeilen für den Prompt — „07:00 bis 09:45".
+     *
+     * @param  list<array{from: int, to: int}>  $windows
+     * @return list<string>
+     */
+    public static function windowLabels(array $windows): array
+    {
         return array_map(
             fn (array $window): string => self::toTime($window['from']).' bis '.self::toTime($window['to']),
-            $this->freeWindows($minutes, $except),
+            $windows,
         );
     }
 

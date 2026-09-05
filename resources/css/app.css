@@ -131,18 +131,44 @@
  * Werte pixelgenau aus den Mockups gemessen, siehe designsprache.md §2.1/§9.
  * Genau ein gesättigter Buntton: Olivbronze --olive. Kein Rot, kein Alarm (§1.4).
  */
+/*
+ * Die Leiter des Tages — Entscheidung vom 04.09.2026.
+ *
+ * Vorher lagen alle Flächen fast aufeinander: Eine Karte hob sich vom
+ * Seitengrund um ΔL* 1.8 ab, ein Block von der Karte um 4.0. Das ist unter der
+ * Schwelle, ab der das Auge zwei Flächen als zwei liest — der Tag sah aus wie
+ * ein Blatt Papier mit Text darauf, nicht wie ein Raster mit Blöcken darin.
+ *
+ * Jetzt gibt es vier Stufen, und jede ist eine Aussage:
+ *
+ *   Seitengrund  →  Karte        ΔL*  6   „hier beginnt ein Bereich"
+ *   Karte        →  track        ΔL*  8   „das ist eine Gewohnheit"
+ *   track        →  accent       ΔL*  4   „die ist erledigt"
+ *   accent       →  sand         ΔL*  4   „das ist kein Vorsatz, das ist Uni"
+ *
+ * Gemessen wird in ΔL* und nicht im WCAG-Verhältnis: Für große Flächen sagt
+ * das Verhältnis wenig (1.2:1 kann deutlich sichtbar sein), die wahrgenommene
+ * Helligkeit dagegen genau das, was hier gemeint ist. Für Text gilt weiter
+ * WCAG AA, 4.5:1 — und das erreichen jetzt auch `faintest` (Stundenzahlen) und
+ * `olive-mid` (Zeile über dem Kursblock), die vorher bei 2.29:1 und 2.85:1
+ * lagen und damit für viele schlicht nicht lesbar waren.
+ *
+ * `accent` ist deshalb nicht mehr derselbe Wert wie `sand`: Es trägt beides,
+ * den Überfahr-Zustand und die erledigte Gewohnheit, und musste zwischen die
+ * beiden anderen Stufen passen.
+ */
 :root {
-    --canvas: #fdf9f8;
+    --canvas: #f3ede4;
     --surface: #ffffff;
-    --olive: #775a19;
-    --olive-mid: #988353;
+    --olive: #6f5316;
+    --olive-mid: #685831;
     --gold: #c5a058;
-    --sand: #e8e2d6;
-    --track: #f7f3ef;
-    --faint: #7c7b78;
-    --faintest: #adaba9;
+    --sand: #dcd0b8;
+    --track: #efe8dc;
+    --faint: #6f6b64;
+    --faintest: #7a766e;
     --ai-fill: #fdfbf6;
-    --ai-line: #c5a058;
+    --ai-line: #a8853f;
 
     --background: var(--canvas);
     --foreground: #1d1b1b;
@@ -152,22 +178,22 @@
     --popover-foreground: #1d1b1b;
     --primary: var(--olive);
     --primary-foreground: #ffffff;
-    --secondary: #e4e2de;
+    --secondary: #e0dcd4;
     --secondary-foreground: #1d1b1b;
     --muted: var(--track);
     --muted-foreground: #5f5e5b;
-    --accent: var(--sand);
+    /* Eigene Stufe zwischen `track` und `sand` — siehe die Leiter oben. */
+    --accent: #e6dcc8;
     --accent-foreground: #1d1b1b;
     /* §11.5 — semantische Farben fehlen in den Mockups absichtlich.
        Falls nötig: gedämpft und warm, kein Signalrot. Offener Punkt. */
-    --destructive: #9c5a42;
+    --destructive: #8f4f38;
     --destructive-foreground: #ffffff;
-    --border: #f0ece5;
+    --border: #ddd5c5;
     /* Kartenkante ist bewusst fast unsichtbar (§2.1) — für Formularfelder
-       reicht das nicht: `border` erreicht 1.1:1, `neutral` 1.29:1, WCAG 1.4.11
-       verlangt 3:1 für Bedienelement-Grenzen. Dieser Wert (3.44:1) ist eine
-       Ergänzung von mir und in der Designsprache nicht belegt — Team prüfen. */
-    --input: #8e8a82;
+       reicht das nicht: WCAG 1.4.11 verlangt 3:1 für Bedienelement-Grenzen.
+       Dieser Wert erreicht 4.39:1 auf der Karte. */
+    --input: #7d786f;
     --ring: var(--olive);
     /*
      * Höhe als Mittel der Hierarchie (Apple §12: „Material weight encodes
@@ -190,31 +216,47 @@
     --sidebar-primary: var(--olive);
     --sidebar-primary-foreground: #ffffff;
     /* §10 — aktive Sidebar-Pille ist `neutral`, ausdrücklich NICHT Oliv. */
-    --sidebar-accent: #e4e2de;
+    --sidebar-accent: #e0dcd4;
     --sidebar-accent-foreground: #1d1b1b;
-    --sidebar-border: #f0ece5;
+    --sidebar-border: #ddd5c5;
     --sidebar-ring: var(--olive);
 }
 
 /*
- * ABLEITUNG — NICHT BELEGT. designsprache.md §11.4: Dark Mode existiert in den
- * Mockups nicht und braucht "eine eigene Runde". Die frühere dunkle Figma-
- * Iteration (Navy + Cyan/Magenta) ist ausdrücklich nicht kompatibel.
- * Diese Werte halten den Dark Mode nur funktionsfähig und warm; sie sind ein
- * Platzhalter bis zur Designentscheidung, keine Vorlage.
+ * Der dunkle Modus — die eigene Runde, die designsprache.md §11.4 verlangt
+ * hat, gehalten am 04.09.2026.
+ *
+ * Er kehrt die Leiter nicht um, er dreht sie: Im Hellen liegt die Karte über
+ * dem Grund, weil sie heller ist; im Dunkeln aus demselben Grund. Eine
+ * Fläche, die weiter vorn liegt, ist heller — beide Modi folgen derselben
+ * Regel, und deshalb fühlt sich der Umschalter wie eine Beleuchtung an und
+ * nicht wie eine zweite App.
+ *
+ * Vorher war das nicht so: Der Grund lag bei #17130f, die Blöcke bei #262019
+ * und #332c24 — ΔL* 2.5 und 8.3 zur Karte. Die Blöcke waren damit dunkel und
+ * fast unsichtbar, obwohl gerade sie im Dunkeln tragen sollen. Der Grund ist
+ * jetzt tiefer und die Blöcke sind deutlich heller; der Abstand Karte→Kurs ist
+ * von ΔL* 8.3 auf 16.6 gewachsen.
+ *
+ * Die Textwerte gehen denselben Weg wie im Hellen: `faintest` von 2.40:1 auf
+ * 4.73:1, der Feldrahmen von 1.6:1 auf 3.03:1.
+ *
+ * Was bleibt: warme Töne, ein einziger gesättigter Farbton, kein Signalrot.
+ * Die frühere dunkle Figma-Iteration (Navy + Cyan/Magenta) ist ausdrücklich
+ * nicht kompatibel und war nie gemeint.
  */
 .dark {
-    --canvas: #17130f;
-    --surface: #201b16;
-    --olive: #c9a45e;
-    --olive-mid: #a08a55;
+    --canvas: #100e0b;
+    --surface: #25201a;
+    --olive: #d7b26a;
+    --olive-mid: #c9b17e;
     --gold: #8c7647;
-    --sand: #332c24;
-    --track: #262019;
-    --faint: #8b837b;
-    --faintest: #5e574f;
-    --ai-fill: #221d16;
-    --ai-line: #8c7647;
+    --sand: #4f4332;
+    --track: #362f26;
+    --faint: #a49c92;
+    --faintest: #918a80;
+    --ai-fill: #2b2419;
+    --ai-line: #c9a45e;
 
     --background: var(--canvas);
     --foreground: #f4f0ea;
@@ -224,16 +266,17 @@
     --popover-foreground: #f4f0ea;
     --primary: var(--olive);
     --primary-foreground: #1d1b1b;
-    --secondary: #2c251e;
+    --secondary: #332c24;
     --secondary-foreground: #f4f0ea;
     --muted: var(--track);
-    --muted-foreground: #a9a29a;
-    --accent: var(--sand);
+    --muted-foreground: #b0a9a0;
+    /* Eigene Stufe zwischen `track` und `sand`, wie im hellen Modus. */
+    --accent: #43392a;
     --accent-foreground: #f4f0ea;
-    --destructive: #c07a5e;
+    --destructive: #d08c6d;
     --destructive-foreground: #1d1b1b;
-    --border: #2c251e;
-    --input: #3a3128;
+    --border: #41382e;
+    --input: #766959;
     --ring: var(--olive);
     /* Im Dunkeln trägt nicht der Schatten, sondern die hellere Fläche —
        der Schatten stützt nur noch die Kante. */
@@ -248,9 +291,9 @@
     --sidebar-foreground: #f4f0ea;
     --sidebar-primary: var(--olive);
     --sidebar-primary-foreground: #1d1b1b;
-    --sidebar-accent: #2c251e;
+    --sidebar-accent: #332c24;
     --sidebar-accent-foreground: #f4f0ea;
-    --sidebar-border: #2c251e;
+    --sidebar-border: #41382e;
     --sidebar-ring: var(--olive);
 }
 

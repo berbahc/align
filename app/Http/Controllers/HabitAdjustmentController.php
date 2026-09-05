@@ -12,6 +12,8 @@ use App\Models\AiSuggestion;
 use App\Models\Habit;
 use App\Models\User;
 use App\Support\DayPlan;
+use App\Support\SlotConflict;
+use App\Support\Timetable;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -132,6 +134,8 @@ class HabitAdjustmentController extends Controller
         }, fn (mixed $value): bool => $value !== null);
 
         $habit->update($request->anchor());
+        // Der Weg von Hand für eine verdrängte Gewohnheit führt hier durch.
+        $habit->takeAPlace();
 
         // Ohne diesen Eintrag bliebe der Vorschlag im Gedächtnis offen — und
         // die KI würde ihn beim nächsten Mal als „nicht genommen" lesen,
@@ -165,13 +169,25 @@ class HabitAdjustmentController extends Controller
         $habits = $user->habits()->active()->get();
         $habits->each(fn (Habit $other) => $other->setRelation('user', $user));
 
-        $plan = DayPlan::for(
-            $habits->filter(fn (Habit $other): bool => $other->isScheduledOn($day)),
-            $day->dayOfWeekIso,
-            $user->sleepWindows(),
+        // Der Stundenplan dieses Wochentags. Damit verschwinden Vorlesungszeiten
+        // aus den freien Fenstern — und die KI kann sie gar nicht mehr
+        // vorschlagen, ohne dass am Agenten eine Zeile geändert wurde. Liegt
+        // das Semester noch vor uns, zählt sein erster Termin mit.
+        $timetable = Timetable::for($user);
+
+        $plans = array_map(
+            fn (Carbon $date): DayPlan => DayPlan::forDate(
+                $habits->filter(fn (Habit $other): bool => $other->isScheduledOn($date)),
+                $date,
+                $user->sleepWindows(),
+                $timetable->blocksOn($date),
+            ),
+            SlotConflict::datesFor([$day->dayOfWeekIso], $timetable),
         );
 
-        return $plan->freeWindowLabels($habit->durationMinutes() ?? 0, $habit);
+        return DayPlan::windowLabels(
+            DayPlan::commonFreeWindows($plans, $habit->durationMinutes() ?? 0, $habit),
+        );
     }
 
     /**

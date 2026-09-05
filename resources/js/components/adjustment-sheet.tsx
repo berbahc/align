@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAnchorSuggestions } from '@/hooks/use-anchor-suggestions';
+import { BOTTOM_SHEET } from '@/lib/interaction';
 import { cn } from '@/lib/utils';
 import { store, suggestions } from '@/routes/habits/adjustment';
 import type { AnchorAlternative, CalendarBlock } from '@/types';
@@ -149,10 +150,7 @@ export function AdjustmentSheet({
             open={block !== null}
             onOpenChange={(open) => !open && dismiss()}
         >
-            <SheetContent
-                side="bottom"
-                className="mx-auto max-h-[85vh] max-w-lg gap-0 overflow-y-auto rounded-t-2xl px-5 pt-6 pb-8"
-            >
+            <SheetContent side="bottom" className={BOTTOM_SHEET}>
                 <SheetHeader className="gap-2 p-0">
                     <SheetTitle className="type-eyebrow flex items-center gap-2 text-primary">
                         <Sparkles

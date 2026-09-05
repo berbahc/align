@@ -19,23 +19,28 @@
             })();
         </script>
 
-        {{-- Inline style to set the HTML background color based on our theme in app.css --}}
+        {{-- Der Grund, bevor das Stylesheet da ist — sonst blitzt beim Laden Weiß
+             auf. Die beiden Werte sind `--canvas` aus `app.css`, hell und dunkel,
+             und müssen mit ihm mitwandern. --}}
         <style>
             html {
-                background-color: #FDF9F8;
+                background-color: #F3EDE4;
             }
 
             html.dark {
-                background-color: #17130F;
+                background-color: #100E0B;
             }
         </style>
 
         {{-- Hier ist `prefers-color-scheme` richtig und die `.dark`-Klasse falsch:
              die Tab-Leiste gehört dem Betriebssystem, nicht der App-Einstellung.
-             `favicon.ico` bleibt der Fallback für Browser, die `media` ignorieren. --}}
+             `favicon.ico` bleibt der Fallback für Browser, die `media` ignorieren.
+
+             Die Namen sagen, worauf die Kachel gehört: Auf eine helle Tab-Leiste
+             die dunkle, auf eine dunkle die helle. --}}
         <link rel="icon" href="/favicon.ico" sizes="any">
-        <link rel="icon" type="image/png" href="/icon-light.png" media="(prefers-color-scheme: light)">
-        <link rel="icon" type="image/png" href="/icon-dark.png" media="(prefers-color-scheme: dark)">
+        <link rel="icon" type="image/png" href="/icon-on-light.png" media="(prefers-color-scheme: light)">
+        <link rel="icon" type="image/png" href="/icon-on-dark.png" media="(prefers-color-scheme: dark)">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
         @fonts

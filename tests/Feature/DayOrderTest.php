@@ -2,7 +2,9 @@
 
 use App\Ai\Agents\SuggestDayOrder;
 use App\Enums\ScheduleType;
+use App\Models\Course;
 use App\Models\Habit;
+use App\Models\Semester;
 use App\Models\User;
 use App\Support\DayPlan;
 use Illuminate\Support\Carbon;
@@ -220,4 +222,104 @@ test('the day plan reads the frame and the gaps between habits', function () {
         ])
         // Zwölf Stunden am Stück gibt dieser Tag nicht mehr her.
         ->and($plan->hasRoomFor(720))->toBeFalse();
+});
+
+/**
+ * Der Stundenplan reicht bis in die Tagesordnung.
+ *
+ * Anders als bei den freien Fenstern der Einzelanpassung genügt es hier nicht,
+ * `DayPlan` zu füttern: Der Agent bekommt nur den Rahmen und die Gewohnheiten.
+ * Ohne eine ausdrückliche Liste des Belegten legte er eine Gewohnheit mitten in
+ * eine Vorlesung — und der Kalender wiese sie beim Übernehmen wieder ab.
+ */
+test('the lectures of that day travel into the prompt as fixed blocks', function () {
+    $monday = orderingMonday();
+
+    $user = User::factory()->create();
+    $semester = Semester::factory()->for($user)->create([
+        'starts_on' => $monday->copy()->subMonth(),
+        'ends_on' => $monday->copy()->addMonths(3),
+    ]);
+    Course::factory()->for($semester)->onWeekday(1)->at('10:00', '11:30')
+        ->create(['title' => 'Analysis I']);
+
+    $first = Habit::factory()->for($user)->fixedSchedule('17:00', [1])->withMeasure(30)->create();
+    $second = Habit::factory()->for($user)->fixedSchedule('18:00', [1])->withMeasure(20)->create();
+
+    SuggestDayOrder::fake([[
+        'order' => [
+            ['id' => $first->id, 'time' => '08:00'],
+            ['id' => $second->id, 'time' => '14:00'],
+        ],
+        'reason' => 'Vormittag und Nachmittag, die Vorlesung dazwischen.',
+    ]]);
+
+    $this->actingAs($user)
+        ->postJson(route('calendar.order.suggestions'), ['date' => $monday->toDateString()])
+        ->assertOk();
+
+    SuggestDayOrder::assertPrompted(
+        fn (AgentPrompt $prompt): bool => $prompt->contains('Belegt an diesem Tag')
+            && $prompt->contains('10:00 bis 11:30: Analysis I'),
+    );
+});
+
+test('an order that lands inside a lecture is refused instead of shown', function () {
+    $monday = orderingMonday();
+
+    $user = User::factory()->create();
+    $semester = Semester::factory()->for($user)->create([
+        'starts_on' => $monday->copy()->subMonth(),
+        'ends_on' => $monday->copy()->addMonths(3),
+    ]);
+    Course::factory()->for($semester)->onWeekday(1)->at('10:00', '11:30')->create();
+
+    $first = Habit::factory()->for($user)->fixedSchedule('17:00', [1])->withMeasure(30)->create();
+    $second = Habit::factory()->for($user)->fixedSchedule('18:00', [1])->withMeasure(20)->create();
+
+    SuggestDayOrder::fake([[
+        'order' => [
+            ['id' => $first->id, 'time' => '08:00'],
+            // Mitten in der Vorlesung — die Zeile fällt durch, damit fehlt eine
+            // Gewohnheit, und ein unvollständiger Tag ist kein Vorschlag.
+            ['id' => $second->id, 'time' => '10:30'],
+        ],
+        'reason' => 'Passt schon.',
+    ]]);
+
+    $this->actingAs($user)
+        ->postJson(route('calendar.order.suggestions'), ['date' => $monday->toDateString()])
+        ->assertStatus(503)
+        ->assertJsonMissingPath('order');
+});
+
+/**
+ * Ein Tag, der von Vorlesungen ausgefüllt ist, wird gar nicht erst gefragt.
+ *
+ * Dieselbe Haltung wie beim zu vollen Tag: Das ist eine Rechnung, keine
+ * Einschätzung — und eine Absage aus einem Modell wäre eine Meinung.
+ */
+test('a day filled with lectures is refused before the model is asked', function () {
+    $monday = orderingMonday();
+
+    $user = User::factory()->create();
+    $semester = Semester::factory()->for($user)->create([
+        'starts_on' => $monday->copy()->subMonth(),
+        'ends_on' => $monday->copy()->addMonths(3),
+    ]);
+
+    // Von acht bis zwanzig Uhr am Stück — in Blöcken, weil ein Kurs höchstens
+    // sechs Stunden dauert.
+    Course::factory()->for($semester)->onWeekday(1)->at('07:00', '13:00')->create();
+    Course::factory()->for($semester)->onWeekday(1)->at('13:00', '19:00')->create();
+    Course::factory()->for($semester)->onWeekday(1)->at('19:00', '23:00')->create();
+
+    Habit::factory()->for($user)->fixedSchedule('17:00', [1])->withMeasure(60)->create();
+    Habit::factory()->for($user)->fixedSchedule('18:00', [1])->withMeasure(60)->create();
+
+    $this->actingAs($user)
+        ->postJson(route('calendar.order.suggestions'), ['date' => $monday->toDateString()])
+        ->assertStatus(422);
+
+    SuggestDayOrder::assertNotPrompted(fn (AgentPrompt $prompt): bool => true);
 });

@@ -2,7 +2,7 @@ import { useHttp } from '@inertiajs/react';
 import { useState } from 'react';
 
 /** Eine Gewohnheit an ihrem vorgeschlagenen Platz. */
-export interface OrderedHabit {
+interface OrderedHabit {
     id: number;
     title: string;
     /** Der neue Beginn, „07:30". */
@@ -23,7 +23,7 @@ interface OrderResponse {
  * Der Rumpf kommt als Zeichenkette; ein unlesbarer darf nicht dazu führen,
  * dass die Oberfläche gar nichts sagt.
  */
-function readMessage(body: string): string | null {
+export function readMessage(body: string): string | null {
     try {
         const parsed: unknown = JSON.parse(body);
 

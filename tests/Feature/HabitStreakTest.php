@@ -192,3 +192,52 @@ test('die Gewohnheiten-Liste zeigt die Serie je Gewohnheit als fertige Zeile', f
             ->where('habits.1.streak', '5× in Folge')
         );
 });
+
+/**
+ * Der Stundenplan nimmt den Platz — er darf nicht auch noch die Serie nehmen.
+ *
+ * `time-blocking.md`: „Verpasste Tage führen nicht zur Bestrafung." Ein Tag,
+ * an dem eine Vorlesung den Platz hatte, ist kein verpasster Tag.
+ */
+test('a parked habit neither breaks the streak nor counts as a miss', function () {
+    $user = User::factory()->create();
+    // Jeden Tag, damit die Rechnung nicht am Wochenende hängt.
+    $habit = Habit::factory()->for($user)->fixedSchedule('10:00', [1, 2, 3, 4, 5, 6, 7])
+        ->withMeasure(30)->create(['created_at' => Carbon::today()->subDays(20)]);
+
+    // Die letzten fünf Tage lief sie nicht — weil sie seit sechs Tagen geparkt
+    // ist. Davor lief sie durch.
+    complete($habit, [6, 7, 8, 9, 10]);
+    $habit->forceFill(['displaced_at' => Carbon::today()->subDays(5)])->save();
+
+    $habit = $habit->fresh();
+    $habit->setRelation('user', $user);
+    $habit->load('completions', 'completionDates');
+
+    expect($habit->currentStreak())->toBe(5)
+        // Die sechs geparkten Tage stehen in keinem Rückblick — die KI
+        // bekäme sonst „6× verpasst" als Beleg für einen Vorschlag.
+        ->and($habit->recentMisses(6))->toBe([])
+        // Der Wochenstreifen zeigt die geparkten Tage als nicht vorgesehen,
+        // nicht als offene Lücke.
+        // Sieben Tage im Rückblick, sechs davon geparkt: Nur der siebte ist
+        // eine Zeile, an der etwas anstand.
+        ->and(collect($habit->weekOverview(Carbon::today(), 7))->where('scheduled', true)->count())->toBe(1);
+});
+
+test('a mark that only starts with the semester leaves earlier days untouched', function () {
+    $user = User::factory()->create();
+    $habit = Habit::factory()->for($user)->fixedSchedule('10:00', [1, 2, 3, 4, 5, 6, 7])
+        ->withMeasure(30)->create(['created_at' => Carbon::today()->subDays(20)]);
+
+    // Der Vermerk gilt erst nächsten Monat — bis dahin steht sie an, und ein
+    // versäumter Tag bleibt ein versäumter Tag.
+    $habit->forceFill(['displaced_at' => Carbon::today()->addMonth()])->save();
+
+    $habit = $habit->fresh();
+    $habit->setRelation('user', $user);
+    $habit->load('completions', 'completionDates');
+
+    expect($habit->isDueOn(Carbon::today()))->toBeTrue()
+        ->and($habit->recentMisses(3))->not->toBe([]);
+});

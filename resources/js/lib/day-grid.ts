@@ -1,4 +1,4 @@
-import type { CalendarBlock } from '@/types';
+import type { CalendarBlock, CourseBlock } from '@/types';
 
 /**
  * Die Rechnung hinter dem Stundenraster — getrennt von seiner Zeichnung.
@@ -46,11 +46,17 @@ const BLOCK_GAP = 1;
  *
  * Derselbe Wert wie in `DayPlan::AssumedMinutes` — nur alte Zeilen aus der
  * Zeit der freien Eingabe haben keine Dauer, der Katalog vergibt immer eine.
+ * Wo damit gerechnet wird, soll es auch dastehen ({@see spanLabel}).
  */
-const ASSUMED_MINUTES = 15;
+export const ASSUMED_MINUTES = 15;
 
-/** Die kleinste Spanne, die ein Block visuell einnimmt. */
-const MIN_VISUAL_MINUTES = (MIN_BLOCK_HEIGHT / HOUR_HEIGHT) * 60;
+/**
+ * Die Luft zwischen zwei Blöcken — dieselbe wie `DayPlan::BreatherMinutes`.
+ *
+ * Gilt für jede Hand, nicht nur für die KI: Was sie nie vorschlüge, soll sich
+ * auch nicht hinziehen lassen. Zwei Blöcke direkt hintereinander sind zu eng.
+ */
+export const BREATHER_MINUTES = 15;
 
 /** Der Ausschnitt des Tages, den das Raster zeigt — volle Stunden. */
 export interface GridBounds {
@@ -62,9 +68,31 @@ export interface GridBounds {
     height: number;
 }
 
+/**
+ * Alles, was das Raster tragen kann.
+ *
+ * Unterschieden über `kind`: Eine Gewohnheit lässt sich abhaken und ziehen,
+ * ein Kurs nicht. Beide brauchen aber dieselbe Spaltenverteilung — läge eine
+ * Gewohnheit auf einer Vorlesung, müssten sie sich die Breite teilen wie zwei
+ * Gewohnheiten auch.
+ */
+export type GridBlock = CalendarBlock | CourseBlock;
+
+/**
+ * Das Wenigste, was ein Block zum Platzieren mitbringen muss.
+ *
+ * Die Rechnung kennt weder Haken noch Titel — nur wann etwas anfängt und wie
+ * lange es dauert.
+ */
+interface Placeable {
+    id: number;
+    startMinute: number | null;
+    durationMinutes: number | null;
+}
+
 /** Ein Block mit seinem Platz im Raster. */
-export interface PlacedBlock {
-    block: CalendarBlock;
+export interface PlacedBlock<T extends Placeable = GridBlock> {
+    block: T;
     top: number;
     height: number;
     /** Die Spalte, in der er liegt — bei Überschneidung teilen sich Blöcke die Breite. */
@@ -125,7 +153,7 @@ export function hourMarks(bounds: GridBounds, skip: number[] = []): number[] {
 export function boundsFor(
     frameFrom: number,
     frameTo: number,
-    blocks: CalendarBlock[],
+    blocks: Placeable[],
 ): GridBounds {
     let from = frameFrom;
     let to = frameTo;
@@ -150,6 +178,25 @@ export function offsetOf(minute: number, bounds: GridBounds): number {
     return ((minute - bounds.from) / 60) * HOUR_HEIGHT;
 }
 
+/**
+ * Die belegte Spanne, wie sie im Block steht — auch die angenommene.
+ *
+ * Ohne eigene Dauer rechnet der Tag mit einer Viertelstunde. Das soll
+ * dastehen („10:45 – ca. 11:00") und nicht nur gelten: Sonst sieht man einen
+ * Block ohne Ende, und was direkt danach liegt, wirkt, als läge es darin.
+ */
+export function spanLabel(block: CalendarBlock): string {
+    if (block.timeRange !== null) {
+        return block.timeRange;
+    }
+
+    if (block.startMinute === null || !block.exact) {
+        return block.anchor;
+    }
+
+    return `${timeLabel(block.startMinute)} – ca. ${timeLabel(block.startMinute + ASSUMED_MINUTES)}`;
+}
+
 /** Eine Minute seit Mitternacht als „07:30" — auch über den Tagesrand hinaus. */
 export function timeLabel(minute: number): string {
     const wrapped = ((minute % 1440) + 1440) % 1440;
@@ -167,12 +214,15 @@ export function timeLabel(minute: number): string {
  * die Gruppe — nicht der ganze Tag, sonst würde eine einzige Überschneidung am
  * Morgen den Abend halb so breit machen.
  *
- * Gerechnet wird mit der **gezeichneten** Spanne, nicht der echten: Zwei
- * Zehn-Minuten-Gewohnheiten zwanzig Minuten auseinander überschneiden sich
- * zeitlich nicht, ihre Mindesthöhen aber schon.
+ * Gerechnet wird mit der **echten** Spanne, nicht der gezeichneten: Zwei
+ * Blöcke direkt hintereinander sind eine Reihenfolge, keine Überschneidung —
+ * und nebeneinander gemalt läsen sie sich als „liegt drin". Ragt die
+ * Mindesthöhe des ersten in den zweiten, deckt der zweite sie ab: Er kommt
+ * später und liegt darum obenauf. Die Zeile des ersten steht oben im Block
+ * und bleibt lesbar.
  */
-export function placeBlocks(
-    blocks: CalendarBlock[],
+export function placeBlocks<T extends Placeable>(
+    blocks: T[],
     bounds: GridBounds,
     /**
      * Die Schlafenszeit, als Minute — bis hierher darf gezeichnet werden.
@@ -185,7 +235,7 @@ export function placeBlocks(
      * nach oben gerückt, dass auch die Zeichnung hineinpasst.
      */
     limit?: number,
-): PlacedBlock[] {
+): PlacedBlock<T>[] {
     const spans = blocks
         .filter((block) => block.startMinute !== null)
         .map((block) => {
@@ -196,14 +246,12 @@ export function placeBlocks(
                 block,
                 from,
                 to: from + minutes,
-                // Was das Auge belegt sieht — die Grundlage der Spaltenwahl.
-                until: from + Math.max(minutes, MIN_VISUAL_MINUTES),
             };
         })
-        .sort((a, b) => a.from - b.from || b.until - a.until);
+        .sort((a, b) => a.from - b.from || b.to - a.to);
 
-    const placed: PlacedBlock[] = [];
-    let group: PlacedBlock[] = [];
+    const placed: PlacedBlock<T>[] = [];
+    let group: PlacedBlock<T>[] = [];
     let laneEnds: number[] = [];
     let groupEnd = -Infinity;
 
@@ -227,8 +275,8 @@ export function placeBlocks(
         const free = laneEnds.findIndex((end) => end <= span.from);
         const lane = free === -1 ? laneEnds.length : free;
 
-        laneEnds[lane] = span.until;
-        groupEnd = Math.max(groupEnd, span.until);
+        laneEnds[lane] = span.to;
+        groupEnd = Math.max(groupEnd, span.to);
 
         const height =
             Math.max(
@@ -259,7 +307,7 @@ export function placeBlocks(
  * Server, und 24 Pixel bei `HOUR_HEIGHT`. Minutengenau zu schieben hieße, mit
  * dem Finger eine Genauigkeit zu verlangen, die niemand hat.
  */
-export const SNAP_MINUTES = 15;
+const SNAP_MINUTES = 15;
 
 /** Auf die nächste Viertelstunde, aber nie aus dem Rahmen heraus. */
 export function snapMinute(
@@ -313,9 +361,13 @@ export function withDrag(
 
             const previous = byId.get(block.chainedToId);
 
+            // „Danach" heißt: nach dem Ende plus der Viertelstunde Luft —
+            // dieselbe Rechnung wie `Habit::resolveStart()`.
             moved.set(
                 block.id,
-                start + (previous?.durationMinutes ?? ASSUMED_MINUTES),
+                start +
+                    (previous?.durationMinutes ?? ASSUMED_MINUTES) +
+                    BREATHER_MINUTES,
             );
         }
     }
@@ -351,19 +403,32 @@ export function followersOf(
         }));
 }
 
+/** Was im Weg liegt: sein Titel und ob es sich überhaupt bewegen lässt. */
+export interface BlockConflict {
+    title: string;
+    kind: 'habit' | 'course';
+    /** Wo das Hindernis liegt — für den Satz, bis wann und ab wann Platz ist. */
+    from: number;
+    to: number;
+}
+
 /**
  * Was dem Zug an diesem Tag im Weg liegt — oder nichts.
  *
- * Geprüft wird echte Überschneidung ohne Atempause, genau wie in
- * `DayPlan::collisionWith()`: Zwei Blöcke direkt hintereinander sind eine
- * Planung, keine Doppelbuchung. Die Antwort steht dadurch sofort im Pop-up,
- * statt erst nach einem Rundweg über den Server.
+ * Geprüft wird mit der Viertelstunde Luft, genau wie in
+ * `DayPlan::collisionWith()`: Ein Block braucht davor und danach Platz zum
+ * Atmen. Die Antwort steht dadurch sofort im Pop-up, statt erst nach einem
+ * Rundweg über den Server.
+ *
+ * Die Art kommt mit, weil sie den Ausweg bestimmt: Eine Gewohnheit lässt sich
+ * verschieben, eine Vorlesung nicht — sie kommt von der Uni.
  */
 export function collisionOf(
     blocks: CalendarBlock[],
+    courses: CourseBlock[],
     draggedId: number,
     minute: number,
-): string | null {
+): BlockConflict | null {
     const after = withDrag(blocks, draggedId, minute);
     const before = new Map(
         blocks.map((block) => [block.id, block.startMinute]),
@@ -374,9 +439,16 @@ export function collisionOf(
             block.id === draggedId ||
             block.startMinute !== before.get(block.id),
     );
-    const resting = after.filter(
-        (block) => !moving.some((other) => other.id === block.id),
-    );
+    // Kurse ruhen immer: Sie ziehen nicht mit und weichen nicht aus. Sie
+    // stehen hier aus demselben Grund, aus dem `DayPlan::occupied()` die
+    // Fremdblöcke mitzählt — sonst sagte das Pop-up „frei", und der Server
+    // wiese den Zug danach ab.
+    const resting: GridBlock[] = [
+        ...after.filter(
+            (block) => !moving.some((other) => other.id === block.id),
+        ),
+        ...courses,
+    ];
 
     for (const block of moving) {
         const from = block.startMinute as number;
@@ -390,8 +462,16 @@ export function collisionOf(
             const otherTo =
                 other.startMinute + (other.durationMinutes ?? ASSUMED_MINUTES);
 
-            if (from < otherTo && to > other.startMinute) {
-                return other.title;
+            if (
+                from < otherTo + BREATHER_MINUTES &&
+                to + BREATHER_MINUTES > other.startMinute
+            ) {
+                return {
+                    title: other.title,
+                    kind: other.kind,
+                    from: other.startMinute,
+                    to: otherTo,
+                };
             }
         }
     }

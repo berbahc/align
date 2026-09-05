@@ -1,7 +1,10 @@
 <?php
 
 use App\Enums\ScheduleType;
+use App\Models\Course;
+use App\Models\CourseException;
 use App\Models\Habit;
+use App\Models\Semester;
 use App\Models\User;
 use App\Support\DayPlan;
 use Illuminate\Support\Carbon;
@@ -145,7 +148,7 @@ test('a follower moves along, even for a single day', function () {
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->where('blocks.0.startMinute', 15 * 60)
             ->where('blocks.1.title', 'Lesen')
-            ->where('blocks.1.startMinute', 15 * 60 + 20)
+            ->where('blocks.1.startMinute', 15 * 60 + 20 + 15)
         );
 });
 
@@ -183,7 +186,12 @@ test('a collision on another weekday stops the permanent move', function () {
             'start_minute' => 14 * 60,
             'scope' => 'always',
         ])
-        ->assertSessionHasErrors(['start_minute' => '„Essen vorkochen" liegt montags schon um 14:00. Verschiebe die zuerst, dann lässt sich die Zeit hier umstellen.']);
+        ->assertSessionHasErrors('start_minute');
+
+    expect(session('errors')->first('start_minute'))
+        ->toStartWith('„Essen vorkochen" liegt montags schon um 14:00')
+        ->toContain('eine Viertelstunde Luft')
+        ->toContain('Verschiebe die zuerst, dann lässt sich die Zeit hier umstellen.');
 
     expect($habit->fresh()->scheduled_time->format('H:i'))->toBe('09:00');
 });
@@ -400,4 +408,150 @@ test('a shift occupies its new place for the AI as well', function () {
     expect($plan->occupied()[0]['from'])->toBe(14 * 60)
         ->and($plan->collisionWith(14 * 60, 14 * 60 + 30))->not->toBeNull()
         ->and($plan->collisionWith(9 * 60, 10 * 60))->toBeNull();
+});
+
+/**
+ * Der Stundenplan ist die zweite Grenze neben dem Schlafrahmen.
+ *
+ * Eine Vorlesung lässt sich nicht wegschieben, und der Satz darf deshalb auch
+ * nichts anderes anbieten als eine andere Uhrzeit.
+ */
+test('a lecture blocks the move and says so without offering to move it', function () {
+    $user = User::factory()->create();
+    $monday = Carbon::today()->next(Carbon::MONDAY);
+
+    $semester = Semester::factory()->for($user)->create();
+    Course::factory()->for($semester)->onWeekday(1)->at('10:00', '11:30')
+        ->create(['title' => 'Analysis I']);
+
+    $habit = shiftable($user);
+
+    $response = $this->actingAs($user)
+        ->put(route('habits.shifts.move', $habit), [
+            'date' => $monday->toDateString(),
+            'start_minute' => 10 * 60,
+            'scope' => 'today',
+        ])
+        ->assertSessionHasErrors('start_minute');
+
+    $message = session('errors')->first('start_minute');
+
+    expect($message)->toContain('Analysis I')
+        ->and($message)->toContain('der Kurs rückt nicht')
+        ->and($message)->not->toContain('Verschiebe die zuerst')
+        ->and($habit->dayShifts()->count())->toBe(0);
+
+    $response->assertRedirect();
+});
+
+test('the gap between two lectures takes the habit', function () {
+    $user = User::factory()->create();
+    $monday = Carbon::today()->next(Carbon::MONDAY);
+
+    $semester = Semester::factory()->for($user)->create();
+    Course::factory()->for($semester)->onWeekday(1)->at('08:00', '09:30')->create();
+    Course::factory()->for($semester)->onWeekday(1)->at('12:00', '13:30')
+        ->create(['title' => 'Statistik']);
+
+    $habit = shiftable($user);
+
+    $this->actingAs($user)
+        ->put(route('habits.shifts.move', $habit), [
+            'date' => $monday->toDateString(),
+            'start_minute' => 10 * 60,
+            'scope' => 'today',
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect($habit->dayShifts()->sole()->scheduled_time->format('H:i'))->toBe('10:00');
+});
+
+/**
+ * Ein ausgefallener Kurs belegt nichts mehr — sonst wäre der freie Vormittag,
+ * den eine Absage schenkt, im Kalender weiter blockiert.
+ */
+test('a cancelled lecture frees its place again', function () {
+    $user = User::factory()->create();
+    $monday = Carbon::today()->next(Carbon::MONDAY);
+
+    $semester = Semester::factory()->for($user)->create();
+    $course = Course::factory()->for($semester)->onWeekday(1)->at('10:00', '11:30')->create();
+    CourseException::factory()->for($course)->cancelledOn($monday)->create();
+
+    $habit = shiftable($user);
+
+    $this->actingAs($user)
+        ->put(route('habits.shifts.move', $habit), [
+            'date' => $monday->toDateString(),
+            'start_minute' => 10 * 60,
+            'scope' => 'today',
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect($habit->dayShifts()->count())->toBe(1);
+});
+
+/**
+ * Die einmalige Verschiebung für eine Verabredung ist einer von sieben Wegen,
+ * eine Uhrzeit zu setzen — und sie muss dieselben Grenzen halten wie die
+ * übrigen sechs. Sie rechnete lange selbst nach, ohne die Viertelstunde Luft
+ * und ohne die Kette; beides ist hier festgenagelt.
+ */
+test('an appointment shift keeps the same quarter hour of air as every other path', function () {
+    $user = User::factory()->create();
+    $semester = Semester::factory()->for($user)->create();
+    Course::factory()->for($semester)->onWeekday(1)->at('10:00', '11:30')->create(['title' => 'Mathe 1']);
+    $habit = Habit::factory()->for($user)->fixedSchedule('16:00', [1])->withMeasure(30)->create();
+
+    $monday = Carbon::today()->next(Carbon::MONDAY);
+
+    // Direkt hinter der Vorlesung: zu eng.
+    $this->actingAs($user)
+        ->post(route('habits.shifts.store', $habit), [
+            'date' => $monday->toDateString(),
+            'scheduled_time' => '11:30',
+        ])
+        ->assertSessionHasErrors('scheduled_time');
+
+    expect(session('errors')->first('scheduled_time'))
+        ->toContain('Mathe 1')
+        ->toContain('eine Viertelstunde Luft');
+
+    // Eine Viertelstunde später geht es.
+    $this->actingAs($user)
+        ->post(route('habits.shifts.store', $habit), [
+            'date' => $monday->toDateString(),
+            'scheduled_time' => '11:45',
+        ])
+        ->assertSessionHasNoErrors();
+});
+
+test('an appointment shift refuses when the chain would land in a lecture', function () {
+    $user = User::factory()->create();
+    $semester = Semester::factory()->for($user)->create();
+    Course::factory()->for($semester)->onWeekday(1)->at('10:00', '11:30')->create(['title' => 'Mathe 1']);
+
+    $anchor = Habit::factory()->for($user)->fixedSchedule('16:00', [1])->withMeasure(30)
+        ->create(['title' => 'Spazieren']);
+    $follower = Habit::factory()->for($user)->withMeasure(30)->create([
+        'title' => 'Lesen',
+        'schedule_type' => ScheduleType::Chained,
+        'chained_to_habit_id' => $anchor->id,
+        'trigger_situation' => null,
+    ]);
+
+    $monday = Carbon::today()->next(Carbon::MONDAY);
+
+    // Der Anker selbst passt um 09:00 — seine Nachfolgerin läge dann ab 09:45
+    // mitten in Mathe. Sie rutscht mit, also zählt sie mit.
+    $this->actingAs($user)
+        ->post(route('habits.shifts.store', $anchor), [
+            'date' => $monday->toDateString(),
+            'scheduled_time' => '09:00',
+        ])
+        ->assertSessionHasErrors('scheduled_time');
+
+    expect(session('errors')->first('scheduled_time'))->toContain('Mathe 1')
+        ->and($anchor->dayShifts()->count())->toBe(0)
+        ->and($follower->fresh()->dayShifts()->count())->toBe(0);
 });

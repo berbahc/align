@@ -165,6 +165,7 @@ export default function EditHabit({
                                 setData('chained_to_habit_id', id)
                             }
                             busySlots={busySlots}
+                            durationMinutes={data.target_amount}
                             sleepWindows={sleepWindows}
                         >
                             <SituationPicker

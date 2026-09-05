@@ -42,6 +42,11 @@ export default function HabitsIndex({
 
     const groups = (
         [
+            {
+                key: 'ohne-platz',
+                heading: 'Braucht einen neuen Platz',
+                group: 'displaced',
+            },
             { key: 'heute', heading: 'Steht heute an', group: 'today' },
             { key: 'spaeter', heading: 'Steht später an', group: 'later' },
         ] satisfies { key: string; heading: string; group: HabitGroup }[]
