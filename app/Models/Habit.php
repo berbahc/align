@@ -711,8 +711,9 @@ class Habit extends Model
         // Auch keine ungefähre Stelle: Die Stunde ist eine Sortierhilfe für
         // Blöcke, die im Tag stehen — und diese steht dort gerade nicht. Eine
         // gekoppelte fragt weiter unten ihren Anker und bekommt dort dieselbe
-        // Antwort.
-        if ($this->displacedOn($on)) {
+        // Antwort. Ein Umzug für genau diesen Tag geht vor: Er sagt, dass sie
+        // heute doch eine Stelle hat.
+        if ($this->shiftedTimeOn($on) === null && $this->displacedOn($on)) {
             return null;
         }
 
@@ -896,22 +897,25 @@ class Habit extends Model
             return null;
         }
 
-        // Eine geparkte Gewohnheit hat keine Stelle im Tag — sonst läge sie
+        // Die Ausnahme für einen Tag schlägt jede Regel — auch die Kette und
+        // den Parkvermerk. Wer sein Lesen einmal nach hinten schiebt,
+        // verschiebt damit den Block, nicht seinen Plan; und fällt die
+        // Vorlesung an einem Tag aus, liegt die verdrängte Gewohnheit an
+        // genau diesem Tag wieder da. „Für heute hierhin gelegt" ist die
+        // speziellere Aussage als „hat gerade keinen Platz".
+        $shifted = $this->shiftedTimeOn($on);
+
+        if ($shifted !== null) {
+            return Carbon::createFromFormat('H:i', $shifted);
+        }
+
+        // Eine geparkte Gewohnheit hat sonst keine Stelle im Tag — sie läge
         // weiter dort, wo jetzt der Kurs ist. Hier und nicht bei den
         // Aufrufern, damit Raster, Rechnung und Erinnerung dasselbe sehen.
         // Die Kette fällt mit: Ein Nachfolger fragt seinen Vorgänger, und der
         // antwortet mit nichts. Deshalb reicht hier die eigene Spalte.
         if ($this->displacedOn($on)) {
             return null;
-        }
-
-        // Die Ausnahme für einen Tag schlägt jede Regel — auch die Kette. Wer
-        // sein Lesen einmal nach hinten schiebt, verschiebt damit den Block,
-        // nicht seinen Plan.
-        $shifted = $this->shiftedTimeOn($on);
-
-        if ($shifted !== null) {
-            return Carbon::createFromFormat('H:i', $shifted);
         }
 
         if ($this->schedule_type->hasClockTime()) {

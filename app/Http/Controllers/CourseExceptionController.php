@@ -3,12 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Actions\DisplaceHabits;
+use App\Actions\RestoreDisplacedHabits;
 use App\Http\Requests\StoreCourseExceptionRequest;
 use App\Models\Course;
 use App\Models\Habit;
 use App\Support\DayPlan;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 
@@ -22,8 +24,12 @@ class CourseExceptionController extends Controller
      * Ersatztermin einträgt, ersetzt damit die Absage — genau wie der
      * eindeutige Schlüssel es verlangt.
      */
-    public function store(StoreCourseExceptionRequest $request, Course $course, DisplaceHabits $displace): RedirectResponse
-    {
+    public function store(
+        StoreCourseExceptionRequest $request,
+        Course $course,
+        DisplaceHabits $displace,
+        RestoreDisplacedHabits $restore,
+    ): RedirectResponse {
         Gate::authorize('update', $course);
 
         // Das Datum als Carbon und nicht als Zeichenkette: Der `date`-Cast legt
@@ -54,6 +60,13 @@ class CourseExceptionController extends Controller
             withTimetable: false,
         );
 
+        // Fällt der Kurs aus, ist seine Zeit an diesem Tag frei — und was er
+        // verdrängt hatte, liegt an genau diesem Tag wieder da. Nur an ihm:
+        // Nächste Woche läuft er wieder.
+        $lent = $request->isCancellation()
+            ? $restore->handleOn($request->user(), $request->onDate())
+            : [];
+
         if ($displaced !== []) {
             Inertia::flash('coursePlaced', [
                 'title' => $course->title,
@@ -65,21 +78,34 @@ class CourseExceptionController extends Controller
             ]);
         }
 
-        return back()->with('success', $request->isCancellation()
+        if (! $request->isCancellation()) {
+            return back()->with('success', 'Der Ersatztermin steht.');
+        }
+
+        return back()->with('success', $lent === []
             ? 'Der Termin ist als Ausfall vermerkt.'
-            : 'Der Ersatztermin steht.');
+            : sprintf(
+                'Der Termin ist als Ausfall vermerkt — %s an dem Tag wieder an ihrem Platz.',
+                count($lent) === 1
+                    ? sprintf('„%s" liegt', $lent[0]->title)
+                    : sprintf('%d Gewohnheiten liegen', count($lent)),
+            ));
     }
 
     /**
      * Die Ausnahme zurücknehmen — der Kurs läuft wieder wie jede Woche.
      */
-    public function destroy(Request $request, Course $course): RedirectResponse
+    public function destroy(Request $request, Course $course, RestoreDisplacedHabits $restore): RedirectResponse
     {
         Gate::authorize('update', $course);
 
         $validated = $request->validate([
             'on_date' => ['required', 'date_format:Y-m-d'],
         ]);
+
+        // Was für diesen Tag zurückgeliehen war, muss weichen: Der Kurs läuft
+        // wieder, und zwei Sachen auf einer Minute darf es nicht geben.
+        $restore->withdrawDay($request->user(), Carbon::parse($validated['on_date']));
 
         // `whereDate` und nicht `where`, aus demselben Grund wie beim Setzen:
         // In der Spalte steht ein Zeitstempel, gemeint ist ein Tag.
