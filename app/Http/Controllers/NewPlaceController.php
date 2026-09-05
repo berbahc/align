@@ -373,7 +373,11 @@ class NewPlaceController extends Controller
 
         $hour = $habit->plannedAnchorHour();
 
-        return $hour === null ? null : $hour * 60;
+        if ($hour === null) {
+            return null;
+        }
+
+        return $habit->sleepBoundStartMinute() ?? $hour * 60;
     }
 
     /**

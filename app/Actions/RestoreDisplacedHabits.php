@@ -146,6 +146,12 @@ class RestoreDisplacedHabits
 
         $hour = $habit->plannedAnchorHour();
 
-        return $hour === null ? null : $hour * 60;
+        if ($hour === null) {
+            return null;
+        }
+
+        // Am Tagesrand auf die Minute: Wer um 07:40 aufsteht, hatte seinen
+        // Platz um 07:40 und nicht um 07:00.
+        return $habit->sleepBoundStartMinute() ?? $hour * 60;
     }
 }

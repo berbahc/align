@@ -7,8 +7,8 @@ import { useBlockDrag } from '@/hooks/use-block-drag';
 import type { BlockDrag } from '@/hooks/use-block-drag';
 import type { GridBlock } from '@/lib/day-grid';
 import {
+    boundsFor,
     collisionOf,
-    gridBounds,
     hourMarks,
     offsetOf,
     placeBlocks,
@@ -25,10 +25,12 @@ const GUTTER = 'calc(var(--spacing) * 13)';
 /**
  * Der Tag als Stundenraster.
  *
- * Das Raster reicht vom Aufstehen bis zur Schlafenszeit und keine Minute
- * weiter. Die Stunden davor und danach zu zeichnen hieße, den Tag mit Platz zu
- * füllen, in den nichts geplant werden darf — der Schlafplan ist die Grenze
- * der Planung, nicht eine Empfehlung darin.
+ * Das Raster reicht vom Aufstehen bis zur Schlafenszeit — und darüber hinaus
+ * nur so weit, wie ein Block es erzwingt. Der Schlafplan ist die Grenze der
+ * Planung, und die beiden Marken liegen deshalb **im** Raster an ihrer echten
+ * Minute: Wer um 07:40 aufsteht, hat seine Linie um 07:40 und nicht um sieben.
+ * Was jenseits davon liegt, steht in der Nachtzone — sichtbar draußen, aber
+ * nicht aus dem Raster gefallen.
  *
  * Die Linien liegen bewusst hinter allem und in der leisesten Farbe, die die
  * Designsprache kennt. Sie sind Orientierung, nicht Taktung: Was ein Block
@@ -72,36 +74,26 @@ export function DayGrid({
 }) {
     const now = useNowMinute(isToday);
 
-    // Der Ghost darf über den Rahmen hinausragen — ein Vorschlag um 23:30 muss
-    // sichtbar sein, damit man ihn ablehnen kann.
-    //
-    // Und die Kurse ebenso: Eine Abendvorlesung unter einer frühen
-    // Schlafenszeit belegt auf dem Server Zeit. Zeichnete das Raster sie
-    // nicht, wäre das genau der Widerspruch zwischen Rechnung und Bild, den
-    // dieser Kalender vermeiden soll.
-    const bounds = gridBounds(
-        Math.min(
-            frameFrom,
-            ghost?.block.startMinute ?? frameFrom,
-            ...courseBlocks.map((course) => course.startMinute),
-        ),
-        Math.max(
-            frameTo,
-            ghost?.block.startMinute !== null &&
-                ghost?.block.startMinute !== undefined
-                ? ghost.block.startMinute + (ghost.block.durationMinutes ?? 0)
-                : frameTo,
-            ...courseBlocks.map(
-                (course) => course.startMinute + course.durationMinutes,
-            ),
-        ),
-    );
+    // Gezeigt wird alles: der Rahmen, jeder Block und der Vorschlag der KI —
+    // auch wenn einer davon außerhalb des Rahmens liegt. Die Kurse gehören
+    // dazu: Eine Abendvorlesung unter einer frühen Schlafenszeit belegt auf
+    // dem Server Zeit, und ein Raster, das sie nicht zeichnet, wäre genau der
+    // Widerspruch zwischen Rechnung und Bild, den dieser Kalender vermeidet.
+    const bounds = boundsFor(frameFrom, frameTo, [
+        ...blocks,
+        ...courseBlocks,
+        ...(ghost ? [ghost.block] : []),
+    ]);
+
+    // Geschoben werden darf trotzdem nur in den Rahmen: Der Server weist alles
+    // andere ab, und ein Zug, der in eine Fehlermeldung führt, ist keiner.
+    const reach = { from: frameFrom, to: frameTo, height: 0 };
 
     // Während ein Block getragen wird, liegt der Tag so da, wie er nach dem
     // Loslassen aussähe — samt der Gewohnheiten, die an ihm hängen. Man soll
     // sehen, was man anrichtet, bevor man loslässt.
     const drag = useBlockDrag({
-        bounds,
+        bounds: reach,
         enabled: canShift && ghost === null,
         onDrop,
     });
@@ -132,15 +124,21 @@ export function DayGrid({
     // Beide Arten in einem Durchgang: Läge eine Gewohnheit auf einer
     // Vorlesung, müssten sie sich die Breite teilen wie zwei Gewohnheiten
     // auch. Zwei getrennte Aufrufe zeichneten sie übereinander.
+    // `frameTo` als Grenze: Ein kurzer Block, der auf die Mindesthöhe wächst,
+    // soll nicht über die Schlafenszeit ragen, an der er enden sollte.
     const placed = placeBlocks<GridBlock>(
         [...(ghost ? [...resting, ghost.block] : resting), ...courseBlocks],
         bounds,
+        frameTo,
     );
     // Ein Durchgang, eine Liste: Der getragene Block behält sein Element —
     // wanderte er beim Anheben in eine zweite Liste, verlöre der Browser
     // den Griff (`setPointerCapture` hängt am Element, nicht an der Kennung).
     const lifted = new Set(moving.map((block) => block.id));
-    const entries = [...placed, ...placeBlocks<GridBlock>(moving, bounds)];
+    const entries = [
+        ...placed,
+        ...placeBlocks<GridBlock>(moving, bounds, frameTo),
+    ];
 
     // Ob die Stelle unter dem Finger überhaupt geht — steht am Zeitschild,
     // bevor man loslässt. Ein Kurs rückt nicht; das soll man sehen, nicht
@@ -158,21 +156,37 @@ export function DayGrid({
 
     return (
         <div>
-            <FrameMarker icon={Sun} label="Aufstehen" time={wakeTime} />
+            <div className="relative" style={{ height: bounds.height }}>
+                {/* Die Nacht: außerhalb des Rahmens wird nicht geplant. Sie
+                    erscheint nur, wenn dort auch etwas liegt — sonst endet das
+                    Raster am Rahmen, wie es soll. */}
+                {frameFrom > bounds.from && (
+                    <div
+                        aria-hidden="true"
+                        className="absolute inset-x-0 top-0 rounded-t-lg bg-sand/25"
+                        style={{ height: offsetOf(frameFrom, bounds) }}
+                    />
+                )}
+                {frameTo < bounds.to && (
+                    <div
+                        aria-hidden="true"
+                        className="absolute inset-x-0 bottom-0 rounded-b-lg bg-sand/25"
+                        style={{ top: offsetOf(frameTo, bounds) }}
+                    />
+                )}
 
-            <div className="relative mt-1" style={{ height: bounds.height }}>
                 {/* Die Stunden. `aria-hidden`, weil eine Vorlesesoftware mit
                     sechzehn Uhrzeiten hintereinander nichts anfangen kann —
                     was gilt, sagt jeder Block selbst. */}
                 <div aria-hidden="true">
-                    {hourMarks(bounds).map((minute) => (
+                    {hourMarks(bounds, [frameFrom, frameTo]).map((minute) => (
                         <div
                             key={minute}
-                            className="absolute inset-x-0 flex items-center gap-2"
+                            className="absolute inset-x-0 flex h-0 items-center gap-2"
                             style={{ top: offsetOf(minute, bounds) }}
                         >
                             <span
-                                className="shrink-0 -translate-y-1/2 pr-2 text-right text-[11px] leading-none font-medium text-faintest tabular-nums"
+                                className="shrink-0 pr-2 text-right text-[11px] leading-none font-medium text-faintest tabular-nums"
                                 style={{ width: GUTTER }}
                             >
                                 {timeLabel(minute)}
@@ -181,6 +195,23 @@ export function DayGrid({
                         </div>
                     ))}
                 </div>
+
+                {/* Die beiden Ränder des Tages, an ihrer echten Minute. Sie
+                    führen zum Schlafplan, weil sie dort herkommen — und sie
+                    sind der Grund, aus dem „nach dem Aufstehen" genau hier
+                    liegt und nicht eine Stunde daneben. */}
+                <FrameMarker
+                    icon={Sun}
+                    label="Aufstehen"
+                    time={wakeTime}
+                    top={offsetOf(frameFrom, bounds)}
+                />
+                <FrameMarker
+                    icon={Moon}
+                    label="Schlafenszeit"
+                    time={bedtime}
+                    top={offsetOf(frameTo, bounds)}
+                />
 
                 <ul
                     className="absolute inset-y-0 right-0"
@@ -231,12 +262,12 @@ export function DayGrid({
                     das Schild es gleich: Loslassen ginge hier nicht. */}
                 {drag.drag !== null && (
                     <div
-                        className="pointer-events-none absolute inset-x-0 z-40 flex items-center gap-2"
+                        className="pointer-events-none absolute inset-x-0 z-40 flex h-0 items-center gap-2"
                         style={{ top: offsetOf(drag.drag.minute, bounds) }}
                     >
                         <span
                             className={cn(
-                                'shrink-0 -translate-y-1/2 rounded-full px-1.5 py-0.5 text-center text-[11px] leading-none font-semibold tabular-nums',
+                                'shrink-0 rounded-full px-1.5 py-0.5 text-center text-[11px] leading-none font-semibold tabular-nums',
                                 blockedBy === null
                                     ? 'bg-primary text-primary-foreground'
                                     : 'bg-foreground text-background line-through',
@@ -254,7 +285,7 @@ export function DayGrid({
                             )}
                         />
                         {blockedBy !== null && (
-                            <span className="shrink-0 -translate-y-1/2 rounded-full bg-foreground px-2 py-0.5 text-[11px] leading-none font-semibold text-background">
+                            <span className="shrink-0 rounded-full bg-foreground px-2 py-0.5 text-[11px] leading-none font-semibold text-background">
                                 {blockedBy.kind === 'course'
                                     ? `nicht während „${blockedBy.title}"`
                                     : `dort liegt „${blockedBy.title}"`}
@@ -268,11 +299,11 @@ export function DayGrid({
                     einen Moment, den es dort nicht mehr gibt. */}
                 {showNow && (
                     <div
-                        className="pointer-events-none absolute inset-x-0 z-10 flex items-center gap-2"
+                        className="pointer-events-none absolute inset-x-0 z-10 flex h-0 items-center gap-2"
                         style={{ top: offsetOf(now, bounds) }}
                     >
                         <span
-                            className="shrink-0 -translate-y-1/2 pr-2 text-right text-[11px] leading-none font-semibold text-primary tabular-nums"
+                            className="shrink-0 pr-2 text-right text-[11px] leading-none font-semibold text-primary tabular-nums"
                             style={{ width: GUTTER }}
                         >
                             {timeLabel(now)}
@@ -293,8 +324,6 @@ export function DayGrid({
                     </p>
                 )}
             </div>
-
-            <FrameMarker icon={Moon} label="Schlafenszeit" time={bedtime} />
 
             {/* Was im Tag keine Stelle hat: die verdrängten, und die seltene
                 gerissene Kette. Die Überschrift sagt, was diese Zone ist —
@@ -339,25 +368,34 @@ function FrameMarker({
     icon: Icon,
     label,
     time,
+    top,
 }: {
     icon: typeof Sun;
     label: string;
     time: string;
+    /** Die Pixelhöhe im Raster — die Marke sitzt auf ihrer eigenen Minute. */
+    top: number;
 }) {
     return (
         <Link
             href={sleepShow()}
-            className="flex items-center gap-2 rounded-xl py-1 text-muted-foreground transition-colors duration-[var(--duration-press)] ease-out hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            aria-label={`${label} um ${time} — zum Schlafplan`}
+            style={{ top }}
+            className="absolute inset-x-0 z-20 flex -translate-y-1/2 items-center gap-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         >
+            {/* Zeichen und Uhrzeit bleiben in der Stundenspalte: Dort kommt
+                kein Block hin, und die Grenze des Tages darf nicht dadurch
+                unsichtbar werden, dass eine Gewohnheit genau an ihr endet —
+                was seit „vor dem Schlafengehen" der Regelfall ist. */}
             <span
-                className="flex shrink-0 justify-end pr-2"
+                className="flex shrink-0 items-center justify-end gap-1 pr-1.5 text-[11px] leading-none font-semibold text-foreground tabular-nums transition-colors duration-[var(--duration-press)] ease-out group-hover:text-primary"
                 style={{ width: GUTTER }}
             >
-                <Icon className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                <Icon className="size-3" strokeWidth={2} aria-hidden="true" />
+                {time}
             </span>
-            <span className="text-xs font-semibold tabular-nums">{time}</span>
-            <span className="text-xs">{label}</span>
-            <span className="ml-1 h-px flex-1 bg-border" aria-hidden="true" />
+            {/* Die Grenze selbst, kräftiger als eine Stundenlinie. */}
+            <span className="h-px flex-1 bg-olive-mid/45" aria-hidden="true" />
         </Link>
     );
 }
