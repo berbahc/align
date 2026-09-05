@@ -14,8 +14,22 @@ use Inertia\Inertia;
 
 class SemesterController extends Controller
 {
-    public function store(StoreSemesterRequest $request): RedirectResponse
+    /**
+     * Ein Semester anlegen — es gibt genau eines.
+     *
+     * Jede Strecke arbeitet ohne Kennung auf dem laufenden Semester
+     * ({@see User::currentSemester()}). Ein zweites wäre darum nicht mehr
+     * erreichbar: weder zu ändern noch zu löschen, und seine Kurse tauchten
+     * im Kalender nie wieder auf. Die Oberfläche zeigt das Formular ohnehin
+     * nur, solange keines existiert — die Schranke gehört trotzdem hierher,
+     * wo ein zweiter Klick oder ein zweiter Tab sie nicht umgeht.
+     */
+    public function store(StoreSemesterRequest $request, DisplaceHabits $displace): RedirectResponse
     {
+        if ($request->user()->currentSemester() !== null) {
+            return $this->update($request, $displace);
+        }
+
         $request->user()->semesters()->create($request->validated());
 
         return back()->with('success', 'Dein Semester steht.');

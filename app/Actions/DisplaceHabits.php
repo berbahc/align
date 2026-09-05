@@ -7,6 +7,8 @@ use App\Models\User;
 use App\Support\SlotConflict;
 use App\Support\Timetable;
 use Carbon\CarbonInterface;
+use Closure;
+use Illuminate\Support\Carbon;
 
 /**
  * Räumt Gewohnheiten aus einer Spanne, die ein Kurs jetzt belegt.
@@ -42,6 +44,37 @@ class DisplaceHabits
      */
     public function handle(User $user, array $spans, array $days, bool $withTimetable = true): array
     {
+        return $this->run(
+            $user,
+            fn (array $ignore): ?array => SlotConflict::find($user, $spans, $days, $ignore, $withTimetable, spanIsCourse: true),
+        );
+    }
+
+    /**
+     * Dasselbe für **ein** Datum — für einen Kurs, der einmalig woanders liegt.
+     *
+     * Ein verlegter Termin gilt nicht jede Woche; ihn über den Wochentag zu
+     * prüfen träfe die falschen Tage.
+     *
+     * @param  list<array{id: int, title: string, from: int, to: int}>  $spans
+     * @return list<Habit>
+     */
+    public function handleOn(User $user, array $spans, Carbon $date, bool $withTimetable = true): array
+    {
+        return $this->run(
+            $user,
+            fn (array $ignore): ?array => SlotConflict::findOn($user, $spans, $date, $ignore, $withTimetable, spanIsCourse: true),
+        );
+    }
+
+    /**
+     * Der Rundenlauf, den sich beide Einstiege teilen.
+     *
+     * @param  Closure(list<int>): (array{block: array{id: int, title: string, from: int, to: int}, date: Carbon}|null)  $find
+     * @return list<Habit>
+     */
+    private function run(User $user, Closure $find): array
+    {
         $displaced = [];
         $from = null;
         // Was schon geparkt ist, zählt in der nächsten Runde nicht mehr mit.
@@ -51,7 +84,7 @@ class DisplaceHabits
         $ignore = [];
 
         for ($round = 0; $round < Habit::MaxActivePerUser; $round++) {
-            $conflict = SlotConflict::find($user, $spans, $days, $ignore, $withTimetable, spanIsCourse: true);
+            $conflict = $find($ignore);
 
             if ($conflict === null) {
                 break;
