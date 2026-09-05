@@ -318,6 +318,12 @@ export interface CalendarBlock {
      * sieht aus wie eine feste Uhrzeit.
      */
     scheduleType: ScheduleType;
+    /**
+     * Der erste Tag, an dem ein Kurs den alten Platz wegnimmt — nur bei
+     * Verdrängten. Das Ziel des Wegs „selbst umlegen": Einen neuen Platz
+     * wählt man dort, wo der Kurs steht, der den alten genommen hat.
+     */
+    conflictDate?: string | null;
     /** Die Dauer als fertige Zeile („20 Min"), sonst null. */
     measureLabel: string | null;
     /**

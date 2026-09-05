@@ -202,7 +202,7 @@ class CalendarController extends Controller
             'nextDate' => $day->copy()->addDay()->toDateString(),
             // Damit der Weg zurück in den Monat führt, aus dem man kam.
             'month' => $day->format('Y-m'),
-            'blocks' => $scheduled->map(fn (Habit $habit): array => $this->block($habit, $day, $plan))->all(),
+            'blocks' => $scheduled->map(fn (Habit $habit): array => $this->block($habit, $day, $plan, $timetable))->all(),
             // Kurse liegen auf derselben Achse, sind aber keine Gewohnheiten:
             // Sie werden nicht abgehakt, nicht gezogen und nicht angepasst.
             // Deshalb eine eigene Liste — zehn nullbare Felder an `blocks`
@@ -396,7 +396,7 @@ class CalendarController extends Controller
      *
      * @return array{kind: 'habit', id: int, title: string, anchor: string, anchorHour: int, scheduleType: string, startMinute: int|null, durationMinutes: int|null, exact: bool, shifted: bool, measureLabel: string|null, timeRange: string|null, behaviorType: string, smallestStep: string|null, motivation: string|null, completed: bool, graduated: bool, chainedToId: int|null}
      */
-    private function block(Habit $habit, Carbon $day, ?DayPlan $plan = null): array
+    private function block(Habit $habit, Carbon $day, ?DayPlan $plan = null, ?Timetable $timetable = null): array
     {
         return [
             // Sagt dem Raster, welcher Art dieser Block ist — daneben liegen
@@ -414,6 +414,13 @@ class CalendarController extends Controller
             // verriete es nicht: Ein für heute verschobener Moment sieht aus
             // wie eine feste Uhrzeit.
             'scheduleType' => $habit->schedule_type->value,
+            // Der erste Tag, an dem der Kurs den alten Platz wirklich
+            // wegnimmt. Nur für Verdrängte, und nur als Weg dorthin: Wer
+            // selbst umlegen will, soll das dort tun, wo er den Kurs und die
+            // Lücken daneben sieht — nicht an einem beliebigen Tag.
+            'conflictDate' => $timetable === null
+                ? null
+                : $this->firstConflictDate($habit, $timetable),
             // Wo der Block im Raster liegt und wie hoch er ist. Beides in
             // Minuten, damit der Browser nichts nachrechnen muss, was der
             // Server ohnehin schon weiß.
@@ -442,6 +449,52 @@ class CalendarController extends Controller
             // unabhängige nebeneinanderzustellen.
             'chainedToId' => $habit->chained_to_habit_id,
         ];
+    }
+
+    /**
+     * Der erste Tag, an dem diese Gewohnheit ihren Platz an einen Kurs verliert.
+     *
+     * Ziel eines Weges, kein Datum zum Anzeigen: Von der Liste „ohne festen
+     * Platz" führt ein Knopf dorthin, weil man einen neuen Platz nur da
+     * sinnvoll wählt, wo der Kurs steht, der den alten genommen hat.
+     *
+     * Gesucht wird die echte Überschneidung, nicht der nächste Tag, an dem die
+     * Gewohnheit lief: Wer montags, mittwochs und freitags joggt und dessen
+     * Statistik mittwochs liegt, hat am Montag keinen Konflikt — ihn dorthin
+     * zu schicken zeigte ihm einen freien Tag und keine Ursache.
+     *
+     * Die alte Uhrzeit ist die Erinnerung daran, wo sie lag ({@see
+     * DisplaceHabits}); ohne sie gibt es keine Spanne, die sich vergleichen
+     * ließe. Zwei Wochen weit — ein wöchentlicher Kurs fällt in diese Spanne,
+     * und was danach käme, wäre kein Konflikt mehr, sondern ein anderer Plan.
+     */
+    private function firstConflictDate(Habit $habit, Timetable $timetable): ?string
+    {
+        $start = $habit->scheduled_time;
+
+        if (! $habit->isDisplaced() || $start === null) {
+            return null;
+        }
+
+        $from = $start->hour * 60 + $start->minute;
+        $to = $from + ($habit->durationMinutes() ?? DayPlan::AssumedMinutes);
+        $days = $habit->scheduled_days ?? [1, 2, 3, 4, 5, 6, 7];
+
+        $day = Carbon::today();
+
+        for ($step = 0; $step < 14; $step++, $day->addDay()) {
+            if (! in_array($day->dayOfWeekIso, $days, strict: true)) {
+                continue;
+            }
+
+            foreach ($timetable->blocksOn($day) as $block) {
+                if ($from < $block['to'] && $to > $block['from']) {
+                    return $day->toDateString();
+                }
+            }
+        }
+
+        return null;
     }
 
     /**

@@ -1,4 +1,5 @@
-import { Check } from 'lucide-react';
+import { Link } from '@inertiajs/react';
+import { CalendarClock, Check } from 'lucide-react';
 import {
     Sheet,
     SheetContent,
@@ -15,7 +16,17 @@ import {
     QUIET_LINK,
 } from '@/lib/interaction';
 import { cn } from '@/lib/utils';
+import { day as calendarDay } from '@/routes/calendar';
 import type { CalendarBlock as Block } from '@/types';
+
+/** „Montag, 8. September" — der Tag, an den der Weg führt. */
+function dayLabel(date: string): string {
+    return new Date(`${date}T00:00:00`).toLocaleDateString('de-DE', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+    });
+}
 
 /** Der Weg zu einer KI-Funktion — ✦ steht nur hier (§8). */
 const AI_LINK = `${QUIET_LINK} text-sm`;
@@ -41,6 +52,7 @@ export function BlockSheet({
     onAdjust,
     onStuck,
     onUndoShift,
+    date,
 }: {
     block: Block | null;
     canComplete: boolean;
@@ -50,6 +62,8 @@ export function BlockSheet({
     onStuck: (block: Block) => void;
     /** Nimmt eine Verschiebung zurück, die nur für heute galt. */
     onUndoShift?: (block: Block) => void;
+    /** Der gezeigte Tag — der Weg zum Konflikttag entfällt, wenn er es ist. */
+    date: string;
 }) {
     const Icon = block ? BEHAVIOR_ICONS[block.behaviorType] : null;
 
@@ -166,6 +180,24 @@ export function BlockSheet({
                             </>
                         )}
                     </button>
+                )}
+
+                {/* Selbst umlegen statt fragen.
+                    Der Weg führt an den ersten Tag, an dem der Kurs den alten
+                    Platz wirklich nimmt — dort steht er im Raster, und man
+                    sieht die Lücken daneben. Einen neuen Platz wählt man
+                    sinnvoll nur da, wo man sieht, wogegen man ihn wählt.
+                    Steht man schon auf diesem Tag, fehlt der Knopf: Er führte
+                    dorthin, wo man ist. */}
+                {block?.conflictDate && block.conflictDate !== date && (
+                    <Link
+                        href={calendarDay(block.conflictDate)}
+                        onClick={() => onOpenChange(false)}
+                        className={`${OUTLINE_BUTTON} mt-5 h-12 w-full justify-center rounded-xl`}
+                    >
+                        <CalendarClock className="size-4" aria-hidden="true" />
+                        Selbst umlegen — zum {dayLabel(block.conflictDate)}
+                    </Link>
                 )}
 
                 {/* Zwei Wege, zwei Fragen: „Wann" verschiebt den Block im Tag,

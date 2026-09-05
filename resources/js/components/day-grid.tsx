@@ -147,10 +147,6 @@ export function DayGrid({
         ? collisionOf(blocks, courseBlocks, drag.drag.id, drag.drag.minute)
         : null;
 
-    // Was gar keine Stelle im Tag hat, verschwindet nicht — es steht unter dem
-    // Raster. Eine Gewohnheit, deren Kette gerissen ist, wäre sonst weg.
-    const homeless = blocks.filter((block) => block.startMinute === null);
-
     const showNow =
         now !== null && now >= bounds.from && now <= bounds.to && isToday;
 
@@ -324,35 +320,6 @@ export function DayGrid({
                     </p>
                 )}
             </div>
-
-            {/* Was im Tag keine Stelle hat: die verdrängten, und die seltene
-                gerissene Kette. Die Überschrift sagt, was diese Zone ist —
-                sonst sähe sie aus wie ein Rest, der nicht ins Raster passte. */}
-            {homeless.length > 0 && (
-                <p className="type-eyebrow mt-4 border-t border-border pt-4 text-muted-foreground">
-                    Ohne festen Platz
-                </p>
-            )}
-            {homeless.length > 0 && (
-                <ul className="mt-2 flex flex-col gap-2">
-                    {homeless.map((block) => (
-                        <li key={block.id}>
-                            <button
-                                type="button"
-                                onClick={() => onOpen(block)}
-                                className="w-full cursor-pointer rounded-[10px] bg-card px-3 py-2 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                            >
-                                <span className="type-eyebrow block text-muted-foreground">
-                                    {block.anchor}
-                                </span>
-                                <span className="block text-[13px] leading-tight font-semibold">
-                                    {block.title}
-                                </span>
-                            </button>
-                        </li>
-                    ))}
-                </ul>
-            )}
         </div>
     );
 }

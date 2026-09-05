@@ -1,6 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { ChevronLeft, ChevronRight, LayoutGrid, Sparkles } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
     AdjustmentSheet,
     alternativeLabel,
@@ -15,13 +15,15 @@ import { ShiftSheet } from '@/components/shift-sheet';
 import { StartingHelpSheet } from '@/components/starting-help-sheet';
 import { Card, CardContent } from '@/components/ui/card';
 import type { BlockDrag } from '@/hooks/use-block-drag';
-import { collisionOf, followersOf } from '@/lib/day-grid';
+import { useBlockDrag } from '@/hooks/use-block-drag';
+import { HOUR_HEIGHT, collisionOf, followersOf } from '@/lib/day-grid';
 import {
     OUTLINE_BUTTON,
     PRIMARY_BUTTON,
     QUIET_BUTTON,
     QUIET_LINK,
 } from '@/lib/interaction';
+import { cn } from '@/lib/utils';
 import { calendar } from '@/routes';
 import { day as calendarDay } from '@/routes/calendar';
 import { store as placesStore } from '@/routes/calendar/semester/places';
@@ -180,6 +182,50 @@ export default function CalendarDay({
      */
     // Der Vorschlag aus dem Sheet „Neue Plätze" liegt genauso da wie der
     // aus der Einzelanpassung — dieselbe gestrichelte Kontur, derselbe Weg.
+    /**
+     * Was heute keine Stelle im Tag hat.
+     *
+     * Fast immer sind das die Gewohnheiten, die ein Kurs verdrängt hat; sehr
+     * selten eine, deren Kette gerissen ist. Sie stehen jetzt unter dem
+     * Kalender in einem eigenen Bereich statt unten im Raster — dort sahen sie
+     * aus wie ein Rest, der nicht mehr hineinpasste.
+     */
+    const placeless = blocks.filter((block) => block.startMinute === null);
+
+    /** Die Oberkante des Rasters — der Nullpunkt für einen Zug aus der Liste. */
+    const gridRef = useRef<HTMLDivElement>(null);
+
+    /**
+     * Auch das Platzlose lässt sich anfassen.
+     *
+     * Ein eigener Griff und nicht der des Rasters: Beide können nie
+     * gleichzeitig laufen — es gibt einen Finger —, und so bleibt der Zustand
+     * dort, wo auch die Karte steht. Angehoben setzt der Block am Anfang des
+     * Tages auf; von dort zieht man ihn hin, wo Platz ist.
+     */
+    const lift = useBlockDrag({
+        bounds: { from: frameFrom, to: frameTo, height: 0 },
+        enabled: canShift,
+        onDrop: (drag) => {
+            setShiftError(null);
+            setDropped(drag);
+        },
+        // Absolut statt relativ: Die Liste steht unter dem Raster, und ein
+        // Block ohne Stelle hat keine, von der aus sich schieben ließe. Er
+        // folgt dem Finger dorthin, wo dieser über dem Raster steht.
+        minuteAt: (clientY) => {
+            const top = gridRef.current?.getBoundingClientRect().top;
+
+            return top === undefined
+                ? frameFrom
+                : frameFrom + ((clientY - top) / HOUR_HEIGHT) * 60;
+        },
+    });
+
+    const lifted = lift.drag
+        ? (placeless.find((block) => block.id === lift.drag?.id) ?? null)
+        : null;
+
     const ghost =
         shownProposal !== null && !adjusting
             ? { replaces: shownProposal.habitId, block: shownProposal.block }
@@ -202,6 +248,24 @@ export default function CalendarDay({
                     },
                 }
               : null;
+
+    /**
+     * Was das Raster als Vorschau zeigt: den Vorschlag der KI — oder den Block,
+     * den man gerade aus der Liste heraufzieht. Beides sagt dasselbe („hier
+     * läge es"), also trägt es auch dieselbe gestrichelte Kontur.
+     */
+    const outline =
+        lifted && lift.drag
+            ? {
+                  replaces: lifted.id,
+                  block: {
+                      ...lifted,
+                      startMinute: lift.drag.minute,
+                      exact: true,
+                      timeRange: null,
+                  },
+              }
+            : ghost;
 
     /**
      * Abhaken für den angezeigten Tag, nicht für heute.
@@ -395,7 +459,7 @@ export default function CalendarDay({
                 )}
 
                 <Card className="gap-0 py-5">
-                    <CardContent className="px-4 sm:px-5">
+                    <CardContent className="px-4 sm:px-5" ref={gridRef}>
                         <DayGrid
                             blocks={blocks}
                             courseBlocks={courseBlocks}
@@ -413,7 +477,7 @@ export default function CalendarDay({
                                 setShiftError(null);
                                 setDropped(drag);
                             }}
-                            ghost={ghost}
+                            ghost={outline}
                         />
 
                         {/* Der Weg zur Tagesordnung steht unter dem Raster, weil
@@ -440,6 +504,77 @@ export default function CalendarDay({
                         )}
                     </CardContent>
                 </Card>
+
+                {/* Ein eigener Bereich unter dem Kalender, keine Zeile darin:
+                    Was keinen Platz hat, steht auch nicht im Raster. Die Kante
+                    in Oliv sagt, dass hier etwas offen ist — ohne Rot und ohne
+                    Ausrufezeichen, denn versäumt hat das niemand (§1.4). */}
+                {placeless.length > 0 && (
+                    <section
+                        aria-label="Ohne festen Platz"
+                        className="flex flex-col gap-3 rounded-xl border border-primary/25 bg-accent px-4 py-4"
+                    >
+                        <p className="type-eyebrow text-primary">
+                            Ohne festen Platz
+                        </p>
+
+                        <ul className="flex flex-col gap-2">
+                            {placeless.map((block) => (
+                                <li key={block.id}>
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            lift.swallowsClick() ||
+                                            setOpened(block)
+                                        }
+                                        onPointerDown={(event) =>
+                                            lift.handlers.onPointerDown(
+                                                event,
+                                                block,
+                                                frameFrom,
+                                            )
+                                        }
+                                        onPointerMove={
+                                            lift.handlers.onPointerMove
+                                        }
+                                        onPointerUp={lift.handlers.onPointerUp}
+                                        onPointerCancel={
+                                            lift.handlers.onPointerCancel
+                                        }
+                                        style={{
+                                            touchAction:
+                                                lift.drag?.id === block.id
+                                                    ? 'none'
+                                                    : 'pan-y',
+                                        }}
+                                        className={cn(
+                                            'w-full cursor-pointer rounded-[10px] bg-card px-3 py-2 text-left transition-[box-shadow,scale] duration-[var(--duration-press)] ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+                                            lift.drag?.id === block.id &&
+                                                'shadow-lift ring-2 ring-primary',
+                                        )}
+                                    >
+                                        <span className="type-eyebrow block text-muted-foreground">
+                                            {block.anchor}
+                                        </span>
+                                        <span className="block text-[15px] leading-snug font-semibold">
+                                            {block.title}
+                                        </span>
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+
+                        {/* Der Weg hinein steht einmal unter der Liste, nicht
+                            an jeder Zeile: Er gilt für alle gleich. */}
+                        {canShift && (
+                            <p className="text-sm leading-relaxed text-muted-foreground">
+                                Halte eine gedrückt und zieh sie ins Raster —
+                                oder tippe sie an, um zu sehen, wo sonst Platz
+                                wäre.
+                            </p>
+                        )}
+                    </section>
+                )}
             </div>
 
             <BlockSheet
@@ -450,6 +585,7 @@ export default function CalendarDay({
                 onAdjust={setAdjusting}
                 onStuck={setStuckOn}
                 onUndoShift={undoShift}
+                date={date}
             />
 
             {/* Die Frage nach dem Loslassen. Der Konflikt für heute steht sofort
