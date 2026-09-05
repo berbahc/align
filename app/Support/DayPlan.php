@@ -314,7 +314,26 @@ class DayPlan
         $fixed = [];
         $movable = [];
 
+        // Wer an einer wandernden Situation hängt, wird mit ihr platziert und
+        // nicht vorher: Sonst stünde er an der alten Stelle im Weg und bliebe
+        // dort liegen, während sein Anker ausweicht.
+        $carried = [];
+
         foreach ($this->habits as $habit) {
+            $anchor = $habit->anchorHabit();
+
+            if ($anchor !== null
+                && ! $anchor->is($habit)
+                && $anchor->situationWindow($this->date) !== null) {
+                $carried[$habit->id] = true;
+            }
+        }
+
+        foreach ($this->habits as $habit) {
+            if (isset($carried[$habit->id])) {
+                continue;
+            }
+
             $start = $habit->dayStartMinute($this->date);
 
             if ($start === null) {
@@ -368,11 +387,39 @@ class DayPlan
         $places = $fixed;
 
         foreach ($movable as $entry) {
-            $minutes = $entry['habit']->durationMinutes() ?? self::AssumedMinutes;
-            $start = $this->firstFreeWithin($entry['window'], $minutes, $taken) ?? $entry['start'];
+            // Die ganze Kette auf einmal: Was an der Situation hängt, rutscht
+            // mit ihr, und der Platz muss für alle zusammen reichen. Sonst
+            // bliebe der Nachfolger an der Stelle liegen, der sein Anker
+            // gerade ausgewichen ist.
+            $offsets = $entry['habit']->spansFrom(0);
+            $ends = array_column($offsets, 'to');
+            $needed = $ends === [] ? self::AssumedMinutes : max($ends);
 
-            $places[$entry['habit']->id] = $start;
-            $taken[] = ['from' => $start, 'to' => $start + $minutes];
+            // Das Fenster fasst, was hineinsoll — samt Kette. Sonst fiele die
+            // Suche durch und die Gewohnheit bliebe an ihrer alten Stelle
+            // liegen, obwohl gleich daneben Platz wäre.
+            $window = $entry['window'];
+            $window['to'] = max($window['to'], $window['from'] + $needed);
+
+            // Ist die Spanne zu, gilt der Rest des Tages: Später als der
+            // Anlass ist besser als übereinander, und die eine Regel wiegt
+            // schwerer als die genaue Stelle. Findet sich auch dort nichts,
+            // bekommt sie keine — dann steht sie unter dem Raster, sichtbar.
+            $start = $this->firstFreeWithin($window, $needed, $taken)
+                ?? $this->firstFreeWithin(
+                    ['from' => $window['from'], 'to' => $this->frame()['to']],
+                    $needed,
+                    $taken,
+                );
+
+            if ($start === null) {
+                continue;
+            }
+
+            foreach ($offsets as $span) {
+                $places[$span['id']] = $start + $span['from'];
+                $taken[] = ['from' => $start + $span['from'], 'to' => $start + $span['to']];
+            }
         }
 
         return $this->placements = $places;

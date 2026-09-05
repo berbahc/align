@@ -192,14 +192,30 @@ class Habit extends Model
      * Die beiden am Tagesrand stehen nicht hier — sie hängen am Schlafplan
      * und rechnen sich aus ihm ({@see situationWindow()}).
      *
-     * @var array<string, array{from: int, to: int}>
+     * @var array<string, int>
      */
-    private const array SituationWindows = [
-        'nach dem Frühstück' => ['from' => 480, 'to' => 660],        // 08:00 – 11:00
-        'nach der Vorlesung' => ['from' => 660, 'to' => 900],        // 11:00 – 15:00
-        'nach dem Mittagessen' => ['from' => 780, 'to' => 960],      // 13:00 – 16:00
-        'wenn ich nach Hause komme' => ['from' => 1020, 'to' => 1200], // 17:00 – 20:00
+    private const array SituationStarts = [
+        'nach dem Mittagessen' => 780,        // 13:00
+        'wenn ich nach Hause komme' => 1020,  // 17:00
+        self::AfterLecture => 660,            // 11:00 — nur ohne Stundenplan
     ];
+
+    /**
+     * Wie lange ein Frühstück dauert, wenn niemand es aufgeschrieben hat.
+     *
+     * Nur der Startpunkt: Wer sein Frühstücken als Gewohnheit führt, dessen
+     * Block liegt ohnehin im Weg, und „nach dem Frühstück" weicht ihm aus.
+     * Diese Zahl ist die Annahme für alle anderen.
+     */
+    private const int BreakfastMinutes = 45;
+
+    /**
+     * Und wie lange der Weg von der Uni nach Hause dauert.
+     *
+     * „Wenn ich nach Hause komme" ist später als „nach der Vorlesung" — dazwischen
+     * liegt der Heimweg. Ohne Stundenplan bleibt es beim späten Nachmittag.
+     */
+    private const int CommuteMinutes = 30;
 
     /**
      * Wie weit „nach dem Aufstehen" nach hinten darf: drei Stunden.
@@ -207,7 +223,7 @@ class Habit extends Model
      * Am Schlafplan statt an einer festen Uhrzeit: Wer um elf aufsteht,
      * frühstückt nicht um sieben.
      */
-    private const int MorningWindowMinutes = 180;
+    private const int SituationWindowMinutes = 120;
 
     /**
      * Und „vor dem Schlafengehen" nach vorn: eine Stunde.
@@ -223,13 +239,6 @@ class Habit extends Model
 
     /** Einmal je Gewohnheit geladen — nur die eine Situation fragt danach. */
     private ?Timetable $timetable = null;
-
-    /**
-     * Wie weit „nach der Vorlesung" reicht: drei Stunden nach dem letzten Kurs.
-     *
-     * Danach ist es kein „nach der Vorlesung" mehr, sondern Abend.
-     */
-    private const int AfterLectureWindowMinutes = 180;
 
     /**
      * Die Situationen samt der Gewohnheit, die sie schon belegt.
@@ -546,9 +555,7 @@ class Habit extends Model
             return true;
         }
 
-        $timetable = $this->timetable ??= Timetable::for($this->user);
-
-        return $timetable->semester() === null || $timetable->blocksOn($date) !== [];
+        return $this->situationStart($date) !== null;
     }
 
     /**
@@ -911,27 +918,17 @@ class Habit extends Model
         }
 
         $minutes = $this->durationMinutes() ?? DayPlan::AssumedMinutes;
+        $start = $this->situationStart($on);
 
-        if ($this->trigger_situation === self::AfterLecture) {
-            return $this->afterLectureWindow($on);
-        }
-
-        $bound = $this->sleepBoundStartMinute($on);
-
-        if ($bound !== null) {
-            // „Nach dem Aufstehen" darf nach hinten, „vor dem Schlafengehen"
-            // nach vorn — beide drei Stunden weit, aber nie über den Rand
-            // hinaus, an dem sie hängen.
-            $window = $this->trigger_situation === 'vor dem Schlafengehen'
-                ? ['from' => max(0, $bound - self::EveningWindowMinutes), 'to' => $bound + $minutes]
-                : ['from' => $bound, 'to' => $bound + self::MorningWindowMinutes];
-        } else {
-            $window = self::SituationWindows[$this->trigger_situation] ?? null;
-        }
-
-        if ($window === null) {
+        if ($start === null) {
             return null;
         }
+
+        // „Vor dem Schlafengehen" ist die einzige, die rückwärts zählt: Sie
+        // endet an der Schlafenszeit, statt an einem Anlass zu beginnen.
+        $window = $this->trigger_situation === 'vor dem Schlafengehen'
+            ? ['from' => max(0, $start - self::EveningWindowMinutes), 'to' => $start + $minutes]
+            : ['from' => $start, 'to' => $start + self::SituationWindowMinutes];
 
         // Das Fenster fasst mindestens, was hineinsoll: Eine vierstündige
         // Gewohnheit „nach dem Mittagessen" liegt eben von 13:00 bis 17:00.
@@ -942,46 +939,83 @@ class Habit extends Model
     }
 
     /**
-     * „Nach der Vorlesung" hängt an der Vorlesung, nicht an einer Uhrzeit.
+     * Wo eine Situation anfängt — an ihrem Anlass, nicht an einer Uhr.
      *
-     * Wer seinen Stundenplan gepflegt hat, meint damit den Moment, an dem der
-     * Uni-Tag vorbei ist — nach dem **letzten** Kurs. Zwischen zwei Kursen ist
-     * man unterwegs oder in der nächsten Reihe, nicht bei einer Gewohnheit.
+     * Jede der sechs hängt an etwas, das die App kennt: der Schlafplan sagt,
+     * wann jemand aufsteht und ins Bett geht, der Stundenplan, wann die
+     * Vorlesungen enden. Eine feste Uhrzeit wäre für Spätaufsteher und volle
+     * Uni-Tage gleich falsch — wer um zehn aufsteht, frühstückt nicht um acht.
      *
-     * Ohne Kurse an diesem Tag gibt es die Situation nicht: „Ohne Trigger
-     * keine Gewohnheit" (time-blocking.md). Das beantwortet
-     * {@see isDueOn()} — hier wird daraus `null`, also keine Spanne.
+     * Was die App **nicht** wissen muss: wann jemand isst. Wer sein Frühstück
+     * als Gewohnheit führt, dessen Block liegt ohnehin im Weg, und die
+     * Situation weicht ihm aus. Die Annahme reicht als Startpunkt.
      *
-     * Ohne Semester bleibt es beim festen Fenster: Wer keinen Stundenplan
-     * pflegt, soll die Situation trotzdem nutzen können.
-     *
-     * @return array{from: int, to: int}|null
+     * `null` heißt: An diesem Tag gibt es den Anlass nicht.
      */
-    private function afterLectureWindow(?Carbon $on): ?array
+    private function situationStart(?Carbon $on): ?int
+    {
+        $bound = $this->sleepBoundStartMinute($on);
+
+        if ($bound !== null) {
+            return $bound;
+        }
+
+        if ($this->trigger_situation === 'nach dem Frühstück') {
+            $wake = $this->wakeMinute($on);
+
+            return $wake === null ? null : $wake + self::BreakfastMinutes;
+        }
+
+        $lastLecture = $this->lastLectureEnd($on);
+
+        if ($this->trigger_situation === self::AfterLecture) {
+            return $lastLecture === null
+                ? ($this->knowsTimetable() ? null : self::SituationStarts[self::AfterLecture])
+                : $lastLecture + DayPlan::BreatherMinutes;
+        }
+
+        if ($this->trigger_situation === 'wenn ich nach Hause komme' && $lastLecture !== null) {
+            // Zwischen der letzten Vorlesung und dem Zuhausesein liegt der Weg.
+            // Wer um halb vier fertig ist, ist um vier zu Hause — die feste
+            // Fünf gilt nur, wenn niemand weiß, wann der Uni-Tag endet.
+            return $lastLecture + self::CommuteMinutes;
+        }
+
+        return self::SituationStarts[$this->trigger_situation] ?? null;
+    }
+
+    /** Wann der Tag an diesem Datum anfängt — null ohne geladenen Nutzer. */
+    private function wakeMinute(?Carbon $on): ?int
     {
         if (! $this->relationLoaded('user')) {
-            return self::SituationWindows[self::AfterLecture];
-        }
-
-        $timetable = $this->timetable ??= Timetable::for($this->user);
-
-        if ($timetable->semester() === null) {
-            return self::SituationWindows[self::AfterLecture];
-        }
-
-        $lectures = $timetable->blocksOn($on ?? Carbon::today());
-
-        if ($lectures === []) {
             return null;
         }
 
-        $end = max(array_column($lectures, 'to'));
+        $window = $this->user->sleepWindowFor(($on ?? Carbon::today())->dayOfWeekIso);
 
-        // Die Viertelstunde Luft gilt auch hier: Wer aus dem Hörsaal kommt,
-        // fängt nicht in derselben Minute an.
-        $from = $end + DayPlan::BreatherMinutes;
+        return DayPlan::toMinutes($window['wakeTime']);
+    }
 
-        return ['from' => $from, 'to' => $from + self::AfterLectureWindowMinutes];
+    /** Weiß die App überhaupt etwas über Vorlesungen? */
+    private function knowsTimetable(): bool
+    {
+        return $this->relationLoaded('user')
+            && ($this->timetable ??= Timetable::for($this->user))->semester() !== null;
+    }
+
+    /**
+     * Wann an diesem Tag die letzte Vorlesung endet — null, wenn keine läuft.
+     */
+    private function lastLectureEnd(?Carbon $on): ?int
+    {
+        if (! $this->knowsTimetable()) {
+            return null;
+        }
+
+        $lectures = ($this->timetable ??= Timetable::for($this->user))
+            ->blocksOn($on ?? Carbon::today());
+
+        return $lectures === [] ? null : max(array_column($lectures, 'to'));
     }
 
     /**

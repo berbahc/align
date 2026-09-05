@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\HabitTemplate;
+use App\Enums\MeasureUnit;
 use App\Enums\ScheduleType;
 use App\Models\Course;
 use App\Models\Habit;
@@ -294,4 +295,105 @@ test('before sleeping stays within the hour before bedtime', function () {
 
     expect($window['from'])->toBe(21 * 60 + 30)
         ->and($window['to'])->toBe(23 * 60);
+});
+
+/**
+ * Jede der sechs Situationen hängt an ihrem Anlass, nicht an einer Uhr.
+ *
+ * Das zahlt sich bei Spätaufstehern aus: Wer um zehn aufsteht, frühstückt
+ * nicht um acht. Vorher lag „nach dem Frühstück" fest auf 08:00 — also vor
+ * dem Aufstehen.
+ */
+test('the situations follow the sleep plan instead of a fixed clock', function () {
+    $user = User::factory()->create();
+    $user->sleepSchedules()->create([
+        'weekday' => Carbon::today()->next(Carbon::MONDAY)->dayOfWeekIso,
+        'wake_time' => '10:00',
+        'bedtime' => '01:00',
+        'alarm_enabled' => false,
+    ]);
+
+    $monday = Carbon::today()->next(Carbon::MONDAY);
+
+    $windows = collect(['nach dem Aufstehen', 'nach dem Frühstück', 'vor dem Schlafengehen'])
+        ->mapWithKeys(function (string $situation) use ($user, $monday): array {
+            $habit = new Habit([
+                'schedule_type' => ScheduleType::Dynamic,
+                'trigger_situation' => $situation,
+                'target_amount' => 30,
+                'target_unit' => MeasureUnit::Minutes->value,
+            ]);
+            $habit->setRelation('user', $user->fresh());
+
+            return [$situation => $habit->situationWindow($monday)];
+        });
+
+    expect($windows['nach dem Aufstehen']['from'])->toBe(10 * 60)
+        // Dreiviertelstunde fürs Frühstück, dann geht es los — und nicht um 08:00.
+        ->and($windows['nach dem Frühstück']['from'])->toBe(10 * 60 + 45)
+        // Eine Stunde vor der Schlafenszeit um 01:00, also ab 23:30.
+        ->and($windows['vor dem Schlafengehen']['from'])->toBe(23 * 60 + 30);
+});
+
+test('coming home follows the last lecture, not a fixed five', function () {
+    [$user, $habit] = studentWithLectures();
+
+    $home = Habit::factory()->for($user)->withMeasure(30)->create([
+        'schedule_type' => ScheduleType::Dynamic,
+        'trigger_situation' => 'wenn ich nach Hause komme',
+        'scheduled_time' => null,
+        'scheduled_days' => null,
+    ]);
+    $home->setRelation('user', $user);
+
+    $monday = Carbon::today()->next(Carbon::MONDAY);
+    $tuesday = $monday->copy()->addDay();
+
+    // Montags endet der letzte Kurs 15:30 — plus Heimweg.
+    expect($home->situationWindow($monday)['from'])->toBe(16 * 60)
+        // Dienstags ohne Kurs bleibt es beim späten Nachmittag.
+        ->and($home->situationWindow($tuesday)['from'])->toBe(17 * 60)
+        ->and($habit->title)->toBe('Vorlesung nachbereiten');
+});
+
+test('a chain follows the situation it hangs on', function () {
+    // Der Anker weicht aus — die Nachfolgerin blieb früher an der alten Stelle
+    // liegen und landete mitten in dem, was den Anker verdrängt hatte.
+    $user = User::factory()->create();
+    Habit::factory()->for($user)->fixedSchedule('08:00', [1, 2, 3, 4, 5, 6, 7])
+        ->withMeasure(45)->create(['title' => 'Blockade']);
+
+    $anchor = Habit::factory()->for($user)->withMeasure(20)->create([
+        'title' => 'Spazieren',
+        'schedule_type' => ScheduleType::Dynamic,
+        'trigger_situation' => 'nach dem Frühstück',
+        'scheduled_time' => null,
+        'scheduled_days' => null,
+    ]);
+    $follower = Habit::factory()->for($user)->withMeasure(15)->create([
+        'title' => 'Lesen',
+        'schedule_type' => ScheduleType::Chained,
+        'chained_to_habit_id' => $anchor->id,
+        'trigger_situation' => null,
+        'scheduled_time' => null,
+        'scheduled_days' => null,
+    ]);
+
+    $habits = $user->habits()->active()->with('chainedTo.chainedTo')->get();
+    $habits->each(fn (Habit $h) => $h->setRelation('user', $user));
+
+    $monday = Carbon::today()->next(Carbon::MONDAY);
+    $plan = DayPlan::forDate($habits, $monday, $user->sleepWindows());
+
+    expect($plan->startOf($anchor))->toBe(9 * 60)
+        // Zwanzig Minuten später plus die Viertelstunde Luft.
+        ->and($plan->startOf($follower))->toBe(9 * 60 + 35);
+
+    $blocks = $plan->occupied();
+
+    foreach ($blocks as $i => $block) {
+        foreach (array_slice($blocks, $i + 1) as $other) {
+            expect($block['from'] < $other['to'] && $block['to'] > $other['from'])->toBeFalse();
+        }
+    }
 });

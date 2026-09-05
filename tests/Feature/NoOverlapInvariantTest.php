@@ -224,6 +224,27 @@ function attemptOverlap(object $test, User $user, string $way): void
             ]);
         })(),
 
+        'kette-an-situation' => (function () use ($user) {
+            // Der Anker weicht aus; die Nachfolgerin muss mit, sonst bleibt sie
+            // in dem liegen, dem er gerade ausgewichen ist.
+            Habit::factory()->for($user)->fixedSchedule('08:00', [1])->withMeasure(45)->create();
+
+            $anchor = Habit::factory()->for($user)->withMeasure(20)->create([
+                'schedule_type' => ScheduleType::Dynamic,
+                'trigger_situation' => 'nach dem Frühstück',
+                'scheduled_time' => null,
+                'scheduled_days' => null,
+            ]);
+
+            Habit::factory()->for($user)->withMeasure(15)->create([
+                'schedule_type' => ScheduleType::Chained,
+                'chained_to_habit_id' => $anchor->id,
+                'trigger_situation' => null,
+                'scheduled_time' => null,
+                'scheduled_days' => null,
+            ]);
+        })(),
+
         'kurs-verlegen' => (function () use ($test, $user) {
             // Nicht der Kurs zieht dauerhaft um, sondern er liegt an einem
             // einzigen Datum woanders — genau dort, wo etwas läuft.
@@ -275,6 +296,7 @@ test('no path leaves two things on the same minute', function (string $way) {
     'neue Plätze übernehmen' => 'neue-plaetze-uebernehmen',
     'Kette auflösen nach Verdrängung' => 'kette-aufloesen-nach-verdraengung',
     'Gewohnheit an einer Situation anlegen' => 'situation-anlegen',
+    'Kette an einer ausweichenden Situation' => 'kette-an-situation',
     'Kurs an einem Datum verlegen' => 'kurs-verlegen',
     'für eine Verabredung Platz machen, mit Kette' => 'verabredung-mit-kette',
 ]);
