@@ -456,6 +456,23 @@ class Habit extends Model
     }
 
     /**
+     * Steht sie an diesem Tag wirklich an?
+     *
+     * Der Unterschied zu {@see isScheduledOn()}: Eine Gewohnheit, deren Platz
+     * gerade ein Kurs hat, steht an ihren Wochentagen zwar weiter im Plan —
+     * anstehen tut sie nicht. Wer beides verwechselt, hält ihr einen Tag
+     * vor, den die App ihr selbst genommen hat.
+     *
+     * Für alles, was aus dem Tag eine Bilanz zieht: die Serie, der
+     * Rückblick, die Übersicht. Die Kollisionsprüfung fragt weiter
+     * {@see isScheduledOn()} — sie will alle Tage sehen, auch die geparkten.
+     */
+    public function isDueOn(Carbon $date): bool
+    {
+        return $this->isScheduledOn($date) && ! $this->isDisplaced($date);
+    }
+
+    /**
      * Die letzten Tage im Rückblick, heute als letzter Eintrag.
      *
      * Drei Zustände statt zwei: erfüllt, offen, oder gar nicht vorgesehen. Ein
@@ -487,7 +504,7 @@ class Habit extends Model
                 return [
                     'date' => $date->toDateString(),
                     'label' => self::WeekdayAbbreviations[$date->dayOfWeekIso],
-                    'scheduled' => $this->isScheduledOn($date),
+                    'scheduled' => $this->isDueOn($date),
                     'completed' => in_array($date->toDateString(), $completed, strict: true),
                 ];
             })
@@ -1234,7 +1251,7 @@ class Habit extends Model
         $grace = self::StreakGraceDays;
 
         while ($cursor->greaterThanOrEqualTo($start)) {
-            if ($this->isScheduledOn($cursor)) {
+            if ($this->isDueOn($cursor)) {
                 if ($completed->has($cursor->toDateString())) {
                     $streak++;
                 } elseif (! $cursor->isSameDay($until)) {
