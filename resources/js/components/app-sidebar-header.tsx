@@ -63,10 +63,19 @@ export function AppSidebarHeader({
                     wird die Kachel, die sich vom Hintergrund abhebt. */}
                 <AppLogoIcon className="size-8 justify-self-start" />
 
-                {/* Kein `h1`: Die Seite darunter trägt ihre eigene Überschrift,
-                    und zwei erste Überschriften wären eine zu viel. Hier steht
-                    Orientierung, nicht der Titel des Inhalts. */}
-                <span className="truncate text-[15px] leading-none font-semibold text-foreground">
+                {/* Auf dem Telefon ist das die einzige Überschrift der Seite:
+                    Wo sie dort unten nur der Tab-Name war, fällt sie weg. Sie
+                    trägt deshalb die Farbe, die eine Seitenüberschrift in
+                    dieser App hat, und die Größe einer Navigationsleiste.
+
+                    Kein `h1`: Was noch eine eigene Überschrift trägt — die
+                    Begrüßung auf der Übersicht, das Datum im Kalender —, hätte
+                    sonst eine zweite erste.
+
+                    `leading-none` stand hier und schnitt die Punkte auf dem Ü
+                    von „Übersicht" ab: Zeilenhöhe 1 lässt für Umlaute keinen
+                    Platz. */}
+                <span className="truncate text-[17px] leading-tight font-semibold text-primary">
                     {heading}
                 </span>
 

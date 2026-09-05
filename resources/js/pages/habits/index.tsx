@@ -107,7 +107,11 @@ export default function HabitsIndex({
             <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-4 sm:p-6">
                 <header className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
                     <div>
-                        <h1 className="type-title text-primary">
+                        {/* Auf dem Telefon steht der Name schon im Kopf, und
+                            zweimal „Gewohnheiten" untereinander ist keine
+                            Überschrift, sondern ein Echo. Die Zählung darunter
+                            bleibt — sie sagt etwas, das der Kopf nicht sagt. */}
+                        <h1 className="type-title text-primary max-md:hidden">
                             Gewohnheiten
                         </h1>
 

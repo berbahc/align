@@ -105,7 +105,11 @@ export default function Sleep({
             <Head title="Schlaf" />
 
             <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-4 sm:p-6">
-                <header>
+                {/* Der Kopf trägt nur den Titel, und den zeigt auf dem
+                    Telefon schon die Leiste oben. Versteckt wird deshalb er
+                    und nicht nur die Überschrift darin — sonst bliebe eine
+                    leere Zeile samt ihrem Abstand stehen. */}
+                <header className="max-md:hidden">
                     <h1 className="type-title text-primary">
                         Schlaf & Rhythmus
                     </h1>
