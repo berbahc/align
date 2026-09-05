@@ -449,8 +449,12 @@ test('a habit hanging on a situation also gets a new place offered', function ()
     // Ohne Uhrzeit kein `scheduled_time` — die Abfrage filterte sie damit lange
     // weg, und sie hing ohne Vorschlag fest.
     $user = studentWithSemester();
+    // Die Vorlage gepinnt: Ohne sie würfelt die Factory eine, und mit ihr das
+    // Tagesfenster — ein Vorschlag um 09:00 fiele durch das Fenster von
+    // „Abendessen" und der Test wäre zu einem Fünftel rot.
     $habit = Habit::factory()->for($user)->withMeasure(30)->create([
         'title' => 'Spazieren gehen',
+        'template_key' => HabitTemplate::Spazieren->value,
         'schedule_type' => ScheduleType::Dynamic,
         'trigger_situation' => 'nach dem Aufstehen',
         'scheduled_time' => null,

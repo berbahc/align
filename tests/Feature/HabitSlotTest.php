@@ -183,11 +183,18 @@ test('a follower that would land in a lecture stops the move', function () {
 });
 
 /**
- * Eine Situation hat keinen Zeitpunkt, mit dem sich kollidieren ließe. Sie
- * abzuweisen hieße, eine Genauigkeit zu behaupten, die sie nicht hat.
+ * Eine Situation hat keinen Zeitpunkt — aber der Kalender legt sie auf eine
+ * geschätzte Stelle und rechnet sie dort als belegt. Was Platz belegt, wird
+ * auch geprüft; sonst stehen zwei Blöcke auf derselben Minute, sichtbar im
+ * Raster und in jeder Rechnung darüber.
+ *
+ * Früher galt hier das Gegenteil: „Sie abzuweisen hieße, eine Genauigkeit zu
+ * behaupten, die sie nicht hat." Die Behauptung stand aber längst im Raster —
+ * nur ungeprüft.
  */
-test('a situational habit is not measured against the timetable', function () {
-    $user = studentWithCourse();
+test('a situational habit is measured against the timetable too', function () {
+    // „Nach der Vorlesung" liegt bei 11:00, mitten in Mathe (10:00–11:30).
+    $user = studentWithCourse('10:00', '11:30');
 
     $this->actingAs($user)
         ->post(route('habits.store'), [
@@ -195,9 +202,43 @@ test('a situational habit is not measured against the timetable', function () {
             'target_amount' => 30,
             'trigger_situation' => 'nach der Vorlesung',
         ])
+        ->assertSessionHasErrors('trigger_situation');
+
+    expect(session('errors')->first('trigger_situation'))
+        ->toContain('liegt im Tag bei etwa 11:00')
+        ->toContain('Mathe 1')
+        ->toContain('Wähl eine andere Situation')
+        ->and($user->habits()->count())->toBe(0);
+
+    // Eine Situation, die woanders liegt, geht durch.
+    $this->actingAs($user)
+        ->post(route('habits.store'), [
+            'template_key' => HabitTemplate::Lesen->value,
+            'target_amount' => 30,
+            'trigger_situation' => 'nach dem Aufstehen',
+        ])
         ->assertSessionHasNoErrors();
 
     expect($user->habits()->count())->toBe(1);
+});
+
+test('a situation is refused when a fixed habit already sits in its hour', function () {
+    // Genau der Fall aus der Praxis: Joggen um 17:00, und „wenn ich nach Hause
+    // komme" legt das Mittagessen auf dieselbe Stunde.
+    $user = User::factory()->create();
+    Habit::factory()->for($user)->fixedSchedule('17:00', [1, 2, 3, 4, 5, 6, 7])
+        ->withMeasure(30)->create(['title' => 'Joggen gehen']);
+
+    $this->actingAs($user)
+        ->post(route('habits.store'), [
+            'template_key' => HabitTemplate::Mittagessen->value,
+            'target_amount' => 35,
+            'trigger_situation' => 'wenn ich nach Hause komme',
+        ])
+        ->assertSessionHasErrors('trigger_situation');
+
+    expect(session('errors')->first('trigger_situation'))->toContain('Joggen gehen')
+        ->and($user->habits()->count())->toBe(1);
 });
 
 /**

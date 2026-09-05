@@ -8,6 +8,9 @@ use App\Http\Requests\Concerns\ChecksDayPlan;
 use App\Http\Requests\Concerns\ChecksSituation;
 use App\Http\Requests\Concerns\ChecksSleepWindow;
 use App\Models\Habit;
+use App\Models\User;
+use App\Support\DayPlan;
+use App\Support\SlotConflict;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -102,6 +105,7 @@ abstract class HabitFormRequest extends FormRequest
             $this->validateChain(...),
             $this->validateFrame(...),
             $this->validateSituation(...),
+            $this->validateSituationSlot(...),
             $this->validateSlot(...),
         ];
     }
@@ -122,13 +126,94 @@ abstract class HabitFormRequest extends FormRequest
     }
 
     /**
+     * Auch eine Situation muss irgendwo hin — und dort muss Platz sein.
+     *
+     * „Wenn ich nach Hause komme" ist keine Uhrzeit, aber der Kalender legt
+     * die Gewohnheit auf eine geschätzte Stelle und **rechnet sie dort als
+     * belegt** ({@see Habit::dayStartMinute()}). Wer das eine tut und das
+     * andere nicht prüft, bekommt zwei Blöcke auf derselben Minute — sichtbar
+     * im Raster, und in jeder Rechnung darüber.
+     *
+     * Geprüft wird an genau der Stelle, an die das Raster sie legt: dieselbe
+     * Rechnung, über eine Probe-Gewohnheit mit den eingegebenen Werten. Die
+     * sechs Situationen haben paarweise verschiedene Stunden, sie können sich
+     * also nie gegenseitig blockieren — nur eine feste Uhrzeit oder ein Kurs
+     * in derselben Stunde.
+     */
+    private function validateSituationSlot(Validator $validator): void
+    {
+        if ($this->scheduleType() !== ScheduleType::Dynamic) {
+            return;
+        }
+
+        $user = $this->user();
+        $situation = $this->string('trigger_situation')->trim()->toString();
+
+        if ($user === null || $situation === '' || $validator->errors()->has('trigger_situation')) {
+            return;
+        }
+
+        $minutes = (int) round($this->float('target_amount'));
+        $start = $this->situationStart($user, $situation, $minutes);
+
+        if ($start === null) {
+            return;
+        }
+
+        $edited = $this->editedHabit();
+        $spans = $edited?->spansFrom($start) ?? [[
+            'id' => 0,
+            'title' => '',
+            'from' => $start,
+            'to' => $start + $minutes,
+        ]];
+
+        // Eine Situation gilt an jedem Tag — sie hat keine Wochentagsauswahl.
+        $conflict = SlotConflict::find($user, $spans, [1, 2, 3, 4, 5, 6, 7], array_column($spans, 'id'));
+
+        if ($conflict === null) {
+            return;
+        }
+
+        $validator->errors()->add('trigger_situation', sprintf(
+            '„%s" liegt im Tag bei etwa %s. %s',
+            ucfirst($situation),
+            DayPlan::toTime($start),
+            SlotConflict::message(
+                $conflict['block'],
+                $conflict['date'],
+                'Wähl eine andere Situation — oder eine feste Uhrzeit, dann suchst du dir die Stelle selbst.',
+            ),
+        ));
+    }
+
+    /**
+     * Wo der Kalender eine Gewohnheit an dieser Situation hinlegen würde.
+     *
+     * Über eine Probe-Gewohnheit und nicht über eine eigene Rechnung: Die
+     * beiden Situationen am Tagesrand hängen am Schlafplan und an der Dauer
+     * („vor dem Schlafengehen" endet an der Schlafenszeit), und zwei
+     * Rechnungen dafür wären zwei Wahrheiten über dieselbe Stelle.
+     */
+    private function situationStart(User $user, string $situation, int $minutes): ?int
+    {
+        $probe = new Habit([
+            'schedule_type' => ScheduleType::Dynamic,
+            'trigger_situation' => $situation,
+            'target_amount' => $minutes,
+            'target_unit' => MeasureUnit::Minutes->value,
+        ]);
+
+        $probe->setRelation('user', $user);
+
+        return $probe->dayStartMinute();
+    }
+
+    /**
      * An der gewählten Uhrzeit muss Platz sein — an jedem gewählten Tag.
      *
-     * Nur für feste Uhrzeiten: Eine Situation hat keinen Zeitpunkt, mit dem
-     * sich kollidieren ließe, und eine Kette hat ihren erst, wenn ihr Vorgänger
-     * einen hat. Beide werden im Raster an ihre ungefähre Stelle gezeichnet —
-     * daraus eine Sperre zu machen hieße, eine Genauigkeit zu behaupten, die
-     * sie nicht haben.
+     * Für feste Uhrzeiten. Eine Kette hat ihren Zeitpunkt erst, wenn ihr
+     * Vorgänger einen hat; sie wird über ihn geprüft, nicht selbst.
      */
     private function validateSlot(Validator $validator): void
     {

@@ -344,7 +344,9 @@ test('adopting leaves the request open when that time is taken', function () {
         'template_key' => $habit->template()?->value,
         'target_amount' => 30,
         'schedule_type' => ScheduleType::Dynamic->value,
-        'trigger_situation' => 'nach dem Aufstehen',
+        // Am Nachmittag, damit die eigene Gewohnheit um 07:30 der Übernahme
+        // nicht im Weg steht — geprüft wird hier die Zusage, nicht der Platz.
+        'trigger_situation' => 'nach dem Mittagessen',
         'appointment_id' => $appointment->id,
     ]);
 
@@ -361,7 +363,9 @@ test('a request of someone else cannot be answered by adopting', function () {
             'template_key' => $habit->template()?->value,
             'target_amount' => 30,
             'schedule_type' => ScheduleType::Dynamic->value,
-            'trigger_situation' => 'nach dem Aufstehen',
+            // Eine freie Situation: Der Test fragt nach der Berechtigung, und
+            // die darf nicht daran hängen, ob zufällig ein Platz frei ist.
+            'trigger_situation' => 'nach dem Mittagessen',
             'appointment_id' => $appointment->id,
         ])
         ->assertForbidden();

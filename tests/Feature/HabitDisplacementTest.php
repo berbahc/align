@@ -447,8 +447,12 @@ function situationHabitUnderACourse(): array
     Semester::factory()->for($user)->create();
 
     // „Nach dem Aufstehen" liegt zur Aufstehstunde: 07:00 bei der Vorgabe.
+    // Die Vorlage gepinnt: Ohne sie würfelt die Factory eine, und mit ihr das
+    // Tagesfenster — ein Vorschlag um 09:00 fiele durch das Fenster von
+    // „Abendessen" und der Test wäre zu einem Fünftel rot.
     $habit = Habit::factory()->for($user)->withMeasure(30)->create([
         'title' => 'Spazieren gehen',
+        'template_key' => HabitTemplate::Spazieren->value,
         'schedule_type' => ScheduleType::Dynamic,
         'trigger_situation' => 'nach dem Aufstehen',
         'scheduled_time' => null,
