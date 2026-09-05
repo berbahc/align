@@ -25,14 +25,24 @@ class RestoreDisplacedHabits
     {
         $restored = [];
 
+        // Auch die ohne Uhrzeit: Eine Gewohnheit an einer Situation belegt im
+        // Tag die Stunde ihres Ankers, wird darüber verdrängt — und hinge
+        // ohne diesen Weg für immer, weil sie kein `scheduled_time` hat.
         $parked = $user->habits()
             ->active()
             ->whereNotNull('displaced_at')
-            ->whereNotNull('scheduled_time')
+            ->with('chainedTo.chainedTo')
             ->get();
 
+        $parked->each(fn (Habit $habit) => $habit->setRelation('user', $user));
+
         foreach ($parked as $habit) {
-            $start = DayPlan::toMinutes($habit->scheduled_time->format('H:i'));
+            $start = $this->oldStart($habit);
+
+            if ($start === null) {
+                continue;
+            }
+
             $spans = $habit->spansFrom($start);
 
             $conflict = SlotConflict::find(
@@ -51,5 +61,24 @@ class RestoreDisplacedHabits
         }
 
         return $restored;
+    }
+
+    /**
+     * Wo sie lag, als sie noch einen Platz hatte — in Minuten.
+     *
+     * Eine feste Uhrzeit sagt es selbst. Eine Gewohnheit an einer Situation
+     * hat keine; sie belegte die volle Stunde ihres Ankers, und mit derselben
+     * Näherung wird geprüft, ob dort wieder Platz ist. Null heißt: Sie hat
+     * gar keine Stelle, die sich zurückgeben ließe.
+     */
+    private function oldStart(Habit $habit): ?int
+    {
+        if ($habit->scheduled_time !== null) {
+            return DayPlan::toMinutes($habit->scheduled_time->format('H:i'));
+        }
+
+        $hour = $habit->plannedAnchorHour();
+
+        return $hour === null ? null : $hour * 60;
     }
 }

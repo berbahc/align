@@ -716,6 +716,18 @@ class Habit extends Model
             return null;
         }
 
+        return $this->plannedAnchorHour($on);
+    }
+
+    /**
+     * Die Stunde, zu der sie gehört — ohne die Frage, ob sie gerade Platz hat.
+     *
+     * Für den Rückweg: Wo läge sie, wenn der Kurs weg wäre? Eine Gewohnheit
+     * an einer Situation hat keine Uhrzeit, mit der sich das beantworten
+     * ließe — nur diese Stunde, mit der sie im Tag auch belegt wurde.
+     */
+    public function plannedAnchorHour(?Carbon $on = null): ?int
+    {
         $shifted = $this->shiftedTimeOn($on);
 
         if ($shifted !== null) {

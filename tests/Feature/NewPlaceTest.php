@@ -3,6 +3,7 @@
 use App\Ai\Agents\SuggestNewPlaces;
 use App\Enums\CourseKind;
 use App\Enums\HabitTemplate;
+use App\Enums\ScheduleType;
 use App\Models\AiSuggestion;
 use App\Models\Habit;
 use App\Models\Semester;
@@ -442,4 +443,37 @@ test('a suggestion of someone else is no proposal', function () {
     $this->actingAs($user)
         ->get(route('calendar.day', ['date' => $response->json('places.0.previewDate'), 'suggestion' => $response->json('places.0.suggestionId')]))
         ->assertInertia(fn (AssertableInertia $page) => $page->where('proposal', null)->etc());
+});
+
+test('a habit hanging on a situation also gets a new place offered', function () {
+    // Ohne Uhrzeit kein `scheduled_time` — die Abfrage filterte sie damit lange
+    // weg, und sie hing ohne Vorschlag fest.
+    $user = studentWithSemester();
+    $habit = Habit::factory()->for($user)->withMeasure(30)->create([
+        'title' => 'Spazieren gehen',
+        'schedule_type' => ScheduleType::Dynamic,
+        'trigger_situation' => 'nach dem Aufstehen',
+        'scheduled_time' => null,
+        'scheduled_days' => null,
+    ]);
+    enterCourse($user, 1, '07:00', '08:30', 'Frühseminar');
+
+    expect($habit->fresh()->displaced_at)->not->toBeNull();
+
+    SuggestNewPlaces::fake([[
+        'places' => [
+            ['id' => $habit->id, 'time' => '09:00', 'days' => [1], 'reason' => 'Direkt nach dem Seminar.'],
+        ],
+    ]]);
+
+    $this->actingAs($user)
+        ->postJson(route('calendar.semester.places.suggestions'))
+        ->assertOk()
+        ->assertJsonPath('places.0.id', $habit->id)
+        ->assertJsonPath('places.0.time', '09:00');
+
+    // Sie geht überhaupt ans Modell — das ist der Punkt. Ihre alte Stelle
+    // reist dabei als Stunde ihres Ankers mit; welche das ist, hängt am
+    // Schlafplan und gehört deshalb nicht in diese Zusicherung.
+    SuggestNewPlaces::assertPrompted(fn (AgentPrompt $prompt): bool => $prompt->contains('Spazieren gehen'));
 });

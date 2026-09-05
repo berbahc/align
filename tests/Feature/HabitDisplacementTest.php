@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\RestoreDisplacedHabits;
 use App\Enums\CourseKind;
 use App\Enums\HabitTemplate;
 use App\Enums\ScheduleType;
@@ -432,4 +433,52 @@ test('a course for a future semester parks every habit beneath it, not just the 
     // Viertelstunde Luft, die jeder Hand gilt.
     expect($walk->fresh()->displaced_at)->not->toBeNull()
         ->and($gym->fresh()->displaced_at)->not->toBeNull();
+});
+
+/**
+ * Eine Gewohnheit an einer Situation hat keine Uhrzeit — sie belegt im Tag die
+ * Stunde ihres Ankers und wird darüber verdrängt wie jede andere. Beide
+ * Rückwege filterten sie lange weg: Sie bekam nie einen Vorschlag und kam nie
+ * von selbst zurück. Ein Drittel aller Gewohnheiten ist von dieser Art.
+ */
+function situationHabitUnderACourse(): array
+{
+    $user = User::factory()->create();
+    Semester::factory()->for($user)->create();
+
+    // „Nach dem Aufstehen" liegt zur Aufstehstunde: 07:00 bei der Vorgabe.
+    $habit = Habit::factory()->for($user)->withMeasure(30)->create([
+        'title' => 'Spazieren gehen',
+        'schedule_type' => ScheduleType::Dynamic,
+        'trigger_situation' => 'nach dem Aufstehen',
+        'scheduled_time' => null,
+        'scheduled_days' => null,
+    ]);
+
+    test()->actingAs($user)->post(route('calendar.semester.courses.store'), [
+        'title' => 'Frühseminar',
+        'kind' => CourseKind::Vorlesung->value,
+        'weekday' => 1,
+        'starts_at' => '07:00',
+        'ends_at' => '08:30',
+    ])->assertSessionHasNoErrors();
+
+    return [$user, $habit->fresh()];
+}
+
+test('a habit hanging on a situation is parked like any other', function () {
+    [, $habit] = situationHabitUnderACourse();
+
+    expect($habit->displaced_at)->not->toBeNull()
+        ->and($habit->dayStartMinute(parkedMonday()))->toBeNull();
+});
+
+test('a parked situation habit comes back on its own once the course is gone', function () {
+    [$user, $habit] = situationHabitUnderACourse();
+
+    $user->currentSemester()->courses()->sole()->delete();
+
+    app(RestoreDisplacedHabits::class)->handle($user);
+
+    expect($habit->fresh()->displaced_at)->toBeNull();
 });
