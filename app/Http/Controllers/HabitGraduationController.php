@@ -91,8 +91,10 @@ class HabitGraduationController extends Controller
         }
 
         // Eine geparkte Gewohnheit belegt nichts — es gibt keinen Platz, den
-        // man ihr verwehren könnte. Sie kommt geparkt zurück.
-        if ($habit->displaced_at !== null) {
+        // man ihr verwehren könnte. Sie kommt geparkt zurück. Geprüft wird der
+        // Vermerk für heute: Einer, der erst zum Semesterbeginn gilt, hält den
+        // alten Platz bis dahin noch besetzt.
+        if ($habit->isDisplaced()) {
             return;
         }
 
