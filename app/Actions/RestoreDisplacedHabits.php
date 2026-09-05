@@ -6,6 +6,7 @@ use App\Models\Habit;
 use App\Models\User;
 use App\Support\DayPlan;
 use App\Support\SlotConflict;
+use Illuminate\Support\Carbon;
 
 /**
  * Holt geparkte Gewohnheiten an ihren alten Platz zurück, wo er frei ist.
@@ -61,6 +62,72 @@ class RestoreDisplacedHabits
         }
 
         return $restored;
+    }
+
+    /**
+     * Den Platz für **einen** Tag zurückgeben.
+     *
+     * Fällt die Vorlesung an einem Datum aus, ist die Zeit an diesem Tag
+     * wieder frei — aber nur an ihm. Der Vermerk bleibt deshalb stehen; was
+     * die Gewohnheit bekommt, ist ein Umzug für genau diesen Tag
+     * ({@see HabitDayShift}), und der sagt in der App ohnehin „nur heute
+     * hier". Wird der Ausfall zurückgenommen, fällt er wieder weg.
+     *
+     * @return list<Habit> Was für diesen Tag zurückkonnte
+     */
+    public function handleOn(User $user, Carbon $date): array
+    {
+        $restored = [];
+
+        $parked = $user->habits()
+            ->active()
+            ->displaced()
+            ->with('chainedTo.chainedTo')
+            ->get();
+
+        $parked->each(fn (Habit $habit) => $habit->setRelation('user', $user));
+
+        foreach ($parked as $habit) {
+            $start = $this->oldStart($habit);
+
+            if ($start === null || ! $habit->isScheduledOn($date) || ! $habit->isDisplaced($date)) {
+                continue;
+            }
+
+            $spans = $habit->spansFrom($start);
+
+            if (SlotConflict::findOn($user, $spans, $date, array_column($spans, 'id')) !== null) {
+                continue;
+            }
+
+            $habit->dayShifts()->updateOrCreate(
+                ['shifted_on' => $date->toDateString()],
+                ['scheduled_time' => DayPlan::toTime($start)],
+            );
+
+            $restored[] = $habit;
+        }
+
+        return $restored;
+    }
+
+    /**
+     * Den geliehenen Tag wieder einziehen.
+     *
+     * Der Ausfall ist zurückgenommen, der Kurs läuft wieder — was für diesen
+     * Tag zurückgeliehen war, muss weichen. Betroffen sind nur Umzüge
+     * geparkter Gewohnheiten: Wer keinen Platz hat, kann auch keinen selbst
+     * verschoben haben.
+     */
+    public function withdrawDay(User $user, Carbon $date): void
+    {
+        $user->habits()
+            ->active()
+            ->displaced()
+            ->get()
+            ->each(fn (Habit $habit) => $habit->dayShifts()
+                ->whereDate('shifted_on', $date)
+                ->delete());
     }
 
     /**

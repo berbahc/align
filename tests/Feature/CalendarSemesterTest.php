@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\CourseKind;
 use App\Models\Course;
 use App\Models\CourseException;
 use App\Models\Habit;
@@ -147,4 +148,51 @@ it('gibt dem Monat alle Kurse für die Übersicht mit — nach Wochentag und Uhr
             ->where('courses.2.weekday', 3)
             ->where('courses.0.timeRange', '08:00 – 09:00')
             ->etc());
+});
+
+it('gibt der verdrängten Gewohnheit den Tag zurück, an dem der Kurs ausfällt', function () {
+    // Der Kurs nimmt den Platz jede Woche — aber nicht an dem Tag, an dem er
+    // ausfällt. Dann liegt die Gewohnheit dort wieder, und nur dort.
+    $user = User::factory()->create();
+    Semester::factory()->for($user)->create();
+    $habit = Habit::factory()->for($user)->fixedSchedule('10:15', [1])->withMeasure(30)
+        ->create(['title' => 'Vorlesung nachbereiten']);
+
+    $this->actingAs($user)->post(route('calendar.semester.courses.store'), [
+        'title' => 'Mathe 1',
+        'kind' => CourseKind::Vorlesung->value,
+        'weekday' => 1,
+        'starts_at' => '10:00',
+        'ends_at' => '11:30',
+    ])->assertSessionHasNoErrors();
+
+    $monday = Carbon::today()->next(Carbon::MONDAY);
+    $nextMonday = $monday->copy()->addWeek();
+    $course = $user->currentSemester()->courses()->sole();
+
+    expect($habit->fresh()->displaced_at)->not->toBeNull();
+
+    $this->actingAs($user)->post(route('calendar.semester.courses.exceptions.store', $course), [
+        'on_date' => $monday->toDateString(),
+        'cancelled' => true,
+    ])->assertSessionHasNoErrors();
+
+    $habit = $habit->fresh();
+    $habit->setRelation('user', $user);
+
+    expect($habit->displaced_at)->not->toBeNull()
+        // An dem Tag liegt sie wieder da …
+        ->and($habit->dayStartMinute($monday))->toBe(615)
+        // … und an keinem anderen.
+        ->and($habit->dayStartMinute($nextMonday))->toBeNull();
+
+    // Ausfall zurückgenommen: Der Kurs läuft wieder, der geliehene Tag ist weg.
+    $this->actingAs($user)->delete(route('calendar.semester.courses.exceptions.destroy', $course), [
+        'on_date' => $monday->toDateString(),
+    ])->assertSessionHasNoErrors();
+
+    $habit = $habit->fresh();
+    $habit->setRelation('user', $user);
+
+    expect($habit->dayStartMinute($monday))->toBeNull();
 });
