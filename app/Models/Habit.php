@@ -179,6 +179,37 @@ class Habit extends Model
     ];
 
     /**
+     * Wie weit eine Situation reichen darf, in Minuten seit Mitternacht.
+     *
+     * „Nach dem Frühstück" ist kein Termin um acht — es ist irgendwann am
+     * Vormittag. Die Stunde aus {@see TriggerSuggestions} ist der Punkt, an
+     * dem der Kalender sie zuerst hinlegt; dieses Fenster sagt, wie weit sie
+     * ausweichen darf, wenn dort schon etwas liegt. Der Nutzer sieht es nie:
+     * Er hat eine Situation gewählt, keine Spanne, und die Gewohnheit rutscht
+     * innerhalb dessen, was die Situation ohnehin bedeutet.
+     *
+     * Die beiden am Tagesrand stehen nicht hier — sie hängen am Schlafplan
+     * und rechnen sich aus ihm ({@see situationWindow()}).
+     *
+     * @var array<string, array{from: int, to: int}>
+     */
+    private const array SituationWindows = [
+        'nach dem Frühstück' => ['from' => 480, 'to' => 660],        // 08:00 – 11:00
+        'nach der Vorlesung' => ['from' => 660, 'to' => 900],        // 11:00 – 15:00
+        'nach dem Mittagessen' => ['from' => 780, 'to' => 960],      // 13:00 – 16:00
+        'wenn ich nach Hause komme' => ['from' => 1020, 'to' => 1200], // 17:00 – 20:00
+    ];
+
+    /**
+     * Wie lange die beiden Situationen am Tagesrand nachgeben dürfen.
+     *
+     * Drei Stunden ab dem Aufstehen, drei Stunden vor der Schlafenszeit. Sie
+     * hängen am Schlafplan statt an einer festen Uhrzeit: Wer um elf aufsteht,
+     * frühstückt nicht um sieben.
+     */
+    private const int EdgeWindowMinutes = 180;
+
+    /**
      * Die Situationen samt der Gewohnheit, die sie schon belegt.
      *
      * Eine Situation trägt genau eine Gewohnheit. „Nach dem Aufstehen" zweimal
@@ -809,6 +840,52 @@ class Habit extends Model
             ),
             default => null,
         };
+    }
+
+    /**
+     * Die Spanne, in der eine Situations-Gewohnheit ausweichen darf.
+     *
+     * Der Anfang ist die Stelle, an die der Kalender sie zuerst legt; das Ende
+     * sagt, wie weit sie rutschen kann, wenn dort schon etwas liegt. Für die
+     * beiden Situationen am Tagesrand hängt beides am Schlafplan, für die
+     * übrigen steht es in {@see SituationWindows}.
+     *
+     * `null` heißt: keine Spanne, also auch kein Ausweichen — eine feste
+     * Uhrzeit, eine Kette, oder eine selbst getippte Situation, über die
+     * niemand etwas weiß.
+     *
+     * @return array{from: int, to: int}|null
+     */
+    public function situationWindow(?Carbon $on = null): ?array
+    {
+        if ($this->schedule_type !== ScheduleType::Dynamic || $this->trigger_situation === null) {
+            return null;
+        }
+
+        $minutes = $this->durationMinutes() ?? DayPlan::AssumedMinutes;
+        $bound = $this->sleepBoundStartMinute($on);
+
+        if ($bound !== null) {
+            // „Nach dem Aufstehen" darf nach hinten, „vor dem Schlafengehen"
+            // nach vorn — beide drei Stunden weit, aber nie über den Rand
+            // hinaus, an dem sie hängen.
+            $window = $this->trigger_situation === 'vor dem Schlafengehen'
+                ? ['from' => max(0, $bound - self::EdgeWindowMinutes), 'to' => $bound + $minutes]
+                : ['from' => $bound, 'to' => $bound + self::EdgeWindowMinutes];
+        } else {
+            $window = self::SituationWindows[$this->trigger_situation] ?? null;
+        }
+
+        if ($window === null) {
+            return null;
+        }
+
+        // Das Fenster fasst mindestens, was hineinsoll: Eine vierstündige
+        // Gewohnheit „nach dem Mittagessen" liegt eben von 13:00 bis 17:00.
+        // Sonst gäbe es Dauern, zu denen keine Situation mehr passt.
+        $window['to'] = max($window['to'], $window['from'] + $minutes);
+
+        return $window;
     }
 
     /**

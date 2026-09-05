@@ -11,6 +11,7 @@ use App\Models\Habit;
 use App\Models\User;
 use App\Support\DayPlan;
 use App\Support\SlotConflict;
+use App\Support\Timetable;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -126,19 +127,17 @@ abstract class HabitFormRequest extends FormRequest
     }
 
     /**
-     * Auch eine Situation muss irgendwo hin — und dort muss Platz sein.
+     * Auch eine Situation braucht Platz — irgendwo in ihrer Spanne.
      *
-     * „Wenn ich nach Hause komme" ist keine Uhrzeit, aber der Kalender legt
-     * die Gewohnheit auf eine geschätzte Stelle und **rechnet sie dort als
-     * belegt** ({@see Habit::dayStartMinute()}). Wer das eine tut und das
-     * andere nicht prüft, bekommt zwei Blöcke auf derselben Minute — sichtbar
-     * im Raster, und in jeder Rechnung darüber.
+     * „Nach dem Frühstück" ist kein Termin um acht, sondern irgendwann am
+     * Vormittag. Der Tagesplan legt die Gewohnheit deshalb an den ersten
+     * freien Fleck darin ({@see DayPlan::placements()}), statt sie stur auf
+     * die Stunde zu setzen und mit dem zu kollidieren, was dort liegt.
      *
-     * Geprüft wird an genau der Stelle, an die das Raster sie legt: dieselbe
-     * Rechnung, über eine Probe-Gewohnheit mit den eingegebenen Werten. Die
-     * sechs Situationen haben paarweise verschiedene Stunden, sie können sich
-     * also nie gegenseitig blockieren — nur eine feste Uhrzeit oder ein Kurs
-     * in derselben Stunde.
+     * Abgewiesen wird nur, was gar nicht mehr hineinpasst: Wenn die ganze
+     * Spanne an einem ihrer Tage voll ist, gäbe es keine Stelle mehr, an die
+     * sie ausweichen könnte — und sie läge übereinander, was dieser Kalender
+     * nirgends zulässt.
      */
     private function validateSituationSlot(Validator $validator): void
     {
@@ -154,48 +153,78 @@ abstract class HabitFormRequest extends FormRequest
         }
 
         $minutes = (int) round($this->float('target_amount'));
-        $start = $this->situationStart($user, $situation, $minutes);
-
-        if ($start === null) {
-            return;
-        }
-
         $edited = $this->editedHabit();
-        $spans = $edited?->spansFrom($start) ?? [[
-            'id' => 0,
-            'title' => '',
-            'from' => $start,
-            'to' => $start + $minutes,
-        ]];
+        $probe = $this->probeFor($user, $situation, $minutes);
+        $window = $probe->situationWindow();
 
-        // Eine Situation gilt an jedem Tag — sie hat keine Wochentagsauswahl.
-        $conflict = SlotConflict::find($user, $spans, [1, 2, 3, 4, 5, 6, 7], array_column($spans, 'id'));
-
-        if ($conflict === null) {
+        if ($window === null) {
             return;
         }
 
-        $validator->errors()->add('trigger_situation', sprintf(
-            '„%s" liegt im Tag bei etwa %s. %s',
-            ucfirst($situation),
-            DayPlan::toTime($start),
-            SlotConflict::message(
-                $conflict['block'],
-                $conflict['date'],
-                'Wähl eine andere Situation — oder eine feste Uhrzeit, dann suchst du dir die Stelle selbst.',
-            ),
-        ));
+        $habits = $user->habits()->active()->with('chainedTo.chainedTo')->get();
+        $habits->each(fn (Habit $other) => $other->setRelation('user', $user));
+
+        $timetable = Timetable::for($user);
+
+        foreach (range(1, 7) as $weekday) {
+            $date = SlotConflict::nextWeekday($weekday);
+
+            $plan = DayPlan::forDate(
+                $habits
+                    ->filter(fn (Habit $other): bool => $other->isScheduledOn($date))
+                    ->reject(fn (Habit $other): bool => $edited !== null && $other->is($edited))
+                    ->values(),
+                $date,
+                $user->sleepWindows(),
+                $timetable->blocksOn($date),
+            );
+
+            if ($this->fitsInWindow($plan, $probe->situationWindow($date) ?? $window, $minutes)) {
+                continue;
+            }
+
+            $validator->errors()->add('trigger_situation', sprintf(
+                'Rund um „%s" ist an diesem Tag nichts mehr frei — der Kalender legt die Gewohnheit dort irgendwo zwischen %s und %s hin, und %d Minuten passen nirgends mehr dazwischen. Wähl eine andere Situation, oder mach anderswo Platz.',
+                $situation,
+                DayPlan::toTime($window['from']),
+                DayPlan::toTime($window['to']),
+                $minutes,
+            ));
+
+            return;
+        }
     }
 
     /**
-     * Wo der Kalender eine Gewohnheit an dieser Situation hinlegen würde.
+     * Passt die Dauer irgendwo in diese Spanne?
      *
-     * Über eine Probe-Gewohnheit und nicht über eine eigene Rechnung: Die
-     * beiden Situationen am Tagesrand hängen am Schlafplan und an der Dauer
-     * („vor dem Schlafengehen" endet an der Schlafenszeit), und zwei
-     * Rechnungen dafür wären zwei Wahrheiten über dieselbe Stelle.
+     * Über die freien Fenster des Tages, damit die Atempause und der
+     * Schlafrahmen gelten, ohne dass es dafür eine zweite Rechnung gibt.
+     *
+     * @param  array{from: int, to: int}  $window
      */
-    private function situationStart(User $user, string $situation, int $minutes): ?int
+    private function fitsInWindow(DayPlan $plan, array $window, int $minutes): bool
+    {
+        foreach ($plan->freeWindows($minutes) as $free) {
+            $from = max($free['from'], $window['from']);
+            $to = min($free['to'], $window['to']);
+
+            if ($to - $from >= $minutes) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Eine Gewohnheit, wie sie mit den eingegebenen Werten aussähe.
+     *
+     * Damit die Spanne aus derselben Rechnung kommt wie im Tag: Die beiden
+     * Situationen am Tagesrand hängen am Schlafplan und an der Dauer, und
+     * zwei Rechnungen dafür wären zwei Wahrheiten über dieselbe Stelle.
+     */
+    private function probeFor(User $user, string $situation, int $minutes): Habit
     {
         $probe = new Habit([
             'schedule_type' => ScheduleType::Dynamic,
@@ -206,7 +235,7 @@ abstract class HabitFormRequest extends FormRequest
 
         $probe->setRelation('user', $user);
 
-        return $probe->dayStartMinute();
+        return $probe;
     }
 
     /**

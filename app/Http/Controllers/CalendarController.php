@@ -160,13 +160,6 @@ class CalendarController extends Controller
         $scheduled = $habits
             ->filter(fn (Habit $habit): bool => $this->existedOn($habit, $day))
             ->filter(fn (Habit $habit): bool => $habit->isScheduledOn($day))
-            // Der Tag wird von oben nach unten gelesen: Morgen zuerst, Abend
-            // zuletzt. Bei gleicher Stunde entscheidet die eigene Reihenfolge
-            // aus der Gewohnheitsliste.
-            ->sortBy(fn (Habit $habit): array => [
-                $habit->dayStartMinute($day) ?? PHP_INT_MAX,
-                $habit->position,
-            ])
             ->values();
 
         // Der Rahmen des gezeigten Tages: Das Raster beginnt beim Aufstehen
@@ -178,7 +171,19 @@ class CalendarController extends Controller
         // Minute jenseits von 1440 weiter — sonst risse die Achse am Tagesrand.
         $timetable = Timetable::for($request->user());
         $courseBlocks = $timetable->blocksOn($day);
-        $frame = (new DayPlan($scheduled, $window, $day, $courseBlocks))->frame();
+        $plan = new DayPlan($scheduled, $window, $day, $courseBlocks);
+        $frame = $plan->frame();
+
+        // Der Tag wird von oben nach unten gelesen: Morgen zuerst, Abend
+        // zuletzt. Gefragt wird der Tagesplan und nicht die Gewohnheit: Eine
+        // Situation rutscht dort um das Feste herum, und das Raster muss sie
+        // zeigen, wo die Rechnung sie hinlegt.
+        $scheduled = $scheduled
+            ->sortBy(fn (Habit $habit): array => [
+                $plan->startOf($habit) ?? PHP_INT_MAX,
+                $habit->position,
+            ])
+            ->values();
 
         return Inertia::render('calendar-day', [
             'date' => $day->toDateString(),
@@ -192,7 +197,7 @@ class CalendarController extends Controller
             'nextDate' => $day->copy()->addDay()->toDateString(),
             // Damit der Weg zurück in den Monat führt, aus dem man kam.
             'month' => $day->format('Y-m'),
-            'blocks' => $scheduled->map(fn (Habit $habit): array => $this->block($habit, $day))->all(),
+            'blocks' => $scheduled->map(fn (Habit $habit): array => $this->block($habit, $day, $plan))->all(),
             // Kurse liegen auf derselben Achse, sind aber keine Gewohnheiten:
             // Sie werden nicht abgehakt, nicht gezogen und nicht angepasst.
             // Deshalb eine eigene Liste — zehn nullbare Felder an `blocks`
@@ -386,7 +391,7 @@ class CalendarController extends Controller
      *
      * @return array{kind: 'habit', id: int, title: string, anchor: string, anchorHour: int, scheduleType: string, startMinute: int|null, durationMinutes: int|null, exact: bool, shifted: bool, measureLabel: string|null, timeRange: string|null, behaviorType: string, smallestStep: string|null, motivation: string|null, completed: bool, graduated: bool, chainedToId: int|null}
      */
-    private function block(Habit $habit, Carbon $day): array
+    private function block(Habit $habit, Carbon $day, ?DayPlan $plan = null): array
     {
         return [
             // Sagt dem Raster, welcher Art dieser Block ist — daneben liegen
@@ -407,7 +412,7 @@ class CalendarController extends Controller
             // Wo der Block im Raster liegt und wie hoch er ist. Beides in
             // Minuten, damit der Browser nichts nachrechnen muss, was der
             // Server ohnehin schon weiß.
-            'startMinute' => $habit->dayStartMinute($day),
+            'startMinute' => $plan?->startOf($habit) ?? $habit->dayStartMinute($day),
             'durationMinutes' => $habit->durationMinutes(),
             // Ob die Stelle eine Uhrzeit ist oder eine Näherung. Der Kalender
             // zeichnet beides verschieden: Was keine Uhr hat, bekommt auch

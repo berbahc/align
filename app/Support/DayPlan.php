@@ -55,6 +55,13 @@ class DayPlan
         private readonly array $extraBlocks = [],
     ) {}
 
+    /**
+     * Einmal gerechnet, mehrfach gefragt — der Tag ändert sich zwischendurch nicht.
+     *
+     * @var array<int, int>|null
+     */
+    private ?array $placements = null;
+
     /** „07:30" → 450. */
     public static function toMinutes(string $time): int
     {
@@ -104,10 +111,12 @@ class DayPlan
      */
     public function occupied(?Habit $except = null): array
     {
+        $places = $this->placements();
+
         $blocks = $this->habits
             ->reject(fn (Habit $habit): bool => $except !== null && $habit->is($except))
-            ->map(function (Habit $habit): ?array {
-                $start = $this->startOf($habit);
+            ->map(function (Habit $habit) use ($places): ?array {
+                $start = $places[$habit->id] ?? null;
 
                 if ($start === null) {
                     return null;
@@ -274,9 +283,130 @@ class DayPlan
      * gezeichnet wird, als der Server ihn belegt, wäre ein sichtbarer
      * Widerspruch.
      */
-    private function startOf(Habit $habit): ?int
+    public function startOf(Habit $habit): ?int
     {
-        return $habit->dayStartMinute($this->date);
+        return $this->placements()[$habit->id] ?? null;
+    }
+
+    /**
+     * Wo an diesem Tag jede Gewohnheit liegt — die eine Wahrheit des Tages.
+     *
+     * Zwei Durchgänge, weil nicht alles gleich fest ist. Eine Uhrzeit steht;
+     * eine Situation nicht. „Nach dem Frühstück" heißt irgendwann am
+     * Vormittag, und wenn dort schon etwas liegt, rutscht die Gewohnheit
+     * innerhalb dessen weiter, was die Situation ohnehin bedeutet
+     * ({@see Habit::situationWindow()}). Der Nutzer sieht die Spanne nie — er
+     * hat eine Situation gewählt, keine Uhrzeit, und genau deshalb darf sie
+     * nachgeben, statt die App etwas abweisen zu lassen.
+     *
+     * Was im Fenster keinen Platz findet, bleibt an seinem Anfang liegen. Eine
+     * Gewohnheit verschwinden zu lassen, weil der Vormittag voll ist, wäre
+     * schlimmer als ein sichtbares Gedränge.
+     *
+     * @return array<int, int> Gewohnheit → Minute seit Mitternacht
+     */
+    private function placements(): array
+    {
+        if ($this->placements !== null) {
+            return $this->placements;
+        }
+
+        $fixed = [];
+        $movable = [];
+
+        foreach ($this->habits as $habit) {
+            $start = $habit->dayStartMinute($this->date);
+
+            if ($start === null) {
+                continue;
+            }
+
+            // Ein Umzug für genau diesen Tag ist eine Ansage, keine Näherung:
+            // Wer sein Lesen heute auf 14:00 gelegt hat, will es dort haben und
+            // nicht irgendwo in der Spanne seiner Situation.
+            $window = $habit->shiftedTimeOn($this->date) === null
+                ? $habit->situationWindow($this->date)
+                : null;
+
+            if ($window === null) {
+                $fixed[$habit->id] = $start;
+
+                continue;
+            }
+
+            $movable[] = ['habit' => $habit, 'window' => $window, 'start' => $start];
+        }
+
+        // Was steht, steht — samt allem, was von außen kommt.
+        $taken = array_map(
+            fn (array $block): array => ['from' => $block['from'], 'to' => $block['to']],
+            $this->extraBlocks,
+        );
+
+        foreach ($this->habits as $habit) {
+            if (isset($fixed[$habit->id])) {
+                $taken[] = [
+                    'from' => $fixed[$habit->id],
+                    'to' => $fixed[$habit->id] + ($habit->durationMinutes() ?? self::AssumedMinutes),
+                ];
+            }
+        }
+
+        // Die frühere Situation zuerst: Sonst nähme die spätere den Platz weg,
+        // an den die frühere gehört, und beide rutschten weiter als nötig.
+        usort($movable, fn (array $a, array $b): int => $a['start'] <=> $b['start']);
+
+        $places = $fixed;
+
+        foreach ($movable as $entry) {
+            $minutes = $entry['habit']->durationMinutes() ?? self::AssumedMinutes;
+            $start = $this->firstFreeWithin($entry['window'], $minutes, $taken) ?? $entry['start'];
+
+            $places[$entry['habit']->id] = $start;
+            $taken[] = ['from' => $start, 'to' => $start + $minutes];
+        }
+
+        return $this->placements = $places;
+    }
+
+    /**
+     * Der erste Platz im Fenster, an dem `$minutes` frei sind.
+     *
+     * Mit derselben Viertelstunde Luft wie überall: Was die App nie
+     * vorschlüge, soll auch keine Situation still einnehmen. `null`, wenn das
+     * Fenster nichts mehr hergibt.
+     *
+     * @param  array{from: int, to: int}  $window
+     * @param  list<array{from: int, to: int}>  $taken
+     */
+    private function firstFreeWithin(array $window, int $minutes, array $taken): ?int
+    {
+        $cursor = $window['from'];
+
+        // Höchstens so oft, wie es Blöcke gibt: Jeder schiebt den Zeiger
+        // einmal hinter sich, danach ist entweder Platz oder das Fenster aus.
+        for ($step = 0; $step <= count($taken); $step++) {
+            if ($cursor + $minutes > $window['to']) {
+                return null;
+            }
+
+            $blocking = null;
+
+            foreach ($taken as $block) {
+                if ($cursor < $block['to'] + self::BreatherMinutes
+                    && $cursor + $minutes + self::BreatherMinutes > $block['from']) {
+                    $blocking = max($blocking ?? 0, $block['to'] + self::BreatherMinutes);
+                }
+            }
+
+            if ($blocking === null) {
+                return $cursor;
+            }
+
+            $cursor = $blocking;
+        }
+
+        return null;
     }
 
     /**

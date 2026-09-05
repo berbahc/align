@@ -212,6 +212,18 @@ function attemptOverlap(object $test, User $user, string $way): void
                 'chained_to_habit_id' => $anchor->id,
             ]);
         })(),
+        'situation-anlegen' => (function () use ($test, $user) {
+            // Eine Situation hat keine Uhrzeit, bekommt im Tag aber eine
+            // Stelle — und die muss um das Feste herum gefunden werden.
+            Habit::factory()->for($user)->fixedSchedule('11:45', [1])->withMeasure(30)->create();
+
+            $test->actingAs($user)->post(route('habits.store'), [
+                'template_key' => HabitTemplate::Lesen->value,
+                'target_amount' => 30,
+                'trigger_situation' => 'nach der Vorlesung',
+            ]);
+        })(),
+
         'kurs-verlegen' => (function () use ($test, $user) {
             // Nicht der Kurs zieht dauerhaft um, sondern er liegt an einem
             // einzigen Datum woanders — genau dort, wo etwas läuft.
@@ -262,6 +274,7 @@ test('no path leaves two things on the same minute', function (string $way) {
     'Kette an dieselbe Gewohnheit hängen' => 'kette-verzweigen',
     'neue Plätze übernehmen' => 'neue-plaetze-uebernehmen',
     'Kette auflösen nach Verdrängung' => 'kette-aufloesen-nach-verdraengung',
+    'Gewohnheit an einer Situation anlegen' => 'situation-anlegen',
     'Kurs an einem Datum verlegen' => 'kurs-verlegen',
     'für eine Verabredung Platz machen, mit Kette' => 'verabredung-mit-kette',
 ]);

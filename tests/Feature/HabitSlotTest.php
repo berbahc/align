@@ -8,6 +8,8 @@ use App\Models\Course;
 use App\Models\Habit;
 use App\Models\Semester;
 use App\Models\User;
+use App\Support\DayPlan;
+use App\Support\Timetable;
 use Illuminate\Support\Carbon;
 
 /**
@@ -183,18 +185,86 @@ test('a follower that would land in a lecture stops the move', function () {
 });
 
 /**
- * Eine Situation hat keinen Zeitpunkt — aber der Kalender legt sie auf eine
- * geschätzte Stelle und rechnet sie dort als belegt. Was Platz belegt, wird
- * auch geprüft; sonst stehen zwei Blöcke auf derselben Minute, sichtbar im
- * Raster und in jeder Rechnung darüber.
+ * Eine Situation ist keine Uhrzeit — sie darf ausweichen.
  *
- * Früher galt hier das Gegenteil: „Sie abzuweisen hieße, eine Genauigkeit zu
- * behaupten, die sie nicht hat." Die Behauptung stand aber längst im Raster —
- * nur ungeprüft.
+ * „Nach der Vorlesung" heißt irgendwann am frühen Nachmittag. Liegt an der
+ * Stelle, an die der Kalender sie zuerst legt, schon etwas, rutscht sie
+ * innerhalb ihrer Spanne weiter, statt abgewiesen zu werden oder sich mit dem
+ * anderen die Minute zu teilen. Der Nutzer sieht die Spanne nie; er hat eine
+ * Situation gewählt, und die bedeutet ohnehin einen Zeitraum.
  */
-test('a situational habit is measured against the timetable too', function () {
-    // „Nach der Vorlesung" liegt bei 11:00, mitten in Mathe (10:00–11:30).
+test('a situational habit slides past what is already there', function () {
+    // Mathe liegt 10:00–11:30; „nach der Vorlesung" fängt bei 11:00 an.
     $user = studentWithCourse('10:00', '11:30');
+
+    $this->actingAs($user)
+        ->post(route('habits.store'), [
+            'template_key' => HabitTemplate::Lesen->value,
+            'target_amount' => 30,
+            'trigger_situation' => 'nach der Vorlesung',
+        ])
+        ->assertSessionHasNoErrors();
+
+    $habit = $user->habits()->sole();
+    $habit->setRelation('user', $user);
+
+    $monday = Carbon::today()->next(Carbon::MONDAY);
+    $plan = DayPlan::forDate(
+        collect([$habit]),
+        $monday,
+        $user->sleepWindows(),
+        Timetable::for($user)->blocksOn($monday),
+    );
+
+    // Hinter die Vorlesung, mit der Viertelstunde Luft — nicht auf 11:00.
+    expect($plan->startOf($habit))->toBe(11 * 60 + 45);
+});
+
+test('a situation slides past a fixed habit in the same hour', function () {
+    // Genau der Fall aus der Praxis: Joggen um 17:00, und „wenn ich nach Hause
+    // komme" legt das Mittagessen auf dieselbe Stunde.
+    $user = User::factory()->create();
+    $jogging = Habit::factory()->for($user)->fixedSchedule('17:00', [1, 2, 3, 4, 5, 6, 7])
+        ->withMeasure(30)->create(['title' => 'Joggen gehen']);
+
+    $this->actingAs($user)
+        ->post(route('habits.store'), [
+            'template_key' => HabitTemplate::Mittagessen->value,
+            'target_amount' => 35,
+            'trigger_situation' => 'wenn ich nach Hause komme',
+        ])
+        ->assertSessionHasNoErrors();
+
+    $lunch = $user->habits()->where('title', '!=', 'Joggen gehen')->sole();
+    $habits = collect([$jogging, $lunch]);
+    $habits->each(fn (Habit $h) => $h->setRelation('user', $user));
+
+    $monday = Carbon::today()->next(Carbon::MONDAY);
+    $plan = DayPlan::forDate($habits, $monday, $user->sleepWindows());
+
+    expect($plan->startOf($jogging))->toBe(17 * 60)
+        // Hinter Joggen (bis 17:30) plus Luft.
+        ->and($plan->startOf($lunch))->toBe(17 * 60 + 45);
+
+    // Und damit liegt nichts mehr übereinander.
+    $blocks = $plan->occupied();
+
+    foreach ($blocks as $i => $block) {
+        foreach (array_slice($blocks, $i + 1) as $other) {
+            expect($block['from'] < $other['to'] && $block['to'] > $other['from'])->toBeFalse();
+        }
+    }
+});
+
+test('a situation is refused when its whole window is full', function () {
+    // Der Vormittag zwischen 11:00 und 15:00 ist zu, also gibt es keine Stelle
+    // mehr, an die „nach der Vorlesung" ausweichen könnte.
+    $user = User::factory()->create();
+    $semester = Semester::factory()->for($user)->create();
+
+    foreach ([['11:00', '13:00'], ['13:00', '15:00']] as [$from, $to]) {
+        Course::factory()->for($semester)->onWeekday(1)->at($from, $to)->create(['title' => 'Blockseminar']);
+    }
 
     $this->actingAs($user)
         ->post(route('habits.store'), [
@@ -205,40 +275,8 @@ test('a situational habit is measured against the timetable too', function () {
         ->assertSessionHasErrors('trigger_situation');
 
     expect(session('errors')->first('trigger_situation'))
-        ->toContain('liegt im Tag bei etwa 11:00')
-        ->toContain('Mathe 1')
-        ->toContain('Wähl eine andere Situation')
+        ->toContain('nichts mehr frei')
         ->and($user->habits()->count())->toBe(0);
-
-    // Eine Situation, die woanders liegt, geht durch.
-    $this->actingAs($user)
-        ->post(route('habits.store'), [
-            'template_key' => HabitTemplate::Lesen->value,
-            'target_amount' => 30,
-            'trigger_situation' => 'nach dem Aufstehen',
-        ])
-        ->assertSessionHasNoErrors();
-
-    expect($user->habits()->count())->toBe(1);
-});
-
-test('a situation is refused when a fixed habit already sits in its hour', function () {
-    // Genau der Fall aus der Praxis: Joggen um 17:00, und „wenn ich nach Hause
-    // komme" legt das Mittagessen auf dieselbe Stunde.
-    $user = User::factory()->create();
-    Habit::factory()->for($user)->fixedSchedule('17:00', [1, 2, 3, 4, 5, 6, 7])
-        ->withMeasure(30)->create(['title' => 'Joggen gehen']);
-
-    $this->actingAs($user)
-        ->post(route('habits.store'), [
-            'template_key' => HabitTemplate::Mittagessen->value,
-            'target_amount' => 35,
-            'trigger_situation' => 'wenn ich nach Hause komme',
-        ])
-        ->assertSessionHasErrors('trigger_situation');
-
-    expect(session('errors')->first('trigger_situation'))->toContain('Joggen gehen')
-        ->and($user->habits()->count())->toBe(1);
 });
 
 /**
