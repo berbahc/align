@@ -160,6 +160,11 @@ class CalendarController extends Controller
         $scheduled = $habits
             ->filter(fn (Habit $habit): bool => $this->existedOn($habit, $day))
             ->filter(fn (Habit $habit): bool => $habit->isScheduledOn($day))
+            // „Nach der Vorlesung" ohne Vorlesung: An so einem Tag gibt es den
+            // Auslöser nicht, also auch die Gewohnheit nicht. Der Parkvermerk
+            // gehört hier ausdrücklich nicht dazu — was verdrängt wurde, soll
+            // im Tag sichtbar bleiben, nur ohne Stelle.
+            ->filter(fn (Habit $habit): bool => $habit->hasTriggerOn($day))
             ->values();
 
         // Der Rahmen des gezeigten Tages: Das Raster beginnt beim Aufstehen
@@ -310,7 +315,7 @@ class CalendarController extends Controller
     {
         $scheduled = $habits
             ->filter(fn (Habit $habit): bool => $this->existedOn($habit, $day))
-            ->filter(fn (Habit $habit): bool => $habit->isScheduledOn($day));
+            ->filter(fn (Habit $habit): bool => $habit->isDueOn($day));
 
         $done = $scheduled
             ->filter(fn (Habit $habit): bool => $habit->completions

@@ -9,6 +9,7 @@ use App\Enums\MeasureUnit;
 use App\Enums\ScheduleType;
 use App\Http\Requests\Concerns\ChecksSituation;
 use App\Support\DayPlan;
+use App\Support\Timetable;
 use Carbon\CarbonInterface;
 use Database\Factories\HabitFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -201,13 +202,34 @@ class Habit extends Model
     ];
 
     /**
-     * Wie lange die beiden Situationen am Tagesrand nachgeben dürfen.
+     * Wie weit „nach dem Aufstehen" nach hinten darf: drei Stunden.
      *
-     * Drei Stunden ab dem Aufstehen, drei Stunden vor der Schlafenszeit. Sie
-     * hängen am Schlafplan statt an einer festen Uhrzeit: Wer um elf aufsteht,
+     * Am Schlafplan statt an einer festen Uhrzeit: Wer um elf aufsteht,
      * frühstückt nicht um sieben.
      */
-    private const int EdgeWindowMinutes = 180;
+    private const int MorningWindowMinutes = 180;
+
+    /**
+     * Und „vor dem Schlafengehen" nach vorn: eine Stunde.
+     *
+     * Enger als am Morgen, weil das Wort es enger meint. Drei Stunden vor dem
+     * Schlafengehen ist früher Abend und nichts, was jemand als „vor dem
+     * Schlafengehen" plant.
+     */
+    private const int EveningWindowMinutes = 60;
+
+    /** Die Situation, die am Stundenplan hängt statt an der Uhr. */
+    public const string AfterLecture = 'nach der Vorlesung';
+
+    /** Einmal je Gewohnheit geladen — nur die eine Situation fragt danach. */
+    private ?Timetable $timetable = null;
+
+    /**
+     * Wie weit „nach der Vorlesung" reicht: drei Stunden nach dem letzten Kurs.
+     *
+     * Danach ist es kein „nach der Vorlesung" mehr, sondern Abend.
+     */
+    private const int AfterLectureWindowMinutes = 180;
 
     /**
      * Die Situationen samt der Gewohnheit, die sie schon belegt.
@@ -500,7 +522,33 @@ class Habit extends Model
      */
     public function isDueOn(Carbon $date): bool
     {
-        return $this->isScheduledOn($date) && ! $this->isDisplaced($date);
+        return $this->isScheduledOn($date)
+            && $this->hasTriggerOn($date)
+            && ! $this->isDisplaced($date);
+    }
+
+    /**
+     * Gibt es an diesem Tag überhaupt den Auslöser, an dem sie hängt?
+     *
+     * Nur eine Situation kann fehlen, und nur eine: „Nach der Vorlesung" ohne
+     * Vorlesung ist kein Auslöser. Ohne Trigger keine Gewohnheit
+     * (time-blocking.md) — sie steht an so einem Tag nicht an, statt an einer
+     * erfundenen Uhrzeit zu liegen.
+     *
+     * Wer kein Semester eingetragen hat, behält die Situation: Dann weiß die
+     * App nichts über Vorlesungen, und Schweigen ist kein Nein.
+     */
+    public function hasTriggerOn(Carbon $date): bool
+    {
+        if ($this->trigger_situation !== self::AfterLecture
+            || $this->schedule_type !== ScheduleType::Dynamic
+            || ! $this->relationLoaded('user')) {
+            return true;
+        }
+
+        $timetable = $this->timetable ??= Timetable::for($this->user);
+
+        return $timetable->semester() === null || $timetable->blocksOn($date) !== [];
     }
 
     /**
@@ -863,6 +911,11 @@ class Habit extends Model
         }
 
         $minutes = $this->durationMinutes() ?? DayPlan::AssumedMinutes;
+
+        if ($this->trigger_situation === self::AfterLecture) {
+            return $this->afterLectureWindow($on);
+        }
+
         $bound = $this->sleepBoundStartMinute($on);
 
         if ($bound !== null) {
@@ -870,8 +923,8 @@ class Habit extends Model
             // nach vorn — beide drei Stunden weit, aber nie über den Rand
             // hinaus, an dem sie hängen.
             $window = $this->trigger_situation === 'vor dem Schlafengehen'
-                ? ['from' => max(0, $bound - self::EdgeWindowMinutes), 'to' => $bound + $minutes]
-                : ['from' => $bound, 'to' => $bound + self::EdgeWindowMinutes];
+                ? ['from' => max(0, $bound - self::EveningWindowMinutes), 'to' => $bound + $minutes]
+                : ['from' => $bound, 'to' => $bound + self::MorningWindowMinutes];
         } else {
             $window = self::SituationWindows[$this->trigger_situation] ?? null;
         }
@@ -886,6 +939,49 @@ class Habit extends Model
         $window['to'] = max($window['to'], $window['from'] + $minutes);
 
         return $window;
+    }
+
+    /**
+     * „Nach der Vorlesung" hängt an der Vorlesung, nicht an einer Uhrzeit.
+     *
+     * Wer seinen Stundenplan gepflegt hat, meint damit den Moment, an dem der
+     * Uni-Tag vorbei ist — nach dem **letzten** Kurs. Zwischen zwei Kursen ist
+     * man unterwegs oder in der nächsten Reihe, nicht bei einer Gewohnheit.
+     *
+     * Ohne Kurse an diesem Tag gibt es die Situation nicht: „Ohne Trigger
+     * keine Gewohnheit" (time-blocking.md). Das beantwortet
+     * {@see isDueOn()} — hier wird daraus `null`, also keine Spanne.
+     *
+     * Ohne Semester bleibt es beim festen Fenster: Wer keinen Stundenplan
+     * pflegt, soll die Situation trotzdem nutzen können.
+     *
+     * @return array{from: int, to: int}|null
+     */
+    private function afterLectureWindow(?Carbon $on): ?array
+    {
+        if (! $this->relationLoaded('user')) {
+            return self::SituationWindows[self::AfterLecture];
+        }
+
+        $timetable = $this->timetable ??= Timetable::for($this->user);
+
+        if ($timetable->semester() === null) {
+            return self::SituationWindows[self::AfterLecture];
+        }
+
+        $lectures = $timetable->blocksOn($on ?? Carbon::today());
+
+        if ($lectures === []) {
+            return null;
+        }
+
+        $end = max(array_column($lectures, 'to'));
+
+        // Die Viertelstunde Luft gilt auch hier: Wer aus dem Hörsaal kommt,
+        // fängt nicht in derselben Minute an.
+        $from = $end + DayPlan::BreatherMinutes;
+
+        return ['from' => $from, 'to' => $from + self::AfterLectureWindowMinutes];
     }
 
     /**

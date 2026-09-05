@@ -257,12 +257,14 @@ test('a situation slides past a fixed habit in the same hour', function () {
 });
 
 test('a situation is refused when its whole window is full', function () {
-    // Der Vormittag zwischen 11:00 und 15:00 ist zu, also gibt es keine Stelle
-    // mehr, an die „nach der Vorlesung" ausweichen könnte.
+    // „Nach dem Mittagessen" liegt zwischen 13:00 und 16:00. Ist das zu, gibt
+    // es keine Stelle mehr, an die die Gewohnheit ausweichen könnte.
+    // (Für „nach der Vorlesung" ginge dieser Test nicht: Die Situation hängt
+    // an den Kursen und rutscht mit ihnen hinter den letzten.)
     $user = User::factory()->create();
     $semester = Semester::factory()->for($user)->create();
 
-    foreach ([['11:00', '13:00'], ['13:00', '15:00']] as [$from, $to]) {
+    foreach ([['12:45', '14:30'], ['14:30', '16:15']] as [$from, $to]) {
         Course::factory()->for($semester)->onWeekday(1)->at($from, $to)->create(['title' => 'Blockseminar']);
     }
 
@@ -270,7 +272,7 @@ test('a situation is refused when its whole window is full', function () {
         ->post(route('habits.store'), [
             'template_key' => HabitTemplate::Lesen->value,
             'target_amount' => 30,
-            'trigger_situation' => 'nach der Vorlesung',
+            'trigger_situation' => 'nach dem Mittagessen',
         ])
         ->assertSessionHasErrors('trigger_situation');
 

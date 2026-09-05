@@ -2,8 +2,13 @@
 
 use App\Enums\HabitTemplate;
 use App\Enums\ScheduleType;
+use App\Models\Course;
 use App\Models\Habit;
+use App\Models\Semester;
 use App\Models\User;
+use App\Support\DayPlan;
+use App\Support\Timetable;
+use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia;
 
 /**
@@ -191,4 +196,102 @@ test('a chained habit blocks no moment', function () {
             'trigger_situation' => 'nach dem Aufstehen',
         ])
         ->assertSessionHasNoErrors();
+});
+
+/**
+ * „Nach der Vorlesung" hängt an der Vorlesung, nicht an einer Uhrzeit.
+ *
+ * Wer seinen Stundenplan gepflegt hat, meint den Moment, an dem der Uni-Tag
+ * vorbei ist. Ohne Vorlesung an dem Tag gibt es den Auslöser nicht — und ohne
+ * Auslöser keine Gewohnheit (time-blocking.md).
+ */
+function studentWithLectures(): array
+{
+    $user = User::factory()->create();
+    $semester = Semester::factory()->for($user)->create();
+
+    // Montags zwei Kurse, der letzte endet um 15:30. Dienstags keiner.
+    Course::factory()->for($semester)->onWeekday(1)->at('08:00', '09:30')->create(['title' => 'Mathe 1']);
+    Course::factory()->for($semester)->onWeekday(1)->at('14:00', '15:30')->create(['title' => 'Statistik']);
+
+    $habit = Habit::factory()->for($user)->withMeasure(30)->create([
+        'title' => 'Vorlesung nachbereiten',
+        'template_key' => HabitTemplate::VorlesungNachbereiten->value,
+        'schedule_type' => ScheduleType::Dynamic,
+        'trigger_situation' => Habit::AfterLecture,
+        'scheduled_time' => null,
+        'scheduled_days' => null,
+    ]);
+
+    $habit->setRelation('user', $user);
+
+    return [$user, $habit];
+}
+
+test('after the lecture means after the last one of that day', function () {
+    [$user, $habit] = studentWithLectures();
+
+    $monday = Carbon::today()->next(Carbon::MONDAY);
+    $plan = DayPlan::forDate(
+        collect([$habit]),
+        $monday,
+        $user->sleepWindows(),
+        Timetable::for($user)->blocksOn($monday),
+    );
+
+    // Statistik endet 15:30, plus die Viertelstunde Luft.
+    expect($plan->startOf($habit))->toBe(15 * 60 + 45)
+        ->and($habit->hasTriggerOn($monday))->toBeTrue();
+});
+
+test('without a lecture that day the habit does not stand at all', function () {
+    [$user, $habit] = studentWithLectures();
+
+    $tuesday = Carbon::today()->next(Carbon::TUESDAY);
+
+    expect($habit->hasTriggerOn($tuesday))->toBeFalse()
+        ->and($habit->isDueOn($tuesday))->toBeFalse();
+
+    // Und der Tag zeigt sie nicht — auch nicht als Zeile ohne Platz.
+    $this->actingAs($user)
+        ->get(route('calendar.day', ['date' => $tuesday->toDateString()]))
+        ->assertInertia(fn (AssertableInertia $page) => $page->where('blocks', [])->etc());
+});
+
+test('without a semester the situation keeps its plain window', function () {
+    // Wer keinen Stundenplan pflegt, soll die Situation trotzdem nutzen können
+    // — die App weiß dann nichts über Vorlesungen, und Schweigen ist kein Nein.
+    $user = User::factory()->create();
+    $habit = Habit::factory()->for($user)->withMeasure(30)->create([
+        'template_key' => HabitTemplate::VorlesungNachbereiten->value,
+        'schedule_type' => ScheduleType::Dynamic,
+        'trigger_situation' => Habit::AfterLecture,
+        'scheduled_time' => null,
+        'scheduled_days' => null,
+    ]);
+    $habit->setRelation('user', $user);
+
+    $monday = Carbon::today()->next(Carbon::MONDAY);
+    $plan = DayPlan::forDate(collect([$habit]), $monday, $user->sleepWindows());
+
+    expect($habit->hasTriggerOn($monday))->toBeTrue()
+        ->and($plan->startOf($habit))->toBe(11 * 60);
+});
+
+test('before sleeping stays within the hour before bedtime', function () {
+    $user = User::factory()->create();
+    $habit = Habit::factory()->for($user)->withMeasure(30)->create([
+        'schedule_type' => ScheduleType::Dynamic,
+        'trigger_situation' => 'vor dem Schlafengehen',
+        'scheduled_time' => null,
+        'scheduled_days' => null,
+    ]);
+    $habit->setRelation('user', $user);
+
+    // Schlafenszeit 23:00 in der Vorgabe: Der Block endet dort, und eine
+    // Stunde davor ist die Grenze — nicht drei.
+    $window = $habit->situationWindow();
+
+    expect($window['from'])->toBe(21 * 60 + 30)
+        ->and($window['to'])->toBe(23 * 60);
 });

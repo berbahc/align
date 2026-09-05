@@ -329,6 +329,15 @@ class DayPlan
                 : null;
 
             if ($window === null) {
+                // „Nach der Vorlesung" ohne Vorlesung: kein Auslöser, keine
+                // Stelle. Sie fällt an diesem Tag aus, statt an einer
+                // erfundenen Uhrzeit zu liegen.
+                if ($this->date !== null
+                    && $habit->shiftedTimeOn($this->date) === null
+                    && ! $habit->hasTriggerOn($this->date)) {
+                    continue;
+                }
+
                 $fixed[$habit->id] = $start;
 
                 continue;
