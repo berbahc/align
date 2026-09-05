@@ -38,11 +38,14 @@ function rememberedHabit(User $user, array $attributes = []): Habit
  */
 function threeAnchors(int $times = 1): array
 {
+    // Ein Moment und zwei Fenster: Situationen gibt es nur noch drei, und
+    // ohne Stundenplan zwei — die Antwort mischt deshalb beide Formen, so wie
+    // der Agent es ohnehin tun soll.
     $response = [
         'alternatives' => [
-            ['situation' => 'nach dem Aufstehen', 'reason' => 'Morgens ist der Tag noch ruhig.'],
-            ['situation' => 'nach dem Mittagessen', 'reason' => 'Danach ist ohnehin eine Pause.'],
-            ['situation' => 'vor dem Schlafengehen', 'reason' => 'Der Abend ist verlässlich.'],
+            ['situation' => 'nach dem Aufstehen', 'time' => '', 'days' => [], 'reason' => 'Morgens ist der Tag noch ruhig.'],
+            ['situation' => '', 'time' => '14:00', 'days' => [1, 2, 3, 4, 5], 'reason' => 'Nachmittags ist Platz.'],
+            ['situation' => '', 'time' => '19:00', 'days' => [1, 2, 3, 4, 5], 'reason' => 'Der Abend ist verlässlich.'],
         ],
     ];
 
@@ -53,7 +56,7 @@ test('every offered anchor is remembered, none of them as taken', function () {
     SuggestBetterAnchor::fake(threeAnchors());
 
     $user = User::factory()->create();
-    $habit = rememberedHabit($user, ['trigger_situation' => 'wenn ich nach Hause komme']);
+    $habit = rememberedHabit($user, ['trigger_situation' => 'vor dem Schlafengehen']);
 
     $this->actingAs($user)
         ->postJson(route('habits.adjustment.suggestions', $habit))
@@ -64,8 +67,8 @@ test('every offered anchor is remembered, none of them as taken', function () {
     expect($remembered)->toHaveCount(3)
         ->and($remembered->pluck('label')->all())->toBe([
             'nach dem Aufstehen',
-            'nach dem Mittagessen',
-            'vor dem Schlafengehen',
+            '14:00 · Mo–Fr',
+            '19:00 · Mo–Fr',
         ])
         ->and($remembered->whereNotNull('accepted_at'))->toBeEmpty()
         ->and($remembered->every(fn (AiSuggestion $s): bool => $s->habit_id === $habit->id))->toBeTrue();
@@ -93,7 +96,7 @@ test('taking one anchor marks exactly that one and leaves the others open', func
     SuggestBetterAnchor::fake(threeAnchors());
 
     $user = User::factory()->create();
-    $habit = rememberedHabit($user, ['trigger_situation' => 'wenn ich nach Hause komme']);
+    $habit = rememberedHabit($user, ['trigger_situation' => 'vor dem Schlafengehen']);
 
     $chosen = $this->actingAs($user)
         ->postJson(route('habits.adjustment.suggestions', $habit))
@@ -101,7 +104,8 @@ test('taking one anchor marks exactly that one and leaves the others open', func
         ->json('alternatives.1');
 
     $this->actingAs($user)->post(route('habits.adjustment.store', $habit), [
-        'trigger_situation' => $chosen['situation'],
+        'scheduled_time' => $chosen['time'],
+        'scheduled_days' => $chosen['days'],
         'suggestion_id' => $chosen['id'],
     ]);
 
@@ -113,7 +117,7 @@ test('the anchor an adjustment offered before travels into the next prompt', fun
     SuggestBetterAnchor::fake(threeAnchors(times: 2));
 
     $user = User::factory()->create();
-    $habit = rememberedHabit($user, ['trigger_situation' => 'wenn ich nach Hause komme']);
+    $habit = rememberedHabit($user, ['trigger_situation' => 'vor dem Schlafengehen']);
 
     $this->actingAs($user)->postJson(route('habits.adjustment.suggestions', $habit))->assertOk();
     $this->actingAs($user)->postJson(route('habits.adjustment.suggestions', $habit))->assertOk();
@@ -130,7 +134,7 @@ test('an anchor taken on advice is named as taken, not as refused', function () 
     SuggestBetterAnchor::fake(threeAnchors(times: 2));
 
     $user = User::factory()->create();
-    $habit = rememberedHabit($user, ['trigger_situation' => 'wenn ich nach Hause komme']);
+    $habit = rememberedHabit($user, ['trigger_situation' => 'vor dem Schlafengehen']);
 
     $chosen = $this->actingAs($user)
         ->postJson(route('habits.adjustment.suggestions', $habit))
@@ -155,27 +159,27 @@ test('an anchor taken on advice is named as taken, not as refused', function () 
  */
 test('an unknown suggestion id does not block the adjustment', function () {
     $user = User::factory()->create();
-    $habit = rememberedHabit($user, ['trigger_situation' => 'wenn ich nach Hause komme']);
+    $habit = rememberedHabit($user, ['trigger_situation' => 'vor dem Schlafengehen']);
 
     $this->actingAs($user)
         ->post(route('habits.adjustment.store', $habit), [
-            'trigger_situation' => 'nach dem Frühstück',
+            'trigger_situation' => 'nach dem Aufstehen',
             'suggestion_id' => 99999,
         ])
         ->assertSessionHasNoErrors();
 
-    expect($habit->fresh()->trigger_situation)->toBe('nach dem Frühstück');
+    expect($habit->fresh()->trigger_situation)->toBe('nach dem Aufstehen');
 });
 
 test('a suggestion belonging to another habit is not marked as taken', function () {
     $user = User::factory()->create();
-    $habit = rememberedHabit($user, ['trigger_situation' => 'wenn ich nach Hause komme']);
+    $habit = rememberedHabit($user, ['trigger_situation' => 'vor dem Schlafengehen']);
     $foreign = AiSuggestion::factory()->for($user)->anchor()->create([
         'habit_id' => rememberedHabit($user)->id,
     ]);
 
     $this->actingAs($user)->post(route('habits.adjustment.store', $habit), [
-        'trigger_situation' => 'nach dem Frühstück',
+        'trigger_situation' => 'nach dem Aufstehen',
         'suggestion_id' => $foreign->id,
     ]);
 
@@ -248,7 +252,7 @@ test('a step adopted word for word counts as taken', function () {
     $this->actingAs($user)->post(route('habits.store'), [
         'template_key' => HabitTemplate::Joggen->value,
         'target_amount' => 30,
-        'trigger_situation' => 'wenn ich nach Hause komme',
+        'trigger_situation' => 'vor dem Schlafengehen',
         'smallest_step' => 'Zieh die Laufschuhe an.',
     ])->assertRedirect();
 
@@ -274,7 +278,7 @@ test('a step the user rewrote does not count as taken', function () {
     $this->actingAs($user)->post(route('habits.store'), [
         'template_key' => HabitTemplate::Joggen->value,
         'target_amount' => 30,
-        'trigger_situation' => 'wenn ich nach Hause komme',
+        'trigger_situation' => 'vor dem Schlafengehen',
         'smallest_step' => 'Laufschuhe raussuchen und anziehen.',
     ])->assertRedirect();
 
@@ -336,15 +340,15 @@ test('backdated completions do not turn everyone into an evening person', functi
 
 test('the memory of one person stays out of another persons prompt', function () {
     $user = User::factory()->create();
-    $habit = rememberedHabit($user, ['trigger_situation' => 'wenn ich nach Hause komme']);
+    $habit = rememberedHabit($user, ['trigger_situation' => 'vor dem Schlafengehen']);
 
     $stranger = User::factory()->create();
-    AiSuggestion::factory()->for($stranger)->anchor('nach dem Frühstück')->create([
+    AiSuggestion::factory()->for($stranger)->anchor('nach dem Aufstehen')->create([
         'habit_id' => rememberedHabit($stranger)->id,
     ]);
 
     expect(UserContext::for($user, SuggestionKind::Anchor, $habit)->lines())
-        ->not->toContain('Diese Zeitpunkte wurden schon vorgeschlagen und nicht übernommen: „nach dem Frühstück".');
+        ->not->toContain('Diese Zeitpunkte wurden schon vorgeschlagen und nicht übernommen: „nach dem Aufstehen".');
 });
 
 test('deleting the account takes the memory with it', function () {

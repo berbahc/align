@@ -53,7 +53,7 @@ test('the daily list runs from morning to evening, not by creation order', funct
     ]);
     Habit::factory()->for($user)->create([
         'title' => 'Mittagspause',
-        'trigger_situation' => 'nach dem Mittagessen',
+        'trigger_situation' => 'nach der Vorlesung',
         'position' => 2,
     ]);
 

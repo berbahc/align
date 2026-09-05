@@ -19,7 +19,7 @@ function habitFormData(array $overrides = []): array
 {
     return [
         'schedule_type' => ScheduleType::Dynamic->value,
-        'trigger_situation' => 'nach dem Mittagessen',
+        'trigger_situation' => 'nach der Vorlesung',
         'target_amount' => 20,
         ...$overrides,
     ];
@@ -28,7 +28,7 @@ function habitFormData(array $overrides = []): array
 test('the edit form opens prefilled with what the habit already is', function () {
     $user = User::factory()->create();
     $habit = Habit::factory()->for($user)->fromTemplate(HabitTemplate::Spazieren)->create([
-        'trigger_situation' => 'nach dem Mittagessen',
+        'trigger_situation' => 'nach der Vorlesung',
         'motivation' => 'damit ich rauskomme',
     ]);
 
@@ -42,7 +42,7 @@ test('the edit form opens prefilled with what the habit already is', function ()
             // Über JSON wird aus 20.0 wieder eine 20 — der Stepper rechnet in
             // beiden Fällen dasselbe.
             ->where('habit.durationMinutes', 20)
-            ->where('habit.triggerSituation', 'nach dem Mittagessen')
+            ->where('habit.triggerSituation', 'nach der Vorlesung')
             ->where('habit.motivation', 'damit ich rauskomme')
             // Ohne die Auswahllisten stünde das Formular ohne seine Kacheln da.
             ->has('triggerSuggestions')
@@ -70,7 +70,7 @@ test('a habit of another user cannot be opened or changed', function () {
 test('the planning of a habit can be changed', function () {
     $user = User::factory()->create();
     $habit = Habit::factory()->for($user)->fromTemplate(HabitTemplate::Spazieren)->create([
-        'trigger_situation' => 'nach dem Mittagessen',
+        'trigger_situation' => 'nach der Vorlesung',
         'smallest_step' => 'Schuhe an die Tür',
         'motivation' => 'damit ich rauskomme',
     ]);
@@ -171,7 +171,7 @@ test('switching to a situation clears the time and switches the reminder off', f
 test('switching to a fixed time clears the situation', function () {
     $user = User::factory()->create();
     $habit = Habit::factory()->for($user)->create([
-        'trigger_situation' => 'nach dem Mittagessen',
+        'trigger_situation' => 'nach der Vorlesung',
     ]);
 
     $this->actingAs($user)

@@ -45,10 +45,10 @@ class DatabaseSeeder extends Seeder
         ],
         [
             'template' => HabitTemplate::EssenVorkochen,
-            'schedule' => ScheduleType::Dynamic,
-            'trigger' => 'wenn ich nach Hause komme',
-            'time' => null,
-            'days' => null,
+            'schedule' => ScheduleType::Fixed,
+            'trigger' => null,
+            'time' => '17:00',
+            'days' => [1, 2, 3, 4, 5],
             'consistency' => 0.4,
         ],
         [

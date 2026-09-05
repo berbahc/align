@@ -242,7 +242,7 @@ function attemptOverlap(object $test, User $user, string $way): void
 
             $anchor = Habit::factory()->for($user)->withMeasure(20)->create([
                 'schedule_type' => ScheduleType::Dynamic,
-                'trigger_situation' => 'nach dem Frühstück',
+                'trigger_situation' => 'nach dem Aufstehen',
                 'scheduled_time' => null,
                 'scheduled_days' => null,
             ]);

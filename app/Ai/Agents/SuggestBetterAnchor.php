@@ -60,6 +60,7 @@ class SuggestBetterAnchor implements Agent, HasStructuredOutput
      * @param  array<int, array{weekday: int, wakeTime: string, bedtime: string, alarmEnabled: bool}>  $sleepWindows  Der Rahmen je Wochentag
      * @param  list<string>  $availableSituations  Die Momente, die noch frei sind — mehr gibt es nicht
      * @param  list<string>  $freeWindows  Die Zeitfenster, in die die Dauer wirklich passt
+     * @param  list<array{id: int, title: string, endsAt: string, anchor: string}>  $chainAnchors  Woran sich anknüpfen ließe
      */
     public function __construct(
         private readonly Habit $habit,
@@ -67,6 +68,7 @@ class SuggestBetterAnchor implements Agent, HasStructuredOutput
         private readonly array $sleepWindows = [],
         private readonly array $availableSituations = [],
         private readonly array $freeWindows = [],
+        private readonly array $chainAnchors = [],
         private readonly ?UserContext $context = null,
     ) {}
 
@@ -86,8 +88,22 @@ class SuggestBetterAnchor implements Agent, HasStructuredOutput
         - Schlage keinen Zeitpunkt vor, der schon einmal vorgeschlagen und nicht
           übernommen wurde, und keinen, der dem aktuellen entspricht.
 
-        Ein Zeitpunkt hat zwei mögliche Formen, und du darfst beide anbieten —
+        Ein Zeitpunkt hat drei mögliche Formen, und du darfst sie mischen —
         auch nebeneinander in derselben Antwort:
+
+        **Nach einer bestehenden Gewohnheit.** Trage ihren Titel in
+        `afterHabit` ein, lass `situation`, `time` und `days` leer. **Prüfe
+        diese Form zuerst und bei jeder Antwort.** Eine Gewohnheit, die schon
+        läuft, ist der zuverlässigste Auslöser, den es gibt: Sie hat eine feste
+        Stelle im Tag, sie ist bereits Gewohnheit, und wer sie tut, hat den
+        Anlass für die nächste unmittelbar vor sich. **Wähle ausschließlich aus
+        den unten aufgezählten Gewohnheiten** und gib den Titel wortgleich
+        zurück.
+
+        Aber nicht um jeden Preis: Schlage eine Kette nur vor, wo sie inhaltlich
+        trägt. Lesen nach dem Abendessen ergibt einen Sinn, Joggen danach nicht.
+        Passt keine, lass diese Form weg — eine erzwungene Kette ist schlechter
+        als ein gutes Zeitfenster.
 
         **Ein Moment im Tagesablauf.** Trage ihn in `situation` ein, lass `time`
         leer und `days` leer. **Wähle ausschließlich aus den unten aufgezählten
@@ -146,6 +162,9 @@ class SuggestBetterAnchor implements Agent, HasStructuredOutput
                 ->items($schema->integer())
                 ->description('ISO-Wochentage zur Uhrzeit, 1 = Montag bis 7 = Sonntag. Leer bei einem Moment.')
                 ->required(),
+            'afterHabit' => $schema->string()
+                ->description('Der Titel einer bestehenden Gewohnheit, an die angeknüpft wird — leer bei Moment oder Uhrzeit.')
+                ->required(),
             'reason' => $schema->string()->description('Ein kurzer Satz, warum das tragen könnte.')->required(),
         ]);
 
@@ -166,7 +185,7 @@ class SuggestBetterAnchor implements Agent, HasStructuredOutput
      * muss die Validierung beim Übernehmen auch akzeptieren — sonst führt ein
      * Vorschlag in eine Fehlermeldung.
      *
-     * @return list<array{situation?: string, time?: string, days?: list<int>, reason: string}>
+     * @return list<array{situation?: string, time?: string, days?: list<int>, chainToId?: int, chainToTitle?: string, reason: string}>
      *
      * @throws RuntimeException wenn die Antwort keine brauchbare Alternative enthält
      */
@@ -193,9 +212,11 @@ class SuggestBetterAnchor implements Agent, HasStructuredOutput
 
             // Was der Vorschlag trägt, sagt, welche Form er meint — nicht die
             // Planungsart, in der die Gewohnheit gerade steht.
-            $alternative = $this->text($candidate, 'time') !== ''
-                ? $this->fixedAlternative($candidate)
-                : $this->dynamicAlternative($candidate);
+            $alternative = match (true) {
+                $this->text($candidate, 'afterHabit') !== '' => $this->chainAlternative($candidate),
+                $this->text($candidate, 'time') !== '' => $this->fixedAlternative($candidate),
+                default => $this->dynamicAlternative($candidate),
+            };
 
             if ($alternative === null) {
                 continue;
@@ -213,6 +234,35 @@ class SuggestBetterAnchor implements Agent, HasStructuredOutput
         }
 
         return $alternatives;
+    }
+
+    /**
+     * Eine Kette an eine bestehende Gewohnheit.
+     *
+     * Nur an eine, die wirklich angeboten wurde: Der Agent bekommt die Titel
+     * mitgeteilt, und was er darüber hinaus nennt, gibt es entweder nicht oder
+     * es ergäbe einen Kreis. Verglichen wird wortgleich und ohne Rücksicht auf
+     * Schreibweise — zurückgegeben wird die Kennung, denn Titel sind nicht
+     * eindeutig.
+     *
+     * @param  array<mixed>  $candidate
+     * @return array{chainToId: int, chainToTitle: string, reason: string}|null
+     */
+    private function chainAlternative(array $candidate): ?array
+    {
+        $title = $this->text($candidate, 'afterHabit');
+
+        foreach ($this->chainAnchors as $anchor) {
+            if (mb_strtolower($anchor['title']) === mb_strtolower($title)) {
+                return [
+                    'chainToId' => $anchor['id'],
+                    'chainToTitle' => $anchor['title'],
+                    'reason' => $this->reason($candidate),
+                ];
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -403,6 +453,20 @@ class SuggestBetterAnchor implements Agent, HasStructuredOutput
         if ($this->availableSituations !== []) {
             $lines[] = 'Freie Momente, aus denen du wählen musst: '
                 .implode(', ', $this->availableSituations).'.';
+        }
+
+        // Zuerst die Ketten: Sie stehen auch in der Aufgabe an erster Stelle.
+        if ($this->chainAnchors !== []) {
+            $lines[] = 'Bestehende Gewohnheiten, an die du anknüpfen kannst (Titel wortgleich zurückgeben): '
+                .implode('; ', array_map(
+                    fn (array $anchor): string => sprintf(
+                        '%s (%s, endet %s)',
+                        $anchor['title'],
+                        $anchor['anchor'],
+                        $anchor['endsAt'],
+                    ),
+                    $this->chainAnchors,
+                )).'.';
         }
 
         if ($this->freeWindows !== []) {

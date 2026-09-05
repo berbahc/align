@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\HabitTemplate;
-use App\Enums\MeasureUnit;
 use App\Enums\ScheduleType;
 use App\Models\Course;
 use App\Models\Habit;
@@ -146,7 +145,9 @@ test('the picker marks which moments are taken and by whom', function () {
     $this->actingAs($user)
         ->get(route('habits.create'))
         ->assertInertia(fn (AssertableInertia $page) => $page
-            ->has('triggerSuggestions', count(Habit::TriggerSuggestions))
+            // Ohne Stundenplan sind es zwei: Was die App nicht ausrechnen
+            // kann, bietet sie nicht an ({@see Habit::offeredSituations()}).
+            ->has('triggerSuggestions', 2)
             ->where('triggerSuggestions.0.situation', 'nach dem Aufstehen')
             ->where('triggerSuggestions.0.takenBy', 'Joggen gehen')
             // Der zweite Moment ist frei und trägt niemanden.
@@ -297,65 +298,6 @@ test('before sleeping stays within the hour before bedtime', function () {
         ->and($window['to'])->toBe(23 * 60);
 });
 
-/**
- * Jede der sechs Situationen hängt an ihrem Anlass, nicht an einer Uhr.
- *
- * Das zahlt sich bei Spätaufstehern aus: Wer um zehn aufsteht, frühstückt
- * nicht um acht. Vorher lag „nach dem Frühstück" fest auf 08:00 — also vor
- * dem Aufstehen.
- */
-test('the situations follow the sleep plan instead of a fixed clock', function () {
-    $user = User::factory()->create();
-    $user->sleepSchedules()->create([
-        'weekday' => Carbon::today()->next(Carbon::MONDAY)->dayOfWeekIso,
-        'wake_time' => '10:00',
-        'bedtime' => '01:00',
-        'alarm_enabled' => false,
-    ]);
-
-    $monday = Carbon::today()->next(Carbon::MONDAY);
-
-    $windows = collect(['nach dem Aufstehen', 'nach dem Frühstück', 'vor dem Schlafengehen'])
-        ->mapWithKeys(function (string $situation) use ($user, $monday): array {
-            $habit = new Habit([
-                'schedule_type' => ScheduleType::Dynamic,
-                'trigger_situation' => $situation,
-                'target_amount' => 30,
-                'target_unit' => MeasureUnit::Minutes->value,
-            ]);
-            $habit->setRelation('user', $user->fresh());
-
-            return [$situation => $habit->situationWindow($monday)];
-        });
-
-    expect($windows['nach dem Aufstehen']['from'])->toBe(10 * 60)
-        // Dreiviertelstunde fürs Frühstück, dann geht es los — und nicht um 08:00.
-        ->and($windows['nach dem Frühstück']['from'])->toBe(10 * 60 + 45)
-        // Eine Stunde vor der Schlafenszeit um 01:00, also ab 23:30.
-        ->and($windows['vor dem Schlafengehen']['from'])->toBe(23 * 60 + 30);
-});
-
-test('coming home follows the last lecture, not a fixed five', function () {
-    [$user, $habit] = studentWithLectures();
-
-    $home = Habit::factory()->for($user)->withMeasure(30)->create([
-        'schedule_type' => ScheduleType::Dynamic,
-        'trigger_situation' => 'wenn ich nach Hause komme',
-        'scheduled_time' => null,
-        'scheduled_days' => null,
-    ]);
-    $home->setRelation('user', $user);
-
-    $monday = Carbon::today()->next(Carbon::MONDAY);
-    $tuesday = $monday->copy()->addDay();
-
-    // Montags endet der letzte Kurs 15:30 — plus Heimweg.
-    expect($home->situationWindow($monday)['from'])->toBe(16 * 60)
-        // Dienstags ohne Kurs bleibt es beim späten Nachmittag.
-        ->and($home->situationWindow($tuesday)['from'])->toBe(17 * 60)
-        ->and($habit->title)->toBe('Vorlesung nachbereiten');
-});
-
 test('a chain follows the situation it hangs on', function () {
     // Der Anker weicht aus — die Nachfolgerin blieb früher an der alten Stelle
     // liegen und landete mitten in dem, was den Anker verdrängt hatte.
@@ -366,7 +308,7 @@ test('a chain follows the situation it hangs on', function () {
     $anchor = Habit::factory()->for($user)->withMeasure(20)->create([
         'title' => 'Spazieren',
         'schedule_type' => ScheduleType::Dynamic,
-        'trigger_situation' => 'nach dem Frühstück',
+        'trigger_situation' => 'nach dem Aufstehen',
         'scheduled_time' => null,
         'scheduled_days' => null,
     ]);
@@ -396,4 +338,72 @@ test('a chain follows the situation it hangs on', function () {
             expect($block['from'] < $other['to'] && $block['to'] > $other['from'])->toBeFalse();
         }
     }
+});
+
+/**
+ * Die Regel, auf die sich die ganze Liste stützt: Angeboten wird nur, was die
+ * App ausrechnen kann.
+ *
+ * Der Schlafplan sagt, wann jemand aufsteht und ins Bett geht — daraus folgen
+ * zwei Situationen. Der Stundenplan sagt, wann die Vorlesungen enden — daraus
+ * folgt die dritte, und deshalb steht sie nur da, wenn es ihn gibt.
+ */
+test('a situation is offered only when the app can work out when it happens', function () {
+    $user = User::factory()->create();
+
+    expect(Habit::offeredSituations($user))->toBe([
+        'nach dem Aufstehen',
+        'vor dem Schlafengehen',
+    ]);
+
+    $semester = Semester::factory()->for($user)->create();
+    Course::factory()->for($semester)->onWeekday(1)->at('08:00', '10:00')->create();
+
+    expect(Habit::offeredSituations($user->fresh()))->toBe([
+        'nach dem Aufstehen',
+        'nach der Vorlesung',
+        'vor dem Schlafengehen',
+    ]);
+});
+
+/**
+ * Das Freitextfeld ist weg, und der Server hält die Grenze: Ein selbst
+ * getippter Moment ließe sich nirgends hinlegen und landete mittags — bei
+ * jedem, egal wann er wirklich stattfindet.
+ */
+test('a situation nobody can place is refused', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('habits.store'), [
+            'template_key' => HabitTemplate::Meditieren->value,
+            'target_amount' => 10,
+            'trigger_situation' => 'wenn ich aus der Bib komme',
+        ])
+        ->assertSessionHasErrors('trigger_situation');
+
+    expect($user->habits()->count())->toBe(0);
+});
+
+/**
+ * Wer sein Semester löscht, muss seine Gewohnheiten weiter bearbeiten können —
+ * geprüft wird gegen das Vokabular, nicht gegen das aktuelle Angebot.
+ */
+test('a lecture anchor survives a deleted timetable', function () {
+    $user = User::factory()->create();
+    $habit = Habit::factory()->for($user)->withMeasure(30)->create([
+        'trigger_situation' => 'nach der Vorlesung',
+    ]);
+
+    $this->actingAs($user)
+        ->put(route('habits.update', $habit), [
+            'template_key' => $habit->template_key,
+            'target_amount' => 30,
+            'schedule_type' => ScheduleType::Dynamic->value,
+            'trigger_situation' => 'nach der Vorlesung',
+            'motivation' => 'Bleibt so',
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect($habit->fresh()->trigger_situation)->toBe('nach der Vorlesung');
 });

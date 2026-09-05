@@ -345,14 +345,14 @@ test('a situation lands at its anchor hour and says it is no clock time', functi
 
     Habit::factory()->for($user)->create([
         'title' => 'Lesen',
-        'trigger_situation' => 'nach dem Mittagessen',
+        'trigger_situation' => 'nach der Vorlesung',
     ]);
 
     $this->actingAs($user)
         ->get(route('calendar.day', Carbon::today()->toDateString()))
         ->assertInertia(fn (AssertableInertia $page) => $page
             // 13 Uhr laut Vorschlagsliste — eine Näherung, keine Zusage.
-            ->where('blocks.0.startMinute', 13 * 60)
+            ->where('blocks.0.startMinute', 11 * 60)
             ->where('blocks.0.exact', false)
         );
 });

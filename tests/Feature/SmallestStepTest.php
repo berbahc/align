@@ -17,7 +17,7 @@ test('the wizard receives the steps Claude proposed', function () {
     $this->actingAs($user)
         ->postJson(route('habits.smallest-step.suggestions'), [
             'template_key' => HabitTemplate::Joggen->value,
-            'trigger_situation' => 'wenn ich nach Hause komme',
+            'trigger_situation' => 'vor dem Schlafengehen',
         ])
         ->assertOk()
         ->assertExactJson([
@@ -176,7 +176,7 @@ test('the step is stored with the habit', function () {
     $this->actingAs($user)->post(route('habits.store'), [
         'template_key' => HabitTemplate::Joggen->value,
         'target_amount' => 30,
-        'trigger_situation' => 'wenn ich nach Hause komme',
+        'trigger_situation' => 'vor dem Schlafengehen',
         'smallest_step' => 'Zieh die Laufschuhe an.',
     ])->assertRedirect(route('dashboard'));
 
@@ -189,7 +189,7 @@ test('the step stays optional', function () {
     $this->actingAs($user)->post(route('habits.store'), [
         'template_key' => HabitTemplate::Joggen->value,
         'target_amount' => 30,
-        'trigger_situation' => 'wenn ich nach Hause komme',
+        'trigger_situation' => 'vor dem Schlafengehen',
     ])->assertRedirect(route('dashboard'));
 
     expect($user->habits()->sole()->smallest_step)->toBeNull();
@@ -202,7 +202,7 @@ test('an overlong step is rejected on creation', function () {
         ->post(route('habits.store'), [
             'template_key' => HabitTemplate::Joggen->value,
             'target_amount' => 30,
-            'trigger_situation' => 'wenn ich nach Hause komme',
+            'trigger_situation' => 'vor dem Schlafengehen',
             'smallest_step' => str_repeat('a', 161),
         ])
         ->assertSessionHasErrors('smallest_step');

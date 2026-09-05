@@ -22,6 +22,10 @@ const ACTION_BUTTON =
 
 /** Wie eine Alternative auf der Achse heißt — dasselbe Format wie `scheduleLabel()`. */
 export function alternativeLabel(alternative: AnchorAlternative): string {
+    if (alternative.chainToTitle) {
+        return `nach „${alternative.chainToTitle}"`;
+    }
+
     if (alternative.situation) {
         return alternative.situation;
     }
@@ -117,12 +121,14 @@ export function AdjustmentSheet({
                 // geworden ist — und die übrigen nicht ein zweites Mal
                 // anbietet.
                 suggestion_id: alternative.id,
-                ...(alternative.situation
-                    ? { trigger_situation: alternative.situation }
-                    : {
-                          scheduled_time: alternative.time,
-                          scheduled_days: alternative.days,
-                      }),
+                ...(alternative.chainToId
+                    ? { chained_to_habit_id: alternative.chainToId }
+                    : alternative.situation
+                      ? { trigger_situation: alternative.situation }
+                      : {
+                            scheduled_time: alternative.time,
+                            scheduled_days: alternative.days,
+                        }),
             },
             {
                 preserveScroll: true,

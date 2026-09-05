@@ -19,7 +19,7 @@ test('a habit is created with a duration in minutes', function () {
 
     $this->actingAs($user)->post(route('habits.store'), [
         'template_key' => HabitTemplate::Spazieren->value,
-        'trigger_situation' => 'nach dem Mittagessen',
+        'trigger_situation' => 'nach der Vorlesung',
         'target_amount' => 20,
     ])->assertSessionHasNoErrors();
 
@@ -36,7 +36,7 @@ test('a habit without a duration is refused', function () {
 
     $this->actingAs($user)->post(route('habits.store'), [
         'template_key' => HabitTemplate::Spazieren->value,
-        'trigger_situation' => 'nach dem Mittagessen',
+        'trigger_situation' => 'nach der Vorlesung',
     ])->assertSessionHasErrors('target_amount');
 
     expect($user->habits()->count())->toBe(0);
@@ -51,7 +51,7 @@ test('the duration has bounds', function (float $amount, bool $valid) {
 
     $response = $this->actingAs($user)->post(route('habits.store'), [
         'template_key' => HabitTemplate::Spazieren->value,
-        'trigger_situation' => 'nach dem Mittagessen',
+        'trigger_situation' => 'nach der Vorlesung',
         'target_amount' => $amount,
     ]);
 
@@ -143,7 +143,7 @@ test('the duration can be changed later', function () {
 
     $this->actingAs($user)
         ->put(route('habits.update', $habit), [
-            'trigger_situation' => 'nach dem Mittagessen',
+            'trigger_situation' => 'nach der Vorlesung',
             'target_amount' => 35,
         ])
         ->assertSessionHasNoErrors();

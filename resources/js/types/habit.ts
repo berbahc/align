@@ -266,6 +266,16 @@ export interface AnchorAlternative {
     situation?: string;
     time?: string;
     days?: Weekday[];
+    /**
+     * Die Gewohnheit, an die angeknüpft wird — die dritte Form eines
+     * Zeitpunkts.
+     *
+     * Eine bestehende Gewohnheit ist der zuverlässigste Auslöser, den es gibt:
+     * Sie hat eine feste Stelle im Tag und weiß ihre Uhrzeit selbst, während
+     * eine Situation nur ungefähr weiß, wann sie stattfindet.
+     */
+    chainToId?: number;
+    chainToTitle?: string;
     /** Ein Satz, warum dieser Zeitpunkt tragen könnte. */
     reason: string;
     /** Wo der Block läge, würde man ihn übernehmen — vom Server bestimmt. */
