@@ -39,9 +39,17 @@ function overlapOn(User $user, Carbon $date): ?string
 
     foreach ($blocks as $index => $block) {
         foreach (array_slice($blocks, $index + 1) as $other) {
-            if ($block['from'] < $other['to'] && $block['to'] > $other['from']) {
+            // Mit der Viertelstunde Luft, die überall gilt: Zwei Blöcke Rücken
+            // an Rücken sind zu eng, und ein Weg, der das durchlässt, ist ein
+            // Loch in derselben Regel. Nur Kurse untereinander dürfen sich
+            // berühren — so legt die Uni sie.
+            $air = Timetable::isCourseBlock($block) && Timetable::isCourseBlock($other)
+                ? 0
+                : DayPlan::BreatherMinutes;
+
+            if ($block['from'] < $other['to'] + $air && $other['from'] < $block['to'] + $air) {
                 return sprintf(
-                    '„%s" (%s–%s) über „%s" (%s–%s)',
+                    '„%s" (%s–%s) zu nah an „%s" (%s–%s)',
                     $block['title'], DayPlan::toTime($block['from']), DayPlan::toTime($block['to']),
                     $other['title'], DayPlan::toTime($other['from']), DayPlan::toTime($other['to']),
                 );
@@ -204,6 +212,35 @@ function attemptOverlap(object $test, User $user, string $way): void
                 'chained_to_habit_id' => $anchor->id,
             ]);
         })(),
+        'kurs-verlegen' => (function () use ($test, $user) {
+            // Nicht der Kurs zieht dauerhaft um, sondern er liegt an einem
+            // einzigen Datum woanders — genau dort, wo etwas läuft.
+            Habit::factory()->for($user)->fixedSchedule('14:00', [1])->withMeasure(30)->create();
+
+            $course = $user->currentSemester()->courses()->sole();
+
+            $test->actingAs($user)->post(route('calendar.semester.courses.exceptions.store', $course), [
+                'on_date' => invariantMonday()->toDateString(),
+                'starts_at' => '14:00',
+                'ends_at' => '15:30',
+            ]);
+        })(),
+
+        'verabredung-mit-kette' => (function () use ($test, $user) {
+            // Die verschobene Gewohnheit passt, ihre Nachfolgerin nicht: Sie
+            // rutscht mit und landet in der Vorlesung.
+            $anchor = Habit::factory()->for($user)->fixedSchedule('14:00', [1])->withMeasure(30)->create();
+            Habit::factory()->for($user)->withMeasure(30)->create([
+                'schedule_type' => ScheduleType::Chained,
+                'chained_to_habit_id' => $anchor->id,
+                'trigger_situation' => null,
+            ]);
+
+            $test->actingAs($user)->post(route('habits.shifts.store', $anchor), [
+                'date' => invariantMonday()->toDateString(),
+                'scheduled_time' => '08:30',
+            ]);
+        })(),
     };
 }
 
@@ -225,6 +262,8 @@ test('no path leaves two things on the same minute', function (string $way) {
     'Kette an dieselbe Gewohnheit hängen' => 'kette-verzweigen',
     'neue Plätze übernehmen' => 'neue-plaetze-uebernehmen',
     'Kette auflösen nach Verdrängung' => 'kette-aufloesen-nach-verdraengung',
+    'Kurs an einem Datum verlegen' => 'kurs-verlegen',
+    'für eine Verabredung Platz machen, mit Kette' => 'verabredung-mit-kette',
 ]);
 
 /**

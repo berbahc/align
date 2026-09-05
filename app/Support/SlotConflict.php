@@ -56,8 +56,58 @@ final class SlotConflict
         $semester = Timetable::for($user);
         $timetable = $withTimetable ? $semester : Timetable::none();
 
-        $dates = self::datesFor($days, $semester);
+        return self::findOnDates($user, $spans, self::datesFor($days, $semester), $ignore, $timetable, $spanIsCourse);
+    }
 
+    /**
+     * Dieselbe Frage an **einem** Datum.
+     *
+     * Für alles, was nicht jede Woche gilt: ein verlegter Kurs, ein Tag, an
+     * dem etwas ausnahmsweise woanders liegt. Der Wochentag allein trüge die
+     * Frage nicht — der 14. Oktober ist ein Dienstag, aber nicht jeder.
+     *
+     * @param  list<array{id: int, title: string, from: int, to: int}>  $spans
+     * @param  list<int>  $ignore
+     * @return array{block: array{id: int, title: string, from: int, to: int}, date: Carbon}|null
+     */
+    public static function findOn(
+        User $user,
+        array $spans,
+        Carbon $date,
+        array $ignore = [],
+        bool $withTimetable = true,
+        bool $spanIsCourse = false,
+    ): ?array {
+        if ($spans === []) {
+            return null;
+        }
+
+        return self::findOnDates(
+            $user,
+            $spans,
+            [$date],
+            $ignore,
+            $withTimetable ? Timetable::for($user) : Timetable::none(),
+            $spanIsCourse,
+        );
+    }
+
+    /**
+     * Die gemeinsame Rechnung beider Einstiege.
+     *
+     * @param  list<array{id: int, title: string, from: int, to: int}>  $spans
+     * @param  list<Carbon>  $dates
+     * @param  list<int>  $ignore
+     * @return array{block: array{id: int, title: string, from: int, to: int}, date: Carbon}|null
+     */
+    private static function findOnDates(
+        User $user,
+        array $spans,
+        array $dates,
+        array $ignore,
+        Timetable $timetable,
+        bool $spanIsCourse,
+    ): ?array {
         // Einmal laden, für alle gefragten Tage. Die Tagesausnahmen kommen in
         // derselben Abfrage mit, damit die Platzierung sie sieht, ohne je Tag
         // nachzuladen.

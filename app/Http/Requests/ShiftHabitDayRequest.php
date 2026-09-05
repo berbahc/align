@@ -5,7 +5,7 @@ namespace App\Http\Requests;
 use App\Http\Requests\Concerns\ChecksSleepWindow;
 use App\Models\Habit;
 use App\Support\DayPlan;
-use App\Support\Timetable;
+use App\Support\SlotConflict;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Carbon;
@@ -109,9 +109,15 @@ class ShiftHabitDayRequest extends FormRequest
     /**
      * An der neuen Stelle muss Platz sein.
      *
-     * Dieselbe Rechnung wie überall: der Rahmen des Tages, die belegten
-     * Fenster, eine Atempause dazwischen. Die eigene bisherige Stelle zählt
-     * nicht — von dort soll sie ja gerade weg.
+     * Über {@see SlotConflict::findOn()} und damit über dieselbe Rechnung wie
+     * überall sonst — samt der Viertelstunde Luft. Vorher stand hier ein
+     * eigener Vergleich ohne sie: Über diesen Weg ließ sich ein Block Rücken
+     * an Rücken an eine Vorlesung legen, während jeder andere Weg das abwies.
+     *
+     * Geprüft wird die ganze Kette ({@see Habit::spansFrom()}), nicht nur der
+     * bewegte Block: Die Nachfolger rutschen mit, und einer davon darf nicht
+     * in einer Vorlesung landen. Sie selbst zählen dabei nicht als Hindernis —
+     * von ihrer alten Stelle sollen sie ja gerade weg.
      */
     private function validateSlotIsFree(Validator $validator): void
     {
@@ -122,41 +128,20 @@ class ShiftHabitDayRequest extends FormRequest
         }
 
         $habit = $this->habit();
-        $user = $this->user();
+        $spans = $habit->spansFrom(DayPlan::toMinutes($this->string('scheduled_time')->toString()));
 
-        $habits = $user->habits()->active()->with(['chainedTo.chainedTo', 'dayShifts'])->get();
-        $habits->each(fn (Habit $other) => $other->setRelation('user', $user));
-
-        $plan = DayPlan::forDate(
-            $habits->filter(fn (Habit $other): bool => $other->isScheduledOn($date))->values(),
+        $conflict = SlotConflict::findOn(
+            $this->user(),
+            $spans,
             $date,
-            $user->sleepWindows(),
-            // Der Stundenplan belegt denselben Tag. Ohne ihn ließe sich eine
-            // Gewohnheit in eine Vorlesung legen, und die Rechnung, wo Platz
-            // ist, sagte danach etwas anderes als der Kalender zeigt.
-            Timetable::for($user)->blocksOn($date),
+            array_column($habit->spansFrom(0), 'id'),
         );
 
-        $from = DayPlan::toMinutes($this->string('scheduled_time')->toString());
-        $to = $from + ($habit->durationMinutes() ?? DayPlan::AssumedMinutes);
-
-        foreach ($plan->occupied($habit) as $block) {
-            if ($from < $block['to'] && $to > $block['from']) {
-                // Eine Vorlesung kommt von der Uni und rückt nicht; eine eigene
-                // Gewohnheit schon. Ein Ausweg, den es nicht gibt, ist
-                // schlimmer als keiner.
-                $validator->errors()->add('scheduled_time', Timetable::isCourseBlock($block)
-                    ? sprintf(
-                        'Um diese Zeit läuft an dem Tag „%s" aus deinem Semesterplan. Such eine andere Zeit — der Kurs rückt nicht.',
-                        $block['title'],
-                    )
-                    : sprintf(
-                        'Um diese Zeit läuft an dem Tag schon „%s".',
-                        $block['title'],
-                    ));
-
-                return;
-            }
+        if ($conflict !== null) {
+            $validator->errors()->add(
+                'scheduled_time',
+                SlotConflict::message($conflict['block'], $conflict['date']),
+            );
         }
     }
 }

@@ -356,3 +356,20 @@ it('kennt kein Praktikum als Kursart', function () {
             ->where('kinds', CourseKind::options())
             ->etc());
 });
+
+it('legt kein zweites Semester an, sondern ändert das bestehende', function () {
+    // Alle Strecken arbeiten ohne Kennung auf dem laufenden Semester. Ein
+    // zweites wäre weder zu ändern noch zu löschen — und seine Kurse für
+    // immer unsichtbar.
+    $user = User::factory()->create();
+    Semester::factory()->for($user)->create(['title' => 'Wintersemester 25/26']);
+
+    $this->actingAs($user)->post(route('calendar.semester.store'), [
+        'title' => 'Sommersemester 26',
+        'starts_on' => Carbon::today()->addMonth()->toDateString(),
+        'ends_on' => Carbon::today()->addMonths(5)->toDateString(),
+    ])->assertSessionHasNoErrors();
+
+    expect($user->semesters()->count())->toBe(1)
+        ->and($user->currentSemester()?->title)->toBe('Sommersemester 26');
+});

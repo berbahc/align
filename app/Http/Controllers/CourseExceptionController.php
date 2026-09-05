@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\DisplaceHabits;
 use App\Http\Requests\StoreCourseExceptionRequest;
 use App\Models\Course;
+use App\Models\Habit;
+use App\Support\DayPlan;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Inertia\Inertia;
 
 class CourseExceptionController extends Controller
 {
@@ -18,7 +22,7 @@ class CourseExceptionController extends Controller
      * Ersatztermin einträgt, ersetzt damit die Absage — genau wie der
      * eindeutige Schlüssel es verlangt.
      */
-    public function store(StoreCourseExceptionRequest $request, Course $course): RedirectResponse
+    public function store(StoreCourseExceptionRequest $request, Course $course, DisplaceHabits $displace): RedirectResponse
     {
         Gate::authorize('update', $course);
 
@@ -33,6 +37,33 @@ class CourseExceptionController extends Controller
                 'ends_at' => $request->isCancellation() ? null : $request->string('ends_at')->toString(),
             ],
         );
+
+        // Ein Ersatztermin belegt Zeit wie jeder Kurs — nur an diesem einen
+        // Tag. Was dort liegt, weicht, sonst zeichnete der Tag zwei Sachen
+        // übereinander. Ohne den Stundenplan als Gegner: Der verlegte Kurs
+        // liegt inzwischen selbst darin und kollidierte mit sich.
+        $displaced = $request->isCancellation() ? [] : $displace->handleOn(
+            $request->user(),
+            [[
+                'id' => -$course->id,
+                'title' => $course->title,
+                'from' => DayPlan::toMinutes($request->string('starts_at')->toString()),
+                'to' => DayPlan::toMinutes($request->string('ends_at')->toString()),
+            ]],
+            $request->onDate(),
+            withTimetable: false,
+        );
+
+        if ($displaced !== []) {
+            Inertia::flash('coursePlaced', [
+                'title' => $course->title,
+                'displaced' => array_map(fn (Habit $habit): array => [
+                    'id' => $habit->id,
+                    'title' => $habit->title,
+                    'previousTime' => $habit->scheduled_time?->format('H:i') ?? '',
+                ], $displaced),
+            ]);
+        }
 
         return back()->with('success', $request->isCancellation()
             ? 'Der Termin ist als Ausfall vermerkt.'
