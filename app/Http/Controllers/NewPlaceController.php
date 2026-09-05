@@ -235,10 +235,12 @@ class NewPlaceController extends Controller
      */
     private function parked(User $user): Collection
     {
+        // Auch die ohne Uhrzeit: Eine Gewohnheit an einer Situation belegte
+        // im Tag die Stunde ihres Ankers und wurde darüber verdrängt. Sie hier
+        // wegzufiltern hieße, sie ohne Vorschlag hängen zu lassen.
         $habits = $user->habits()
             ->active()
             ->displaced()
-            ->whereNotNull('scheduled_time')
             ->orderBy('position')
             ->get();
 
@@ -296,7 +298,14 @@ class NewPlaceController extends Controller
 
         foreach ($parked as $habit) {
             $minutes = $habit->durationMinutes() ?? DayPlan::AssumedMinutes;
-            $previousStart = DayPlan::toMinutes($habit->scheduled_time->format('H:i'));
+            // Wo sie lag: die Uhrzeit, oder — ohne eine — die Stunde ihres
+            // Ankers. Das ist der Punkt, um den die Vorschläge kreisen.
+            $previousStart = $this->previousStart($habit);
+
+            if ($previousStart === null) {
+                continue;
+            }
+
             $days = $habit->scheduled_days ?? [1, 2, 3, 4, 5, 6, 7];
 
             $band = $habit->dayBand();
@@ -337,7 +346,7 @@ class NewPlaceController extends Controller
                 'id' => $habit->id,
                 'title' => $habit->title,
                 'minutes' => $minutes,
-                'previousTime' => $habit->scheduled_time->format('H:i'),
+                'previousTime' => DayPlan::toTime($previousStart),
                 'previousDays' => $days,
                 'band' => $band,
                 'bandIsHard' => $bandIsHard,
@@ -346,6 +355,25 @@ class NewPlaceController extends Controller
         }
 
         return [$askable, $unplaced];
+    }
+
+    /**
+     * Wo die Gewohnheit lag, bevor der Stundenplan kam — in Minuten.
+     *
+     * Eine feste Uhrzeit sagt es selbst; eine Gewohnheit an einer Situation
+     * belegte die volle Stunde ihres Ankers, und genau die ist ihr
+     * Ausgangspunkt. Null heißt: Sie hatte gar keine Stelle, und dann gibt es
+     * auch keine, zu der ein Vorschlag nah liegen könnte.
+     */
+    private function previousStart(Habit $habit): ?int
+    {
+        if ($habit->scheduled_time !== null) {
+            return DayPlan::toMinutes($habit->scheduled_time->format('H:i'));
+        }
+
+        $hour = $habit->plannedAnchorHour();
+
+        return $hour === null ? null : $hour * 60;
     }
 
     /**
