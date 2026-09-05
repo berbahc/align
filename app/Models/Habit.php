@@ -172,50 +172,19 @@ class Habit extends Model
      */
     public const array TriggerSuggestions = [
         'nach dem Aufstehen' => 7,
-        'nach dem Frühstück' => 8,
-        'nach der Vorlesung' => 11,
-        'nach dem Mittagessen' => 13,
-        'wenn ich nach Hause komme' => 17,
+        self::AfterLecture => 11,
         'vor dem Schlafengehen' => 22,
     ];
 
     /**
-     * Wie weit eine Situation reichen darf, in Minuten seit Mitternacht.
+     * Wo die Vorlesungs-Situation liegt, wenn der Stundenplan gerade fehlt.
      *
-     * „Nach dem Frühstück" ist kein Termin um acht — es ist irgendwann am
-     * Vormittag. Die Stunde aus {@see TriggerSuggestions} ist der Punkt, an
-     * dem der Kalender sie zuerst hinlegt; dieses Fenster sagt, wie weit sie
-     * ausweichen darf, wenn dort schon etwas liegt. Der Nutzer sieht es nie:
-     * Er hat eine Situation gewählt, keine Spanne, und die Gewohnheit rutscht
-     * innerhalb dessen, was die Situation ohnehin bedeutet.
-     *
-     * Die beiden am Tagesrand stehen nicht hier — sie hängen am Schlafplan
-     * und rechnen sich aus ihm ({@see situationWindow()}).
-     *
-     * @var array<string, int>
+     * Angeboten wird sie nur, solange es Kurse gibt
+     * ({@see situationChoicesFor()}). Wer seinen Stundenplan danach loescht,
+     * behaelt aber die Gewohnheit, und die braucht eine Stelle. Elf Uhr ist
+     * die Annahme dafuer und die einzige, die in diesem Modell noch steht.
      */
-    private const array SituationStarts = [
-        'nach dem Mittagessen' => 780,        // 13:00
-        'wenn ich nach Hause komme' => 1020,  // 17:00
-        self::AfterLecture => 660,            // 11:00 — nur ohne Stundenplan
-    ];
-
-    /**
-     * Wie lange ein Frühstück dauert, wenn niemand es aufgeschrieben hat.
-     *
-     * Nur der Startpunkt: Wer sein Frühstücken als Gewohnheit führt, dessen
-     * Block liegt ohnehin im Weg, und „nach dem Frühstück" weicht ihm aus.
-     * Diese Zahl ist die Annahme für alle anderen.
-     */
-    private const int BreakfastMinutes = 45;
-
-    /**
-     * Und wie lange der Weg von der Uni nach Hause dauert.
-     *
-     * „Wenn ich nach Hause komme" ist später als „nach der Vorlesung" — dazwischen
-     * liegt der Heimweg. Ohne Stundenplan bleibt es beim späten Nachmittag.
-     */
-    private const int CommuteMinutes = 30;
+    private const int LectureFallbackStart = 660;
 
     /**
      * Wie weit „nach dem Aufstehen" nach hinten darf: drei Stunden.
@@ -274,7 +243,37 @@ class Habit extends Model
         return array_map(fn (string $situation): array => [
             'situation' => $situation,
             'takenBy' => $taken->get($situation),
-        ], array_keys(self::TriggerSuggestions));
+        ], self::offeredSituations($user));
+    }
+
+    /**
+     * Welche Situationen ueberhaupt zur Wahl stehen.
+     *
+     * Die Regel dahinter ist der Grund, warum es nur noch drei sind: Eine
+     * Situation wird angeboten, wenn die App ausrechnen kann, wann sie
+     * stattfindet — und zwar aus etwas, das der Nutzer ihr gesagt hat.
+     *
+     * Der Schlafplan sagt, wann jemand aufsteht und ins Bett geht; daraus
+     * folgen zwei. Der Stundenplan sagt, wann die Vorlesungen enden; daraus
+     * folgt die dritte — und deshalb steht sie nur da, wenn es ihn gibt.
+     *
+     * Was frueher hier stand, ruhte auf Annahmen: Fruehstueck 45 Minuten nach
+     * dem Aufstehen, Mittagessen um eins, zu Hause um fuenf. Das ist fuer
+     * niemanden richtig, und ein Kalender, der eine Gewohnheit an eine
+     * erfundene Uhrzeit legt, ist unzuverlaessig an genau der Stelle, an der er
+     * verlaesslich sein muesste. Wer „nach dem Fruehstueck" plant, haengt seine
+     * Gewohnheit jetzt an die Gewohnheit „Fruehstuecken" — eine Kette weiss die
+     * Uhrzeit, eine Annahme raet sie.
+     *
+     * @return list<string>
+     */
+    public static function offeredSituations(User $user): array
+    {
+        return array_values(array_filter(
+            array_keys(self::TriggerSuggestions),
+            fn (string $situation): bool => $situation !== self::AfterLecture
+                || Timetable::for($user)->courseCount() > 0,
+        ));
     }
 
     /**
@@ -960,40 +959,15 @@ class Habit extends Model
             return $bound;
         }
 
-        if ($this->trigger_situation === 'nach dem Frühstück') {
-            $wake = $this->wakeMinute($on);
-
-            return $wake === null ? null : $wake + self::BreakfastMinutes;
+        if ($this->trigger_situation !== self::AfterLecture) {
+            return null;
         }
 
         $lastLecture = $this->lastLectureEnd($on);
 
-        if ($this->trigger_situation === self::AfterLecture) {
-            return $lastLecture === null
-                ? ($this->knowsTimetable() ? null : self::SituationStarts[self::AfterLecture])
-                : $lastLecture + DayPlan::BreatherMinutes;
-        }
-
-        if ($this->trigger_situation === 'wenn ich nach Hause komme' && $lastLecture !== null) {
-            // Zwischen der letzten Vorlesung und dem Zuhausesein liegt der Weg.
-            // Wer um halb vier fertig ist, ist um vier zu Hause — die feste
-            // Fünf gilt nur, wenn niemand weiß, wann der Uni-Tag endet.
-            return $lastLecture + self::CommuteMinutes;
-        }
-
-        return self::SituationStarts[$this->trigger_situation] ?? null;
-    }
-
-    /** Wann der Tag an diesem Datum anfängt — null ohne geladenen Nutzer. */
-    private function wakeMinute(?Carbon $on): ?int
-    {
-        if (! $this->relationLoaded('user')) {
-            return null;
-        }
-
-        $window = $this->user->sleepWindowFor(($on ?? Carbon::today())->dayOfWeekIso);
-
-        return DayPlan::toMinutes($window['wakeTime']);
+        return $lastLecture === null
+            ? ($this->knowsTimetable() ? null : self::LectureFallbackStart)
+            : $lastLecture + DayPlan::BreatherMinutes;
     }
 
     /** Weiß die App überhaupt etwas über Vorlesungen? */

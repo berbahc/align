@@ -399,7 +399,7 @@ test('adopting leaves the request open when that time is taken', function () {
         'schedule_type' => ScheduleType::Dynamic->value,
         // Am Nachmittag, damit die eigene Gewohnheit um 07:30 der Übernahme
         // nicht im Weg steht — geprüft wird hier die Zusage, nicht der Platz.
-        'trigger_situation' => 'nach dem Mittagessen',
+        'trigger_situation' => 'nach der Vorlesung',
         'appointment_id' => $appointment->id,
     ]);
 
@@ -418,7 +418,7 @@ test('a request of someone else cannot be answered by adopting', function () {
             'schedule_type' => ScheduleType::Dynamic->value,
             // Eine freie Situation: Der Test fragt nach der Berechtigung, und
             // die darf nicht daran hängen, ob zufällig ein Platz frei ist.
-            'trigger_situation' => 'nach dem Mittagessen',
+            'trigger_situation' => 'nach der Vorlesung',
             'appointment_id' => $appointment->id,
         ])
         ->assertForbidden();

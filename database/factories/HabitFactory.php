@@ -47,13 +47,24 @@ class HabitFactory extends Factory
         /** @var HabitTemplate $template */
         $template = fake()->randomElement(HabitTemplate::cases());
 
+        // Es gibt nur noch drei Situationen, und jede traegt genau eine
+        // Gewohnheit. Wer mehr als drei erzeugt — die Fuenfergrenze etwa —
+        // bekommt danach feste Uhrzeiten, sonst legte die Fabrik einen Moment
+        // doppelt und verletzte damit die Regel, die sie testen soll.
         $situations = array_keys(Habit::TriggerSuggestions);
+        $index = self::$created++;
+        $situation = $situations[$index] ?? null;
 
         return [
             'user_id' => User::factory(),
             'title' => $template->title(),
             'template_key' => $template->value,
-            'trigger_situation' => $situations[self::$created++ % count($situations)],
+            'schedule_type' => $situation === null ? ScheduleType::Fixed : ScheduleType::Dynamic,
+            'trigger_situation' => $situation,
+            'scheduled_time' => $situation === null
+                ? sprintf('%02d:00', 9 + ($index % 8))
+                : null,
+            'scheduled_days' => $situation === null ? [1, 2, 3, 4, 5, 6, 7] : null,
             'behavior_type' => $template->behaviorType(),
             'target_amount' => $template->defaultMinutes(),
             'target_unit' => MeasureUnit::Minutes,

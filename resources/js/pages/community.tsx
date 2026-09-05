@@ -85,8 +85,12 @@ export default function Community({
 
             <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-4 sm:p-6">
                 <header>
-                    <h1 className="type-title text-primary">Community</h1>
-                    <p className="mt-1 text-sm text-muted-foreground">
+                    {/* Wie bei den Gewohnheiten: Der Name steht oben. Was
+                        darunter erklärt wird, steht sonst nirgends. */}
+                    <h1 className="type-title text-primary max-md:hidden">
+                        Community
+                    </h1>
+                    <p className="mt-1 text-sm text-muted-foreground max-md:mt-0">
                         Was ihr tut, sieht niemand — nur, dass ihr euch kennt.
                     </p>
 

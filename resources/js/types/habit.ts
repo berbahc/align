@@ -291,6 +291,16 @@ export interface AnchorAlternative {
     situation?: string;
     time?: string;
     days?: Weekday[];
+    /**
+     * Die Gewohnheit, an die angeknüpft wird — die dritte Form eines
+     * Zeitpunkts.
+     *
+     * Eine bestehende Gewohnheit ist der zuverlässigste Auslöser, den es gibt:
+     * Sie hat eine feste Stelle im Tag und weiß ihre Uhrzeit selbst, während
+     * eine Situation nur ungefähr weiß, wann sie stattfindet.
+     */
+    chainToId?: number;
+    chainToTitle?: string;
     /** Ein Satz, warum dieser Zeitpunkt tragen könnte. */
     reason: string;
     /** Wo der Block läge, würde man ihn übernehmen — vom Server bestimmt. */
@@ -351,6 +361,12 @@ export interface CalendarBlock {
      * sieht aus wie eine feste Uhrzeit.
      */
     scheduleType: ScheduleType;
+    /**
+     * Der erste Tag, an dem ein Kurs den alten Platz wegnimmt — nur bei
+     * Verdrängten. Das Ziel des Wegs „selbst umlegen": Einen neuen Platz
+     * wählt man dort, wo der Kurs steht, der den alten genommen hat.
+     */
+    conflictDate?: string | null;
     /** Die Dauer als fertige Zeile („20 Min"), sonst null. */
     measureLabel: string | null;
     /**

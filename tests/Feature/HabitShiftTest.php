@@ -23,7 +23,7 @@ function shiftable(User $user, array $attributes = []): Habit
 {
     return Habit::factory()->for($user)->withMeasure(30)->create([
         'title' => 'Joggen gehen',
-        'trigger_situation' => 'nach dem Mittagessen',
+        'trigger_situation' => 'nach der Vorlesung',
         ...$attributes,
     ]);
 }
@@ -42,7 +42,7 @@ test('a shift for today leaves the habit itself alone', function () {
 
     expect($habit->fresh())
         // Der Auslöser bleibt: „heute später" heißt nicht „ab jetzt anders".
-        ->trigger_situation->toBe('nach dem Mittagessen')
+        ->trigger_situation->toBe('nach der Vorlesung')
         ->schedule_type->toBe(ScheduleType::Dynamic)
         ->scheduled_time->toBeNull()
         ->and($habit->dayShifts()->sole()->scheduled_time->format('H:i'))->toBe('14:00');
@@ -126,7 +126,7 @@ test('the shifted block lies at its new place — and only on that day', functio
     $this->actingAs($user)
         ->get(route('calendar.day', Carbon::tomorrow()->toDateString()))
         ->assertInertia(fn (AssertableInertia $page) => $page
-            ->where('blocks.0.startMinute', 13 * 60)
+            ->where('blocks.0.startMinute', 11 * 60)
             ->where('blocks.0.exact', false)
             ->where('blocks.0.shifted', false)
         );

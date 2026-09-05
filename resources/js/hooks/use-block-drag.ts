@@ -46,11 +46,24 @@ export function useBlockDrag({
     bounds,
     enabled,
     onDrop,
+    minuteAt,
 }: {
     bounds: GridBounds;
     enabled: boolean;
     /** Der Zug ist zu Ende und die Minute hat sich geändert. */
     onDrop: (drag: BlockDrag) => void;
+    /**
+     * Welche Minute unter dem Finger liegt — für einen Zug, der außerhalb des
+     * Rasters anfängt.
+     *
+     * Ein Block im Raster wandert **relativ**: Er liegt schon an seiner
+     * Stelle, und der Finger schiebt ihn von dort weiter. Ein Block aus der
+     * Liste darunter hat keine Stelle, und die Liste steht anderthalb
+     * Bildschirme unter der Uhrzeit, die man treffen will — eine Verschiebung
+     * um denselben Weg führte irgendwohin. Er folgt deshalb **absolut** dem
+     * Finger: Wo der über dem Raster steht, liegt der Block.
+     */
+    minuteAt?: (clientY: number) => number;
 }) {
     const [drag, setDrag] = useState<BlockDrag | null>(null);
 
@@ -80,8 +93,19 @@ export function useBlockDrag({
     // Timer hinterlassen, der ins Leere feuert.
     useEffect(() => release, [release]);
 
-    function onPointerDown(event: React.PointerEvent, block: CalendarBlock) {
-        if (!enabled || block.startMinute === null || block.graduated) {
+    /**
+     * @param from Wo der Zug anfängt, wenn der Block noch gar keine Stelle hat
+     *             — eine verdrängte Gewohnheit wird aus der Liste ins Raster
+     *             gehoben und muss dabei irgendwo aufsetzen.
+     */
+    function onPointerDown(
+        event: React.PointerEvent,
+        block: CalendarBlock,
+        from?: number,
+    ) {
+        const origin = block.startMinute ?? from;
+
+        if (!enabled || origin === undefined || block.graduated) {
             return;
         }
 
@@ -90,7 +114,7 @@ export function useBlockDrag({
         grip.current = {
             id: block.id,
             startY: event.clientY,
-            origin: block.startMinute,
+            origin,
             duration: block.durationMinutes ?? 15,
             held: false,
             timer: window.setTimeout(() => {
@@ -131,7 +155,9 @@ export function useBlockDrag({
             id: held.id,
             origin: held.origin,
             minute: snapMinute(
-                held.origin + (dy / HOUR_HEIGHT) * 60,
+                minuteAt === undefined
+                    ? held.origin + (dy / HOUR_HEIGHT) * 60
+                    : minuteAt(event.clientY),
                 bounds,
                 held.duration,
             ),

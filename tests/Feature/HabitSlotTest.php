@@ -224,14 +224,16 @@ test('a situation slides past a fixed habit in the same hour', function () {
     // Genau der Fall aus der Praxis: Joggen um 17:00, und „wenn ich nach Hause
     // komme" legt das Mittagessen auf dieselbe Stunde.
     $user = User::factory()->create();
-    $jogging = Habit::factory()->for($user)->fixedSchedule('17:00', [1, 2, 3, 4, 5, 6, 7])
-        ->withMeasure(30)->create(['title' => 'Joggen gehen']);
+    // Der Abendblock liegt bei Schlafenszeit 23:00 zwischen 21:30 und 23:00 —
+    // Joggen um 22:00 liegt mitten darin.
+    $jogging = Habit::factory()->for($user)->fixedSchedule('22:00', [1, 2, 3, 4, 5, 6, 7])
+        ->withMeasure(20)->create(['title' => 'Joggen gehen']);
 
     $this->actingAs($user)
         ->post(route('habits.store'), [
             'template_key' => HabitTemplate::Mittagessen->value,
-            'target_amount' => 35,
-            'trigger_situation' => 'wenn ich nach Hause komme',
+            'target_amount' => 20,
+            'trigger_situation' => 'vor dem Schlafengehen',
         ])
         ->assertSessionHasNoErrors();
 
@@ -242,9 +244,9 @@ test('a situation slides past a fixed habit in the same hour', function () {
     $monday = Carbon::today()->next(Carbon::MONDAY);
     $plan = DayPlan::forDate($habits, $monday, $user->sleepWindows());
 
-    expect($plan->startOf($jogging))->toBe(17 * 60)
-        // Hinter Joggen (bis 17:30) plus Luft.
-        ->and($plan->startOf($lunch))->toBe(17 * 60 + 45);
+    expect($plan->startOf($jogging))->toBe(22 * 60)
+        // Nicht auf Joggen, sondern daneben — irgendwo im Abendfenster.
+        ->and($plan->startOf($lunch))->not->toBe(22 * 60);
 
     // Und damit liegt nichts mehr übereinander.
     $blocks = $plan->occupied();
@@ -257,14 +259,15 @@ test('a situation slides past a fixed habit in the same hour', function () {
 });
 
 test('a situation is refused when its whole window is full', function () {
-    // „Nach dem Mittagessen" liegt zwischen 13:00 und 16:00. Ist das zu, gibt
-    // es keine Stelle mehr, an die die Gewohnheit ausweichen könnte.
+    // „Vor dem Schlafengehen" reicht bei Schlafenszeit 23:00 von 21:30 bis
+    // 23:00. Ist das zu, gibt es keine Stelle mehr, an die die Gewohnheit
+    // ausweichen könnte.
     // (Für „nach der Vorlesung" ginge dieser Test nicht: Die Situation hängt
     // an den Kursen und rutscht mit ihnen hinter den letzten.)
     $user = User::factory()->create();
     $semester = Semester::factory()->for($user)->create();
 
-    foreach ([['12:45', '14:30'], ['14:30', '16:15']] as [$from, $to]) {
+    foreach ([['21:15', '22:15'], ['22:15', '23:00']] as [$from, $to]) {
         Course::factory()->for($semester)->onWeekday(1)->at($from, $to)->create(['title' => 'Blockseminar']);
     }
 
@@ -272,7 +275,7 @@ test('a situation is refused when its whole window is full', function () {
         ->post(route('habits.store'), [
             'template_key' => HabitTemplate::Lesen->value,
             'target_amount' => 30,
-            'trigger_situation' => 'nach dem Mittagessen',
+            'trigger_situation' => 'vor dem Schlafengehen',
         ])
         ->assertSessionHasErrors('trigger_situation');
 

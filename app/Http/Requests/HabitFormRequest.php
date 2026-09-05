@@ -72,7 +72,14 @@ abstract class HabitFormRequest extends FormRequest
 
         return [
             'schedule_type' => ['required', Rule::enum(ScheduleType::class)],
+            // Abschließend: Ein selbst getippter Moment lässt sich nirgends
+            // hinlegen und landete deshalb mittags — bei jedem, egal wann er
+            // wirklich stattfindet. Geprüft wird gegen das ganze Vokabular und
+            // nicht gegen {@see Habit::offeredSituations()}: Wer „nach der
+            // Vorlesung" gewählt hat und später sein Semester löscht, muss
+            // seine Gewohnheit weiter bearbeiten können.
             'trigger_situation' => [
+                Rule::in(array_keys(Habit::TriggerSuggestions)),
                 Rule::requiredIf($type === ScheduleType::Dynamic),
                 'nullable', 'string', 'max:120',
             ],

@@ -88,7 +88,12 @@ class AdjustHabitRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'trigger_situation' => ['nullable', 'string', 'max:120'],
+            // Auch ein Vorschlag der KI bleibt im Katalog: Was die App nicht
+            // ausrechnen kann, darf sie sich auch nicht ausdenken.
+            'trigger_situation' => [
+                'nullable', 'string', 'max:120',
+                Rule::in(array_keys(Habit::TriggerSuggestions)),
+            ],
             'scheduled_time' => ['nullable', 'date_format:H:i'],
             // Eine Uhrzeit ohne Wochentage wäre ein Zeitpunkt ohne Tag. Jeder
             // Fenster-Vorschlag bringt sie mit, und der Rückweg trägt die

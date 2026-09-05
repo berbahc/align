@@ -34,7 +34,7 @@ class AiSuggestionFactory extends Factory
     /**
      * Ein vorgeschlagener Zeitpunkt statt eines Schritts.
      */
-    public function anchor(string $situation = 'nach dem Frühstück'): static
+    public function anchor(string $situation = 'nach dem Aufstehen'): static
     {
         return $this->state(fn (): array => [
             'kind' => SuggestionKind::Anchor,

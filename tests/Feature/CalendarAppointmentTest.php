@@ -167,9 +167,16 @@ test('the appointment pushes an own situation out of its place', function () {
     // — und der nächste, weil eine Gewohnheit vor ihrem Anlegen nicht anstand.
     $day = Carbon::today()->startOfWeek()->addWeek();
 
-    // „wenn ich nach Hause komme" liegt laut Habit::TriggerSuggestions auf 17
-    // Uhr — genau auf der Verabredung.
-    $situation = 'wenn ich nach Hause komme';
+    // „nach dem Aufstehen" hängt am Schlafplan und liegt ohne eigene Angabe
+    // auf SleepSchedule::DefaultWakeTime — genau auf der Verabredung.
+    //
+    // Vorher stand hier „wenn ich nach Hause komme" auf 17 Uhr. Die Situation
+    // ist weg: Sie ruhte auf einer geratenen Uhrzeit, und ein Kalender, der
+    // eine Gewohnheit auf eine erfundene Stunde legt, ist genau dort
+    // unzuverlässig, wo er verlässlich sein muss. Was der Test prüft, ist
+    // davon unberührt — eine Verabredung verdrängt eine eigene Situation.
+    $situation = 'nach dem Aufstehen';
+    $anchor = 7 * 60;
 
     $undisturbed = User::factory()->create();
     Habit::factory()->for($undisturbed)->withMeasure(30)->create([
@@ -180,11 +187,11 @@ test('the appointment pushes an own situation out of its place', function () {
     $this->actingAs($undisturbed)
         ->get(route('calendar.day', $day->toDateString()))
         ->assertInertia(fn (AssertableInertia $page) => $page
-            ->where('blocks.0.startMinute', 17 * 60)
+            ->where('blocks.0.startMinute', $anchor)
             ->etc()
         );
 
-    [, $invitee] = acceptedAppointment($day, '17:00');
+    [, $invitee] = acceptedAppointment($day, '07:00');
 
     Habit::factory()->for($invitee)->withMeasure(30)->create([
         'title' => 'Lesen',
@@ -207,9 +214,9 @@ test('the appointment pushes an own situation out of its place', function () {
             $myFrom = $mine['startMinute'];
             $myTo = $myFrom + $mine['durationMinutes'];
 
-            expect($theirFrom)->toBe(17 * 60)
+            expect($theirFrom)->toBe(7 * 60)
                 // Nicht mehr an seiner Ankerstunde …
-                ->and($myFrom)->not->toBe(17 * 60)
+                ->and($myFrom)->not->toBe(7 * 60)
                 // … und ohne Überschneidung mit der Verabredung.
                 ->and($myFrom < $theirTo && $myTo > $theirFrom)->toBeFalse();
         });

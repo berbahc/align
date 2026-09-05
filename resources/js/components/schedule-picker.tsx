@@ -1,8 +1,5 @@
 import { TriangleAlert } from 'lucide-react';
-import { useState } from 'react';
 import { TimeStepper } from '@/components/time-stepper';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
     CHOICE_TILE,
     CHOICE_TILE_OFF,
@@ -83,10 +80,15 @@ export function formatWeekdays(days: Weekday[]): string {
 /**
  * Die Situationsauswahl — der `dynamic`-Zweig des SchedulePickers.
  *
- * Die Vorschläge sind ein Angebot, kein Katalog: „Eigene Situation" steht
- * gleichberechtigt darunter, weil der eigene Tag selten dem gemittelten
- * entspricht. Ob getippt oder gewählt wird, hält die Komponente selbst fest —
- * es ist eine Frage der Darstellung, nicht des Formulars.
+ * Die Liste ist abschließend, und das ist der Punkt: Angeboten wird nur, was
+ * die App ausrechnen kann — der Schlafplan sagt, wann jemand aufsteht und ins
+ * Bett geht, der Stundenplan, wann die Vorlesungen enden.
+ *
+ * Das Freitextfeld stand hier einmal daneben. Es klang nach Freiheit, war aber
+ * das Gegenteil: „Wenn ich aus der Bib komme" konnte die App nirgends
+ * hinlegen, also landete es mittags — bei jedem, egal wann er aus der Bib
+ * kommt. Wer einen Moment braucht, den die Liste nicht kennt, hängt seine
+ * Gewohnheit an eine andere: Eine Kette weiß die Uhrzeit, eine Annahme rät sie.
  */
 export function SituationPicker({
     suggestions,
@@ -97,18 +99,10 @@ export function SituationPicker({
     value: string;
     onChange: (value: string) => void;
 }) {
-    // Eine vorbelegte Situation, die nicht in der Liste steht, ist eine
-    // getippte — beim Übernehmen einer fremden Gewohnheit ist das der
-    // Normalfall, und das Feld muss dann offen stehen.
-    const [ownSituation, setOwnSituation] = useState(
-        value !== '' &&
-            !suggestions.some((choice) => choice.situation === value),
-    );
-
     return (
         <div className="flex flex-col gap-2">
             {suggestions.map(({ situation, takenBy }) => {
-                const isSelected = !ownSituation && value === situation;
+                const isSelected = value === situation;
 
                 // Ein vergebener Moment ist keine Wahl: Er bleibt sichtbar,
                 // damit erkennbar ist, wohin die Gewohnheit gehört, die ihn
@@ -137,10 +131,7 @@ export function SituationPicker({
                         key={situation}
                         type="button"
                         aria-pressed={isSelected}
-                        onClick={() => {
-                            setOwnSituation(false);
-                            onChange(situation);
-                        }}
+                        onClick={() => onChange(situation)}
                         className={cn(
                             CHOICE_TILE,
                             'px-4 py-3 text-[15px]',
@@ -152,38 +143,6 @@ export function SituationPicker({
                 );
             })}
 
-            <button
-                type="button"
-                aria-pressed={ownSituation}
-                onClick={() => {
-                    setOwnSituation(true);
-                    onChange('');
-                }}
-                className={cn(
-                    CHOICE_TILE,
-                    'border-dashed px-4 py-3 text-[15px] text-muted-foreground',
-                    ownSituation ? CHOICE_TILE_ON : CHOICE_TILE_OFF,
-                )}
-            >
-                Eigene Situation
-            </button>
-
-            {ownSituation && (
-                <div className="grid gap-2 pt-1">
-                    <Label htmlFor="trigger_situation" className="sr-only">
-                        Eigene Situation
-                    </Label>
-                    <Input
-                        id="trigger_situation"
-                        name="trigger_situation"
-                        autoFocus
-                        maxLength={120}
-                        placeholder="z. B. wenn ich aus der Bib komme"
-                        value={value}
-                        onChange={(event) => onChange(event.target.value)}
-                    />
-                </div>
-            )}
         </div>
     );
 }

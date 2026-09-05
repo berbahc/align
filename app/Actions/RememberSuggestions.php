@@ -47,7 +47,7 @@ class RememberSuggestions
      * vorgeschlagener Zeitpunkt in derselben Sprache stehen wie ein
      * bestehender, sonst liest das Modell zwei verschiedene Dinge.
      *
-     * @param  list<array{situation?: string, time?: string, days?: list<int>, reason: string}>  $alternatives
+     * @param  list<array{situation?: string, time?: string, days?: list<int>, chainToId?: int, chainToTitle?: string, reason: string}>  $alternatives
      * @return Collection<int, AiSuggestion>
      */
     public function anchors(User $user, Habit $habit, array $alternatives): Collection
@@ -55,11 +55,16 @@ class RememberSuggestions
         return collect($alternatives)->map(fn (array $alternative): AiSuggestion => $user->aiSuggestions()->create([
             'habit_id' => $habit->getKey(),
             'kind' => SuggestionKind::Anchor,
-            'label' => Habit::anchorLabel(
-                situation: $alternative['situation'] ?? null,
-                time: $alternative['time'] ?? null,
-                days: $alternative['days'] ?? null,
-            ),
+            // Eine Kette heißt, wie der Kalender sie nennt — der Vorschlag
+            // landet später wieder im Prompt und muss dort dieselbe Sprache
+            // sprechen wie ein bestehender Anker.
+            'label' => isset($alternative['chainToTitle'])
+                ? sprintf('nach „%s"', $alternative['chainToTitle'])
+                : Habit::anchorLabel(
+                    situation: $alternative['situation'] ?? null,
+                    time: $alternative['time'] ?? null,
+                    days: $alternative['days'] ?? null,
+                ),
             'payload' => $alternative,
         ]));
     }

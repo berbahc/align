@@ -321,7 +321,7 @@ test('a habit before sleeping ends at bedtime, whatever it takes', function () {
 
     $long = Habit::factory()->for($user)->withMeasure(60)->create([
         'title' => 'Lesen',
-        'trigger_situation' => 'wenn ich nach Hause komme',
+        'trigger_situation' => 'vor dem Schlafengehen',
         'created_at' => $monday->copy()->subDay(),
     ]);
     $long->setRelation('user', $user);

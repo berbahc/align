@@ -71,6 +71,12 @@ class HabitAdjustmentController extends Controller
                 ), 'situation'),
                 // Und die Fenster, in die die Dauer wirklich passt.
                 freeWindows: $this->freeWindows($request->user(), $habit),
+                // Die Gewohnheiten, an die sich anknüpfen ließe. Sie stehen
+                // ganz oben in der Aufgabe des Agenten: Eine bestehende
+                // Gewohnheit ist der zuverlässigste Auslöser, den es gibt
+                // (time-blocking.md, Domino-Prinzip) — und anders als eine
+                // Situation weiß sie ihre Uhrzeit selbst.
+                chainAnchors: $this->chainAnchors($request->user(), $habit),
                 // Was Align über die Person weiß: ihr Warum, ihr Tagesablauf,
                 // ihr Rhythmus — und welche Zeitpunkte sie schon einmal
                 // angeboten bekam, ohne sie zu nehmen.
@@ -99,10 +105,7 @@ class HabitAdjustmentController extends Controller
                     'id' => $suggestion->id,
                     // Damit die Oberfläche den Block an seine mögliche neue
                     // Stelle legen kann, bevor irgendetwas entschieden ist.
-                    'anchorHour' => Habit::anchorHourFor(
-                        situation: $alternatives[$index]['situation'] ?? null,
-                        time: $alternatives[$index]['time'] ?? null,
-                    ),
+                    'anchorHour' => $this->anchorHourOf($alternatives[$index]),
                 ],
             )->values(),
         ]);
@@ -151,6 +154,76 @@ class HabitAdjustmentController extends Controller
         ]);
 
         return back();
+    }
+
+    /**
+     * Die Gewohnheiten, an die sich diese anhängen ließe.
+     *
+     * Das Angebot ist bewusst breit: **jede**, die an denselben Tagen läuft und
+     * selbst eine Stelle im Tag hat. Welche davon sinnvoll ist, entscheidet der
+     * Agent — er kennt die Titel und weiß, dass Lesen nach dem Abendessen
+     * besser trägt als Joggen danach.
+     *
+     * Ausgeschlossen ist nur, was eine Kette unmöglich macht: die Gewohnheit
+     * selbst, alles was schon an ihr hängt (das ergäbe einen Kreis), und was
+     * gar keinen eigenen Platz hat.
+     *
+     * @return list<array{id: int, title: string, endsAt: string, anchor: string}>
+     */
+    private function chainAnchors(User $user, Habit $habit): array
+    {
+        $followers = $habit->chainedHabits()->pluck('id')->all();
+
+        $habits = $user->habits()->active()->with('chainedTo')->orderBy('position')->get();
+        $habits->each(fn (Habit $other) => $other->setRelation('user', $user));
+
+        $anchors = $habits
+            ->reject(fn (Habit $other): bool => $other->is($habit)
+                || in_array($other->id, $followers, strict: true)
+                || $other->isDisplaced()
+                || $other->dayStartMinute() === null)
+            ->map(fn (Habit $other): array => [
+                'id' => $other->id,
+                'title' => $other->title,
+                'endsAt' => DayPlan::toTime(
+                    ($other->dayStartMinute() ?? 0) + ($other->durationMinutes() ?? DayPlan::AssumedMinutes),
+                ),
+                'anchor' => $other->scheduleLabel(),
+            ])
+            ->values();
+
+        /** @var list<array{id: int, title: string, endsAt: string, anchor: string}> $anchors */
+        $anchors = $anchors->all();
+
+        return $anchors;
+    }
+
+    /**
+     * Wo eine Alternative auf der Achse landet.
+     *
+     * Eine Kette erbt die Stunde von der Gewohnheit, an die sie sich hängt —
+     * die Oberfläche kann den Ghost sonst nirgends hinlegen.
+     *
+     * @param  array{situation?: string, time?: string, chainToId?: int}  $alternative
+     */
+    private function anchorHourOf(array $alternative): int
+    {
+        if (isset($alternative['chainToId'])) {
+            $anchor = Habit::find($alternative['chainToId']);
+
+            return $anchor === null
+                ? Habit::UnknownAnchorHour
+                : intdiv(
+                    ($anchor->dayStartMinute() ?? Habit::UnknownAnchorHour * 60)
+                        + ($anchor->durationMinutes() ?? 0),
+                    60,
+                );
+        }
+
+        return Habit::anchorHourFor(
+            situation: $alternative['situation'] ?? null,
+            time: $alternative['time'] ?? null,
+        );
     }
 
     /**

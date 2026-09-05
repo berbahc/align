@@ -2,6 +2,7 @@
 
 use App\Enums\HabitCategory;
 use App\Enums\HabitTemplate;
+use App\Enums\ScheduleType;
 use App\Models\Habit;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia;
@@ -27,7 +28,7 @@ test('onboarding starts with the frame, then offers the catalog', function () {
             ->where('hasSleepSchedule', false)
             ->has('categories', 4)
             ->has('categories.0.templates')
-            ->has('triggerSuggestions', count(Habit::TriggerSuggestions))
+            ->has('triggerSuggestions', 2)
         );
 });
 
@@ -141,7 +142,7 @@ test('new habits are appended to the end of the list', function () {
     $this->actingAs($user)->post(route('habits.store'), [
         'template_key' => HabitTemplate::Meditieren->value,
         'target_amount' => 10,
-        'trigger_situation' => 'nach dem Mittagessen',
+        'trigger_situation' => 'nach der Vorlesung',
     ]);
 
     expect($user->habits()->where('title', 'Meditieren')->sole()->position)->toBe(2);
@@ -180,11 +181,24 @@ test('the sixth active habit is refused by the server, not only by the interface
 
 test('a graduated habit frees a slot', function () {
     $user = User::factory()->create();
-    Habit::factory()->for($user)->count(Habit::MaxActivePerUser - 1)->create();
+
+    // Die vier hängen an Uhrzeiten, nicht an Momenten: Es gibt nur noch drei
+    // Situationen, und der Test braucht genau eine davon frei.
+    foreach ([9, 11, 13, 15] as $index => $hour) {
+        Habit::factory()->for($user)
+            ->fixedSchedule(sprintf('%02d:00', $hour), [1, 2, 3, 4, 5, 6, 7])
+            ->withMeasure(30)
+            ->create(['position' => $index]);
+    }
+
     // Die beendete Gewohnheit gibt ihren Moment mit frei — sie zählt weder
     // gegen die fünf Plätze noch gegen die Belegung.
-    $graduated = Habit::factory()->for($user)->graduated()
-        ->create(['trigger_situation' => 'vor dem Schlafengehen']);
+    $graduated = Habit::factory()->for($user)->graduated()->create([
+        'schedule_type' => ScheduleType::Dynamic,
+        'trigger_situation' => 'vor dem Schlafengehen',
+        'scheduled_time' => null,
+        'scheduled_days' => null,
+    ]);
 
     $this->actingAs($user)
         ->post(route('habits.store'), [
