@@ -570,6 +570,13 @@ class Habit extends Model
      * hat: sieben Tage für den Streifen, ein längeres Fenster als Beleg für
      * einen Anpassungs-Vorschlag.
      *
+     * **Vor dem Anlegen ist nichts vorgesehen.** Ohne diese Grenze zeigte eine
+     * heute angelegte Mo–Fr-Gewohnheit fünf offene Tage für die Woche davor,
+     * als hätte jemand fünf Mal ausgelassen. `progress-tracking.md` schließt
+     * das aus: „fehlende Tage dürfen nie bestraft oder prominent angezeigt
+     * werden." {@see recentMisses()} wandte die Regel bisher hinterher an;
+     * seit der Streifen diese Reihe unmittelbar zeichnet, gehört sie hierher.
+     *
      * @return list<array{date: string, label: string, scheduled: bool, completed: bool}>
      */
     public function weekOverview(?Carbon $until = null, ?int $days = null): array
@@ -577,19 +584,22 @@ class Habit extends Model
         $until ??= Carbon::today();
         $days ??= self::WeekOverviewDays;
 
+        $created = $this->created_at?->copy()->startOfDay();
+
         $completed = $this->completions
             ->map(fn (HabitCompletion $completion): string => $completion->completed_on->toDateString())
             ->all();
 
         /** @var list<array{date: string, label: string, scheduled: bool, completed: bool}> $overview */
         $overview = collect(range($days - 1, 0))
-            ->map(function (int $offset) use ($until, $completed): array {
+            ->map(function (int $offset) use ($until, $completed, $created): array {
                 $date = $until->copy()->subDays($offset);
+                $existed = $created === null || $date->greaterThanOrEqualTo($created);
 
                 return [
                     'date' => $date->toDateString(),
                     'label' => self::WeekdayAbbreviations[$date->dayOfWeekIso],
-                    'scheduled' => $this->isDueOn($date),
+                    'scheduled' => $existed && $this->isDueOn($date),
                     'completed' => in_array($date->toDateString(), $completed, strict: true),
                 ];
             })
@@ -1504,14 +1514,53 @@ class Habit extends Model
      */
     public function consistencyRate(int $days = 30, ?Carbon $until = null): ?int
     {
-        $until ??= Carbon::today();
-        $start = $until->copy()->subDays($days - 1)->max($this->created_at->copy()->startOfDay());
+        $consistency = $this->consistency($days, $until);
 
-        $window = $this->scheduledDaysBetween($start, $until);
-
-        if ($window < 1) {
+        if ($consistency === null) {
             return null;
         }
+
+        return (int) round($consistency['done'] / $consistency['scheduled'] * 100);
+    }
+
+    /**
+     * Dieselbe Konsistenz als die zwei Zahlen, aus denen sie besteht.
+     *
+     * „18 von 21 Tagen" statt „84 %". Der Prozentwert ist der Vergleichswert
+     * zwischen Gewohnheiten, die beiden Zahlen sind der ehrlichere Blick auf
+     * eine einzelne — vor allem bei seltenen.
+     *
+     * **Warum das nicht dasselbe ist:** Eine Gewohnheit für Samstag und
+     * Sonntag hat im Fenster acht vorgesehene Tage. Ein ausgelassenes
+     * Wochenende macht daraus 75 %, zwei machen 50 % — eine Zahl, die nach
+     * Note klingt, obwohl Lally et al. 2010 für einzelne Aussetzer keine
+     * messbaren Langzeitkosten finden (`progress-tracking.md`). „6 von 8
+     * Tagen" sagt dasselbe, ohne zu urteilen. Die Interviewauswertung führt
+     * genau diesen Fall als Gegenbeispiel: Eine App, die anzeigte, wie weit
+     * jemand zurückgefallen war, wirkte demotivierend, obwohl Fortschritt da
+     * war — „Fortschritt braucht einen ehrlichen, nicht strafenden Kontext."
+     *
+     * `sinceStart` sagt, ob das Anlegedatum das Fenster beschnitten hat, die
+     * Gewohnheit also jünger als `$days` ist. Ohne diese Auskunft könnte die
+     * Oberfläche „1 von 1" nicht erklären: Sie verspräche dreißig Tage und
+     * zeigte einen. Die Zahl ist dann richtig gerechnet und trotzdem nicht zu
+     * lesen.
+     *
+     * `null`, solange es kein Fenster gibt: Vor dem ersten vorgesehenen Tag
+     * gäbe es nichts zu teilen und nichts zu zählen.
+     *
+     * @return array{done: int, scheduled: int, sinceStart: bool}|null
+     */
+    public function consistency(int $days = 30, ?Carbon $until = null): ?array
+    {
+        $until ??= Carbon::today();
+        $window = $this->consistencyWindow($until, $days);
+
+        if ($window === null) {
+            return null;
+        }
+
+        $start = $until->copy()->subDays($days - 1)->max($this->created_at->copy()->startOfDay());
 
         // Carbon-Instanzen statt Datums-Strings: der `date`-Cast legt die Spalte
         // als "Y-m-d H:i:s" ab, ein String-Vergleich gegen "Y-m-d" würde den
@@ -1520,7 +1569,40 @@ class Habit extends Model
             ->whereBetween('completed_on', [$start->copy()->startOfDay(), $until->copy()->endOfDay()])
             ->count();
 
-        return (int) round($completed / $window * 100);
+        return ['done' => $completed, ...$window];
+    }
+
+    /**
+     * Nur der Nenner: wie viele Gelegenheiten das Fenster überhaupt enthielt.
+     *
+     * Reine Rechnung, keine Datenbank. Das ist der Grund, aus dem er getrennt
+     * steht: Der **Zähler** braucht die Grenze am Anlegedatum gar nicht, denn
+     * Erfüllungen vor dem Anlegen kann es nicht geben. Er lässt sich deshalb
+     * beim Laden der Gewohnheiten in einem `withCount` mitnehmen und kostet
+     * nichts extra. Nur der Nenner braucht die Grenze, und die steht hier.
+     *
+     * Wer beides zusammen will und die Abfrage nicht scheut, nimmt
+     * {@see consistency()}.
+     *
+     * `sinceStart` sagt, ob das Anlegedatum das Fenster beschnitten hat. Ohne
+     * diese Auskunft könnte die Oberfläche „1 von 1" nicht erklären: Sie
+     * verspräche dreißig Tage und zeigte einen.
+     *
+     * @return array{scheduled: int, sinceStart: bool}|null
+     */
+    public function consistencyWindow(?Carbon $until = null, int $days = 30): ?array
+    {
+        $until ??= Carbon::today();
+        $created = $this->created_at->copy()->startOfDay();
+        $full = $until->copy()->subDays($days - 1);
+
+        $scheduled = $this->scheduledDaysBetween($full->copy()->max($created), $until);
+
+        if ($scheduled < 1) {
+            return null;
+        }
+
+        return ['scheduled' => $scheduled, 'sinceStart' => $created->greaterThan($full)];
     }
 
     /**

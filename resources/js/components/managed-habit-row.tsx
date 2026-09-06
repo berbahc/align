@@ -1,9 +1,15 @@
 import { Link } from '@inertiajs/react';
-import { Bell, CircleCheck, MoreHorizontal, Pencil } from 'lucide-react';
+import { Bell, CircleCheck, Info, MoreHorizontal, Pencil } from 'lucide-react';
+import { useState } from 'react';
 import { HabitGlyph } from '@/components/habit-glyph';
 import { RhythmStrip } from '@/components/rhythm-strip';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import {
     DropdownMenu,
     DropdownMenuCheckboxItem,
@@ -50,17 +56,8 @@ export function ManagedHabitRow({
      */
     highlighted?: boolean;
 }) {
-    /**
-     * Wie es läuft — in der Reihenfolge vom weiten zum nahen Blick.
-     *
-     * Beide Angaben sind optional: Vor dem ersten vorgesehenen Tag gibt es
-     * kein Fenster für eine Rate, und unterhalb der Mindestlänge behauptet die
-     * Serie lieber nichts, als eine „1" zu zeigen.
-     */
-    const stats = [
-        habit.consistency !== null && `${habit.consistency} % in 30 Tagen`,
-        habit.streak,
-    ].filter((entry): entry is string => typeof entry === 'string');
+    // Ob der Erklärkasten unter dieser Zeile offen ist.
+    const [explaining, setExplaining] = useState(false);
 
     return (
         <li
@@ -204,23 +201,132 @@ export function ManagedHabitRow({
                         reicht, und untereinander, wo nicht — auf 375px passt
                         beides nicht in eine Zeile, und ein abgeschnittener
                         Prozentwert wäre schlimmer als ein Umbruch. */}
-                    <div className="flex flex-wrap items-end gap-x-4 gap-y-2 pl-14">
+                    <Collapsible
+                        open={explaining}
+                        onOpenChange={setExplaining}
+                        className="flex flex-wrap items-end gap-x-4 gap-y-2 pl-14"
+                    >
                         <RhythmStrip days={habit.rhythm} title={habit.title} />
 
                         {/* Zwei Zeitachsen, die einander nicht wiederholen:
                             Der Streifen zeigt die Woche und lässt sich
-                            abzählen, die Rate blickt über dreißig Tage und
-                            springt bei einem Fehltag nicht. Daneben die Serie —
-                            {@see Habit::consistencyRate()} nennt sie „den
-                            Antrieb" und die Rate „den ehrlicheren Blick".
-                            Beides gehört in dieselbe Zeile, weil beides
-                            dieselbe Frage beantwortet: wie läuft es. */}
-                        {stats.length > 0 && (
+                            abzählen, die Konsistenz blickt über dreißig Tage
+                            und springt bei einem Fehltag nicht. Daneben die
+                            Serie — {@see Habit::consistencyRate()} nennt sie
+                            „den Antrieb" und die Rate „den ehrlicheren Blick".
+
+                            Die Zahlen tragen Gewicht, die Wörter nicht: §3.3
+                            hält gemischte Gewichte in einer Zeile als eigenes
+                            Muster fest („**85 %** Erreicht"). Vorher stand
+                            hier alles in `muted` — die Auskunft, die Lally
+                            2010 als wichtigsten Prädiktor nennt, war damit das
+                            Leiseste in der Karte. */}
+                        {(habit.consistency !== null ||
+                            habit.streak !== null) && (
                             <p className="pb-3.5 text-xs text-muted-foreground">
-                                {stats.join(' · ')}
+                                {habit.consistency !== null && (
+                                    <>
+                                        <span className="font-semibold text-foreground tabular-nums">
+                                            {habit.consistency.done} von{' '}
+                                            {habit.consistency.scheduled}
+                                        </span>{' '}
+                                        {/* Bei einer jungen Gewohnheit reicht
+                                            das Fenster nur bis zum Anlegetag.
+                                            Ohne diesen Zusatz stünde dort „1
+                                            von 1", während die Legende einen
+                                            Monat verspricht. Die Zahl wäre
+                                            richtig und trotzdem nicht zu
+                                            lesen. */}
+                                        {habit.consistency.sinceStart
+                                            ? 'Tagen seit dem Start'
+                                            : 'Tagen'}
+                                        {/* Die Erklärung steht dort, wo die
+                                            Frage entsteht: „22 Tage wovon?"
+                                            fragt man an der Zahl, nicht am
+                                            Seitenkopf. Aufklappen statt
+                                            Tooltip, weil es auf dem Handy kein
+                                            Hover gibt. Derselbe Weg wie bei
+                                            {@see HabitLimitNote}. */}
+                                        <CollapsibleTrigger className="ml-1 inline-flex size-6 -translate-y-px cursor-pointer items-center justify-center rounded-full align-middle text-muted-foreground transition-colors duration-[var(--duration-press)] ease-out hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+                                            <Info
+                                                className="size-3.5"
+                                                aria-hidden="true"
+                                            />
+                                            <span className="sr-only">
+                                                {explaining
+                                                    ? 'Erklärung ausblenden'
+                                                    : `Was zählt die Zahl bei ${habit.title}?`}
+                                            </span>
+                                        </CollapsibleTrigger>
+                                    </>
+                                )}
+                                {habit.consistency !== null &&
+                                    habit.streak !== null && (
+                                        <span aria-hidden="true"> · </span>
+                                    )}
+                                {habit.streak}
                             </p>
                         )}
-                    </div>
+
+                        {/* Mit den echten Zahlen dieser Gewohnheit statt
+                            allgemein. „Sie zählt nur Tage, an denen die
+                            Gewohnheit anstand" beschrieb den Nenner und ließ
+                            offen, was die erste Zahl ist. Wer hier klickt,
+                            will wissen, was die zwei Zahlen bedeuten, die er
+                            gerade vor sich hat. */}
+                        {habit.consistency !== null && (
+                            <CollapsibleContent className="w-full">
+                                <div className="rounded-xl border border-dashed px-4 py-3">
+                                    <p className="text-[13px] font-semibold">
+                                        Was die Zahl bedeutet
+                                    </p>
+                                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                                        {habit.consistency.sinceStart
+                                            ? 'Seit du '
+                                            : 'In den letzten 30 Tagen stand '}
+                                        <span className="font-semibold text-foreground">
+                                            {habit.title}
+                                        </span>{' '}
+                                        {habit.consistency.sinceStart
+                                            ? 'angelegt hast, stand sie an '
+                                            : 'an '}
+                                        <span className="font-semibold text-foreground tabular-nums">
+                                            {habit.consistency.scheduled}
+                                        </span>{' '}
+                                        Tagen an. An{' '}
+                                        <span className="font-semibold text-foreground tabular-nums">
+                                            {habit.consistency.done}
+                                        </span>{' '}
+                                        davon hast du sie erledigt.
+                                    </p>
+
+                                    {/* Der Streifen darüber zeigt schon, welche
+                                        Tage nicht mitzählen. Ein Beispiel („bei
+                                        einer Mo–Fr-Gewohnheit also keine
+                                        Wochenenden") stand auch über einer
+                                        täglichen Gewohnheit und erklärte dort
+                                        nichts. */}
+                                    <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                                        Tage, an denen sie nicht anstand, zählen
+                                        nicht mit.
+                                    </p>
+
+                                    {/* Der Anfang steht hier, weil er sonst
+                                        nirgends steht: Das Archiv nennt „Beendet
+                                        am", eine laufende Gewohnheit sagte bis
+                                        hierher nicht, seit wann es sie gibt. */}
+                                    {habit.startedOn !== null && (
+                                        <p className="mt-2 text-xs text-muted-foreground">
+                                            Angefangen am{' '}
+                                            <span className="font-semibold text-foreground tabular-nums">
+                                                {habit.startedOn}
+                                            </span>
+                                        </p>
+                                    )}
+                                </div>
+                            </CollapsibleContent>
+                        )}
+                    </Collapsible>
                 </CardContent>
             </Card>
         </li>

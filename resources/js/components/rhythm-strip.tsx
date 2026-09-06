@@ -119,8 +119,8 @@ export function RhythmStrip({
             role="img"
             aria-label={
                 scheduled === 0
-                    ? `${title}: in den letzten sieben Tagen nicht vorgesehen`
-                    : `${title}: ${done} von ${scheduled} vorgesehenen Tagen der letzten Woche erledigt`
+                    ? `${title}: stand in den letzten sieben Tagen nicht an`
+                    : `${title}: in der letzten Woche an ${done} von ${scheduled} Tagen erledigt`
             }
             className={cn('flex shrink-0 gap-1', className)}
         >
@@ -169,12 +169,17 @@ export function RhythmStrip({
  *
  * Einmal auf der Seite, nicht an jeder Karte: Eine Legende, die sich fünfmal
  * wiederholt, ist keine Erklärung mehr, sondern Rauschen. Sie steht über der
- * Liste, weil man sie beim ersten Blick braucht — und ist leise genug, um
+ * Liste, weil man sie beim ersten Blick braucht, und ist leise genug, um
  * danach nicht zu stören.
  *
  * Die Marken kommen aus derselben Quelle wie die im Streifen ({@see MARK}).
  * Eine Legende muss mit der Sache mitwandern, die sie erklärt, sonst erklärt
  * sie irgendwann etwas Falsches.
+ *
+ * **Nur die Töne, kein Erklärtext.** Die Bezugsgröße der Zahl wird dort
+ * erklärt, wo die Frage entsteht: an der Zahl selbst, über ein Zeichen in der
+ * Zeile. Ein Absatz über der Liste beantwortete eine Frage, die man erst zehn
+ * Zeilen weiter unten stellt.
  */
 export function RhythmLegend({ className }: { className?: string }) {
     const states: DayState[] = ['done', 'open', 'unplanned'];
@@ -187,7 +192,7 @@ export function RhythmLegend({ className }: { className?: string }) {
             )}
         >
             <span className="sr-only">
-                Der Streifen an jeder Gewohnheit zeigt die letzten sieben Tage:
+                Der Streifen bei jeder Gewohnheit zeigt die letzten sieben Tage:
             </span>
             {states.map((state) => (
                 <span key={state} className="flex items-center gap-1.5">

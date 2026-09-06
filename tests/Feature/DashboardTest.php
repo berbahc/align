@@ -3,6 +3,7 @@
 use App\Models\Habit;
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia;
 
 test('guests are redirected to the login page', function () {
@@ -136,9 +137,15 @@ test('the consistency rate counts the full 30 day window including today', funct
 
     expect($habit->consistencyRate())->toBe(100);
 
+    // Dreißig vorgesehene Tage, dreißig erledigt. Als Prozentwert wären das
+    // 100 %; die Oberfläche nennt beide Zahlen, damit niemand sie für einen
+    // Durchschnitt über die Gewohnheiten hält.
     $this->actingAs($user)
         ->get(route('dashboard'))
-        ->assertInertia(fn (AssertableInertia $page) => $page->where('consistency', 100));
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('consistency.done', 30)
+            ->where('consistency.scheduled', 30)
+        );
 });
 
 test('a user without habits gets no consistency rate instead of zero percent', function () {
@@ -221,9 +228,133 @@ test('a weekday habit reaches 100 percent without being punished for the weekend
 
     expect($habit->consistencyRate())->toBe(100);
 
+    // Nur die Werktage stehen im Nenner, nicht die dreißig Kalendertage. Sonst
+    // bliebe eine lückenlos erfüllte Mo–Fr-Gewohnheit dauerhaft unter 72 %.
     $this->actingAs($user)
         ->get(route('dashboard'))
-        ->assertInertia(fn (AssertableInertia $page) => $page->where('consistency', 100));
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('consistency.done', 21)
+            ->where('consistency.scheduled', 21)
+        );
+});
+
+/**
+ * Die Gesamtzahl rechnet wie die Zahl je Gewohnheit.
+ *
+ * Sie beschnitt ihr Fenster nicht am Anlegedatum, die Gewohnheiten-Seite
+ * schon. Wer gestern seine erste Gewohnheit anlegte und erledigte, las hier
+ * rund 3 % und dort 100 %. Zwei Zahlen, die beide „Konsistenz" heißen, dürfen
+ * nicht verschieden rechnen — und Lally et al. 2010 gibt die Richtung vor:
+ * Konsistenz ist der Anteil genutzter Gelegenheiten, und ein Tag vor dem
+ * Anlegen war keine.
+ */
+test('a habit created yesterday is not judged against the month before it', function () {
+    Carbon::setTestNow(Carbon::parse('2026-08-05'));
+
+    $user = User::factory()->create();
+    $habit = Habit::factory()->for($user)
+        ->fixedSchedule(days: [1, 2, 3, 4, 5, 6, 7])
+        ->create(['created_at' => Carbon::parse('2026-08-04')]);
+
+    // Gestern und heute erfüllt, also beide Gelegenheiten genutzt.
+    foreach ([0, 1] as $daysAgo) {
+        $date = Carbon::today()->subDays($daysAgo);
+
+        $habit->completions()->create([
+            'completed_on' => $date,
+            'completed_at' => $date->copy()->setTime(8, 0),
+        ]);
+    }
+
+    // Zwei Gelegenheiten seit gestern, beide genutzt. Ohne die Grenze am
+    // Anlegedatum stünden hier 30 geplante Tage, von denen 28 nie eine
+    // Gelegenheit waren.
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('consistency.done', 2)
+            ->where('consistency.scheduled', 2)
+        );
+});
+
+/**
+ * Die Zahl nennt Tage, keinen Prozentwert, und das aus einem Grund.
+ *
+ * „62 %" über alle Gewohnheiten lädt zu einer Fehllesung ein. Wer täglich
+ * meditiert und das Wochenend-Radfahren auslässt, läse 79 %, obwohl eine
+ * seiner beiden Gewohnheiten bei null steht: Die Zahl ist nach Häufigkeit
+ * gewichtet, und niemand liest sie so. „30 von 38" behauptet dagegen gar
+ * nicht, ein Durchschnitt zu sein.
+ */
+test('the overview counts days across habits instead of averaging them', function () {
+    // Ein Samstag, damit beide Gewohnheiten heute anstehen.
+    Carbon::setTestNow(Carbon::parse('2026-08-08'));
+
+    $user = User::factory()->create();
+
+    $daily = Habit::factory()->for($user)
+        ->fixedSchedule('21:00', [1, 2, 3, 4, 5, 6, 7])
+        ->create(['created_at' => Carbon::today()->subDays(60)]);
+
+    // Am Wochenende, und kein einziges Mal erfüllt.
+    Habit::factory()->for($user)
+        ->fixedSchedule('17:00', [6, 7])
+        ->create(['created_at' => Carbon::today()->subDays(60)]);
+
+    foreach (range(0, 29) as $daysAgo) {
+        $date = Carbon::today()->subDays($daysAgo);
+
+        $daily->completions()->create([
+            'completed_on' => $date,
+            'completed_at' => $date->copy()->setTime(21, 0),
+        ]);
+    }
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            // Das Fenster reicht von Freitag, dem 10.07., bis Samstag, dem
+            // 08.08.: fünf Samstage und vier Sonntage, also neun Wochenendtage
+            // neben den dreißig täglichen. Macht 39 Gelegenheiten, genutzt
+            // wurden 30.
+            //
+            // Als Prozentwert wären das 77 %, obwohl die zweite Gewohnheit bei
+            // null steht. Der Durchschnitt der beiden wäre 50 %. Genau deshalb
+            // nennt die Oberfläche Tage und keinen Prozentwert.
+            ->where('consistency.done', 30)
+            ->where('consistency.scheduled', 39)
+        );
+});
+
+/**
+ * Der Zähler gehört in die Hauptabfrage.
+ *
+ * Er kam schon einmal dort heraus, und niemandem fiel es auf: Die Zahl war
+ * weiterhin richtig, nur kostete sie je Gewohnheit eine eigene Zählabfrage.
+ * Dieser Test hält fest, dass die Seite mit fünf Gewohnheiten nicht mehr
+ * Abfragen braucht als mit einer.
+ */
+test('the overview does not query more for every additional habit', function () {
+    Carbon::setTestNow(Carbon::parse('2026-08-08'));
+
+    $count = function (int $habits): int {
+        $user = User::factory()->create();
+
+        Habit::factory()->count($habits)->for($user)
+            ->fixedSchedule('09:00', [1, 2, 3, 4, 5, 6, 7])
+            ->create(['created_at' => Carbon::today()->subDays(60)]);
+
+        $queries = 0;
+        DB::listen(function () use (&$queries) {
+            $queries++;
+        });
+
+        $this->actingAs($user)->get(route('dashboard'))->assertOk();
+
+        return $queries;
+    };
+
+    expect($count(5))->toBe($count(1));
 });
 
 test('the schedule label carries the time and days of a fixed habit', function () {

@@ -55,7 +55,14 @@ interface DashboardProps {
     sleepCard: SleepCardData;
     todayProgress: TodayProgress;
     /** Anteil erfüllter Tage der letzten 30 Tage; null, solange es keine Gewohnheiten gibt. */
-    consistency: number | null;
+    /**
+     * Erledigte und geplante Tage über alle Gewohnheiten, 30 Tage weit.
+     *
+     * Dieselbe Form wie auf der Gewohnheiten-Seite, nur über alle statt über
+     * eine. Bewusst kein Prozentwert: Er ist nach Häufigkeit gewichtet, und
+     * niemand liest ihn so. Null, solange es keine Gewohnheiten gibt.
+     */
+    consistency: { done: number; scheduled: number } | null;
     /** Die stärkste laufende Serie; null unterhalb von Habit::StreakMinimum. */
     streak: Streak | null;
     /** Nur die heute vorgesehenen Gewohnheiten. */
@@ -370,10 +377,23 @@ export default function Dashboard({
                                     {todayProgress.completed} von{' '}
                                     {todayProgress.total} Gewohnheiten
                                 </span>
+                                {/* „Mal" und nicht „Tage": Die Zahl ist eine
+                                    Summe über alle Gewohnheiten und kann
+                                    deshalb größer sein als 30. „60 Tage in den
+                                    letzten 30 Tagen" wäre ein Widerspruch.
+                                    Dieselbe Unterscheidung trifft
+                                    {@see Habit::streakUnit()} schon für die
+                                    Serie. Je Gewohnheit stimmt „Tage",
+                                    deshalb steht es auf der
+                                    Gewohnheiten-Seite. */}
                                 {consistency !== null && (
                                     <span>
-                                        Konsistenz der letzten 30 Tage:{' '}
-                                        {consistency} %
+                                        Letzte 30 Tage:{' '}
+                                        <span className="font-semibold text-foreground tabular-nums">
+                                            {consistency.done} von{' '}
+                                            {consistency.scheduled}
+                                        </span>{' '}
+                                        Mal erledigt
                                     </span>
                                 )}
                             </p>
@@ -469,8 +489,8 @@ export default function Dashboard({
                                     Für heute ist nichts vorgesehen.{' '}
                                     {activeCount === 1
                                         ? 'Deine Gewohnheit ist für andere Wochentage eingeplant'
-                                        : `Deine ${activeCount} Gewohnheiten sind für andere Wochentage eingeplant`}{' '}
-                                    — unter{' '}
+                                        : `Deine ${activeCount} Gewohnheiten sind für andere Wochentage eingeplant`}
+                                    . Unter{' '}
                                     <Link
                                         href={habitsIndex()}
                                         className={QUIET_LINK}

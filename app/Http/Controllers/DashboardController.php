@@ -46,7 +46,11 @@ class DashboardController extends Controller
             // eine verschobene Gewohnheit weiter an ihrer alten Stelle, und
             // wer für eine Verabredung Platz gemacht hat, sähe davon nichts.
             ->with(['dayShifts' => fn (Relation $query) => $query->whereDate('shifted_on', $today)])
-            ->withCount(['completions as completions_last_30_days' => fn (Builder $query) => $query
+            // Der Zähler der Konsistenz, in derselben Abfrage. Er braucht die
+            // Grenze am Anlegedatum nicht: Vor dem Anlegen kann es keine
+            // Erfüllung geben. Nur der Nenner braucht sie, und der rechnet in
+            // {@see Habit::consistencyWindow()} ohne Datenbank.
+            ->withCount(['completions as completions_in_window' => fn (Builder $query) => $query
                 ->where('completed_on', '>=', $today->copy()->subDays(29)->startOfDay()),
             ])
             ->orderBy('position')
@@ -108,7 +112,7 @@ class DashboardController extends Controller
             ])->all(),
             'appointmentsEnabled' => $request->user()->appointments_enabled,
             'todayProgress' => $this->todayProgress($todaysHabits),
-            'consistency' => $this->consistencyRate($habits, $today),
+            'consistency' => $this->consistency($habits, $today),
             'streak' => $this->streak($habits, $today),
             // Eine leere Tagesliste heißt nicht, dass es keine Gewohnheiten
             // gibt — eine Mo–Fr-Gewohnheit ist am Samstag schlicht nicht
@@ -357,40 +361,57 @@ class DashboardController extends Controller
     }
 
     /**
-     * Gemeinsame Konsistenzrate über alle aktiven Gewohnheiten der letzten 30 Tage.
+     * Erledigte und geplante Tage über alle aktiven Gewohnheiten, 30 Tage weit.
      *
      * Die ruhige Zweitansicht neben der Serie: Sie springt nicht bei einem
      * einzelnen Fehltag und bleibt damit der ehrlichere Blick über dreißig
      * Tage. Dass sie den Streak ersetzt, stand nur in progress-tracking.md und
-     * stammt aus den Interviews — die Umfrage hat das widerlegt
-     * (umfrage-auswertung.md §6). Ohne aktive Gewohnheiten gibt es keine Rate —
-     * dann zeigt die Oberfläche den leeren Zustand statt „0 %".
+     * stammt aus den Interviews; die Umfrage hat das widerlegt
+     * (umfrage-auswertung.md §6). Ohne aktive Gewohnheiten gibt es keine Zahl,
+     * dann zeigt die Oberfläche den leeren Zustand statt „0 von 0".
      *
-     * Die Zahl der möglichen Tage wird pro Gewohnheit ermittelt, nicht pauschal
-     * mit 30 multipliziert: eine Mo–Fr-Gewohnheit hat in dreißig Tagen rund
-     * zweiundzwanzig vorgesehene Tage. Über alle Tage zu rechnen würde sie
-     * dauerhaft unter 72 % halten, obwohl sie lückenlos erfüllt wurde.
+     * **Zwei Zahlen statt einer Prozentzahl.** „62 %" über alle Gewohnheiten
+     * lädt zu einer Fehllesung ein: Wer täglich meditiert und das
+     * Wochenend-Radfahren auslässt, liest 79 %, obwohl eine seiner beiden
+     * Gewohnheiten bei null steht. Die Zahl ist nach Häufigkeit gewichtet, und
+     * niemand liest sie so. „30 von 38 geplanten Tagen" behauptet dagegen gar
+     * nicht, ein Durchschnitt zu sein, und sagt genau das, was gerechnet wurde.
+     * Nebenbei trägt die Karte „Heute" damit nur noch eine Prozentzahl, ihre
+     * eigene.
+     *
+     * Es ist dieselbe Form wie auf der Gewohnheiten-Seite, nur über alle statt
+     * über eine. Wer die Zahl dort lesen kann, kann sie auch hier lesen.
+     *
+     * Die geplanten Tage werden pro Gewohnheit ermittelt, nicht pauschal mit 30
+     * multipliziert: Eine Mo–Fr-Gewohnheit hat in dreißig Tagen rund
+     * zweiundzwanzig. Über alle Kalendertage zu rechnen hielte sie dauerhaft
+     * unter 72 %, obwohl sie lückenlos erfüllt wurde.
+     *
+     * Der Nenner kommt aus {@see Habit::consistencyWindow()} und schneidet am
+     * Anlegedatum ab: Lally et al. 2010 nennt Konsistenz den Anteil genutzter
+     * Gelegenheiten, und ein Tag vor dem Anlegen war keine. Der Zähler steht
+     * schon in der Hauptabfrage und braucht die Grenze nicht.
      *
      * @param  Collection<int, Habit>  $habits
+     * @return array{done: int, scheduled: int}|null
      */
-    private function consistencyRate(Collection $habits, Carbon $today): ?int
+    private function consistency(Collection $habits, Carbon $today): ?array
     {
         if ($habits->isEmpty()) {
             return null;
         }
 
-        $start = $today->copy()->subDays(29);
-
         $possible = $habits->sum(
-            fn (Habit $habit): int => $habit->scheduledDaysBetween($start, $today),
+            fn (Habit $habit): int => $habit->consistencyWindow($today)['scheduled'] ?? 0,
         );
 
         if ($possible < 1) {
             return null;
         }
 
-        $completed = $habits->sum('completions_last_30_days');
-
-        return (int) round($completed / $possible * 100);
+        return [
+            'done' => (int) $habits->sum('completions_in_window'),
+            'scheduled' => (int) $possible,
+        ];
     }
 }

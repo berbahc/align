@@ -260,12 +260,34 @@ export interface ManagedHabit {
      */
     rhythm: RhythmDay[];
     /**
-     * Anteil erfüllter vorgesehener Tage der letzten 30 Tage, in Prozent.
+     * Die Konsistenz der letzten 30 Tage als die zwei Zahlen, aus denen sie
+     * besteht: erledigte und vorgesehene Tage.
      *
-     * Die zweite Zeitachse neben dem Streifen: Der zeigt eine Woche, die Rate
-     * einen Monat. Null, solange es noch kein Fenster gibt.
+     * Die zweite Zeitachse neben dem Streifen — der zeigt eine Woche, diese
+     * Angabe einen Monat. Bewusst kein Prozentwert: Bei einer Gewohnheit mit
+     * acht vorgesehenen Tagen im Fenster macht ein ausgelassenes Wochenende
+     * daraus „75 %", was nach Note klingt. „6 von 8 Tagen" sagt dasselbe,
+     * ohne zu urteilen.
+     *
+     * Null, solange es noch kein Fenster gibt.
      */
-    consistency: number | null;
+    consistency: {
+        done: number;
+        scheduled: number;
+        /**
+         * Wahr, wenn das Anlegedatum das Fenster beschnitten hat. Dann sind es
+         * weniger als 30 Tage, und die Zeile muss das sagen: „1 von 1" ohne
+         * diesen Hinweis verspricht einen Monat und zeigt einen Tag.
+         */
+        sinceStart: boolean;
+    } | null;
+    /**
+     * Wann die Gewohnheit angefangen hat, als „06.08.2026".
+     *
+     * Dasselbe Datum, an dem auch das Fenster der Konsistenz beginnt. Beide
+     * stehen im selben Kasten und dürfen sich nicht widersprechen.
+     */
+    startedOn: string | null;
 }
 
 /**

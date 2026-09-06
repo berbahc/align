@@ -195,17 +195,28 @@ class HabitController extends Controller
                 // zählt nicht und er bricht nicht.
                 'rhythm' => $habit->weekOverview($today),
                 // Die zweite Zeitachse neben dem Streifen. Der zeigt eine
-                // Woche und lässt sich abzählen; die Rate blickt über dreißig
-                // Tage und springt bei einem Fehltag nicht — zwei Auskünfte,
-                // die einander nicht wiederholen.
+                // Woche und lässt sich abzählen; die Konsistenz blickt über
+                // dreißig Tage und springt bei einem Fehltag nicht — zwei
+                // Auskünfte, die einander nicht wiederholen.
                 //
-                // {@see Habit::consistencyRate()} nennt sie „die ruhige
-                // Zweitansicht neben der Serie, nicht ihr Ersatz": die Serie
-                // als Antrieb, die Rate als der ehrlichere Blick. Beide stehen
-                // deshalb in derselben Zeile. Null vor dem ersten vorgesehenen
-                // Tag — dann gibt es kein Fenster, über das sich etwas sagen
-                // ließe.
-                'consistency' => $habit->consistencyRate(),
+                // Als zwei Zahlen und nicht als Prozentwert: „6 von 8 Tagen"
+                // statt „75 %". Warum, steht bei {@see Habit::consistency()}.
+                // Null vor dem ersten vorgesehenen Tag.
+                'consistency' => $habit->consistency(),
+                // Wann die Gewohnheit angefangen hat. Bis hierher stand das
+                // nirgends: Das Archiv nennt „Beendet am", eine laufende
+                // Gewohnheit sagte nicht, seit wann es sie gibt.
+                //
+                // `created_at` und nicht `committed_at`, obwohl letzteres das
+                // ausdrückliche „Ich nehme mir das vor" aus time-blocking.md
+                // ist und damit den schöneren Namen hätte. Der Grund ist
+                // Widerspruchsfreiheit: Dasselbe Feld begrenzt in
+                // {@see Habit::consistencyWindow()} das Fenster, und der Kasten
+                // zeigt beide Angaben nebeneinander. Nennte er einen Anfang,
+                // von dem die Zahl daneben nichts weiß, wäre die Karte in sich
+                // falsch. {@see CreateHabit} setzt ohnehin beide im selben
+                // Moment.
+                'startedOn' => $habit->created_at?->format('d.m.Y'),
             ])->all(),
             'graduatedHabits' => $graduated->map(fn (Habit $habit): array => [
                 'id' => $habit->id,

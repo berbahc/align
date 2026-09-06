@@ -194,6 +194,125 @@ test('die Gewohnheiten-Liste zeigt die Serie je Gewohnheit als fertige Zeile', f
 });
 
 /**
+ * Die Konsistenz steht als zwei Zahlen, nicht als Prozentwert.
+ *
+ * `progress-tracking.md` verlangt „eine Konsistenzrate der letzten 30 Tage",
+ * die Interviewauswertung warnt zugleich vor der nackten Prozentzahl: Eine
+ * App, die anzeigte, wie weit jemand zurückgefallen war, wirkte
+ * demotivierend, obwohl Fortschritt da war. Bei einer Gewohnheit mit wenigen
+ * vorgesehenen Tagen im Fenster klingt „50 %" nach Note; „1 von 2 Tagen" sagt
+ * dasselbe und lässt sich nicht falsch verstehen.
+ *
+ * Der Nenner sind die **vorgesehenen** Tage, nicht die Kalendertage — sonst
+ * wäre eine Mo–Fr-Gewohnheit dauerhaft bei 71 % gedeckelt.
+ */
+test('die Gewohnheiten-Liste zählt erledigte gegen vorgesehene Tage', function () {
+    Carbon::setTestNow(Carbon::parse('2026-08-08'));
+
+    $user = User::factory()->create();
+
+    $habit = existingSince(
+        Habit::factory()->for($user)->fixedSchedule(days: [1, 2, 3, 4, 5])->create(),
+        60,
+    );
+
+    complete($habit, [1, 4, 5]);
+
+    $this->actingAs($user)
+        ->get(route('habits.index'))
+        ->assertInertia(function (AssertableInertia $page) {
+            /** @var array{done: int, scheduled: int} $consistency */
+            $consistency = $page->toArray()['props']['habits'][0]['consistency'];
+
+            // Das Fenster reicht vom Freitag, 10.07.2026, bis Samstag, den
+            // 08.08.2026 — vier volle Wochen plus Freitag und Samstag. Damit
+            // fallen 21 Werktage hinein, nicht 22: Der angebrochene Rest
+            // bringt nur einen weiteren Freitag.
+            //
+            // Die Zahl steht ausgeschrieben, weil sie das ist, was der Nutzer
+            // liest. Eine nachgerechnete Erwartung machte denselben Fehler wie
+            // der Code, falls er einen hat.
+            expect($consistency['scheduled'])->toBe(21)
+                ->and($consistency['done'])->toBe(3);
+        });
+});
+
+/**
+ * Eine junge Gewohnheit rechnet nur mit ihren eigenen Tagen.
+ *
+ * Lally et al. 2010: Konsistenz ist der Anteil genutzter Gelegenheiten, **nicht
+ * die absolute Anzahl** der Ausführungen. Ein Tag vor dem Anlegen war keine
+ * Gelegenheit; ihn mitzuzählen machte aus der Konsistenz eine verkappte
+ * Altersangabe der Gewohnheit.
+ *
+ * `sinceStart` reist deshalb mit: Ohne diese Auskunft könnte die Oberfläche
+ * „1 von 1" nicht erklären, weil die Legende dreißig Tage verspricht.
+ */
+test('eine junge Gewohnheit zählt nur ihre eigenen Tage', function () {
+    // Ein Mittwoch. Die Gewohnheit entsteht am Montag davor, läuft täglich und
+    // wird an zwei ihrer drei Tage erfüllt.
+    Carbon::setTestNow(Carbon::parse('2026-08-05'));
+
+    $user = User::factory()->create();
+    $habit = Habit::factory()->for($user)
+        ->fixedSchedule(days: [1, 2, 3, 4, 5, 6, 7])
+        ->create(['created_at' => Carbon::parse('2026-08-03')]);
+
+    complete($habit, [0, 1]);
+
+    $this->actingAs($user)
+        ->get(route('habits.index'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            // Drei Tage seit dem Anlegen, nicht dreißig. Ohne die Grenze am
+            // Anlegedatum stünden hier 30 vorgesehene Tage, von denen 27 nie
+            // eine Gelegenheit waren.
+            ->where('habits.0.consistency.scheduled', 3)
+            ->where('habits.0.consistency.done', 2)
+            ->where('habits.0.consistency.sinceStart', true)
+            // Derselbe Tag, an dem auch das Fenster beginnt. Beide stehen im
+            // selben Kasten, ein anderes Datum wäre ein Widerspruch in sich.
+            ->where('habits.0.startedOn', '03.08.2026')
+            ->etc()
+        );
+});
+
+/**
+ * Der Streifen erfindet keine versäumten Tage.
+ *
+ * `progress-tracking.md`: „fehlende Tage dürfen nie bestraft oder prominent
+ * angezeigt werden." Ohne die Grenze am Anlegedatum zeigte eine heute
+ * angelegte Mo–Fr-Gewohnheit offene Marken für die ganze Woche davor, als
+ * hätte jemand fünf Mal ausgelassen. {@see Habit::recentMisses()} wandte diese
+ * Regel längst an, bevor die KI die Tage sieht.
+ */
+test('der Streifen zeigt keine Tage, an denen es die Gewohnheit nicht gab', function () {
+    // Ein Freitag. Die Gewohnheit entsteht am Donnerstag davor.
+    Carbon::setTestNow(Carbon::parse('2026-08-07'));
+
+    $user = User::factory()->create();
+    Habit::factory()->for($user)
+        ->fixedSchedule(days: [1, 2, 3, 4, 5])
+        ->create(['created_at' => Carbon::parse('2026-08-06')]);
+
+    $this->actingAs($user)
+        ->get(route('habits.index'))
+        ->assertInertia(function (AssertableInertia $page) {
+            /** @var list<array{date: string, scheduled: bool}> $rhythm */
+            $rhythm = $page->toArray()['props']['habits'][0]['rhythm'];
+            $byDate = collect($rhythm)->keyBy('date');
+
+            // Donnerstag und Freitag: die Gewohnheit gab es, also vorgesehen.
+            expect($byDate['2026-08-06']['scheduled'])->toBeTrue()
+                ->and($byDate['2026-08-07']['scheduled'])->toBeTrue()
+                // Montag bis Mittwoch wären Werktage. Es gab sie nur noch
+                // nicht, und damit sind es keine Lücken.
+                ->and($byDate['2026-08-03']['scheduled'])->toBeFalse()
+                ->and($byDate['2026-08-04']['scheduled'])->toBeFalse()
+                ->and($byDate['2026-08-05']['scheduled'])->toBeFalse();
+        });
+});
+
+/**
  * Der Rhythmusstreifen ist ausdrücklich **keine** Serie.
  *
  * Der Unterschied hängt an einem einzigen Feld: Ein Samstag ohne
