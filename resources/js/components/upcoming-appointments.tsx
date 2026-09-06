@@ -70,7 +70,7 @@ export function UpcomingAppointments({
             <SectionHeading
                 id="verabredungen"
                 title="Verabredungen"
-                hint="Was du mit jemandem ausgemacht hast — der Tag steht dabei."
+                hint="Was du mit jemandem ausgemacht hast, mit Tag und Uhrzeit."
             />
 
             {appointments.map((appointment) => {

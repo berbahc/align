@@ -104,7 +104,7 @@ export default function Onboarding({
                                     Wann beginnt dein Tag?
                                 </h1>
                                 <p className="mt-2 text-[15px] leading-relaxed text-muted-foreground">
-                                    Gilt zunächst für alle Tage — je Wochentag
+                                    Gilt zunächst für alle Tage. Je Wochentag
                                     einstellbar ist es später.
                                 </p>
                             </div>

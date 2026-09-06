@@ -119,7 +119,7 @@ export function BlockSheet({
                                     block.startMinute !== null && (
                                         <span className="mt-0.5 block text-sm text-muted-foreground">
                                             Ohne festgelegte Dauer rechnet Align
-                                            mit {ASSUMED_MINUTES} Minuten — die
+                                            mit {ASSUMED_MINUTES} Minuten. Die
                                             Dauer legst du beim Anpassen fest.
                                         </span>
                                     )}
@@ -192,7 +192,7 @@ export function BlockSheet({
                         className={`${OUTLINE_BUTTON} mt-5 h-12 w-full justify-center rounded-xl`}
                     >
                         <CalendarClock className="size-4" aria-hidden="true" />
-                        Selbst umlegen — zum {dayLabel(block.conflictDate)}
+                        Selbst umlegen am {dayLabel(block.conflictDate)}
                     </Link>
                 )}
 

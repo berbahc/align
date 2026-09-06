@@ -72,7 +72,7 @@ export function CourseCancellationSheet({
                     </SheetTitle>
                     <SheetDescription className="text-left text-sm text-muted-foreground">
                         An welchem Tag findet „{course?.title}" nicht statt? Nur
-                        an diesem einen — danach läuft der Kurs wieder wie jede
+                        an diesem einen. Danach läuft der Kurs wieder wie jede
                         Woche.
                     </SheetDescription>
                 </SheetHeader>

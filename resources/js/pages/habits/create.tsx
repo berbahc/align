@@ -95,11 +95,11 @@ export default function CreateHabit({
                         <p className="text-sm leading-relaxed text-foreground">
                             <span className="font-semibold">
                                 {activeCount} von {maxActive} aktiv
-                            </span>{' '}
-                            — alle Plätze sind belegt. Mehr als {maxActive} auf
+                            </span>
+                            . Alle Plätze sind belegt. Mehr als {maxActive} auf
                             einmal trägt niemand durch; das ist ein Schutz, kein
                             Verbot. Läuft eine schon von allein, markiere sie
-                            als gefestigt — dann ist hier Platz für eine neue.
+                            als gefestigt. Dann ist hier Platz für eine neue.
                         </p>
                         <Link
                             href={habitsIndex()}

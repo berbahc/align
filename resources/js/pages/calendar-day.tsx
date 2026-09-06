@@ -460,7 +460,7 @@ export default function CalendarDay({
                             <span className="font-semibold">
                                 {shownProposal.label}
                             </span>{' '}
-                            laufen — gestrichelt im Raster.{' '}
+                            laufen, gestrichelt im Raster.{' '}
                             {shownProposal.reason}
                         </p>
                         {proposalError !== null && (
@@ -615,8 +615,8 @@ export default function CalendarDay({
                             an jeder Zeile: Er gilt für alle gleich. */}
                         {canShift && (
                             <p className="text-sm leading-relaxed text-muted-foreground">
-                                Halte eine gedrückt und zieh sie ins Raster —
-                                oder tippe sie an, um zu sehen, wo sonst Platz
+                                Halte eine gedrückt und zieh sie ins Raster.
+                                Oder tippe sie an, um zu sehen, wo sonst Platz
                                 wäre.
                             </p>
                         )}

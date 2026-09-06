@@ -156,7 +156,7 @@ export function NewPlacesSheet({
                                         className="inline-block h-5 w-3/4 align-middle"
                                     />
                                 ) : (
-                                    'Wo deine Gewohnheiten jetzt Platz hätten — so nah wie möglich an der alten Zeit.'
+                                    'Wo deine Gewohnheiten jetzt Platz hätten, so nah wie möglich an der alten Zeit.'
                                 ))}
                         </SheetDescription>
                     </div>
@@ -275,7 +275,7 @@ export function NewPlacesSheet({
                             ))}
                         </ul>
                         <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                            Tippe sie im Tag an — dort findest du ihre
+                            Tippe sie im Tag an. Dort findest du ihre
                             Einstellungen.
                         </p>
                     </section>

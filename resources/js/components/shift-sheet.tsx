@@ -104,7 +104,7 @@ export function ShiftSheet({
                     >
                         {conflict.kind === 'course' ? (
                             <>
-                                Während „{conflict.title}" geht das nicht — der
+                                Während „{conflict.title}" geht das nicht. Der
                                 Kurs kommt von der Uni und rückt nicht. Davor
                                 und danach hält Align eine Viertelstunde Luft,
                                 zum Hinkommen und Umschalten: Platz ist bis{' '}
@@ -116,7 +116,7 @@ export function ShiftSheet({
                             <>
                                 „{conflict.title}" liegt heute schon dort.
                                 Zwischen zwei Gewohnheiten hält Align eine
-                                Viertelstunde Luft — Platz ist bis{' '}
+                                Viertelstunde Luft. Platz ist bis{' '}
                                 {timeLabel(conflict.from - BREATHER_MINUTES)}{' '}
                                 und wieder ab{' '}
                                 {timeLabel(conflict.to + BREATHER_MINUTES)}.
@@ -176,11 +176,11 @@ export function ShiftSheet({
  */
 function consequence(block: CalendarBlock): string | null {
     if (block.scheduleType === 'dynamic') {
-        return `„Immer" macht daraus eine feste Uhrzeit — der Auslöser „${block.anchor}" fällt dann weg.`;
+        return `„Immer" macht daraus eine feste Uhrzeit. Der Auslöser „${block.anchor}" fällt dann weg.`;
     }
 
     if (block.scheduleType === 'chained') {
-        return `„Immer" macht daraus eine feste Uhrzeit — sie hängt dann nicht mehr ${block.anchor}.`;
+        return `„Immer" macht daraus eine feste Uhrzeit. Sie hängt dann nicht mehr ${block.anchor}.`;
     }
 
     return null;

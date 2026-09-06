@@ -128,7 +128,7 @@ export default function Calendar({
                         aria-label={
                             semester === null
                                 ? 'Semester und Kurse eintragen'
-                                : `Kurse verwalten — ${courseCount} eingetragen`
+                                : `Kurse verwalten, ${courseCount} eingetragen`
                         }
                         className={NAV_BUTTON}
                     >
@@ -161,7 +161,7 @@ export default function Calendar({
                     >
                         <p className="text-sm text-foreground">
                             {onlyUpcoming
-                                ? `${displaced.length === 1 ? 'Eine Gewohnheit verliert' : `${displaced.length} Gewohnheiten verlieren`} ab dem ${firstFrom} durch deinen Stundenplan ihren Platz. Bis dahin läuft alles wie bisher — ein neuer Platz lässt sich schon jetzt finden.`
+                                ? `${displaced.length === 1 ? 'Eine Gewohnheit verliert' : `${displaced.length} Gewohnheiten verlieren`} ab dem ${firstFrom} durch deinen Stundenplan ihren Platz. Bis dahin läuft alles wie bisher. Ein neuer Platz lässt sich schon jetzt finden.`
                                 : `${displaced.length === 1 ? 'Eine Gewohnheit hat' : `${displaced.length} Gewohnheiten haben`} durch deinen Stundenplan ihren Platz verloren. Sie bleiben, bis sie einen neuen haben.`}
                         </p>
                         <ul className="flex flex-col gap-1">

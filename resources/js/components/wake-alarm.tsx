@@ -122,7 +122,7 @@ export function WakeAlarm() {
             <div className="text-center">
                 <p className="type-numeral text-6xl">{alarm.wakeTime}</p>
                 <p className="mt-3 text-lg text-primary-foreground/80">
-                    Guten Morgen — dein Tag beginnt.
+                    Guten Morgen, dein Tag beginnt.
                 </p>
             </div>
 

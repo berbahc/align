@@ -275,16 +275,16 @@ export default function HabitsIndex({
 
                                 {group === 'displaced' && (
                                     <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
-                                        Ein Kurs hat den alten Platz übernommen.
-                                        Im{' '}
+                                        Ein Kurs liegt jetzt auf dem alten
+                                        Platz. Im{' '}
                                         <Link
                                             href={calendar()}
                                             className={QUIET_LINK}
                                         >
                                             Kalender
                                         </Link>{' '}
-                                        siehst du, was dagegen steht, und kannst
-                                        einen neuen wählen.
+                                        siehst du den Kurs und kannst eine neue
+                                        Zeit aussuchen.
                                     </p>
                                 )}
 
@@ -387,8 +387,8 @@ export default function HabitsIndex({
                         {habits.some((habit) => !habit.canRemind) && (
                             <p className="text-xs leading-relaxed text-muted-foreground">
                                 Erinnern lässt sich nur, was eine feste Uhrzeit
-                                hat. Die einzelne Erinnerung steht im ⋯-Menü
-                                jeder Gewohnheit.
+                                hat. Ein- und ausschalten kannst du sie im
+                                ⋯-Menü der Gewohnheit.
                             </p>
                         )}
                     </section>

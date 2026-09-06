@@ -54,8 +54,8 @@ export function CoursesSheet({
                     </SheetTitle>
                     <SheetDescription className="text-left text-sm text-muted-foreground">
                         {courses.length === 1
-                            ? 'Ein Kurs in der Woche — antippen zum Ändern, Ausfallen oder Löschen.'
-                            : `${courses.length} Kurse in der Woche — antippen zum Ändern, Ausfallen oder Löschen.`}
+                            ? 'Ein Kurs in der Woche. Antippen zum Ändern, Ausfallen oder Löschen.'
+                            : `${courses.length} Kurse in der Woche. Antippen zum Ändern, Ausfallen oder Löschen.`}
                     </SheetDescription>
                 </SheetHeader>
 

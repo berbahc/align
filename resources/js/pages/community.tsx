@@ -91,7 +91,7 @@ export default function Community({
                         Community
                     </h1>
                     <p className="mt-1 text-sm text-muted-foreground max-md:mt-0">
-                        Was ihr tut, sieht niemand — nur, dass ihr euch kennt.
+                        Was ihr tut, sieht niemand. Nur, dass ihr euch kennt.
                     </p>
 
                     {/* Den eigenen Handle sieht man sonst nirgends, muss ihn
@@ -221,7 +221,7 @@ export default function Community({
                                             />
 
                                             <p className="text-xs text-muted-foreground">
-                                                Der Name muss genau stimmen —
+                                                Der Name muss genau stimmen.
                                                 Align sucht nicht nach
                                                 Ähnlichem.
                                             </p>

@@ -155,12 +155,12 @@ function dayLabel(day: MonthDay, today: string): string {
     const together = day.hasAppointment ? ' · zusammen verabredet' : '';
 
     if (day.planned === 0) {
-        return `${prefix}${date} — nichts vorgesehen${lectures}${together}`;
+        return `${prefix}${date}, nichts vorgesehen${lectures}${together}`;
     }
 
     if (day.isFuture) {
-        return `${prefix}${date} — ${day.planned} vorgesehen${lectures}${together}`;
+        return `${prefix}${date}, ${day.planned} vorgesehen${lectures}${together}`;
     }
 
-    return `${prefix}${date} — ${day.done} von ${day.planned} erledigt${lectures}${together}`;
+    return `${prefix}${date}, ${day.done} von ${day.planned} erledigt${lectures}${together}`;
 }

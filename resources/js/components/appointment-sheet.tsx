@@ -215,7 +215,7 @@ export function AppointmentSheet({
                                 <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
                                     {chosenFriend?.name ?? 'Die Person'} bekommt
                                     eine Anfrage. Bei einer Absage siehst du nur
-                                    das — ohne Grund, ohne Zähler.
+                                    das, ohne Grund und ohne Zähler.
                                 </p>
                             </div>
                         </>

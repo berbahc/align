@@ -389,7 +389,7 @@ function FrameMarker({
     return (
         <Link
             href={sleepShow()}
-            aria-label={`${label} um ${time} — zum Schlafplan`}
+            aria-label={`${label} um ${time}, zum Schlafplan`}
             style={{ top }}
             className="absolute inset-x-0 z-20 flex -translate-y-1/2 items-center gap-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         >

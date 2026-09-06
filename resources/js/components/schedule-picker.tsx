@@ -269,9 +269,9 @@ export function SchedulePicker({
                                 nicht in derselben Minute. */}
                             <p className="text-xs leading-relaxed text-muted-foreground">
                                 Eine angehängte Gewohnheit beginnt eine
-                                Viertelstunde nach dem Ende der vorherigen —
-                                Zeit zum Umschalten. Rückt die eine, rückt die
-                                andere mit.
+                                Viertelstunde nach dem Ende der vorherigen. Das
+                                ist Zeit zum Umschalten. Rückt die eine, rückt
+                                die andere mit.
                             </p>
                             {chainCandidates.map((candidate) => {
                                 const isSelected = chainedTo === candidate.id;
@@ -338,7 +338,7 @@ export function SchedulePicker({
                                 {conflict.to !== conflict.from &&
                                     ` – ${conflict.to}`}
                                 ): Davor und danach hält Align eine
-                                Viertelstunde Luft — zum Umschalten.
+                                Viertelstunde Luft zum Umschalten.
                                 {free !== null && (
                                     <>
                                         {' '}
@@ -368,8 +368,8 @@ export function SchedulePicker({
                                 aria-hidden="true"
                             />
                             <span>
-                                Um {time} Uhr schläfst du laut deinem Schlafplan
-                                —{' '}
+                                Um {time} Uhr schläfst du laut deinem
+                                Schlafplan.{' '}
                                 {
                                     WEEKDAYS.find(
                                         (day) => day.value === asleep.weekday,

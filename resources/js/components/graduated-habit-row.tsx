@@ -91,7 +91,7 @@ export function GraduatedHabitRow({
                     title={
                         canReactivate
                             ? undefined
-                            : 'Erst Platz schaffen — fünf Gewohnheiten sind bereits aktiv.'
+                            : 'Erst Platz schaffen. Fünf Gewohnheiten sind bereits aktiv.'
                     }
                 >
                     <RotateCcw className="size-4" aria-hidden="true" />
@@ -121,7 +121,7 @@ export function GraduatedHabitRow({
                     <DialogDescription>
                         {habit.completionCount === 0
                             ? 'Die Gewohnheit verschwindet vollständig. Das lässt sich nicht rückgängig machen.'
-                            : `${history} gehen dabei verloren. Das lässt sich nicht rückgängig machen — solange die Gewohnheit im Archiv liegt, bleibt der Verlauf erhalten.`}
+                            : `${history} gehen dabei verloren. Das lässt sich nicht rückgängig machen. Solange die Gewohnheit im Archiv liegt, bleibt der Verlauf erhalten.`}
                     </DialogDescription>
 
                     <DialogFooter className="gap-2">

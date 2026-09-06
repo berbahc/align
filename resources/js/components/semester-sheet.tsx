@@ -115,7 +115,7 @@ export function SemesterSheet({
                     </SheetTitle>
                     <SheetDescription className="text-left text-sm text-muted-foreground">
                         {semester === null
-                            ? 'Zwischen Anfang und Ende belegen deine Kurse ihre Zeit im Kalender — und Align plant deine Gewohnheiten darum herum.'
+                            ? 'Zwischen Anfang und Ende belegen deine Kurse ihre Zeit im Kalender. Align plant deine Gewohnheiten darum herum.'
                             : 'Deine Kurse belegen ihre Zeit im Kalender; Align plant deine Gewohnheiten darum herum.'}
                     </SheetDescription>
                 </SheetHeader>
@@ -181,8 +181,8 @@ export function SemesterSheet({
                         )}
                         <p className="text-center text-xs leading-relaxed text-muted-foreground">
                             {courseCount >= maxCourses
-                                ? `${maxCourses} Kurse sind das Maximum — mehr wäre kein Plan mehr.`
-                                : 'Eingetragene Kurse liegen an ihrem Tag im Kalender — antippen zum Ändern.'}
+                                ? `${maxCourses} Kurse sind das Maximum. Mehr wäre kein Plan mehr.`
+                                : 'Eingetragene Kurse liegen an ihrem Tag im Kalender. Antippen zum Ändern.'}
                         </p>
                     </div>
                 )}

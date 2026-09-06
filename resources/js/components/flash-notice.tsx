@@ -64,7 +64,7 @@ export function FlashNotice() {
                         {!created.scheduledToday && (
                             <span className="text-muted-foreground">
                                 {' '}
-                                Heute ist sie nicht vorgesehen — deshalb siehst
+                                Heute ist sie nicht vorgesehen. Deshalb siehst
                                 du sie in der Übersicht noch nicht.
                             </span>
                         )}
@@ -126,7 +126,7 @@ export function FlashNotice() {
                         )}
                         <span className="text-muted-foreground">
                             {' '}
-                            Nichts ist verloren — sie stehen in deiner
+                            Nichts ist verloren. Sie stehen in deiner
                             Gewohnheitsliste unter „Braucht einen neuen Platz".
                         </span>
                     </>
@@ -171,8 +171,8 @@ export function FlashNotice() {
                             <span className="text-muted-foreground">
                                 {' '}
                                 {applied.remaining === 1
-                                    ? 'Eine wartet noch — die legst du selbst hin.'
-                                    : `${applied.remaining} warten noch — die legst du selbst hin.`}
+                                    ? 'Eine wartet noch. Die legst du selbst hin.'
+                                    : `${applied.remaining} warten noch. Die legst du selbst hin.`}
                             </span>
                         )}
                     </>

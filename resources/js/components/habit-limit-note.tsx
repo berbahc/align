@@ -44,7 +44,7 @@ export function HabitLimitNote({
                         Warum nur {max}?
                     </p>
                     <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                        Läuft eine schon von allein, beende sie — dann ist der
+                        Läuft eine schon von allein, beende sie. Dann ist der
                         Platz frei für eine neue.
                     </p>
                 </div>

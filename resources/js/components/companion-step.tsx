@@ -180,7 +180,7 @@ export function CompanionStep({
             {ready && (
                 <p className="text-xs leading-relaxed text-muted-foreground">
                     {chosenFriend.name} bekommt eine Anfrage. Bei einer Absage
-                    siehst du nur das — ohne Grund, ohne Zähler.
+                    siehst du nur das, ohne Grund und ohne Zähler.
                 </p>
             )}
         </div>
