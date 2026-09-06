@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react';
 import { CalendarClock, Check } from 'lucide-react';
 import { AiMascot } from '@/components/ai-mascot';
+import { HabitGlyph } from '@/components/habit-glyph';
 import {
     Sheet,
     SheetContent,
@@ -8,7 +9,6 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
-import { BEHAVIOR_ICONS } from '@/lib/behavior-icons';
 import { ASSUMED_MINUTES, spanLabel } from '@/lib/day-grid';
 import {
     AI_LINK,
@@ -29,7 +29,6 @@ function dayLabel(date: string): string {
         month: 'long',
     });
 }
-
 
 /**
  * Der aufgeschlagene Block.
@@ -65,8 +64,6 @@ export function BlockSheet({
     /** Der gezeigte Tag — der Weg zum Konflikttag entfällt, wenn er es ist. */
     date: string;
 }) {
-    const Icon = block ? BEHAVIOR_ICONS[block.behaviorType] : null;
-
     /** Ein Weg aus dem Sheet heraus in den nächsten — erst zu, dann auf. */
     function leaveFor(next: (block: Block) => void) {
         if (block === null) {
@@ -88,7 +85,7 @@ export function BlockSheet({
                     </SheetTitle>
                     <SheetDescription asChild>
                         <div className="flex items-center gap-3 text-left">
-                            {Icon && (
+                            {block !== null && (
                                 <span
                                     className={cn(
                                         'flex size-11 shrink-0 items-center justify-center transition-colors duration-[var(--duration-fluid)] ease-[var(--ease-fluid)]',
@@ -97,10 +94,9 @@ export function BlockSheet({
                                             : 'rounded-xl bg-sand text-primary',
                                     )}
                                 >
-                                    <Icon
+                                    <HabitGlyph
+                                        habit={block}
                                         className="size-5"
-                                        strokeWidth={1.5}
-                                        aria-hidden="true"
                                     />
                                 </span>
                             )}

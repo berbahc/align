@@ -1,8 +1,8 @@
 import { Check, Undo2 } from 'lucide-react';
 import { AiMascot } from '@/components/ai-mascot';
+import { HabitGlyph } from '@/components/habit-glyph';
 import { PersonCircle } from '@/components/person-circle';
 import { useSwipeToggle } from '@/hooks/use-swipe-toggle';
-import { BEHAVIOR_ICONS } from '@/lib/behavior-icons';
 import { AI_LINK, QUIET_LINK } from '@/lib/interaction';
 import { cn } from '@/lib/utils';
 import type { Habit } from '@/types';
@@ -64,7 +64,6 @@ export function HabitRow({
      */
     highlighted?: boolean;
 }) {
-    const Icon = BEHAVIOR_ICONS[habit.behaviorType];
     const isDone = habit.completedAt !== null;
     const companion = habit.companion;
 
@@ -242,11 +241,7 @@ export function HabitRow({
                                         : 'rounded-xl bg-sand text-primary',
                                 )}
                             >
-                                <Icon
-                                    className="size-5"
-                                    strokeWidth={1.5}
-                                    aria-hidden="true"
-                                />
+                                <HabitGlyph habit={habit} className="size-5" />
                             </span>
                         )}
 

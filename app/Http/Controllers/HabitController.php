@@ -14,6 +14,7 @@ use App\Models\AppointmentNotice;
 use App\Models\Course;
 use App\Models\Habit;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -127,6 +128,13 @@ class HabitController extends Controller
             ->habits()
             ->active()
             ->with('completionDates')
+            // Der Rhythmusstreifen liest `completions`, die Serie liest
+            // `completionDates` — zwei Relationen, weil zwei Fenster: Die Serie
+            // braucht die ganze Historie, der Streifen nur seine sieben Tage.
+            // Ohne die Eingrenzung zöge jede Zeile ihr gesamtes Archiv mit.
+            ->with(['completions' => fn (Relation $query) => $query
+                ->where('completed_on', '>=', $today->copy()->subDays(Habit::WeekOverviewDays - 1)),
+            ])
             ->orderBy('position')
             ->get()
             // Zeitlich statt nach Anlegedatum: Was heute ansteht, steht oben,
@@ -156,6 +164,9 @@ class HabitController extends Controller
                 'id' => $habit->id,
                 'title' => $habit->title,
                 'behaviorType' => $habit->behavior_type->value,
+                // Entscheidet das Zeichen: Die Vorlage weiß, worum es
+                // geht, die Verhaltensrichtung ordnet nur fachlich ein.
+                'templateKey' => $habit->template_key,
                 // Steht hinter dem Titel, nicht darin: „Spazieren gehen · 20 Min".
                 'measureLabel' => $habit->measureLabel(),
                 'scheduleLabel' => $habit->scheduleLabel(),
@@ -174,14 +185,35 @@ class HabitController extends Controller
                 // auf der Übersicht, die nur die stärkste zeigt. Unterhalb der
                 // Mindestlänge bleibt die Zeile weg statt eine „1" zu behaupten.
                 'streak' => $this->streakLabel($habit),
-                // Der Bereich aus dem Katalog — `null` bei Gewohnheiten aus
-                // der Zeit der freien Eingabe.
-                'categoryLabel' => $habit->category()?->label(),
+                // Die letzten sieben Tage als Streifen. Drei Zustände, nicht
+                // zwei: Ein Samstag ohne Mo–Fr-Gewohnheit ist keine Lücke, und
+                // der Streifen darf ihn nicht wie eine aussehen lassen. Genau
+                // dafür ist {@see Habit::weekOverview()} gebaut — die Methode
+                // gab es längst und erreichte die Oberfläche nirgends.
+                //
+                // Bewusst kein Streak: Der Streifen zeigt den Rhythmus, er
+                // zählt nicht und er bricht nicht.
+                'rhythm' => $habit->weekOverview($today),
+                // Die zweite Zeitachse neben dem Streifen. Der zeigt eine
+                // Woche und lässt sich abzählen; die Rate blickt über dreißig
+                // Tage und springt bei einem Fehltag nicht — zwei Auskünfte,
+                // die einander nicht wiederholen.
+                //
+                // {@see Habit::consistencyRate()} nennt sie „die ruhige
+                // Zweitansicht neben der Serie, nicht ihr Ersatz": die Serie
+                // als Antrieb, die Rate als der ehrlichere Blick. Beide stehen
+                // deshalb in derselben Zeile. Null vor dem ersten vorgesehenen
+                // Tag — dann gibt es kein Fenster, über das sich etwas sagen
+                // ließe.
+                'consistency' => $habit->consistencyRate(),
             ])->all(),
             'graduatedHabits' => $graduated->map(fn (Habit $habit): array => [
                 'id' => $habit->id,
                 'title' => $habit->title,
                 'behaviorType' => $habit->behavior_type->value,
+                // Entscheidet das Zeichen: Die Vorlage weiß, worum es
+                // geht, die Verhaltensrichtung ordnet nur fachlich ein.
+                'templateKey' => $habit->template_key,
                 'scheduleLabel' => $habit->scheduleLabel(),
                 'graduatedOn' => $habit->graduated_at?->format('d.m.Y') ?? '',
                 'completionCount' => (int) $habit->completions_count,
@@ -389,6 +421,9 @@ class HabitController extends Controller
                 // bearbeitet. Der Bereich sagt, wo im Katalog sie herkommt.
                 'categoryLabel' => $habit->category()?->label(),
                 'behaviorType' => $habit->behavior_type->value,
+                // Entscheidet das Zeichen: Die Vorlage weiß, worum es
+                // geht, die Verhaltensrichtung ordnet nur fachlich ein.
+                'templateKey' => $habit->template_key,
                 // Die Dauer, in Minuten. Alte Gewohnheiten konnten einen
                 // Umfang in Seiten oder Litern haben — der lässt sich nicht
                 // als Dauer vorbelegen und beginnt beim Startwert des Steppers.

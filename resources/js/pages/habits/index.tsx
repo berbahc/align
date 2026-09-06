@@ -1,13 +1,15 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Plus } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { GraduatedHabitRow } from '@/components/graduated-habit-row';
 import { HabitLimitNote } from '@/components/habit-limit-note';
 import { ManagedHabitRow } from '@/components/managed-habit-row';
+import { RhythmLegend } from '@/components/rhythm-strip';
 import { Card, CardContent } from '@/components/ui/card';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { requestReminderPermission } from '@/hooks/use-habit-reminders';
-import { OUTLINE_BUTTON } from '@/lib/interaction';
-import { dashboard } from '@/routes';
+import { OUTLINE_BUTTON, PRIMARY_BUTTON, QUIET_LINK } from '@/lib/interaction';
+import { calendar, dashboard } from '@/routes';
 import { create } from '@/routes/habits';
 import { store as graduate } from '@/routes/habits/graduation';
 import { update } from '@/routes/habits/reminder';
@@ -27,12 +29,36 @@ export default function HabitsIndex({
     maxActive,
 }: HabitsIndexProps) {
     const { errors } = usePage().props;
+
+    // Welche Zeile gerade betont ist, nachdem sie hierher gewandert ist.
+    const [landed, setLanded] = useState<string | null>(null);
+    const fadeLanding = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    useEffect(
+        () => () => {
+            if (fadeLanding.current !== null) {
+                clearTimeout(fadeLanding.current);
+            }
+        },
+        [],
+    );
     const remindable = habits.filter((habit) => habit.canRemind);
     const isAtLimit = habits.length >= maxActive;
 
+    const dueToday = habits.filter((habit) => habit.group === 'today').length;
+
+    // An der Grenze zählt die Grenze — sonst zählt der Tag. „5 von 5 aktiv"
+    // beziffert ein Kontingent und sagt nichts über heute; wer nicht am Limit
+    // ist, will wissen, was ansteht.
     const countLabel =
         habits.length > 0
-            ? `${habits.length} von ${maxActive} aktiv`
+            ? isAtLimit
+                ? `${habits.length} von ${maxActive} aktiv`
+                : `${habits.length} aktiv · ${
+                      dueToday === 1
+                          ? '1 steht heute an'
+                          : `${dueToday} stehen heute an`
+                  }`
             : graduatedHabits.length > 0
               ? 'Keine aktive Gewohnheit.'
               : 'Noch nichts angelegt.';
@@ -95,9 +121,47 @@ export default function HabitsIndex({
      * Ohne Rückfrage: die Gewohnheit rutscht sichtbar ins Archiv direkt
      * darunter, wo „Wiederaufnehmen" einen Klick entfernt ist. Ein Dialog
      * würde eine Endgültigkeit behaupten, die hier nicht besteht.
+     *
+     * „Sichtbar" war bis hierher eine Behauptung: Die Zeile verschwand oben
+     * und erschien unten, und wer das Archiv nicht ohnehin im Blick hatte, sah
+     * nur, dass etwas weg war. Der Ring holt sie ein — dieselbe Antwort, die
+     * die Übersicht auf „Mach ich trotzdem" gibt.
      */
     function endHabit(habit: ManagedHabit) {
-        router.post(graduate.url(habit.id), {}, { preserveScroll: true });
+        router.post(
+            graduate.url(habit.id),
+            {},
+            {
+                preserveScroll: true,
+                onSuccess: () => showLanding(`graduated-habit-${habit.id}`),
+            },
+        );
+    }
+
+    /**
+     * Zeigt, wo etwas gelandet ist, statt es finden zu lassen.
+     *
+     * Gilt in beide Richtungen: beendet nach unten, wieder aufgenommen nach
+     * oben. Der Ring steht ein paar Sekunden und geht von selbst — er ist eine
+     * Antwort auf einen Klick, kein Zustand.
+     */
+    function showLanding(id: string) {
+        const row = document.getElementById(id);
+
+        if (row === null) {
+            return;
+        }
+
+        setLanded(id);
+        row.scrollIntoView({
+            behavior: window.matchMedia('(prefers-reduced-motion: reduce)')
+                .matches
+                ? 'auto'
+                : 'smooth',
+            block: 'center',
+        });
+
+        fadeLanding.current = setTimeout(() => setLanded(null), 2500);
     }
 
     return (
@@ -138,30 +202,23 @@ export default function HabitsIndex({
                     )}
                 </header>
 
-                {/* Ein Sammelschalter über genau einem Schalter ist derselbe
-                    Schalter zweimal — er lohnt erst, wenn er etwas
-                    zusammenfasst (§16 Simplicity). */}
-                {remindable.length > 1 && (
-                    <Card>
-                        <CardContent className="flex items-center justify-between gap-4">
-                            <p className="min-w-0 text-[15px] font-semibold">
-                                Alle {remindable.length} Erinnerungen
-                            </p>
-                            <ToggleSwitch
-                                checked={allRemindersOn}
-                                onChange={toggleAll}
-                                label="Erinnerung für alle Gewohnheiten mit fester Uhrzeit"
-                            />
-                        </CardContent>
-                    </Card>
-                )}
-
                 {habits.length === 0 ? (
+                    /* Der Weg gehört in den leeren Zustand, nicht nur in die
+                       Kopfzeile: Wer hier landet, hat nichts zu lesen und
+                       braucht etwas zu tun. Dieselbe Auflösung wie auf der
+                       Übersicht. */
                     <Card>
-                        <CardContent>
+                        <CardContent className="flex flex-col items-start gap-4">
                             <p className="text-sm leading-relaxed text-muted-foreground">
                                 Noch keine Gewohnheit angelegt.
                             </p>
+                            <Link
+                                href={create()}
+                                className={`${PRIMARY_BUTTON} w-auto`}
+                            >
+                                <Plus className="size-4" aria-hidden="true" />
+                                Erste Gewohnheit anlegen
+                            </Link>
                         </CardContent>
                     </Card>
                 ) : (
@@ -171,8 +228,32 @@ export default function HabitsIndex({
                        mich heute oder später; der genaue Tag steht ohnehin in
                        der Zeile. */
                     <div className="flex flex-col gap-6">
-                        {groups.map(({ key, heading, entries }) => (
-                            <section key={key} aria-labelledby={key}>
+                        {/* Einmal für die ganze Seite, direkt über der ersten
+                            Zeile: Die Töne im Streifen sind ohne Erklärung
+                            raterei, und fünf Legenden wären fünfmal dieselbe
+                            Erklärung. Sie steht über der Liste, weil man sie
+                            beim ersten Blick braucht — und ist leise genug, um
+                            danach nicht zu stören. */}
+                        <RhythmLegend />
+
+                        {groups.map(({ key, heading, group, entries }) => (
+                            <section
+                                key={key}
+                                aria-labelledby={key}
+                                className={
+                                    /* Was seinen Platz verloren hat, wartet auf
+                                       eine Entscheidung — und sah bisher aus wie
+                                       alles andere. Der Kalender markiert
+                                       denselben Fall längst mit dieser Fläche;
+                                       die Liste zog nur eine Kleinversalien-
+                                       Zeile darüber und bot keinen Ausweg.
+                                       Accent statt Rot: Hier ist nichts schief-
+                                       gegangen, hier fehlt eine Wahl (§1.4). */
+                                    group === 'displaced'
+                                        ? 'rounded-xl border border-primary/25 bg-accent p-4'
+                                        : undefined
+                                }
+                            >
                                 {/* Die Überschrift erscheint nur, wenn es etwas
                                     abzugrenzen gibt. Steht alles heute an, wäre
                                     sie ein Titel über einer Liste ohne
@@ -192,6 +273,21 @@ export default function HabitsIndex({
                                     </h2>
                                 )}
 
+                                {group === 'displaced' && (
+                                    <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
+                                        Ein Kurs hat den alten Platz übernommen.
+                                        Im{' '}
+                                        <Link
+                                            href={calendar()}
+                                            className={QUIET_LINK}
+                                        >
+                                            Kalender
+                                        </Link>{' '}
+                                        siehst du, was dagegen steht, und kannst
+                                        einen neuen wählen.
+                                    </p>
+                                )}
+
                                 <ul className="flex flex-col gap-3">
                                     {entries.map((habit) => (
                                         <ManagedHabitRow
@@ -199,6 +295,10 @@ export default function HabitsIndex({
                                             habit={habit}
                                             onToggleReminder={toggleOne}
                                             onEnd={endHabit}
+                                            highlighted={
+                                                landed ===
+                                                `managed-habit-${habit.id}`
+                                            }
                                         />
                                     ))}
                                 </ul>
@@ -232,18 +332,66 @@ export default function HabitsIndex({
                                     key={habit.id}
                                     habit={habit}
                                     canReactivate={!isAtLimit}
+                                    highlighted={
+                                        landed === `graduated-habit-${habit.id}`
+                                    }
+                                    onReactivated={() =>
+                                        showLanding(`managed-habit-${habit.id}`)
+                                    }
                                 />
                             ))}
                         </ul>
                     </section>
                 )}
 
-                {/* Erklärt die fehlenden Schalter in einigen Zeilen — ohne
-                    diesen Satz sähe es nach einem Fehler aus. */}
-                {habits.some((habit) => !habit.canRemind) && (
-                    <p className="text-xs leading-relaxed text-muted-foreground">
-                        Erinnern lässt sich nur, was eine feste Uhrzeit hat.
-                    </p>
+                {/* Der Sammelschalter stand bisher ganz oben — das Erste auf
+                    dem Gewohnheiten-Tab war damit eine Benachrichtigungs-
+                    Voreinstellung. Er steht jetzt hier unten bei dem Satz, der
+                    zur selben Sache gehört: Beide reden über Erinnerungen, und
+                    zusammen sind sie ein Abschnitt statt zweier Einsprengsel.
+                    Weggefallen ist nichts, der Weg ist derselbe.
+
+                    Ein Sammelschalter über genau einem Schalter ist derselbe
+                    Schalter zweimal — er lohnt erst, wenn er etwas zusammen-
+                    fasst (§16 Simplicity). */}
+                {(remindable.length > 1 ||
+                    habits.some((habit) => !habit.canRemind)) && (
+                    <section
+                        aria-labelledby="erinnerungen"
+                        className="flex flex-col gap-3"
+                    >
+                        <h2
+                            id="erinnerungen"
+                            className="type-eyebrow text-muted-foreground"
+                        >
+                            Erinnerungen
+                        </h2>
+
+                        {remindable.length > 1 && (
+                            <Card className="gap-0 py-4 shadow-none">
+                                <CardContent className="flex items-center justify-between gap-4 px-4">
+                                    <p className="min-w-0 text-[15px] font-semibold">
+                                        Alle {remindable.length} Erinnerungen
+                                    </p>
+                                    <ToggleSwitch
+                                        checked={allRemindersOn}
+                                        onChange={toggleAll}
+                                        label="Erinnerung für alle Gewohnheiten mit fester Uhrzeit"
+                                    />
+                                </CardContent>
+                            </Card>
+                        )}
+
+                        {/* Erklärt die fehlenden Einträge in einigen Menüs —
+                            ohne diesen Satz sähe es nach einem Fehler aus. */}
+                        {habits.some((habit) => !habit.canRemind) && (
+                            <p className="text-xs leading-relaxed text-muted-foreground">
+                                Erinnern lässt sich nur, was eine feste Uhrzeit
+                                hat. Die einzelne Erinnerung steht im ⋯-Menü
+                                jeder Gewohnheit.
+                            </p>
+                        )}
+                    </section>
                 )}
             </div>
         </>

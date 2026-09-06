@@ -1,8 +1,14 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import type { HabitReminder, Weekday } from '@/types';
 
-/** Vorlaufzeit der Erinnerung in Minuten. */
-const LEAD_MINUTES = 10;
+/**
+ * Vorlaufzeit der Erinnerung in Minuten.
+ *
+ * Exportiert, weil die Zahl auch beschriftet werden muss: Die Gewohnheiten-Liste
+ * nennt sie im Menü („Erinnerung 10 Min vorher"). Stand sie dort ein zweites
+ * Mal als Text, sagten Verhalten und Beschriftung irgendwann Verschiedenes.
+ */
+export const LEAD_MINUTES = 10;
 
 /**
  * Wie lange eine überfällige Gewohnheit noch angezeigt wird.

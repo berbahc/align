@@ -194,6 +194,60 @@ test('die Gewohnheiten-Liste zeigt die Serie je Gewohnheit als fertige Zeile', f
 });
 
 /**
+ * Der Rhythmusstreifen ist ausdrücklich **keine** Serie.
+ *
+ * Der Unterschied hängt an einem einzigen Feld: Ein Samstag ohne
+ * Mo–Fr-Gewohnheit trägt `scheduled: false` und ist damit keine Lücke, sondern
+ * ein Tag, an dem nie etwas vorgesehen war. Fiele diese Unterscheidung weg,
+ * sähe die Woche jeder Mo–Fr-Gewohnheit aus wie zwei versäumte Tage — genau
+ * die Bestrafung, die `time-blocking.md` ausschließt.
+ */
+test('die Gewohnheiten-Liste trägt sieben Tage Rhythmus je Gewohnheit', function () {
+    // Ein Samstag: Der Rückblick endet heute und reicht bis zum Sonntag davor,
+    // enthält also genau ein Wochenende.
+    Carbon::setTestNow(Carbon::parse('2026-08-08'));
+
+    $user = User::factory()->create();
+
+    $habit = existingSince(
+        Habit::factory()->for($user)->fixedSchedule(days: [1, 2, 3, 4, 5])->create(),
+        30,
+    );
+
+    // Gestern war Freitag und wurde erfüllt.
+    complete($habit, [1]);
+
+    $this->actingAs($user)
+        ->get(route('habits.index'))
+        ->assertInertia(function (AssertableInertia $page) {
+            /** @var list<array{date: string, label: string, scheduled: bool, completed: bool}> $rhythm */
+            $rhythm = $page->toArray()['props']['habits'][0]['rhythm'];
+
+            expect($rhythm)->toHaveCount(Habit::WeekOverviewDays);
+
+            $byDate = collect($rhythm)->keyBy('date');
+
+            // Der erfüllte Freitag.
+            expect($byDate['2026-08-07']['completed'])->toBeTrue()
+                ->and($byDate['2026-08-07']['scheduled'])->toBeTrue()
+                // Heute, Samstag: nicht vorgesehen — und deshalb auch keine
+                // Lücke. Das ist der Zustand, den ein Streak nicht kennt.
+                ->and($byDate['2026-08-08']['scheduled'])->toBeFalse()
+                ->and($byDate['2026-08-08']['completed'])->toBeFalse()
+                // Der Sonntag am anderen Ende genauso.
+                ->and($byDate['2026-08-02']['scheduled'])->toBeFalse()
+                // Und ein vorgesehener Tag ohne Erfüllung bleibt offen, statt
+                // aus der Reihe zu fallen.
+                ->and($byDate['2026-08-06']['scheduled'])->toBeTrue()
+                ->and($byDate['2026-08-06']['completed'])->toBeFalse();
+
+            // Der letzte Eintrag ist heute — darauf setzt der Streifen die
+            // Markierung „hier stehst du".
+            expect(collect($rhythm)->last()['date'])->toBe('2026-08-08');
+        });
+});
+
+/**
  * Der Stundenplan nimmt den Platz — er darf nicht auch noch die Serie nehmen.
  *
  * `time-blocking.md`: „Verpasste Tage führen nicht zur Bestrafung." Ein Tag,

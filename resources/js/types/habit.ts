@@ -145,6 +145,14 @@ export interface Habit {
     /** Die Wiederholung: „Mo–Fr", „täglich", „nur an diesem Tag". */
     repeatLabel: string | null;
     behaviorType: BehaviorType;
+    /**
+     * Der Schlüssel der Katalog-Vorlage („tagebuch"), sonst null.
+     *
+     * Entscheidet das Icon: Die Vorlage weiß, worum es geht, die
+     * Verhaltensrichtung ordnet nur fachlich ein. Null bei Gewohnheiten aus
+     * der Zeit der freien Eingabe — die fallen auf die Richtung zurück.
+     */
+    templateKey: string | null;
     /** Die Dauer als fertige Zeile („20 Min"), sonst null. */
     measureLabel: string | null;
     /**
@@ -196,11 +204,36 @@ export interface Habit {
 export type HabitGroup = 'displaced' | 'today' | 'later';
 
 /** Eine Gewohnheit in der Verwaltungsansicht — dort zählt die Planung, nicht der heutige Tag. */
+/**
+ * Ein Tag im Rhythmusstreifen der Gewohnheiten-Liste.
+ *
+ * Drei Zustände aus zwei Feldern: erfüllt (`completed`), vorgesehen und offen
+ * (`scheduled` ohne `completed`), gar nicht vorgesehen (weder noch). Der dritte
+ * Fall ist der Grund, aus dem es zwei Felder braucht — ein Samstag ohne
+ * Mo–Fr-Gewohnheit darf nicht wie ein versäumter Tag aussehen.
+ */
+export interface RhythmDay {
+    /** „2026-09-05" — nur als stabiler Schlüssel der Liste. */
+    date: string;
+    /** Der Wochentag als Kürzel, „Mo" bis „So". */
+    label: string;
+    scheduled: boolean;
+    completed: boolean;
+}
+
 export interface ManagedHabit {
     id: number;
     title: string;
     scheduleLabel: string;
     behaviorType: BehaviorType;
+    /**
+     * Der Schlüssel der Katalog-Vorlage („tagebuch"), sonst null.
+     *
+     * Entscheidet das Icon: Die Vorlage weiß, worum es geht, die
+     * Verhaltensrichtung ordnet nur fachlich ein. Null bei Gewohnheiten aus
+     * der Zeit der freien Eingabe — die fallen auf die Richtung zurück.
+     */
+    templateKey: string | null;
     /** Die Dauer als fertige Zeile („20 Min"), sonst null. */
     measureLabel: string | null;
     /** Nur bei fester Uhrzeit lässt sich eine Erinnerung setzen. */
@@ -222,12 +255,17 @@ export interface ManagedHabit {
      */
     streak: string | null;
     /**
-     * Der Katalog-Bereich („Sport & Bewegung"), sonst null.
-     *
-     * Null bei Gewohnheiten aus der Zeit der freien Eingabe — sie laufen
-     * weiter, gehören aber zu keinem Bereich.
+     * Die letzten sieben Tage als Streifen — das Element, das die Zeilen
+     * voneinander unterscheidbar macht.
      */
-    categoryLabel: string | null;
+    rhythm: RhythmDay[];
+    /**
+     * Anteil erfüllter vorgesehener Tage der letzten 30 Tage, in Prozent.
+     *
+     * Die zweite Zeitachse neben dem Streifen: Der zeigt eine Woche, die Rate
+     * einen Monat. Null, solange es noch kein Fenster gibt.
+     */
+    consistency: number | null;
 }
 
 /**
@@ -376,6 +414,14 @@ export interface CalendarBlock {
      */
     timeRange: string | null;
     behaviorType: BehaviorType;
+    /**
+     * Der Schlüssel der Katalog-Vorlage („tagebuch"), sonst null.
+     *
+     * Entscheidet das Icon: Die Vorlage weiß, worum es geht, die
+     * Verhaltensrichtung ordnet nur fachlich ein. Null bei Gewohnheiten aus
+     * der Zeit der freien Eingabe — die fallen auf die Richtung zurück.
+     */
+    templateKey: string | null;
     smallestStep: string | null;
     /** Der eigene Warum-Satz — erscheint nur im Starthilfe-Sheet. */
     motivation: string | null;
@@ -434,6 +480,14 @@ export interface GraduatedHabit {
     title: string;
     scheduleLabel: string;
     behaviorType: BehaviorType;
+    /**
+     * Der Schlüssel der Katalog-Vorlage („tagebuch"), sonst null.
+     *
+     * Entscheidet das Icon: Die Vorlage weiß, worum es geht, die
+     * Verhaltensrichtung ordnet nur fachlich ein. Null bei Gewohnheiten aus
+     * der Zeit der freien Eingabe — die fallen auf die Richtung zurück.
+     */
+    templateKey: string | null;
     /** Tag des Beendens, formatiert als „08.08.2026". */
     graduatedOn: string;
     completionCount: number;

@@ -127,6 +127,9 @@ class DashboardController extends Controller
                 // steht daneben, weil das Verabredungs-Sheet sie braucht.
                 ...$habit->schedulePieces($today),
                 'behaviorType' => $habit->behavior_type->value,
+                // Entscheidet das Zeichen: Die Vorlage weiß, worum es
+                // geht, die Verhaltensrichtung ordnet nur fachlich ein.
+                'templateKey' => $habit->template_key,
                 'measureLabel' => $habit->measureLabel(),
                 'smallestStep' => $habit->smallest_step,
                 // Der Warum-Satz wird seit dem Anlegen gespeichert und stand

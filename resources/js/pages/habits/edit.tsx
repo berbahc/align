@@ -1,12 +1,12 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 import { DurationPicker } from '@/components/duration-picker';
+import { HabitGlyph } from '@/components/habit-glyph';
 import InputError from '@/components/input-error';
 import { SchedulePicker, SituationPicker } from '@/components/schedule-picker';
 import type { ScheduleTypeOption } from '@/components/schedule-picker';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import { BEHAVIOR_ICONS } from '@/lib/behavior-icons';
 import { PRIMARY_BUTTON, QUIET_BUTTON } from '@/lib/interaction';
 import { dashboard } from '@/routes';
 import { index, update } from '@/routes/habits';
@@ -27,6 +27,8 @@ interface EditableHabit {
     title: string;
     /** Der Katalog-Bereich; null bei Gewohnheiten aus der Zeit der freien Eingabe. */
     categoryLabel: string | null;
+    /** Der Schlüssel der Katalog-Vorlage — entscheidet das Zeichen. */
+    templateKey: string | null;
     behaviorType: BehaviorType;
     /** Die Dauer in Minuten; null, wenn die alte Zeile keinen Minuten-Umfang trug. */
     durationMinutes: number | null;
@@ -84,7 +86,6 @@ export default function EditHabit({
     });
 
     const isFixed = data.schedule_type === 'fixed';
-    const Icon = BEHAVIOR_ICONS[habit.behaviorType];
 
     function submit(event: React.FormEvent) {
         event.preventDefault();
@@ -106,11 +107,7 @@ export default function EditHabit({
                         sind. */}
                     <div className="flex items-center gap-3 rounded-2xl bg-card p-4">
                         <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-sand text-primary">
-                            <Icon
-                                className="size-5"
-                                strokeWidth={1.5}
-                                aria-hidden="true"
-                            />
+                            <HabitGlyph habit={habit} className="size-5" />
                         </span>
                         <span className="min-w-0">
                             <span className="block truncate text-[15px] leading-snug font-semibold">

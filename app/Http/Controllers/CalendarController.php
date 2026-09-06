@@ -486,6 +486,9 @@ class CalendarController extends Controller
                     'exact' => $habit->startsAt() !== null,
                     'timeRange' => $habit->timeRangeLabel(),
                     'behaviorType' => $habit->behavior_type->value,
+                    // Entscheidet das Zeichen: Die Vorlage weiß, worum es
+                    // geht, die Verhaltensrichtung ordnet nur fachlich ein.
+                    'templateKey' => $habit->template_key,
                     // Der eigene Haken an der Zusage. Er hängt an der
                     // Verabredung, nicht an der fremden Gewohnheit — die
                     // gehört der anderen Person.
@@ -523,7 +526,7 @@ class CalendarController extends Controller
      *
      * @param  array{name: string, initial: string}|null  $companion  Wer heute mitmacht
      * @param  Timetable|null  $timetable  Für den ersten Tag, an dem ein Kurs den alten Platz nimmt
-     * @return array{kind: 'habit', companion: array{name: string, initial: string}|null, id: int, title: string, anchor: string, anchorHour: int, scheduleType: string, conflictDate: string|null, startMinute: int|null, durationMinutes: int|null, exact: bool, shifted: bool, measureLabel: string|null, timeRange: string|null, behaviorType: string, smallestStep: string|null, motivation: string|null, completed: bool, graduated: bool, chainedToId: int|null}
+     * @return array{kind: 'habit', companion: array{name: string, initial: string}|null, id: int, title: string, anchor: string, anchorHour: int, scheduleType: string, conflictDate: string|null, startMinute: int|null, durationMinutes: int|null, exact: bool, shifted: bool, measureLabel: string|null, timeRange: string|null, behaviorType: string, templateKey: string|null, smallestStep: string|null, motivation: string|null, completed: bool, graduated: bool, chainedToId: int|null}
      */
     private function block(Habit $habit, Carbon $day, ?DayPlan $plan = null, ?array $companion = null, ?Timetable $timetable = null): array
     {
@@ -572,6 +575,9 @@ class CalendarController extends Controller
             'measureLabel' => $habit->measureLabel(),
             'timeRange' => $habit->timeRangeLabel($day),
             'behaviorType' => $habit->behavior_type->value,
+            // Entscheidet das Zeichen: Die Vorlage weiß, worum es
+            // geht, die Verhaltensrichtung ordnet nur fachlich ein.
+            'templateKey' => $habit->template_key,
             'smallestStep' => $habit->smallest_step,
             // Für die Starthilfe, die es jetzt auch im Kalender gibt.
             'motivation' => $habit->motivation,

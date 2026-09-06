@@ -1,6 +1,7 @@
 import { router } from '@inertiajs/react';
 import { RotateCcw, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import { HabitGlyph } from '@/components/habit-glyph';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -10,7 +11,7 @@ import {
     DialogFooter,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { BEHAVIOR_ICONS } from '@/lib/behavior-icons';
+import { cn } from '@/lib/utils';
 import { destroy as deleteHabit } from '@/routes/habits';
 import { destroy as reactivate } from '@/routes/habits/graduation';
 import type { GraduatedHabit } from '@/types';
@@ -28,15 +29,24 @@ import type { GraduatedHabit } from '@/types';
 export function GraduatedHabitRow({
     habit,
     canReactivate,
+    highlighted = false,
+    onReactivated,
 }: {
     habit: GraduatedHabit;
     /** Falsch, wenn bereits fünf Gewohnheiten aktiv sind. */
     canReactivate: boolean;
+    /**
+     * Kurz betont, weil die Gewohnheit gerade hier gelandet ist.
+     *
+     * Kein Zustand des Archivs, sondern eine Antwort auf „Beenden": Wer etwas
+     * beendet, soll sehen, wohin es gewandert ist, statt es zu suchen.
+     */
+    highlighted?: boolean;
+    /** Sagt Bescheid, sobald sie wieder oben in der Liste steht. */
+    onReactivated?: () => void;
 }) {
     const [confirming, setConfirming] = useState(false);
     const [working, setWorking] = useState(false);
-
-    const Icon = BEHAVIOR_ICONS[habit.behaviorType];
 
     const history =
         habit.completionCount === 1
@@ -44,9 +54,16 @@ export function GraduatedHabitRow({
             : `${habit.completionCount} Tage abgehakt`;
 
     return (
-        <li className="flex items-center gap-3 rounded-xl border border-dashed px-4 py-3">
+        <li
+            id={`graduated-habit-${habit.id}`}
+            className={cn(
+                'flex items-center gap-3 rounded-xl border border-dashed px-4 py-3 transition-shadow duration-300',
+                highlighted &&
+                    'ring-2 ring-primary ring-offset-4 ring-offset-background',
+            )}
+        >
             <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
-                <Icon className="size-5" strokeWidth={1.5} aria-hidden="true" />
+                <HabitGlyph habit={habit} className="size-5" />
             </span>
 
             <span className="min-w-0 flex-1">
@@ -66,6 +83,7 @@ export function GraduatedHabitRow({
                         setWorking(true);
                         router.delete(reactivate.url(habit.id), {
                             preserveScroll: true,
+                            onSuccess: () => onReactivated?.(),
                             onFinish: () => setWorking(false),
                         });
                     }}

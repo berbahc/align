@@ -1,6 +1,6 @@
 import { Check } from 'lucide-react';
+import { HabitGlyph } from '@/components/habit-glyph';
 import { PersonCircle } from '@/components/person-circle';
-import { BEHAVIOR_ICONS } from '@/lib/behavior-icons';
 import { MIN_BLOCK_HEIGHT, spanLabel } from '@/lib/day-grid';
 import type { PlacedBlock } from '@/lib/day-grid';
 import { cn } from '@/lib/utils';
@@ -69,7 +69,6 @@ export function CalendarBlock({
     };
 }) {
     const { block, top, height, lane, lanes } = placed;
-    const Icon = BEHAVIOR_ICONS[block.behaviorType];
 
     const drawn = Math.max(height, MIN_BLOCK_HEIGHT);
     const spacious = drawn >= SPACIOUS;
@@ -135,7 +134,6 @@ export function CalendarBlock({
                     >
                         <BlockBody
                             block={block}
-                            Icon={Icon}
                             spacious={spacious}
                             selfInitial={selfInitial}
                         />
@@ -144,7 +142,6 @@ export function CalendarBlock({
                     <div className="min-w-0 flex-1 px-2.5 py-1">
                         <BlockBody
                             block={block}
-                            Icon={Icon}
                             spacious={spacious}
                             selfInitial={selfInitial}
                         />
@@ -189,12 +186,10 @@ export function CalendarBlock({
  */
 function BlockBody({
     block,
-    Icon,
     spacious,
     selfInitial,
 }: {
     block: Block;
-    Icon: (typeof BEHAVIOR_ICONS)[keyof typeof BEHAVIOR_ICONS];
     spacious: boolean;
     /** Die eigene Initiale — die linke Hälfte des Doppel-Zeichens aus §3.2. */
     selfInitial: string;
@@ -231,11 +226,7 @@ function BlockBody({
                                 : 'bg-sand text-primary',
                         )}
                     >
-                        <Icon
-                            className="size-3.5"
-                            strokeWidth={1.5}
-                            aria-hidden="true"
-                        />
+                        <HabitGlyph habit={block} className="size-3.5" />
                     </span>
                 ))}
 

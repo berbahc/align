@@ -142,7 +142,6 @@ export function SituationPicker({
                     </button>
                 );
             })}
-
         </div>
     );
 }
