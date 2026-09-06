@@ -42,7 +42,7 @@ export function useNewPlaces() {
                 },
                 onHttpException: (response) => {
                     const message =
-                        response.status === 422
+                        response.status === 409
                             ? readMessage(response.data)
                             : null;
 

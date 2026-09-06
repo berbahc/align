@@ -112,22 +112,35 @@ export function FlashNotice() {
                                 lag dort
                                 {placed.displaced[0].previousTime !== '' &&
                                     ` um ${placed.displaced[0].previousTime}`}{' '}
-                                und braucht jetzt einen neuen Platz.
+                                und braucht
+                                {placed.displacedFrom === null
+                                    ? ' jetzt'
+                                    : ` ab dem ${placed.displacedFrom}`}{' '}
+                                einen neuen Platz.
                             </>
                         ) : (
                             <>
                                 {placed.displaced.length} Gewohnheiten lagen
-                                dort und brauchen jetzt einen neuen Platz:{' '}
+                                dort und brauchen
+                                {placed.displacedFrom === null
+                                    ? ' jetzt'
+                                    : ` ab dem ${placed.displacedFrom}`}{' '}
+                                einen neuen Platz:{' '}
                                 {placed.displaced
                                     .map((habit) => `„${habit.title}"`)
                                     .join(', ')}
                                 .
                             </>
                         )}
+                        {/* Der Verweis gilt erst, wenn der Platz wirklich weg
+                            ist: Vorher steht die Gewohnheit in keiner Liste
+                            „Braucht einen neuen Platz" — sie läuft ja noch. */}
                         <span className="text-muted-foreground">
                             {' '}
-                            Nichts ist verloren. Sie stehen in deiner
-                            Gewohnheitsliste unter „Braucht einen neuen Platz".
+                            Nichts ist verloren.{' '}
+                            {placed.displacedFrom === null
+                                ? 'Sie stehen im Kalender unter „Braucht einen neuen Platz".'
+                                : 'Ab dann stehen sie im Kalender unter „Braucht einen neuen Platz".'}
                         </span>
                     </>
                 )}

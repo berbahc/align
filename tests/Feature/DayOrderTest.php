@@ -74,7 +74,7 @@ test('a day that does not fit is refused with a reason, not a shrug', function (
 
     $this->actingAs($user)
         ->postJson(route('calendar.order.suggestions'), ['date' => $monday->toDateString()])
-        ->assertStatus(422)
+        ->assertStatus(409)
         ->assertJsonPath('message', fn (string $message): bool => str_contains($message, 'brauchen zusammen'));
 
     // Die KI wird gar nicht erst gefragt — das ist eine Rechnung, keine
@@ -90,7 +90,7 @@ test('a single habit has no order to speak of', function () {
 
     $this->actingAs($user)
         ->postJson(route('calendar.order.suggestions'), ['date' => $monday->toDateString()])
-        ->assertStatus(422);
+        ->assertStatus(409);
 
     SuggestDayOrder::assertNotPrompted(fn (AgentPrompt $prompt): bool => true);
 });
@@ -319,7 +319,7 @@ test('a day filled with lectures is refused before the model is asked', function
 
     $this->actingAs($user)
         ->postJson(route('calendar.order.suggestions'), ['date' => $monday->toDateString()])
-        ->assertStatus(422);
+        ->assertStatus(409);
 
     SuggestDayOrder::assertNotPrompted(fn (AgentPrompt $prompt): bool => true);
 });

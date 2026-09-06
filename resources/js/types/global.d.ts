@@ -70,6 +70,8 @@ declare module '@inertiajs/core' {
              */
             coursePlaced?: {
                 title: string;
+                /** „12. Oktober", wenn der Platz erst später wegfällt. */
+                displacedFrom: string | null;
                 displaced: {
                     id: number;
                     title: string;

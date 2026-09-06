@@ -220,6 +220,11 @@ class CalendarController extends Controller
             // Grenze, die HabitCompletionController serverseitig durchsetzt.
             // Die Zukunft ist ohnehin nicht abhakbar.
             'canComplete' => $this->withinBackdatingWindow($day, $today),
+            // `canComplete` ist auch an einem künftigen Tag falsch — dort aber
+            // aus einem anderen Grund. Ohne diese Unterscheidung stand unter
+            // dem Morgen der Satz „Nachtragen geht für die letzten sieben
+            // Tage", als wäre eine Frist verstrichen, die noch gar nicht läuft.
+            'isPast' => $day->lessThan($today),
             'previousDate' => $this->previousDate($habits, $day),
             'nextDate' => $day->copy()->addDay()->toDateString(),
             // Damit der Weg zurück in den Monat führt, aus dem man kam.
@@ -617,7 +622,7 @@ class CalendarController extends Controller
 
         $from = $start->hour * 60 + $start->minute;
         $to = $from + ($habit->durationMinutes() ?? DayPlan::AssumedMinutes);
-        $days = $habit->scheduled_days ?? [1, 2, 3, 4, 5, 6, 7];
+        $days = $habit->activeWeekdays() ?: Habit::EveryDay;
 
         $day = Carbon::today();
 

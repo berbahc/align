@@ -263,6 +263,14 @@ export function CourseSheet({
                                 </button>
                             ))}
                         </div>
+                        {/* Dieselben Kreise stehen bei einer Gewohnheit für
+                            mehrere Tage; hier trägt jeder Termin seinen
+                            eigenen. Ohne diesen Satz wählt man Mo, dann Mi —
+                            und merkt nicht, dass Mo dabei wieder abfällt. */}
+                        <p className="text-xs leading-relaxed text-muted-foreground">
+                            Ein Termin je Tag. Findet der Kurs mehrmals in der
+                            Woche statt, trag ihn für jeden Tag einmal ein.
+                        </p>
                     </Field>
 
                     <Field

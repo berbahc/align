@@ -23,15 +23,24 @@ interface OrderResponse {
  * Der Rumpf kommt als Zeichenkette; ein unlesbarer darf nicht dazu führen,
  * dass die Oberfläche gar nichts sagt.
  */
-export function readMessage(body: string): string | null {
-    try {
-        const parsed: unknown = JSON.parse(body);
+export function readMessage(
+    body: string | Record<string, unknown>,
+): string | null {
+    // Der Körper kommt mal als Text, mal schon geparst — Inertia gibt beides
+    // zurück. `JSON.parse` auf ein Objekt loszulassen warf still eine Ausnahme,
+    // und der Satz des Servers war weg.
+    const parsed: unknown = typeof body === 'string' ? tryParse(body) : body;
 
-        return typeof parsed === 'object' &&
-            parsed !== null &&
-            typeof (parsed as { message?: unknown }).message === 'string'
-            ? (parsed as { message: string }).message
-            : null;
+    return typeof parsed === 'object' &&
+        parsed !== null &&
+        typeof (parsed as { message?: unknown }).message === 'string'
+        ? (parsed as { message: string }).message
+        : null;
+}
+
+function tryParse(body: string): unknown {
+    try {
+        return JSON.parse(body);
     } catch {
         return null;
     }
@@ -67,11 +76,11 @@ export function useDayOrder() {
                     setOrder(response.order ?? []);
                 },
                 onHttpException: (response) => {
-                    // 422 trägt einen Satz, der erklärt, warum es nicht geht —
+                    // 409 trägt einen Satz, der erklärt, warum es nicht geht —
                     // ihn als Ausfall zu zeigen wäre eine Ausrede statt einer
                     // Antwort. Alles andere ist ein echter Ausfall.
                     const message =
-                        response.status === 422
+                        response.status === 409
                             ? readMessage(response.data)
                             : null;
 

@@ -38,6 +38,7 @@ interface Follower {
 export function ShiftSheet({
     block,
     minute,
+    isToday,
     followers,
     conflict,
     error,
@@ -46,6 +47,14 @@ export function ShiftSheet({
 }: {
     block: CalendarBlock | null;
     minute: number;
+    /**
+     * Steht der angezeigte Tag heute? Nur dann heißt die Ausnahme „heute".
+     *
+     * Ziehen lässt sich auch am Montag, während Sonntag ist — die Frage „Soll
+     * das nur für heute gelten?" meinte dann einen anderen Tag als den, der auf
+     * dem Bildschirm liegt.
+     */
+    isToday: boolean;
     followers: Follower[];
     /** Was heute schon an dieser Stelle liegt — dann geht gar nichts. */
     conflict: BlockConflict | null;
@@ -68,7 +77,8 @@ export function ShiftSheet({
                         <span className="font-semibold tabular-nums">
                             {target}
                         </span>
-                        . Soll das nur für heute gelten?
+                        . Soll das nur {isToday ? 'für heute' : 'an diesem Tag'}{' '}
+                        gelten?
                     </SheetDescription>
                 </SheetHeader>
 
@@ -142,7 +152,7 @@ export function ShiftSheet({
                         disabled={conflict !== null}
                         className={`${OUTLINE_BUTTON} ${ACTION_BUTTON} border-primary text-primary hover:bg-accent`}
                     >
-                        Nur heute
+                        {isToday ? 'Nur heute' : 'Nur an dem Tag'}
                     </button>
                     <button
                         type="button"

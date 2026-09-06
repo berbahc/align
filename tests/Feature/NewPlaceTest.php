@@ -168,7 +168,7 @@ test('with nothing parked the model is not asked', function () {
 
     $this->actingAs($user)
         ->postJson(route('calendar.semester.places.suggestions'))
-        ->assertStatus(422);
+        ->assertStatus(409);
 
     SuggestNewPlaces::assertNeverPrompted();
 });

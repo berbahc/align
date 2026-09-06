@@ -58,6 +58,8 @@ interface CalendarDayProps {
     isToday: boolean;
     /** Nur im Nachtrag-Fenster und nicht in der Zukunft lässt sich abhaken. */
     canComplete: boolean;
+    /** Liegt der Tag hinter uns? Entscheidet, ob die Nachtragfrist gilt. */
+    isPast: boolean;
     /** Null, sobald es davor keine Gewohnheiten mehr gab. */
     previousDate: string | null;
     nextDate: string;
@@ -111,6 +113,7 @@ export default function CalendarDay({
     heading,
     isToday,
     canComplete,
+    isPast,
     previousDate,
     nextDate,
     month,
@@ -543,8 +546,9 @@ export default function CalendarDay({
 
                         {/* Kein Fehler, sondern eine Grenze: Was der
                             Wochenstreifen nicht mehr zeigt, lässt sich auch
-                            nicht mehr nachtragen. */}
-                        {!canComplete && (
+                            nicht mehr nachtragen. Nur rückwärts — vor einem
+                            Tag, der noch kommt, ist nichts verstrichen. */}
+                        {!canComplete && isPast && (
                             <p className="mt-5 border-t border-border pt-4 text-sm leading-relaxed text-muted-foreground">
                                 Nachtragen geht für die letzten sieben Tage.
                             </p>
@@ -642,6 +646,7 @@ export default function CalendarDay({
             <ShiftSheet
                 block={shifting}
                 minute={dropped?.minute ?? 0}
+                isToday={isToday}
                 followers={
                     dropped
                         ? followersOf(blocks, dropped.id, dropped.minute)

@@ -46,9 +46,15 @@ class NewPlaceController extends Controller
         $parked = $this->parked($user);
 
         if ($parked->isEmpty()) {
+            // 409 statt 422: Das ist kein Formularfehler, sondern der Zustand
+            // des Tages — und der Unterschied ist nicht bloß Semantik. Inertia
+            // behandelt **jede** 422 als Validierungsantwort, schickt sie an
+            // `onError` und ruft `onHttpException` nie auf. Der Satz hier kam
+            // deshalb nirgends an: Das Sheet blieb leer stehen, mit einem
+            // aktiven „Übernehmen" über nichts.
             return response()->json([
                 'message' => 'Gerade steht keine Gewohnheit ohne Platz da.',
-            ], 422);
+            ], 409);
         }
 
         [$askable, $unplaced] = $this->prepare($user, $parked);
@@ -306,7 +312,7 @@ class NewPlaceController extends Controller
                 continue;
             }
 
-            $days = $habit->scheduled_days ?? [1, 2, 3, 4, 5, 6, 7];
+            $days = $habit->activeWeekdays() ?: Habit::EveryDay;
 
             $band = $habit->dayBand();
             $bandIsHard = true;

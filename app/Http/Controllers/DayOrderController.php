@@ -57,9 +57,15 @@ class DayOrderController extends Controller
         $due = $this->habitsOn($request->user(), $date);
 
         if ($due->count() < self::MinimumHabits) {
+            // 409 statt 422: Das ist kein Formularfehler, sondern der Zustand
+            // des Tages — und der Unterschied ist nicht bloß Semantik. Inertia
+            // behandelt **jede** 422 als Validierungsantwort, schickt sie an
+            // `onError` und ruft `onHttpException` nie auf. Der Satz hier kam
+            // deshalb nirgends an: Das Sheet blieb leer stehen, mit einem
+            // aktiven „Übernehmen" über nichts.
             return response()->json([
                 'message' => 'Zum Ordnen braucht es mindestens zwei Gewohnheiten an einem Tag.',
-            ], 422);
+            ], 409);
         }
 
         $busy = Timetable::for($request->user())->blocksOn($date);
@@ -86,7 +92,7 @@ class DayOrderController extends Controller
                     DayPlan::toTime($frame['to']),
                     max(0, $available),
                 ),
-            ], 422);
+            ], 409);
         }
 
         // Die App-Locale ist nicht deutsch, die Oberfläche schon — dasselbe
@@ -173,7 +179,7 @@ class DayOrderController extends Controller
             $habit->update([
                 'schedule_type' => ScheduleType::Fixed,
                 'scheduled_time' => $row['time'],
-                'scheduled_days' => $habit->scheduled_days ?? [1, 2, 3, 4, 5, 6, 7],
+                'scheduled_days' => $habit->activeWeekdays() ?: Habit::EveryDay,
                 'trigger_situation' => null,
                 'chained_to_habit_id' => null,
             ]);
@@ -300,12 +306,19 @@ class DayOrderController extends Controller
         $habits = $user->habits()->active()->with('chainedTo')->orderBy('position')->get();
         $habits->each(fn (Habit $habit) => $habit->setRelation('user', $user));
 
+        // Dieselbe Frage wie im Kalender: **steht sie an diesem Tag wirklich
+        // an?** `isScheduledOn()` allein reicht dafür nicht — „nach der
+        // Vorlesung" gilt an jedem Wochentag, aber ohne Vorlesung gibt es den
+        // Auslöser nicht. Der Tag zeigte die Gewohnheit deshalb gar nicht, und
+        // die Neuordnung plante sie trotzdem ein: ein Samstagstermin für etwas,
+        // das samstags nicht stattfindet — und mit „Übernehmen" wäre daraus
+        // eine feste Uhrzeit geworden.
+        //
+        // `isDueOn()` fragt alle drei Bedingungen auf einmal, den Parkvermerk
+        // eingeschlossen: Was keinen Platz hat, bekommt ihn auf dem eigenen Weg
+        // — und nicht nebenbei mit einer Uhrzeit, die den Vermerk stehen ließe.
         return $habits
-            ->filter(fn (Habit $habit): bool => $habit->isScheduledOn($date))
-            // Die Ordnung betrifft den Tag, wie er liegt. Was keinen Platz
-            // hat, bekommt ihn auf dem eigenen Weg — und nicht nebenbei mit
-            // einer Uhrzeit, die den Vermerk stehen ließe.
-            ->reject(fn (Habit $habit): bool => $habit->isDisplaced($date))
+            ->filter(fn (Habit $habit): bool => $habit->isDueOn($date))
             ->values();
     }
 }

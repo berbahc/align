@@ -56,7 +56,13 @@ export function MobileNav({ items }: { items: NavItem[] }) {
                                         />
                                     )}
                                 </span>
-                                <span className="truncate">{item.title}</span>
+                                {/* Eigene Zeilenhöhe: `leading-none` oben und
+                                    das `overflow-hidden` von `truncate` schnitten
+                                    zusammen die Umlautpunkte ab — „Übersicht"
+                                    stand als „Ubersicht" in der Leiste. */}
+                                <span className="truncate leading-tight">
+                                    {item.title}
+                                </span>
                             </Link>
                         </li>
                     );

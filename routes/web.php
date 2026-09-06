@@ -36,6 +36,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('onboarding/sleep', [OnboardingController::class, 'storeSleep'])->name('onboarding.sleep');
     Route::post('onboarding/skip', [OnboardingController::class, 'skip'])->name('onboarding.skip');
 
+    // Der kleinste Schritt wird **im** Onboarding gebraucht — dort legt jemand
+    // seine erste Gewohnheit an, und Schritt 4 fragt die KI danach. Hinter
+    // `EnsureOnboarded` lief die Anfrage in genau diesem Moment gegen die
+    // Weiche: Die Antwort war eine Weiterleitung auf `/onboarding`, und der
+    // Wizard meldete „Die Vorschläge lassen sich gerade nicht laden."
+    //
+    // Die Strecke legt nichts an und liest keine fremden Daten; sie nimmt eine
+    // Vorlage und gibt Sätze zurück. Gedrosselt bleibt sie: ein ungebremster
+    // Endpunkt zu einem bezahlten Dienst ist eine Rechnung, die jemand anderes
+    // schreiben kann.
+    Route::post('habits/smallest-step/suggestions', [SmallestStepController::class, 'suggestions'])
+        ->middleware('throttle:20,1')
+        ->name('habits.smallest-step.suggestions');
+
     Route::middleware(EnsureOnboarded::class)->group(function () {
         Route::get('dashboard', DashboardController::class)->name('dashboard');
 
@@ -167,12 +181,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Wie bei den Erinnerungen steht die feste Strecke vor `{habit}`,
         // sonst wird „smallest-step" als Modellschlüssel gelesen.
         //
-        // Die beiden fragenden Wege sprechen mit der Claude API und werden
-        // deshalb gedrosselt: ein ungebremster Endpunkt zu einem bezahlten
-        // Dienst ist eine Rechnung, die jemand anderes schreiben kann.
-        Route::post('habits/smallest-step/suggestions', [SmallestStepController::class, 'suggestions'])
-            ->middleware('throttle:20,1')
-            ->name('habits.smallest-step.suggestions');
+        // Der fragende Weg spricht mit der Claude API und wird deshalb
+        // gedrosselt: ein ungebremster Endpunkt zu einem bezahlten Dienst ist
+        // eine Rechnung, die jemand anderes schreiben kann.
         Route::post('habits/{habit}/smallest-step', [SmallestStepController::class, 'smaller'])
             ->middleware('throttle:20,1')
             ->name('habits.smallest-step.smaller');

@@ -23,18 +23,17 @@ export default function TwoFactorChallenge() {
     }>(() => {
         if (showRecoveryInput) {
             return {
-                title: 'Recovery code',
+                title: 'Wiederherstellungscode',
                 description:
-                    'Please confirm access to your account by entering one of your emergency recovery codes.',
-                toggleText: 'login using an authentication code',
+                    'Bestätige den Zugang zu deinem Konto mit einem deiner Wiederherstellungscodes.',
+                toggleText: 'dich mit einem Bestätigungscode anmelden',
             };
         }
 
         return {
-            title: 'Authentication code',
-            description:
-                'Enter the authentication code provided by your authenticator application.',
-            toggleText: 'login using a recovery code',
+            title: 'Bestätigungscode',
+            description: 'Gib den Code aus deiner Authenticator-App ein.',
+            toggleText: 'dich mit einem Wiederherstellungscode anmelden',
         };
     }, [showRecoveryInput]);
 
@@ -67,7 +66,7 @@ export default function TwoFactorChallenge() {
                                     <Input
                                         name="recovery_code"
                                         type="text"
-                                        placeholder="Enter recovery code"
+                                        placeholder="Wiederherstellungscode"
                                         autoFocus={showRecoveryInput}
                                         required
                                     />
@@ -109,11 +108,11 @@ export default function TwoFactorChallenge() {
                                 className="w-full"
                                 disabled={processing}
                             >
-                                Continue
+                                Weiter
                             </Button>
 
                             <div className="text-center text-sm text-muted-foreground">
-                                <span>or you can </span>
+                                <span>oder </span>
                                 <button
                                     type="button"
                                     className="cursor-pointer text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"
