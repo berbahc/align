@@ -62,12 +62,18 @@ class HabitAdjustmentController extends Controller
                 // Übernehmen abgewiesen — die KI soll ihn deshalb gar nicht
                 // erst machen.
                 sleepWindows: $request->user()->sleepWindows(),
-                // Die freien Momente: Jede Situation trägt genau eine
+                // Die freien Momente: Eine Situation trägt pro Tag genau eine
                 // Gewohnheit, und die KI wählt aus dem, was übrig ist — statt
                 // sich einen Moment auszudenken, den es im Tag nicht gibt.
+                // Frei heißt hier: an **allen** Tagen dieser Gewohnheit frei.
+                // Ein Moment, der nur mittwochs noch offen ist, wäre für eine
+                // Mo–Fr-Gewohnheit ein Vorschlag, den das Speichern abweist.
                 availableSituations: array_column(array_filter(
                     Habit::situationChoicesFor($request->user(), $habit),
-                    fn (array $choice): bool => $choice['takenBy'] === null,
+                    fn (array $choice): bool => array_intersect(
+                        $choice['takenDays'],
+                        $habit->activeWeekdays() ?: Habit::EveryDay,
+                    ) === [],
                 ), 'situation'),
                 // Und die Fenster, in die die Dauer wirklich passt.
                 freeWindows: $this->freeWindows($request->user(), $habit),

@@ -58,13 +58,15 @@ export type Weekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 /**
  * Ein Moment im Tag, den man als Auslöser wählen kann.
  *
- * `takenBy` trägt den Titel der Gewohnheit, die ihn schon hält — dann ist der
- * Moment vergeben. Eine Situation trägt genau eine Gewohnheit: zwei Dinge im
- * selben Moment sind kein Plan.
+ * `takenDays` sind die Wochentage, an denen ihn schon eine andere Gewohnheit
+ * hält, `takenBy` deren Titel. Eine Situation trägt **pro Tag** genau eine
+ * Gewohnheit: zwei Dinge im selben Moment sind kein Plan — an verschiedenen
+ * Tagen dagegen liegt nichts übereinander.
  */
 export interface SituationChoice {
     situation: string;
     takenBy: string | null;
+    takenDays: Weekday[];
 }
 
 /**

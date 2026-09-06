@@ -101,7 +101,7 @@ class HabitGraduationController extends Controller
         $conflict = SlotConflict::find(
             $user,
             $habit->spansFrom(DayPlan::toMinutes($habit->scheduled_time->format('H:i'))),
-            $habit->scheduled_days ?? [1, 2, 3, 4, 5, 6, 7],
+            $habit->activeWeekdays(),
             [$habit->id],
         );
 

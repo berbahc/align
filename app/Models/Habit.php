@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 
 /**
  * @property int $id
@@ -210,27 +211,32 @@ class Habit extends Model
     private ?Timetable $timetable = null;
 
     /**
-     * Die Situationen samt der Gewohnheit, die sie schon belegt.
+     * Die Situationen samt der Tage, an denen sie schon vergeben sind.
      *
-     * Eine Situation trägt genau eine Gewohnheit. „Nach dem Aufstehen" zweimal
-     * zu vergeben hieße, zwei Dinge im selben Moment zu tun — der Kalender
-     * zeigte sie untereinander, als gäbe es eine Reihenfolge, die niemand
-     * festgelegt hat. Das unterläuft das Time-Blocking, dem die ganze Planung
-     * dient.
+     * Eine Situation trägt **pro Tag** genau eine Gewohnheit. „Nach dem
+     * Aufstehen" zweimal am selben Montag zu vergeben hieße, zwei Dinge im
+     * selben Moment zu tun — der Kalender zeigte sie untereinander, als gäbe
+     * es eine Reihenfolge, die niemand festgelegt hat. Das unterläuft das
+     * Time-Blocking, dem die ganze Planung dient.
+     *
+     * An **verschiedenen** Tagen ist es dagegen kein Konflikt: „Lesen" montags
+     * und „Dehnen" dienstags nach dem Aufstehen überschneiden sich nirgends.
+     * Bei nur drei Situationen wäre die Sperre über die ganze Woche sonst eine
+     * Grenze von drei situativen Gewohnheiten — eine, die aus der Rechnung
+     * nicht folgt.
      *
      * Diese Methode ist die eine Quelle dafür: Die Oberfläche sperrt daraus
-     * die belegten Einträge, {@see ChecksSituation}
-     * weist sie ab. Liefen beide auseinander, böte der Picker etwas an, das
-     * beim Speichern scheitert.
+     * die belegten Tage, {@see ChecksSituation} weist sie ab. Liefen beide
+     * auseinander, böte der Picker etwas an, das beim Speichern scheitert.
      *
-     * `$except` ist die gerade bearbeitete Gewohnheit — ohne sie wäre ihre
-     * eigene Situation für sie selbst gesperrt.
+     * `$except` ist die gerade bearbeitete Gewohnheit — ohne sie wären ihre
+     * eigenen Tage für sie selbst gesperrt.
      *
-     * @return list<array{situation: string, takenBy: string|null}>
+     * @return list<array{situation: string, takenBy: string|null, takenDays: list<int>}>
      */
     public static function situationChoicesFor(User $user, ?self $except = null): array
     {
-        $taken = $user->habits()
+        $holders = $user->habits()
             ->active()
             ->whereNotNull('trigger_situation')
             // Eine gekettete Gewohnheit belegt keinen Moment: Ihr Anker ist die
@@ -238,12 +244,31 @@ class Habit extends Model
             // Ohne diese Zeile sperrte sie einen Moment, den sie gar nicht hat.
             ->whereIn('schedule_type', ScheduleType::withOwnAnchor())
             ->when($except?->exists, fn (Builder $query) => $query->whereKeyNot($except))
-            ->pluck('title', 'trigger_situation');
+            ->get(['id', 'title', 'schedule_type', 'trigger_situation', 'scheduled_days'])
+            ->groupBy('trigger_situation');
 
-        return array_map(fn (string $situation): array => [
-            'situation' => $situation,
-            'takenBy' => $taken->get($situation),
-        ], self::offeredSituations($user));
+        return array_map(function (string $situation) use ($holders): array {
+            /** @var Collection<int, self> $taken */
+            $taken = $holders->get($situation) ?? collect();
+
+            /** @var list<int> $days */
+            $days = $taken
+                ->flatMap(fn (self $habit): array => $habit->activeWeekdays())
+                ->unique()
+                ->sort()
+                ->values()
+                ->all();
+
+            return [
+                'situation' => $situation,
+                // Mehrere Namen kommagetrennt: Der Satz darunter sagt, wem die
+                // gesperrten Kreise gehören — gesperrt wird über die Tage.
+                'takenBy' => $taken->isEmpty()
+                    ? null
+                    : $taken->pluck('title')->implode(', '),
+                'takenDays' => $days,
+            ];
+        }, self::offeredSituations($user));
     }
 
     /**
@@ -298,6 +323,17 @@ class Habit extends Model
         6 => 'Sa',
         7 => 'So',
     ];
+
+    /**
+     * Alle sieben Tage — „täglich" als Liste.
+     *
+     * Stand vorher siebenmal ausgeschrieben im Code, überall als Rückfall für
+     * eine Gewohnheit ohne eigene Tage. Jetzt an einer Stelle, damit die
+     * Bedeutung eine bleibt.
+     *
+     * @var list<int>
+     */
+    public const array EveryDay = [1, 2, 3, 4, 5, 6, 7];
 
     /**
      * @return BelongsTo<User, $this>
@@ -492,28 +528,48 @@ class Habit extends Model
     }
 
     /**
+     * An welchen Wochentagen die Gewohnheit läuft.
+     *
+     * Die eine Quelle dafür, und sie beantwortet drei verschiedene Fragen:
+     *
+     * - Eine **gekoppelte** Gewohnheit läuft, wenn die läuft, an der sie hängt
+     *   — nicht öfter und nicht seltener. Ohne Vorgänger läuft sie nirgends.
+     * - Eine **feste** Uhrzeit ohne Tage ist kein Zeitpunkt: Das Formular
+     *   verlangt die Tage, und eine leere Liste heißt hier deshalb „an keinem
+     *   Tag", nicht „an allen".
+     * - Eine **Situation** ohne Tage heißt täglich. Das ist die Altlast und
+     *   ihre einzige Stelle: Bis die Wochentage auch für Situationen wählbar
+     *   waren, hatte keine von ihnen eine Spalte — sie liefen jeden Tag, und
+     *   genau das tun sie weiter, bis jemand Tage abwählt.
+     *
+     * @return list<int>
+     */
+    public function activeWeekdays(): array
+    {
+        if (! $this->schedule_type->hasOwnAnchor()) {
+            return $this->anchorHabit()?->activeWeekdays() ?? [];
+        }
+
+        /** @var list<int> $days */
+        $days = $this->scheduled_days ?? ($this->schedule_type->hasClockTime() ? [] : self::EveryDay);
+
+        return $days;
+    }
+
+    /**
      * Ist die Gewohnheit an diesem Tag überhaupt vorgesehen?
      *
-     * Dynamische Gewohnheiten hängen an einer Situation, die an jedem Tag
-     * eintreten kann — sie gelten deshalb immer. Feste Gewohnheiten gelten
-     * nur an ihren Wochentagen; an allen anderen Tagen sind sie nicht offen,
-     * sondern schlicht nicht vorgesehen. Der Unterschied entscheidet darüber,
-     * ob ein Tag in die Konsistenzrate zählt.
+     * Eine Gewohnheit gilt nur an ihren Wochentagen; an allen anderen Tagen ist
+     * sie nicht offen, sondern schlicht nicht vorgesehen. Der Unterschied
+     * entscheidet darüber, ob ein Tag in die Konsistenzrate zählt.
+     *
+     * Das galt lange nur für feste Uhrzeiten — eine Situation gab hier `true`
+     * zurück, für jeden Tag. „Nach dem Aufstehen lesen" hieß damit zwangsläufig
+     * auch sonntags, ohne dass es je jemand so gewählt hätte.
      */
     public function isScheduledOn(Carbon $date): bool
     {
-        // Eine gekoppelte Gewohnheit findet statt, wenn die stattfindet, an der
-        // sie hängt — nicht öfter und nicht seltener. Ist der Vorgänger
-        // verschwunden, steht sie an keinem Tag an.
-        if (! $this->schedule_type->hasOwnAnchor()) {
-            return $this->anchorHabit()?->isScheduledOn($date) ?? false;
-        }
-
-        if (! $this->schedule_type->hasClockTime()) {
-            return true;
-        }
-
-        return in_array($date->dayOfWeekIso, $this->scheduled_days ?? [], strict: true);
+        return in_array($date->dayOfWeekIso, $this->activeWeekdays(), strict: true);
     }
 
     /**
@@ -1308,8 +1364,18 @@ class Habit extends Model
             ];
         }
 
+        // Die Situation trägt ihre Tage mit, sobald es nicht alle sieben sind:
+        // „nach dem Aufstehen" allein läse sich wie jeden Tag, und genau das
+        // war es einmal.
         if (! $this->schedule_type->hasClockTime()) {
-            return ['timeLabel' => null, 'repeatLabel' => $this->trigger_situation];
+            $days = $this->activeWeekdays();
+
+            return [
+                'timeLabel' => null,
+                'repeatLabel' => count($days) === 7
+                    ? $this->trigger_situation
+                    : $this->trigger_situation.' · '.self::weekdayLabel($days),
+            ];
         }
 
         $time = $this->scheduled_time?->format('H:i');
@@ -1375,7 +1441,7 @@ class Habit extends Model
      *
      * @param  list<int>  $scheduledDays
      */
-    private static function weekdayLabel(array $scheduledDays): string
+    public static function weekdayLabel(array $scheduledDays): string
     {
         $days = collect($scheduledDays)->sort()->values();
 
@@ -1693,14 +1759,10 @@ class Habit extends Model
      */
     private function runsEveryDay(): bool
     {
-        // Eine gekoppelte Gewohnheit läuft so oft wie die, an der sie hängt —
-        // hinter einer Mo–Fr-Gewohnheit wären „12 Tage in Folge" gelogen.
-        if (! $this->schedule_type->hasOwnAnchor()) {
-            return $this->anchorHabit()?->runsEveryDay() ?? true;
-        }
-
-        return ! $this->schedule_type->hasClockTime()
-            || count($this->scheduled_days ?? []) === 7;
+        // Die Kette ist schon in `activeWeekdays()` mitgedacht: Sie läuft so
+        // oft wie die, an der sie hängt — hinter einer Mo–Fr-Gewohnheit wären
+        // „12 Tage in Folge" gelogen.
+        return count($this->activeWeekdays()) === 7;
     }
 
     /**
@@ -1711,23 +1773,19 @@ class Habit extends Model
      */
     public function scheduledDaysBetween(Carbon $start, Carbon $until): int
     {
-        // Die gekoppelte Gewohnheit steht an denselben Tagen an wie die, an der
-        // sie hängt — sonst rechnete sie mit einem Soll, das ihr Vorgänger gar
-        // nicht hat.
-        if (! $this->schedule_type->hasOwnAnchor()) {
-            return $this->anchorHabit()?->scheduledDaysBetween($start, $until) ?? 0;
-        }
-
         $length = (int) $start->copy()->startOfDay()->diffInDays($until->copy()->startOfDay()) + 1;
 
-        if (! $this->schedule_type->hasClockTime()) {
-            return $length;
-        }
-
-        $weekdays = $this->scheduled_days ?? [];
+        // Die gekoppelte Gewohnheit steht an denselben Tagen an wie die, an der
+        // sie hängt — das löst `activeWeekdays()` bereits auf. Sonst rechnete
+        // sie mit einem Soll, das ihr Vorgänger gar nicht hat.
+        $weekdays = $this->activeWeekdays();
 
         if ($weekdays === []) {
             return 0;
+        }
+
+        if (count($weekdays) === 7) {
+            return $length;
         }
 
         // Volle Wochen liefern jeden gewählten Tag genau einmal; nur der Rest

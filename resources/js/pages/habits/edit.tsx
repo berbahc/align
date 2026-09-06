@@ -79,7 +79,11 @@ export default function EditHabit({
         schedule_type: habit.scheduleType,
         trigger_situation: habit.triggerSituation ?? '',
         scheduled_time: habit.scheduledTime ?? DEFAULT_TIME,
-        scheduled_days: habit.scheduledDays ?? ([1, 2, 3, 4, 5] as Weekday[]),
+        // Ohne eigene Tage lief sie täglich — das ist die Altlast der
+        // situativen Gewohnheiten, und das Formular muss sie so zeigen, wie sie
+        // wirklich läuft.
+        scheduled_days:
+            habit.scheduledDays ?? ([1, 2, 3, 4, 5, 6, 7] as Weekday[]),
         chained_to_habit_id: habit.chainedToHabitId,
         motivation: habit.motivation ?? '',
         smallest_step: habit.smallestStep ?? '',
@@ -167,6 +171,10 @@ export default function EditHabit({
                         >
                             <SituationPicker
                                 suggestions={triggerSuggestions}
+                                days={data.scheduled_days}
+                                onDaysChange={(days) =>
+                                    setData('scheduled_days', days)
+                                }
                                 value={data.trigger_situation}
                                 onChange={(value) =>
                                     setData('trigger_situation', value)

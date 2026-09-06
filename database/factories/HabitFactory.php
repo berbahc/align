@@ -64,7 +64,9 @@ class HabitFactory extends Factory
             'scheduled_time' => $situation === null
                 ? sprintf('%02d:00', 9 + ($index % 8))
                 : null,
-            'scheduled_days' => $situation === null ? [1, 2, 3, 4, 5, 6, 7] : null,
+            // Auch eine Situation hat Tage: Testdaten sollen sagen, was sie
+            // meinen, statt sich auf den `null`-Fall zu verlassen.
+            'scheduled_days' => [1, 2, 3, 4, 5, 6, 7],
             'behavior_type' => $template->behaviorType(),
             'target_amount' => $template->defaultMinutes(),
             'target_unit' => MeasureUnit::Minutes,

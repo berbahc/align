@@ -165,7 +165,7 @@ class HabitDayShiftController extends Controller
      */
     private function always(User $user, Habit $habit, int $start): void
     {
-        $days = $habit->scheduled_days ?? [1, 2, 3, 4, 5, 6, 7];
+        $days = $habit->activeWeekdays() ?: Habit::EveryDay;
 
         foreach ($days as $weekday) {
             $this->guard($user, $habit, SlotConflict::nextWeekday($weekday), $start);

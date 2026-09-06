@@ -161,7 +161,9 @@ test('switching to a situation clears the time and switches the reminder off', f
     $habit->refresh();
 
     expect($habit->scheduled_time)->toBeNull()
-        ->and($habit->scheduled_days)->toBeNull()
+        // Die Tage bleiben: Sie gehören seit den Wochentagen auch zur
+        // Situation — nur die Uhrzeit hat die Gewohnheit verloren.
+        ->and($habit->scheduled_days)->toBe([1, 2, 3, 4, 5])
         // Ohne Zeitpunkt gäbe es nichts zu erinnern — der Schalter dürfte sonst
         // an aussehen und nichts auslösen.
         ->and($habit->reminder_enabled)->toBeFalse()

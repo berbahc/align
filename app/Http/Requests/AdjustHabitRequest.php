@@ -75,7 +75,11 @@ class AdjustHabitRequest extends FormRequest
                     ScheduleType::Fixed => $this->validateFixed($validator),
                     // Auch ein Vorschlag der KI darf keinen Moment doppelt
                     // belegen — die eigene Gewohnheit zählt dabei nicht mit.
-                    ScheduleType::Dynamic => $this->validateSituationIsFree($validator, $this->habit()),
+                    ScheduleType::Dynamic => $this->validateSituationIsFree(
+                        $validator,
+                        $this->habit(),
+                        $this->situationDays(),
+                    ),
                     ScheduleType::Chained => $this->validateChain($validator),
                 };
             },
@@ -98,7 +102,8 @@ class AdjustHabitRequest extends FormRequest
             // Eine Uhrzeit ohne Wochentage wäre ein Zeitpunkt ohne Tag. Jeder
             // Fenster-Vorschlag bringt sie mit, und der Rückweg trägt die
             // bisherigen zurück — es gibt keinen Weg hierher, der sie nicht
-            // kennt.
+            // kennt. Zu einer Situation sind sie dagegen freiwillig: Ohne sie
+            // behält die Gewohnheit die Tage, die sie schon hatte.
             'scheduled_days' => [
                 Rule::requiredIf($this->filled('scheduled_time')),
                 'nullable', 'array', 'min:1', 'max:7',
@@ -193,8 +198,26 @@ class AdjustHabitRequest extends FormRequest
                 ...$empty,
                 'schedule_type' => ScheduleType::Dynamic,
                 'trigger_situation' => $this->string('trigger_situation')->trim()->toString(),
+                // Die Tage bleiben, wie sie waren: Ein Vorschlag der KI ändert
+                // den Moment, nicht den Rhythmus. Wer montags und mittwochs
+                // liest, liest danach nicht plötzlich täglich.
+                'scheduled_days' => $this->situationDays(),
             ],
         };
+    }
+
+    /**
+     * Die Tage für eine situative Anpassung — geschickte, sonst die bisherigen.
+     *
+     * @return list<int>
+     */
+    private function situationDays(): array
+    {
+        $days = $this->days();
+
+        return $days === []
+            ? ($this->habit()->activeWeekdays() ?: Habit::EveryDay)
+            : $days;
     }
 
     /**

@@ -47,9 +47,10 @@ test('the message names the habit that holds the moment', function () {
             'trigger_situation' => 'nach dem Aufstehen',
         ])
         ->assertSessionHasErrors([
-            // Der Satz sagt, wem der Moment gehört — sonst müsste man raten,
-            // welche Gewohnheit im Weg steht.
-            'trigger_situation' => '„Joggen gehen" hängt schon an diesem Moment. Zwei Gewohnheiten zur selben Zeit sind kein Plan — wähle einen anderen Auslöser.',
+            // Der Satz sagt, wem der Moment an welchen Tagen gehört — sonst
+            // müsste man raten, welche Gewohnheit im Weg steht, und seit den
+            // Wochentagen auch, an welchem Tag.
+            'trigger_situation' => '„Joggen gehen" hängt täglich schon an diesem Moment. Zwei Gewohnheiten zur selben Zeit sind kein Plan — wähl andere Tage oder einen anderen Auslöser.',
         ]);
 });
 
@@ -406,4 +407,179 @@ test('a lecture anchor survives a deleted timetable', function () {
         ->assertSessionHasNoErrors();
 
     expect($habit->fresh()->trigger_situation)->toBe('nach der Vorlesung');
+});
+
+/**
+ * Auch eine Situation läuft an Wochentagen.
+ *
+ * Das war lange nicht so: `isScheduledOn()` gab für eine situative Gewohnheit
+ * `true` zurück, für jeden Tag. „Nach dem Aufstehen lesen" hieß damit
+ * zwangsläufig auch sonntags — nicht, weil jemand es so gewählt hätte, sondern
+ * weil die Spalte für sie nie gefüllt wurde.
+ */
+test('a situation runs only on its chosen weekdays', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('habits.store'), [
+            'template_key' => HabitTemplate::Meditieren->value,
+            'target_amount' => 10,
+            'trigger_situation' => 'nach dem Aufstehen',
+            'scheduled_days' => [1, 3, 5],
+        ])
+        ->assertSessionHasNoErrors();
+
+    $habit = $user->habits()->sole();
+
+    expect($habit->scheduled_days)->toBe([1, 3, 5])
+        ->and($habit->activeWeekdays())->toBe([1, 3, 5])
+        // Montag ja, Dienstag nicht.
+        ->and($habit->isScheduledOn(Carbon::parse('next monday')))->toBeTrue()
+        ->and($habit->isScheduledOn(Carbon::parse('next tuesday')))->toBeFalse()
+        // Und der Kalender nennt den Rhythmus, statt ihn zu verschweigen.
+        ->and($habit->scheduleLabel())->toBe('nach dem Aufstehen · Mo, Mi, Fr');
+});
+
+/**
+ * Ohne geschickte Tage bleibt es täglich.
+ *
+ * Die Altlast: Jede situative Gewohnheit, die vor den Wochentagen entstanden
+ * ist, hat keine Tage in der Spalte. Sie lief jeden Tag und muss das weiter
+ * tun — eine Gewohnheit still auf Mo–Fr zu setzen, weil die App eine Spalte
+ * dazubekommen hat, wäre eine Änderung, die niemand angeordnet hat.
+ */
+test('a situation without days keeps running daily', function () {
+    $user = User::factory()->create();
+    $habit = Habit::factory()->for($user)->withMeasure(10)->create([
+        'schedule_type' => ScheduleType::Dynamic,
+        'trigger_situation' => 'nach dem Aufstehen',
+        'scheduled_days' => null,
+    ]);
+
+    expect($habit->activeWeekdays())->toBe([1, 2, 3, 4, 5, 6, 7])
+        ->and($habit->isScheduledOn(Carbon::parse('next sunday')))->toBeTrue()
+        // Und das Etikett bleibt der bloße Moment: „täglich" dahinterzuhängen
+        // wäre richtig, aber es stand nie da und sagt nichts dazu.
+        ->and($habit->scheduleLabel())->toBe('nach dem Aufstehen');
+});
+
+/**
+ * Dieselbe Situation an verschiedenen Tagen ist keine Doppelbelegung.
+ *
+ * „Lesen" montags und „Dehnen" dienstags nach dem Aufstehen liegen nirgends
+ * übereinander. Bei drei angebotenen Situationen wäre die Sperre über die ganze
+ * Woche eine Grenze von drei situativen Gewohnheiten — eine, die aus der
+ * Rechnung nicht folgt.
+ */
+test('the same situation is free on the other days', function () {
+    $user = User::factory()->create();
+    Habit::factory()->for($user)->fromTemplate(HabitTemplate::Joggen)->create([
+        'trigger_situation' => 'nach dem Aufstehen',
+        'scheduled_days' => [1, 2, 3],
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('habits.store'), [
+            'template_key' => HabitTemplate::Aufraeumen->value,
+            'target_amount' => 15,
+            'trigger_situation' => 'nach dem Aufstehen',
+            'scheduled_days' => [4, 5],
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect($user->habits()->count())->toBe(2);
+});
+
+test('the same situation on a shared day is refused by name and day', function () {
+    $user = User::factory()->create();
+    Habit::factory()->for($user)->fromTemplate(HabitTemplate::Joggen)->create([
+        'trigger_situation' => 'nach dem Aufstehen',
+        'scheduled_days' => [1, 2, 3],
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('habits.store'), [
+            'template_key' => HabitTemplate::Aufraeumen->value,
+            'target_amount' => 15,
+            'trigger_situation' => 'nach dem Aufstehen',
+            'scheduled_days' => [3, 4, 5],
+        ])
+        ->assertSessionHasErrors([
+            // Der Satz nennt beide Auswege, weil es seit den Wochentagen zwei
+            // gibt: andere Tage oder ein anderer Moment.
+            'trigger_situation' => '„Joggen gehen" hängt Mi schon an diesem Moment. Zwei Gewohnheiten zur selben Zeit sind kein Plan — wähl andere Tage oder einen anderen Auslöser.',
+        ]);
+
+    expect($user->habits()->count())->toBe(1);
+});
+
+/**
+ * Die Oberfläche sperrt aus derselben Quelle, aus der die Prüfung abweist.
+ *
+ * Liefen beide auseinander, böte der Picker Tage an, die beim Speichern
+ * scheitern.
+ */
+test('the picker reports which days are taken', function () {
+    $user = User::factory()->create();
+    Habit::factory()->for($user)->fromTemplate(HabitTemplate::Joggen)->create([
+        'trigger_situation' => 'nach dem Aufstehen',
+        'scheduled_days' => [1, 2, 3],
+    ]);
+
+    $choices = collect(Habit::situationChoicesFor($user))
+        ->keyBy('situation');
+
+    expect($choices['nach dem Aufstehen']['takenDays'])->toBe([1, 2, 3])
+        ->and($choices['nach dem Aufstehen']['takenBy'])->toBe('Joggen gehen')
+        ->and($choices['vor dem Schlafengehen']['takenDays'])->toBe([])
+        ->and($choices['vor dem Schlafengehen']['takenBy'])->toBeNull();
+});
+
+/**
+ * Das Soll folgt den Tagen — sonst läge der Fortschritt dauerhaft daneben.
+ *
+ * Eine Gewohnheit für Mo/Mi/Fr hat in einer Woche drei Tage zu erfüllen, nicht
+ * sieben. Vorher zählte jede situative Gewohnheit die volle Woche.
+ */
+test('the target counts only the chosen days', function () {
+    $user = User::factory()->create();
+    $habit = Habit::factory()->for($user)->withMeasure(10)->create([
+        'schedule_type' => ScheduleType::Dynamic,
+        'trigger_situation' => 'nach dem Aufstehen',
+        'scheduled_days' => [1, 3, 5],
+    ]);
+
+    $monday = Carbon::parse('next monday');
+
+    expect($habit->scheduledDaysBetween($monday, $monday->copy()->addDays(6)))->toBe(3);
+});
+
+/**
+ * Ein Tag, an dem sie nicht vorgesehen ist, lässt sich nicht abhaken.
+ *
+ * Der Weg dorthin führt über {@see Habit::isScheduledOn()} — dieselbe Grenze,
+ * die den Kalender füllt.
+ */
+test('a situation cannot be completed on a day it does not run', function () {
+    $user = User::factory()->create();
+    $habit = Habit::factory()->for($user)->withMeasure(10)->create([
+        'schedule_type' => ScheduleType::Dynamic,
+        'trigger_situation' => 'nach dem Aufstehen',
+        'scheduled_days' => [1, 3, 5],
+    ]);
+
+    // Mittwoch als Heute, nachgetragen wird der Dienstag davor.
+    Carbon::setTestNow(Carbon::parse('next wednesday')->setTime(9, 0));
+
+    $this->actingAs($user)
+        ->post(route('habits.completions.store', $habit), [
+            'completed_on' => Carbon::now()->subDay()->toDateString(),
+        ])
+        ->assertSessionHasErrors([
+            'completed_on' => 'An diesem Tag war die Gewohnheit nicht vorgesehen.',
+        ]);
+
+    expect($habit->completions()->count())->toBe(0);
+
+    Carbon::setTestNow();
 });

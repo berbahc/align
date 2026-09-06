@@ -86,6 +86,12 @@ abstract class HabitFormRequest extends FormRequest
             'scheduled_time' => [
                 Rule::requiredIf($type->hasClockTime()), 'nullable', 'date_format:H:i',
             ],
+            // Pflicht nur bei einer Uhrzeit: Ein Zeitpunkt ohne Tag wäre
+            // keiner. Eine Situation darf das Feld weglassen und heißt dann
+            // täglich — so liefen alle situativen Gewohnheiten, bevor die Tage
+            // hier wählbar waren, und so laufen die alten weiter. Ein *leeres*
+            // Array bleibt trotzdem ein Fehler: In der Oberfläche keinen Tag
+            // gewählt zu haben ist etwas anderes, als keine Tage zu schicken.
             'scheduled_days' => [
                 Rule::requiredIf($type->hasClockTime()), 'nullable', 'array', 'min:1', 'max:7',
             ],
@@ -119,7 +125,8 @@ abstract class HabitFormRequest extends FormRequest
     }
 
     /**
-     * Die Situation muss frei sein — geprüft nur, wo es eine gibt.
+     * Die Situation muss frei sein — an den gewählten Tagen, geprüft nur, wo es
+     * eine gibt.
      *
      * Eine feste Uhrzeit und eine Kette haben keinen Situationstext, gegen den
      * sich vergleichen ließe.
@@ -130,7 +137,33 @@ abstract class HabitFormRequest extends FormRequest
             return;
         }
 
-        $this->validateSituationIsFree($validator, $this->editedHabit());
+        $this->validateSituationIsFree($validator, $this->editedHabit(), $this->chosenDays());
+    }
+
+    /**
+     * Die gewählten Wochentage.
+     *
+     * Kommen keine, gelten die bisherigen der Gewohnheit — und beim Anlegen
+     * alle sieben. Das ist der Unterschied zwischen „keine Tage geschickt" und
+     * „keinen Tag gewählt": Ein Formular ohne das Feld darf einer bestehenden
+     * Gewohnheit nicht still ihren Rhythmus nehmen.
+     *
+     * @return list<int>
+     */
+    private function chosenDays(): array
+    {
+        /** @var list<int> $days */
+        $days = array_values(array_unique(array_map(
+            intval(...),
+            $this->array('scheduled_days'),
+        )));
+        sort($days);
+
+        if ($days !== []) {
+            return $days;
+        }
+
+        return $this->editedHabit()?->activeWeekdays() ?: Habit::EveryDay;
     }
 
     /**
@@ -173,7 +206,9 @@ abstract class HabitFormRequest extends FormRequest
 
         $timetable = Timetable::for($user);
 
-        foreach (range(1, 7) as $weekday) {
+        // Nur die eigenen Tage: Ein voller Dienstag hält eine Gewohnheit nicht
+        // auf, die montags und mittwochs läuft.
+        foreach ($this->chosenDays() as $weekday) {
             $date = SlotConflict::nextWeekday($weekday);
 
             $plan = DayPlan::forDate(
@@ -430,13 +465,6 @@ abstract class HabitFormRequest extends FormRequest
     {
         $type = $this->scheduleType();
 
-        /** @var list<int> $days */
-        $days = array_values(array_unique(array_map(
-            intval(...),
-            $this->array('scheduled_days'),
-        )));
-        sort($days);
-
         return [
             'schedule_type' => $type->value,
             'trigger_situation' => $type === ScheduleType::Dynamic
@@ -445,7 +473,10 @@ abstract class HabitFormRequest extends FormRequest
             'scheduled_time' => $type->hasClockTime()
                 ? $this->string('scheduled_time')->toString()
                 : null,
-            'scheduled_days' => $type->hasClockTime() ? $days : null,
+            // Beide eigenen Anker haben Tage: „nach dem Aufstehen" heißt seit
+            // den Wochentagen nicht mehr zwangsläufig auch sonntags. Nur die
+            // Kette bleibt ohne — sie läuft, wenn ihr Vorgänger läuft.
+            'scheduled_days' => $type->hasOwnAnchor() ? $this->chosenDays() : null,
             'chained_to_habit_id' => $type === ScheduleType::Chained
                 ? $this->integer('chained_to_habit_id')
                 : null,

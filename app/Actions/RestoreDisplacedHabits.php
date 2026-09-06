@@ -49,7 +49,7 @@ class RestoreDisplacedHabits
             $conflict = SlotConflict::find(
                 $user,
                 $spans,
-                $habit->scheduled_days ?? [1, 2, 3, 4, 5, 6, 7],
+                $habit->activeWeekdays(),
                 array_column($spans, 'id'),
             );
 

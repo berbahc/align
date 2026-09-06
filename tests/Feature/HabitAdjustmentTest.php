@@ -529,8 +529,12 @@ test('a chained habit moves to a moment and leaves its chain', function () {
         ->schedule_type->toBe(ScheduleType::Dynamic)
         ->trigger_situation->toBe('nach dem Aufstehen')
         ->chained_to_habit_id->toBeNull()
+        // Den Rhythmus behält sie: Sie lief an den Tagen ihres Vorgängers und
+        // läuft weiter an ihnen — der Vorschlag ändert den Moment, nicht wie
+        // oft.
+        ->scheduled_days->toBe([1, 2, 3, 4, 5])
         // Und der Kalender zeigt den neuen Anker, nicht mehr den Vorgänger.
-        ->scheduleLabel()->toBe('nach dem Aufstehen');
+        ->scheduleLabel()->toBe('nach dem Aufstehen · Mo–Fr');
 });
 
 test('a chained habit moves into a free window and leaves its chain', function () {
@@ -902,4 +906,30 @@ test('taking a chain hangs the habit on the other one', function () {
         ->schedule_type->toBe(ScheduleType::Chained)
         ->chained_to_habit_id->toBe($dinner->id)
         ->trigger_situation->toBeNull();
+});
+
+/**
+ * Ein Vorschlag ändert den Moment, nicht den Rhythmus.
+ *
+ * Der Rückweg leerte die Wochentage, weil eine Situation sie einmal nicht
+ * hatte. Wer montags und mittwochs liest, läse danach plötzlich täglich — eine
+ * Änderung, die niemand gewählt hat und die im Vorschlag auch nicht stand.
+ */
+test('moving to another situation keeps the weekdays', function () {
+    $user = User::factory()->create();
+    $habit = Habit::factory()->for($user)->withMeasure(15)->create([
+        'schedule_type' => ScheduleType::Dynamic,
+        'trigger_situation' => 'nach dem Aufstehen',
+        'scheduled_days' => [1, 3],
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('habits.adjustment.store', $habit), [
+            'trigger_situation' => 'vor dem Schlafengehen',
+        ])
+        ->assertRedirect();
+
+    expect($habit->fresh())
+        ->trigger_situation->toBe('vor dem Schlafengehen')
+        ->scheduled_days->toBe([1, 3]);
 });

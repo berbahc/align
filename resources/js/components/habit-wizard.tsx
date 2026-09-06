@@ -109,8 +109,11 @@ export function HabitWizard({
         schedule_type: blueprint?.scheduleType ?? ('dynamic' as ScheduleType),
         trigger_situation: blueprint?.triggerSituation ?? '',
         scheduled_time: blueprint?.scheduledTime ?? DEFAULT_TIME,
+        // Täglich als Vorgabe, für beide Anker: So verhielten sich Situationen
+        // schon immer, und eine Gewohnheit, die man aufbauen will, hat jeden
+        // Tag den besten Grund zu laufen. Wer seltener will, wählt ab.
         scheduled_days: (blueprint?.scheduledDays ?? [
-            1, 2, 3, 4, 5,
+            1, 2, 3, 4, 5, 6, 7,
         ]) as Weekday[],
         chained_to_habit_id: null as number | null,
         motivation: '',
@@ -164,7 +167,8 @@ export function HabitWizard({
                   ? data.scheduled_days.length > 0 &&
                     asleep === null &&
                     blocked === null
-                  : data.trigger_situation.trim().length > 0,
+                  : data.trigger_situation.trim().length > 0 &&
+                    data.scheduled_days.length > 0,
         // Der kleinste Schritt ist überspringbar — bei ø 3,92 Schuldgefühl
         // darf hier kein weiteres Pflichtfeld entstehen.
         4: true,
@@ -431,6 +435,10 @@ export function HabitWizard({
                             onChange={(value) =>
                                 setData('trigger_situation', value)
                             }
+                            days={data.scheduled_days}
+                            onDaysChange={(days) =>
+                                setData('scheduled_days', days)
+                            }
                         />
                     </SchedulePicker>
 
@@ -572,7 +580,12 @@ export function HabitWizard({
                                     ? `nach „${chainCandidates.find((candidate) => candidate.id === data.chained_to_habit_id)?.title ?? ''}"`
                                     : isFixed
                                       ? `${data.scheduled_time} Uhr · ${formatWeekdays(data.scheduled_days)}`
-                                      : data.trigger_situation}
+                                      : /* Die Tage gehören auch zur Situation
+                                           — außer sie sind alle sieben, dann
+                                           sagt der Moment schon alles. */
+                                        data.scheduled_days.length === 7
+                                        ? data.trigger_situation
+                                        : `${data.trigger_situation} · ${formatWeekdays(data.scheduled_days)}`}
                             </p>
                         </div>
                         <div className="h-4 w-px self-center bg-sand" />

@@ -78,6 +78,125 @@ export function formatWeekdays(days: Weekday[]): string {
 }
 
 /**
+ * An welchen Tagen — die Reihe, die beide Anker teilen.
+ *
+ * Eine Situation braucht sie so sehr wie eine Uhrzeit: „Nach dem Aufstehen
+ * lesen" hieß, solange es sie hier nicht gab, zwangsläufig auch sonntags. Eine
+ * Komponente für beide, damit die Bedienung dieselbe bleibt — der Unterschied
+ * zwischen den Ankern ist der Moment, nicht der Rhythmus.
+ *
+ * `blocked` sind Tage, an denen der gewählte Moment schon vergeben ist. Sie
+ * bleiben sichtbar, damit erkennbar ist, was fehlt, und der Satz darunter sagt,
+ * wem sie gehören — dieselbe Behandlung wie bei einer vergebenen Situation.
+ */
+export function WeekdayPicker({
+    days,
+    onChange,
+    blocked = [],
+    blockedBy = null,
+}: {
+    days: Weekday[];
+    onChange: (days: Weekday[]) => void;
+    blocked?: Weekday[];
+    blockedBy?: string | null;
+}) {
+    const free = WEEKDAYS.filter((day) => !blocked.includes(day.value));
+    const isDaily =
+        free.length > 0 && free.every((day) => days.includes(day.value));
+
+    function toggleDay(day: Weekday) {
+        onChange(
+            days.includes(day)
+                ? days.filter((candidate) => candidate !== day)
+                : [...days, day].sort((a, b) => a - b),
+        );
+    }
+
+    return (
+        <div className="flex flex-col gap-3">
+            <div className="flex items-baseline justify-between gap-3">
+                <p className="type-eyebrow text-muted-foreground">
+                    An diesen Tagen
+                </p>
+                {/* Die Abkürzung für den Regelfall: Wer täglich will, tippt
+                    nicht siebenmal. Gedrückt, sobald alle wählbaren Tage an
+                    sind — der Schalter beschreibt den Zustand, er merkt sich
+                    keinen eigenen. */}
+                <button
+                    type="button"
+                    aria-pressed={isDaily}
+                    onClick={() =>
+                        onChange(
+                            free.map((day) => day.value).sort((a, b) => a - b),
+                        )
+                    }
+                    className={cn(
+                        'cursor-pointer rounded-full border px-3 py-1 text-xs font-semibold',
+                        'transition-[background-color,border-color,color] duration-[var(--duration-press)] ease-out',
+                        'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+                        isDaily
+                            ? 'border-primary bg-primary text-primary-foreground'
+                            : 'border-border bg-card text-muted-foreground hover:border-secondary',
+                    )}
+                >
+                    täglich
+                </button>
+            </div>
+
+            <div
+                role="group"
+                aria-label="Wochentage"
+                className="flex flex-wrap gap-2"
+            >
+                {WEEKDAYS.map((day) => {
+                    const isBlocked = blocked.includes(day.value);
+                    const isSelected = !isBlocked && days.includes(day.value);
+
+                    return (
+                        <button
+                            key={day.value}
+                            type="button"
+                            disabled={isBlocked}
+                            aria-pressed={isSelected}
+                            aria-label={day.full}
+                            onClick={() => toggleDay(day.value)}
+                            className={cn(
+                                'flex size-12 items-center justify-center rounded-full border text-[15px] font-semibold',
+                                'transition-[background-color,border-color,color,scale] duration-[var(--duration-press)] ease-out',
+                                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+                                isBlocked
+                                    ? /* Ohne Kante und ohne Zeiger: Was keine
+                                         Wahl ist, sieht auch nicht wie eine aus
+                                         — dieselbe Behandlung wie die vergebene
+                                         Situationszeile (§16). */
+                                      'border-transparent text-muted-foreground/50'
+                                    : cn(
+                                          'cursor-pointer motion-safe:active:scale-[0.92]',
+                                          isSelected
+                                              ? 'border-primary bg-primary text-primary-foreground'
+                                              : 'border-border bg-card text-foreground hover:border-secondary',
+                                      ),
+                            )}
+                        >
+                            {day.label}
+                        </button>
+                    );
+                })}
+            </div>
+
+            {/* §1.5 — sagt, was gilt, ohne Vorwurf: Der Satz nennt den
+                Besitzer der gesperrten Tage, damit die grauen Kreise nicht
+                unerklärt dastehen. */}
+            {blocked.length > 0 && blockedBy !== null && (
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                    {formatWeekdays(blocked)} hängt dort schon „{blockedBy}".
+                </p>
+            )}
+        </div>
+    );
+}
+
+/**
  * Die Situationsauswahl — der `dynamic`-Zweig des SchedulePickers.
  *
  * Die Liste ist abschließend, und das ist der Punkt: Angeboten wird nur, was
@@ -89,59 +208,104 @@ export function formatWeekdays(days: Weekday[]): string {
  * hinlegen, also landete es mittags — bei jedem, egal wann er aus der Bib
  * kommt. Wer einen Moment braucht, den die Liste nicht kennt, hängt seine
  * Gewohnheit an eine andere: Eine Kette weiß die Uhrzeit, eine Annahme rät sie.
+ *
+ * Unter der Liste stehen die Wochentage — aber erst, wenn ein Moment gewählt
+ * ist: Tage ohne Moment sind keine Aussage, und welche davon frei sind, hängt
+ * am gewählten Moment.
  */
 export function SituationPicker({
     suggestions,
     value,
     onChange,
+    days,
+    onDaysChange,
 }: {
     suggestions: SituationChoice[];
     value: string;
     onChange: (value: string) => void;
+    days: Weekday[];
+    onDaysChange: (days: Weekday[]) => void;
 }) {
-    return (
-        <div className="flex flex-col gap-2">
-            {suggestions.map(({ situation, takenBy }) => {
-                const isSelected = value === situation;
+    const chosen = suggestions.find(
+        (suggestion) => suggestion.situation === value,
+    );
 
-                // Ein vergebener Moment ist keine Wahl: Er bleibt sichtbar,
-                // damit erkennbar ist, wohin die Gewohnheit gehört, die ihn
-                // hält — aber er lässt sich nicht ein zweites Mal nehmen.
-                if (takenBy !== null) {
-                    return (
-                        <div
-                            key={situation}
-                            /* Ohne Kante: Was keine Wahl ist, sieht auch nicht
+    return (
+        <div className="flex flex-col gap-5">
+            <div className="flex flex-col gap-2">
+                {suggestions.map(({ situation, takenBy, takenDays }) => {
+                    const isSelected = value === situation;
+
+                    // Ein an allen sieben Tagen vergebener Moment ist keine Wahl:
+                    // Er bleibt sichtbar, damit erkennbar ist, wohin die Gewohnheit
+                    // gehört, die ihn hält — aber er lässt sich nicht ein zweites
+                    // Mal nehmen. An einzelnen Tagen belegt heißt dagegen nur, dass
+                    // diese Kreise unten fehlen.
+                    if (takenDays.length === 7 && takenBy !== null) {
+                        return (
+                            <div
+                                key={situation}
+                                /* Ohne Kante: Was keine Wahl ist, sieht auch nicht
                                wie eine aus. Die gestrichelte Kante gehört
                                „Eigene Situation" — sie steht für offen, nicht
                                für vergeben, und beide dürfen sich nicht
                                gleichen (§16 Familiarity). */
-                            className="flex items-baseline justify-between gap-3 px-4 py-2 text-[15px] text-muted-foreground/70"
+                                className="flex items-baseline justify-between gap-3 px-4 py-2 text-[15px] text-muted-foreground/70"
+                            >
+                                <span>{situation}</span>
+                                <span className="shrink-0 truncate text-xs">
+                                    {takenBy}
+                                </span>
+                            </div>
+                        );
+                    }
+
+                    return (
+                        <button
+                            key={situation}
+                            type="button"
+                            aria-pressed={isSelected}
+                            onClick={() => {
+                                onChange(situation);
+                                // Belegte Tage fallen mit der Wahl heraus.
+                                // Sonst stünden sie ausgegraut da und wären
+                                // trotzdem mitgeschickt — der Server wiese es
+                                // ab, und die Absage käme für etwas, das gar
+                                // nicht zu sehen war.
+                                onDaysChange(
+                                    days.filter(
+                                        (day) => !takenDays.includes(day),
+                                    ),
+                                );
+                            }}
+                            className={cn(
+                                CHOICE_TILE,
+                                'flex items-baseline justify-between gap-3 px-4 py-3 text-[15px]',
+                                isSelected ? CHOICE_TILE_ON : CHOICE_TILE_OFF,
+                            )}
                         >
                             <span>{situation}</span>
-                            <span className="shrink-0 truncate text-xs">
-                                {takenBy}
-                            </span>
-                        </div>
+                            {/* Teilweise vergeben: Der Moment steht offen, aber
+                            nicht an jedem Tag — das gehört vor die Wahl, nicht
+                            erst danach. */}
+                            {takenDays.length > 0 && takenBy !== null && (
+                                <span className="shrink-0 text-xs text-muted-foreground">
+                                    {formatWeekdays(takenDays)} belegt
+                                </span>
+                            )}
+                        </button>
                     );
-                }
+                })}
+            </div>
 
-                return (
-                    <button
-                        key={situation}
-                        type="button"
-                        aria-pressed={isSelected}
-                        onClick={() => onChange(situation)}
-                        className={cn(
-                            CHOICE_TILE,
-                            'px-4 py-3 text-[15px]',
-                            isSelected ? CHOICE_TILE_ON : CHOICE_TILE_OFF,
-                        )}
-                    >
-                        {situation}
-                    </button>
-                );
-            })}
+            {chosen !== undefined && (
+                <WeekdayPicker
+                    days={days}
+                    onChange={onDaysChange}
+                    blocked={chosen.takenDays}
+                    blockedBy={chosen.takenBy}
+                />
+            )}
         </div>
     );
 }
@@ -199,14 +363,6 @@ export function SchedulePicker({
     // Der Rahmen aus dem Schlafplan: Der Server weist eine Uhrzeit außerhalb
     // ohnehin ab — die Oberfläche sagt es vorher, mit demselben Ergebnis.
     const asleep = outsideSleepWindow(time, days, sleepWindows);
-
-    function toggleDay(day: Weekday) {
-        onDaysChange(
-            days.includes(day)
-                ? days.filter((candidate) => candidate !== day)
-                : [...days, day].sort((a, b) => a - b),
-        );
-    }
 
     return (
         <div className="flex flex-col gap-4">
@@ -380,40 +536,10 @@ export function SchedulePicker({
                         </p>
                     )}
 
-                    <div className="flex flex-col gap-3">
-                        <p className="type-eyebrow text-muted-foreground">
-                            An diesen Tagen
-                        </p>
-                        <div
-                            role="group"
-                            aria-label="Wochentage"
-                            className="flex flex-wrap gap-2"
-                        >
-                            {WEEKDAYS.map((day) => {
-                                const isSelected = days.includes(day.value);
-
-                                return (
-                                    <button
-                                        key={day.value}
-                                        type="button"
-                                        aria-pressed={isSelected}
-                                        aria-label={day.full}
-                                        onClick={() => toggleDay(day.value)}
-                                        className={cn(
-                                            'flex size-12 cursor-pointer items-center justify-center rounded-full border text-[15px] font-semibold',
-                                            'transition-[background-color,border-color,color,scale] duration-[var(--duration-press)] ease-out',
-                                            'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-safe:active:scale-[0.92]',
-                                            isSelected
-                                                ? 'border-primary bg-primary text-primary-foreground'
-                                                : 'border-border bg-card text-foreground hover:border-secondary',
-                                        )}
-                                    >
-                                        {day.label}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
+                    {/* Dieselbe Reihe wie bei der Situation — ohne gesperrte
+                        Tage: Eine Uhrzeit lässt sich prüfen, dafür steht der
+                        Überschneidungshinweis darüber. */}
+                    <WeekdayPicker days={days} onChange={onDaysChange} />
                 </div>
             )}
         </div>

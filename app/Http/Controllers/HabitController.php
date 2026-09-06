@@ -72,7 +72,7 @@ class HabitController extends Controller
             ->map(fn (Habit $habit): array => [
                 'id' => $habit->id,
                 'title' => $habit->title,
-                'days' => $habit->scheduled_days ?? [1, 2, 3, 4, 5, 6, 7],
+                'days' => $habit->activeWeekdays(),
                 'from' => $habit->startsAt()?->format('H:i') ?? '',
                 'to' => ($habit->endsAt() ?? $habit->startsAt())?->format('H:i') ?? '',
             ])
