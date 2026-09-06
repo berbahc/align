@@ -12,6 +12,39 @@ import type { MonthDay } from '@/types';
  */
 const WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 
+/** Ein Punkt im Raster: gefüllt heißt erledigt, sand heißt vorgesehen. */
+function Dot({ done }: { done: boolean }) {
+    return (
+        <span
+            aria-hidden="true"
+            className={cn(
+                'size-1.5 shrink-0 rounded-full',
+                done ? 'bg-primary' : 'bg-sand',
+            )}
+        />
+    );
+}
+
+/** Der Strich unter einem Vorlesungstag. */
+function LectureBar() {
+    return (
+        <span
+            aria-hidden="true"
+            className="h-px w-4 shrink-0 rounded-full bg-olive-mid/40"
+        />
+    );
+}
+
+/** Der offene Ring: hier steht etwas mit jemandem an. */
+function TogetherRing() {
+    return (
+        <span
+            aria-hidden="true"
+            className="size-1.5 shrink-0 rounded-full border border-primary/70"
+        />
+    );
+}
+
 /**
  * Der Monat als Raster aus Wochen.
  *
@@ -23,6 +56,17 @@ const WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
  *
  * Die Zelle ist der Weg in den Tag. Sie ist ein Link und kein Knopf: Der Tag
  * hat eine eigene Adresse, übersteht ein Neuladen und lässt sich teilen.
+ *
+ * **Die laufende Woche liegt auf einem Band.** Fünfunddreißig gleich
+ * aussehende Zellen geben dem Auge nichts, woran es sich festhält; man sucht
+ * den heutigen Kreis und rechnet von dort. Das Band beantwortet „wo stehe ich"
+ * vor dem ersten Blick auf die Zahlen. Es ist `track`, die leiseste Stufe der
+ * Flächenleiter, und nimmt der Ziffer nichts weg.
+ *
+ * **Die Wochen ziehen beim Monatswechsel nacheinander ein.** Der Wechsel ist
+ * ein Seitenwechsel, das Raster wird also neu gebaut; ohne Bewegung springt
+ * der Monat hart um. Von oben nach unten, damit die Bewegung dieselbe
+ * Richtung hat wie das Lesen.
  */
 export function MonthGrid({
     days,
@@ -31,6 +75,11 @@ export function MonthGrid({
     days: MonthDay[];
     today: string;
 }) {
+    // Welche Zeile heute enthält. Die Tage kommen als volle Wochen, der Index
+    // teilt sich also glatt durch sieben. `-1`, wenn der gezeigte Monat ein
+    // anderer ist; dann liegt kein Band im Raster.
+    const currentWeek = Math.floor(days.findIndex((day) => day.isToday) / 7);
+
     return (
         <div>
             <div
@@ -41,7 +90,7 @@ export function MonthGrid({
                 {WEEKDAYS.map((weekday) => (
                     <span
                         key={weekday}
-                        className="type-eyebrow py-2 text-center text-muted-foreground"
+                        className="type-eyebrow py-2 text-center text-muted-foreground md:py-3"
                     >
                         {weekday}
                     </span>
@@ -49,53 +98,79 @@ export function MonthGrid({
             </div>
 
             <ul className="grid grid-cols-7 gap-y-1">
-                {days.map((day) => (
-                    <li key={day.date}>
-                        <Link
-                            href={calendarDay(day.date)}
-                            aria-label={dayLabel(day, today)}
-                            aria-current={day.isToday ? 'date' : undefined}
+                {days.map((day, index) => {
+                    const column = index % 7;
+                    const week = Math.floor(index / 7);
+
+                    return (
+                        <li
+                            key={day.date}
                             className={cn(
-                                'flex h-14 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl transition-[background-color,scale] duration-[var(--duration-press)] ease-out hover:bg-accent focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring motion-safe:active:scale-[0.94]',
-                                // Tage aus dem Nachbarmonat füllen nur die
-                                // Woche auf. Sie bleiben erreichbar — nur eben
-                                // leiser, damit der Monat seine Kante behält.
-                                !day.inMonth && 'opacity-40',
+                                // Das Band der laufenden Woche. Es liegt auf
+                                // dem `li`, damit der Überfahr-Zustand der
+                                // Zelle darüber sichtbar bleibt, und rundet
+                                // nur an den beiden Enden der Woche.
+                                currentWeek === week && 'bg-track',
+                                currentWeek === week &&
+                                    column === 0 &&
+                                    'rounded-l-2xl',
+                                currentWeek === week &&
+                                    column === 6 &&
+                                    'rounded-r-2xl',
+                                'motion-safe:animate-in motion-safe:fill-mode-backwards motion-safe:fade-in',
                             )}
+                            style={{
+                                animationDuration: 'var(--duration-fluid)',
+                                animationTimingFunction: 'var(--ease-fluid)',
+                                animationDelay: `${week * 45}ms`,
+                            }}
                         >
-                            <span
+                            <Link
+                                href={calendarDay(day.date)}
+                                aria-label={dayLabel(day, today)}
+                                aria-current={day.isToday ? 'date' : undefined}
                                 className={cn(
-                                    'flex size-7 items-center justify-center rounded-full text-[13px] leading-none font-semibold tabular-nums',
-                                    day.isToday &&
-                                        'bg-primary text-primary-foreground',
-                                    !day.isToday &&
-                                        (day.isFuture
-                                            ? 'text-faintest'
-                                            : 'text-foreground'),
+                                    // Die Höhe wächst in Stufen mit. Sieben
+                                    // Spalten über eine breite Fläche ergeben
+                                    // sonst Zellen, die dreimal so breit wie hoch
+                                    // sind, und das Raster sieht gedrückt aus.
+                                    // Schon auf dem Tablet ist eine Zelle rund 100
+                                    // Pixel breit, während die Höhe bei 56 stünde.
+                                    'flex h-14 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl transition-[background-color,scale] duration-[var(--duration-press)] ease-out hover:bg-accent focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring motion-safe:active:scale-[0.94] sm:h-16 md:h-20 lg:h-24 lg:gap-2',
+                                    // Tage aus dem Nachbarmonat füllen nur die
+                                    // Woche auf. Sie bleiben erreichbar — nur eben
+                                    // leiser, damit der Monat seine Kante behält.
+                                    !day.inMonth && 'opacity-40',
                                 )}
                             >
-                                {day.dayOfMonth}
-                            </span>
+                                <span
+                                    className={cn(
+                                        'flex size-7 items-center justify-center rounded-full text-[13px] leading-none font-semibold tabular-nums md:size-8 md:text-sm',
+                                        day.isToday &&
+                                            'bg-primary text-primary-foreground',
+                                        !day.isToday &&
+                                            (day.isFuture
+                                                ? 'text-faintest'
+                                                : 'text-foreground'),
+                                    )}
+                                >
+                                    {day.dayOfMonth}
+                                </span>
 
-                            {/* Die Höhe steht auch ohne Punkte, damit die
+                                {/* Die Höhe steht auch ohne Punkte, damit die
                                 Ziffern aller Zellen auf einer Linie bleiben. */}
-                            <span className="flex h-1.5 items-center gap-[3px]">
-                                {Array.from({ length: day.planned }).map(
-                                    (_, index) => (
-                                        <span
-                                            key={index}
-                                            className={cn(
-                                                'size-1.5 rounded-full',
-                                                index < day.done
-                                                    ? 'bg-primary'
-                                                    : 'bg-sand',
-                                            )}
-                                        />
-                                    ),
-                                )}
-                            </span>
+                                <span className="flex h-1.5 items-center gap-[3px]">
+                                    {Array.from({ length: day.planned }).map(
+                                        (_, index) => (
+                                            <Dot
+                                                key={index}
+                                                done={index < day.done}
+                                            />
+                                        ),
+                                    )}
+                                </span>
 
-                            {/* Ein Vorlesungstag. Eine Linie und kein Punkt,
+                                {/* Ein Vorlesungstag. Eine Linie und kein Punkt,
                                 damit sie nicht mitgezählt wird; leiser als der
                                 offene Punkt, damit sie den Inhalt des Monats
                                 nie überstimmt. Sie wird auch für die Zukunft
@@ -114,25 +189,66 @@ export function MonthGrid({
                                 die beiden sich dann nur in der Farbe
                                 unterschieden — Linie gegen Ring ist ein
                                 Unterschied in der Form. */}
-                            <span
-                                aria-hidden="true"
-                                className="flex h-1.5 items-center justify-center gap-1"
-                            >
                                 <span
-                                    className={cn(
-                                        'h-px w-4 rounded-full',
-                                        day.hasLectures && 'bg-olive-mid/40',
+                                    aria-hidden="true"
+                                    className="flex h-1.5 items-center justify-center gap-1"
+                                >
+                                    {day.hasLectures ? (
+                                        <LectureBar />
+                                    ) : (
+                                        <span className="h-px w-4 shrink-0" />
                                     )}
-                                />
-                                {day.hasAppointment && (
-                                    <span className="size-1.5 rounded-full border border-primary/70" />
-                                )}
-                            </span>
-                        </Link>
-                    </li>
-                ))}
+                                    {day.hasAppointment && <TogetherRing />}
+                                </span>
+                            </Link>
+                        </li>
+                    );
+                })}
             </ul>
         </div>
+    );
+}
+
+/**
+ * Was die Zeichen unter den Tagen bedeuten.
+ *
+ * Der Monat trägt vier verschiedene Marken, und keine erklärte sich bisher.
+ * Auf der Gewohnheiten-Seite steht eine Legende über sieben Marken in einer
+ * Reihe; hier sind es fünfunddreißig Zellen, in denen dieselben Zeichen viel
+ * kleiner stehen. Gebraucht wird sie also eher hier.
+ *
+ * Die Marken kommen aus denselben Bausteinen wie im Raster. Eine Legende, die
+ * ihre eigene Kopie zeichnet, erklärt irgendwann etwas Falsches.
+ */
+export function MonthLegend({ className }: { className?: string }) {
+    return (
+        <dl
+            className={cn(
+                'flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground',
+                className,
+            )}
+        >
+            <div className="flex items-center gap-1.5">
+                <span className="flex items-center gap-[3px]">
+                    <Dot done />
+                    <Dot done={false} />
+                </span>
+                <dt className="sr-only">Punkte</dt>
+                <dd>Ein Punkt je Gewohnheit, gefüllt heißt erledigt</dd>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+                <LectureBar />
+                <dt className="sr-only">Strich</dt>
+                <dd>Vorlesungstag</dd>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+                <TogetherRing />
+                <dt className="sr-only">Ring</dt>
+                <dd>Mit jemandem verabredet</dd>
+            </div>
+        </dl>
     );
 }
 

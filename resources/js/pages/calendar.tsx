@@ -6,7 +6,7 @@ import { CourseCancellationSheet } from '@/components/course-cancellation-sheet'
 import { CourseDetailSheet } from '@/components/course-detail-sheet';
 import { CourseSheet } from '@/components/course-sheet';
 import { CoursesSheet } from '@/components/courses-sheet';
-import { MonthGrid } from '@/components/month-grid';
+import { MonthGrid, MonthLegend } from '@/components/month-grid';
 import { NewPlacesSheet } from '@/components/new-places-sheet';
 import { SemesterSheet } from '@/components/semester-sheet';
 import { Card, CardContent } from '@/components/ui/card';
@@ -91,12 +91,34 @@ export default function Calendar({
         displaced.length > 0 && upcoming.length === displaced.length;
     const firstFrom = upcoming[0]?.fromLabel ?? null;
 
+    /**
+     * Wie der Monat bisher gelaufen ist, in Tagen.
+     *
+     * Nur Tage dieses Monats und nur bis heute. Was noch kommt, ist nicht
+     * offen, sondern nicht dran; künftige Tage mitzuzählen machte aus jedem
+     * Monatsanfang einen Rückstand.
+     */
+    const monthDone = days.reduce(
+        (sum, day) =>
+            day.inMonth && !day.isFuture
+                ? {
+                      done: sum.done + day.done,
+                      planned: sum.planned + day.planned,
+                  }
+                : sum,
+        { done: 0, planned: 0 },
+    );
+
     return (
         <>
             <Head title="Kalender" />
 
             <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-4 sm:p-6">
-                <header className="flex items-center gap-2">
+                {/* Mittig und symmetrisch: Pfeil, Monat, Pfeil. Der
+                    Stundenplan saß hier als drittes Zeichen rechts und zog die
+                    Zeile aus der Mitte. Er steht jetzt unter dem Raster, wo er
+                    ein Wort tragen kann, statt geraten zu werden. */}
+                <header className="flex items-center justify-center gap-2">
                     {/* Pfeile sind Links, kein Client-State: der Monat steht in
                         der URL und übersteht damit ein Neuladen. */}
                     <Link
@@ -107,9 +129,25 @@ export default function Calendar({
                         <ChevronLeft className="size-5" aria-hidden="true" />
                     </Link>
 
-                    <h1 className="flex-1 text-center text-[clamp(1.125rem,4vw,1.5rem)] leading-tight font-bold text-primary">
-                        {heading}
-                    </h1>
+                    <div className="min-w-0 flex-1 text-center">
+                        <h1 className="text-[clamp(1.125rem,4vw,1.75rem)] leading-tight font-bold text-primary">
+                            {heading}
+                        </h1>
+
+                        {/* Der Monat sagte bisher nicht, wie er gelaufen ist.
+                            Die Punkte zeigen es je Tag, aber niemand zählt
+                            fünfunddreißig Zellen zusammen. Dieselbe Sprache
+                            wie auf der Übersicht und der Gewohnheiten-Seite:
+                            Tage, keine Prozentzahl. */}
+                        {monthDone.planned > 0 && (
+                            <p className="mt-1 text-xs text-muted-foreground">
+                                <span className="font-semibold text-foreground tabular-nums">
+                                    {monthDone.done} von {monthDone.planned}
+                                </span>{' '}
+                                erledigt
+                            </p>
+                        )}
+                    </div>
 
                     <Link
                         href={calendar({ query: { month: nextMonth } })}
@@ -118,26 +156,6 @@ export default function Calendar({
                     >
                         <ChevronRight className="size-5" aria-hidden="true" />
                     </Link>
-
-                    {/* Der Stundenplan, oben rechts: ein Knopf, kein Tab. Wer
-                        ihn drückt, trägt Kurse ein oder setzt den Zeitraum —
-                        beides im Sheet, beides ohne die Seite zu verlassen. */}
-                    <button
-                        type="button"
-                        onClick={() => setSemesterOpen(true)}
-                        aria-label={
-                            semester === null
-                                ? 'Semester und Kurse eintragen'
-                                : `Kurse verwalten, ${courseCount} eingetragen`
-                        }
-                        className={NAV_BUTTON}
-                    >
-                        <GraduationCap
-                            className="size-5"
-                            strokeWidth={1.75}
-                            aria-hidden="true"
-                        />
-                    </button>
                 </header>
 
                 {!isCurrentMonth && (
@@ -168,7 +186,7 @@ export default function Calendar({
                             {displaced.map((habit) => (
                                 <li
                                     key={habit.id}
-                                    className="flex items-baseline justify-between gap-3 text-sm"
+                                    className="flex flex-wrap items-baseline justify-between gap-x-3 text-sm"
                                 >
                                     <span className="font-semibold">
                                         {habit.title}
@@ -183,7 +201,7 @@ export default function Calendar({
                                 </li>
                             ))}
                         </ul>
-                        {/* Der Weg zur KI — die Figur steht nur hier (§8). */}
+                        {/* Der Weg zur KI, die Figur steht nur hier (§8). */}
                         <button
                             type="button"
                             onClick={() => setPlacesOpen(true)}
@@ -198,22 +216,43 @@ export default function Calendar({
                     </div>
                 )}
 
-                <Card className="gap-0 py-4">
+                {/* Die eine tragende Fläche der Seite (§12/§16): Das Raster ist
+                    der Gegenstand, alles andere begleitet es. Vorher lag es so
+                    flach wie jede Notiz daneben. */}
+                <Card className="gap-0 border-transparent py-5 shadow-[var(--shadow-lift)]">
                     <CardContent className="px-3 sm:px-5">
                         <MonthGrid days={days} today={today} />
                     </CardContent>
                 </Card>
 
-                {/* Der Sprung in den heutigen Tag steht unter dem Raster und
-                    nicht als Kachel darin: Er führt eine Ebene tiefer, während
-                    alles im Raster nur den Ausschnitt wechselt. */}
-                <div className="flex justify-center">
+                {/* Die Legende erklärt, was direkt darüber steht. */}
+                <MonthLegend className="justify-center" />
+
+                {/* Die zwei Wege aus dem Monat heraus, mittig als Paar. */}
+                <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
                     <Link
                         href={calendarDay(today)}
                         className={`${QUIET_LINK} text-sm`}
                     >
                         Heutigen Tag öffnen
                     </Link>
+
+                    <button
+                        type="button"
+                        onClick={() => setSemesterOpen(true)}
+                        className={`${QUIET_LINK} inline-flex items-center gap-1.5 text-sm`}
+                    >
+                        <GraduationCap
+                            className="size-4 shrink-0"
+                            strokeWidth={1.75}
+                            aria-hidden="true"
+                        />
+                        {semester === null
+                            ? 'Semester eintragen'
+                            : courseCount === 1
+                              ? 'Stundenplan, 1 Kurs'
+                              : `Stundenplan, ${courseCount} Kurse`}
+                    </button>
                 </div>
 
                 <SemesterSheet
