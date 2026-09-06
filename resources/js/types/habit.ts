@@ -198,10 +198,18 @@ export interface Habit {
     appointmentDays: AppointmentDay[];
 }
 
-/** Der Block der Gewohnheiten-Liste: steht heute an oder später. */
 /**
+ * Wo eine Gewohnheit in der Liste steht: geparkt, heute fällig oder später.
+ *
  * `displaced` steht zuerst: Was seinen Platz verloren hat, wartet auf eine
  * Entscheidung — und gehört damit vor das, was nur ansteht.
+ *
+ * **`today` und `later` erreichen die Oberfläche nicht mehr.** Zwei
+ * Überschriften daraus zu machen hieße, die Frage der Übersicht ein zweites Mal
+ * zu stellen; das Blatt beantwortet sie ohnehin genauer in der Spalte des
+ * heutigen Tages. Beide Werte kommen weiter vom Server, weil dieselbe
+ * Unterscheidung die Sortierung entscheidet — gezeichnet wird nur noch, ob
+ * etwas geparkt ist.
  */
 export type HabitGroup = 'displaced' | 'today' | 'later';
 
@@ -245,6 +253,12 @@ export interface ManagedHabit {
      * Wann die Gewohnheit das nächste Mal ansteht: „heute", „morgen",
      * „am Freitag" — die Größe, nach der die Liste sortiert ist. Null, solange
      * kein Wochentag gewählt ist.
+     *
+     * **Wird zurzeit nicht gezeichnet.** Die Zeile trug den Wert einmal vor dem
+     * Zeitplan („morgen · 19:00 · Mo–Sa"). Er ist der Blick auf die nächsten
+     * Stunden und gehört damit der Übersicht; hier zählt der Plan, und der
+     * steht ohnehin in derselben Zeile. Der Wert bleibt im Zug, weil er die
+     * Reihenfolge erklärt und billig ist — wer ihn wieder zeigen will, hat ihn.
      */
     nextOccurrence: string | null;
     /** Der Block der Liste, in dem die Zeile steht — vom Server bestimmt. */

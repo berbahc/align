@@ -414,3 +414,53 @@ test('a mark that only starts with the semester leaves earlier days untouched', 
     expect($habit->isDueOn(Carbon::today()))->toBeTrue()
         ->and($habit->recentMisses(3))->not->toBe([]);
 });
+
+/**
+ * Alle Zeilen der Gewohnheiten-Seite teilen dieselben sieben Tage.
+ *
+ * Das Blatt zeichnet die Tagesachse **einmal** über allen Gewohnheiten und
+ * hängt jede Zeile an dieselben Spalten. Das trägt nur, solange jede Zeile
+ * genau sieben Einträge in derselben Reihenfolge liefert — sonst säße die
+ * Marke einer Gewohnheit unter der Beschriftung einer anderen, und das Blatt
+ * behauptete Tage, die es nie gab.
+ *
+ * Der heikle Fall ist die frisch angelegte Gewohnheit: Vor ihrem Anlegedatum
+ * ist nichts vorgesehen ({@see Habit::weekOverview()}), und die Reihe darf
+ * trotzdem nicht kürzer werden — die Tage davor sind `scheduled: false`, nicht
+ * abwesend.
+ */
+test('jede Gewohnheit liefert dieselben sieben Tage für die Achse', function () {
+    // Ein Samstag. Zwei alte Gewohnheiten, eine von heute.
+    Carbon::setTestNow(Carbon::parse('2026-08-08'));
+
+    $user = User::factory()->create();
+
+    existingSince(
+        Habit::factory()->for($user)->fixedSchedule(days: [1, 2, 3, 4, 5])->create(),
+        60,
+    );
+    existingSince(
+        Habit::factory()->for($user)->fixedSchedule(days: [6, 7])->create(),
+        60,
+    );
+    Habit::factory()->for($user)->fixedSchedule(days: [1, 2, 3, 4, 5, 6, 7])->create();
+
+    $this->actingAs($user)
+        ->get(route('habits.index'))
+        ->assertInertia(function (AssertableInertia $page) {
+            /** @var list<array{rhythm: list<array{date: string}>}> $habits */
+            $habits = $page->toArray()['props']['habits'];
+
+            expect($habits)->toHaveCount(3);
+
+            $dates = array_column($habits[0]['rhythm'], 'date');
+
+            expect($dates)->toHaveCount(Habit::WeekOverviewDays)
+                // Der letzte Eintrag ist heute — die Achse markiert genau ihn.
+                ->and(end($dates))->toBe('2026-08-08');
+
+            foreach ($habits as $habit) {
+                expect(array_column($habit['rhythm'], 'date'))->toBe($dates);
+            }
+        });
+});
