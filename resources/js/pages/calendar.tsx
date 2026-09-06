@@ -216,19 +216,10 @@ export default function Calendar({
                     </div>
                 )}
 
-                {/* Die eine tragende Fläche der Seite (§12/§16): Das Raster ist
-                    der Gegenstand, alles andere begleitet es. Vorher lag es so
-                    flach wie jede Notiz daneben. */}
-                <Card className="gap-0 border-transparent py-5 shadow-[var(--shadow-lift)]">
-                    <CardContent className="px-3 sm:px-5">
-                        <MonthGrid days={days} today={today} />
-                    </CardContent>
-                </Card>
-
-                {/* Die Legende erklärt, was direkt darüber steht. */}
-                <MonthLegend className="justify-center" />
-
-                {/* Die zwei Wege aus dem Monat heraus, mittig als Paar. */}
+                {/* Die zwei Wege aus dem Monat heraus, mittig als Paar. Sie
+                    stehen über dem Raster: Wer den Kalender öffnet, will
+                    meistens in den heutigen Tag, und dieser Weg soll nicht
+                    unter fünf Wochen Raster liegen. */}
                 <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
                     <Link
                         href={calendarDay(today)}
@@ -254,6 +245,18 @@ export default function Calendar({
                               : `Stundenplan, ${courseCount} Kurse`}
                     </button>
                 </div>
+
+                {/* Die eine tragende Fläche der Seite (§12/§16): Das Raster ist
+                    der Gegenstand, alles andere begleitet es. Vorher lag es so
+                    flach wie jede Notiz daneben. */}
+                <Card className="gap-0 border-transparent py-5 shadow-[var(--shadow-lift)]">
+                    <CardContent className="px-3 sm:px-5">
+                        <MonthGrid days={days} today={today} />
+                    </CardContent>
+                </Card>
+
+                {/* Die Legende erklärt, was direkt darüber steht. */}
+                <MonthLegend className="justify-center" />
 
                 <SemesterSheet
                     open={semesterOpen}
