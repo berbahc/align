@@ -30,8 +30,10 @@ import type { HabitGroup, ManagedHabit } from '@/types';
  * Stellen, liefen Achse und Marken irgendwann ein paar Pixel auseinander — und
  * eine Achse, die nicht über ihrer Spalte sitzt, ist schlimmer als keine.
  */
-const DAY_CELL = 'w-[1.125rem] sm:w-7';
-const DAY_MARK = 'size-3.5 sm:size-5';
+const DAY_CELL = 'w-5 sm:w-7';
+// Zwei Pixel mehr als der Rest der Kleinschrift verlangt: Der offene Haken ist
+// eine Kontur, und eine Kontur verliert bei 14 Pixeln mehr als eine Fläche.
+const DAY_MARK = 'size-4 sm:size-5';
 const BALANCE_COLUMN = 'w-28 lg:w-32';
 const MENU_COLUMN = 'w-10 sm:w-11';
 const ROW = 'flex gap-2 sm:gap-3';
