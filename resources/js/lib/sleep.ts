@@ -44,3 +44,50 @@ export function outsideSleepWindow(
 export function formatWindow(window: SleepWindow): string {
     return `${window.wakeTime} bis ${window.bedtime}`;
 }
+
+/** Minuten seit Mitternacht für „HH:MM". */
+function toMinutes(time: string): number {
+    const [hours = 0, minutes = 0] = time.split(':').map(Number);
+
+    return hours * 60 + minutes;
+}
+
+/**
+ * Wie lange zwischen Schlafenszeit und Aufstehen liegt, in Minuten.
+ *
+ * Der Rahmen läuft über Mitternacht: 23:00 bis 07:00 sind acht Stunden, nicht
+ * minus sechzehn. Der Rest gegen 1440 fängt das ab und gilt auch für eine
+ * Schlafenszeit nach Mitternacht (00:30 bis 07:00 sind sechseinhalb Stunden).
+ */
+export function sleepMinutes(wakeTime: string, bedtime: string): number {
+    return (toMinutes(wakeTime) - toMinutes(bedtime) + 1440) % 1440;
+}
+
+/**
+ * Dieselbe Dauer als fertige Zeile: „8 Stunden", „7,5 Stunden".
+ *
+ * Der Schlafplan nannte bisher nur Uhrzeiten. Wie lange jemand dabei schläft,
+ * stand nirgends, obwohl es die eine Zahl ist, um die es auf dieser Seite
+ * geht. Halbe Stunden mit Komma, weil Deutsch so schreibt; Viertelstunden
+ * bekommen ihre Minuten, statt auf eine krumme Kommazahl gerundet zu werden.
+ */
+export function sleepDurationLabel(
+    wakeTime: string,
+    bedtime: string,
+    short = false,
+): string {
+    const minutes = sleepMinutes(wakeTime, bedtime);
+    const hours = Math.floor(minutes / 60);
+    const rest = minutes % 60;
+    const unit = short ? 'Std' : 'Stunden';
+
+    if (rest === 0) {
+        return `${hours} ${unit}`;
+    }
+
+    if (rest === 30) {
+        return `${hours},5 ${unit}`;
+    }
+
+    return `${hours} Std ${rest} Min`;
+}

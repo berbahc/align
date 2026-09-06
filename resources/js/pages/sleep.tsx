@@ -1,16 +1,28 @@
 import { Head, useForm } from '@inertiajs/react';
-import { AlarmClock, ChevronDown } from 'lucide-react';
+import { AlarmClock } from 'lucide-react';
 import { useState } from 'react';
 import InputError from '@/components/input-error';
+import { SleepWeek } from '@/components/sleep-week';
 import { TimeStepper } from '@/components/time-stepper';
 import { Card, CardContent } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { PRIMARY_BUTTON, QUIET_LINK } from '@/lib/interaction';
-import { cn } from '@/lib/utils';
+import { sleepDurationLabel, sleepMinutes } from '@/lib/sleep';
 import { dashboard } from '@/routes';
 import { update } from '@/routes/sleep';
 import type { SleepWindow, Weekday } from '@/types';
+
+/** Die Kurzform für die Zeilen im Nachtband, wo der volle Name nicht passt. */
+const WEEKDAY_SHORT: Record<Weekday, string> = {
+    1: 'Mo',
+    2: 'Di',
+    3: 'Mi',
+    4: 'Do',
+    5: 'Fr',
+    6: 'Sa',
+    7: 'So',
+};
 
 const WEEKDAY_NAMES: Record<Weekday, string> = {
     1: 'Montag',
@@ -58,8 +70,14 @@ export default function Sleep({
         bedtime_reminder_enabled: bedtimeReminderEnabled,
     });
 
-    /** Welcher Wochentag gerade aufgeklappt ist; null heißt keiner. */
-    const [expanded, setExpanded] = useState<Weekday | null>(null);
+    /**
+     * Welcher Tag gerade im Editor steht.
+     *
+     * Nie keiner: Der Editor ist die eine Stelle, an der Zeiten geändert
+     * werden, und ein leerer Platz daneben wäre eine Lücke ohne Grund. Montag
+     * ist der Anfang der Woche und damit der Anfang des Plans.
+     */
+    const [selected, setSelected] = useState<Weekday>(1);
 
     function updateDay(weekday: Weekday, patch: Partial<SleepDayForm>) {
         setData(
@@ -94,234 +112,250 @@ export default function Sleep({
         put(update.url(), { preserveScroll: true });
     }
 
+    /**
+     * Wie lange die Woche Schlaf lässt, als ein Satz.
+     *
+     * Die Seite heißt „Schlaf & Rhythmus" und nannte bisher nur Uhrzeiten. Wie
+     * viel Schlaf dabei herauskommt, stand nirgends, obwohl es die eine Zahl
+     * ist, um die es hier geht. Sind alle Tage gleich, ist es eine Zahl; sonst
+     * eine Spanne, und die ist der Rhythmus, den der Titel verspricht.
+     */
+    const durations = data.days.map((day) =>
+        sleepMinutes(day.wake_time, day.bedtime),
+    );
+    const shortest = data.days[durations.indexOf(Math.min(...durations))];
+    const longest = data.days[durations.indexOf(Math.max(...durations))];
+    const sameEveryDay = Math.min(...durations) === Math.max(...durations);
+
     // Der erste Fehler aus den verschachtelten Tages-Feldern — Inertia legt
     // sie unter Schlüsseln wie „days.2.bedtime" ab.
     const dayError = Object.entries(errors).find(([key]) =>
         key.startsWith('days.'),
     )?.[1];
 
+    const selectedDay =
+        data.days.find((day) => day.weekday === selected) ?? data.days[0];
+
     return (
         <>
             <Head title="Schlaf" />
 
-            <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-4 sm:p-6">
-                {/* Der Kopf trägt nur den Titel, und den zeigt auf dem
-                    Telefon schon die Leiste oben. Versteckt wird deshalb er
-                    und nicht nur die Überschrift darin — sonst bliebe eine
-                    leere Zeile samt ihrem Abstand stehen. */}
-                <header className="max-md:hidden">
-                    <h1 className="type-title text-primary">
+            <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 sm:p-6">
+                <header>
+                    {/* Den Titel zeigt auf dem Telefon schon die Leiste oben.
+                        Der Satz darunter ist neu und gilt überall. */}
+                    <h1 className="type-title text-primary max-md:hidden">
                         Schlaf & Rhythmus
                     </h1>
+
+                    {shortest !== undefined && longest !== undefined && (
+                        <p className="text-sm text-muted-foreground md:mt-1">
+                            {sameEveryDay ? (
+                                <>
+                                    Jeden Tag{' '}
+                                    <span className="font-semibold text-foreground">
+                                        {sleepDurationLabel(
+                                            shortest.wake_time,
+                                            shortest.bedtime,
+                                        )}
+                                    </span>{' '}
+                                    Schlaf
+                                </>
+                            ) : (
+                                <>
+                                    <span className="font-semibold text-foreground">
+                                        {sleepDurationLabel(
+                                            shortest.wake_time,
+                                            shortest.bedtime,
+                                        )}
+                                    </span>{' '}
+                                    bis{' '}
+                                    <span className="font-semibold text-foreground">
+                                        {sleepDurationLabel(
+                                            longest.wake_time,
+                                            longest.bedtime,
+                                        )}
+                                    </span>{' '}
+                                    Schlaf, je nach Tag
+                                </>
+                            )}
+                        </p>
+                    )}
                 </header>
 
-                <form onSubmit={submit} className="flex flex-col gap-6">
-                    <Card>
-                        <CardContent className="flex items-center justify-between gap-4">
-                            <div className="min-w-0">
-                                <p className="text-[15px] font-semibold">
-                                    Erinnerung {reminderLeadMinutes} Min vor der
-                                    Schlafenszeit
-                                </p>
-                                <p className="mt-0.5 text-xs text-muted-foreground">
-                                    Nur bei geöffneter App.
-                                </p>
-                            </div>
-                            <ToggleSwitch
-                                checked={data.bedtime_reminder_enabled}
-                                onChange={(enabled) =>
-                                    setData('bedtime_reminder_enabled', enabled)
-                                }
-                                label="Erinnerung vor der Schlafenszeit"
-                            />
-                        </CardContent>
-                    </Card>
+                {/* Links die Woche als Ganzes, rechts der eine Tag, den man
+                    gerade ändert. Ein Schlafplan ist Woche mal Uhrzeit, also
+                    zweidimensional; als Stapel gleicher Karten ging die zweite
+                    Achse verloren, und sieben Zeilen mit „07:00" darin zeigten
+                    nicht, dass das Wochenende später anfängt. Auf dem Handy
+                    stehen beide untereinander, die Woche zuerst. */}
+                <form
+                    onSubmit={submit}
+                    className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start"
+                >
+                    <div className="flex flex-col gap-4">
+                        <Card className="gap-0 border-transparent py-5 shadow-[var(--shadow-lift)]">
+                            <CardContent className="px-3 sm:px-4">
+                                <SleepWeek
+                                    days={data.days.map((day) => ({
+                                        weekday: day.weekday,
+                                        name: WEEKDAY_NAMES[day.weekday],
+                                        short: WEEKDAY_SHORT[day.weekday],
+                                        wakeTime: day.wake_time,
+                                        bedtime: day.bedtime,
+                                        alarmEnabled: day.alarm_enabled,
+                                    }))}
+                                    selected={selected}
+                                    onSelect={setSelected}
+                                    onToggleAlarm={(weekday, enabled) =>
+                                        updateDay(weekday, {
+                                            alarm_enabled: enabled,
+                                        })
+                                    }
+                                />
+                            </CardContent>
+                        </Card>
 
-                    <section aria-label="Zeiten je Wochentag">
-                        {/* Die eine Grenze, die man kennen muss — dort, wo die
-                            Wecker stehen, nicht als Fußnote am Seitenende. */}
-                        <p className="mb-2 text-xs text-muted-foreground">
-                            Der Wecker klingelt nur bei geöffneter App.
+                        {/* Nur der gefüllte Teil braucht ein Wort. Was nicht
+                            Schlaf ist, ist wach, und das musste niemandem
+                            gesagt werden. */}
+                        <p className="flex flex-wrap items-center gap-x-4 gap-y-1 px-1 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1.5">
+                                <span className="h-2.5 w-5 shrink-0 rounded-full bg-primary" />
+                                Schlaf
+                            </span>
+                            <span>
+                                Der Wecker klingelt nur bei geöffneter App.
+                            </span>
                         </p>
-                        <ul className="flex flex-col gap-2">
-                            {data.days.map((day) => {
-                                const isOpen = expanded === day.weekday;
+                    </div>
 
-                                return (
-                                    <li key={day.weekday}>
-                                        <Card
-                                            className={cn(
-                                                'gap-0 py-0 transition-[box-shadow,border-color] duration-[var(--duration-fluid)] ease-[var(--ease-fluid)]',
-                                                // Der offene Tag liegt höher als
-                                                // die geschlossenen: Höhe trägt
-                                                // die Hierarchie, nicht Farbe
-                                                // (Apple §12).
-                                                isOpen
-                                                    ? 'shadow-[var(--shadow-lift)]'
-                                                    : 'shadow-none',
-                                            )}
-                                        >
-                                            <CardContent className="px-0">
-                                                <div className="flex items-center gap-3 px-4 py-3">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            setExpanded(
-                                                                isOpen
-                                                                    ? null
-                                                                    : day.weekday,
-                                                            )
-                                                        }
-                                                        aria-expanded={isOpen}
-                                                        className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-lg text-left transition-[scale] duration-[var(--duration-press)] ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-safe:active:scale-[0.99]"
-                                                    >
-                                                        <span className="w-24 shrink-0 text-[15px] font-semibold">
-                                                            {
-                                                                WEEKDAY_NAMES[
-                                                                    day.weekday
-                                                                ]
-                                                            }
-                                                        </span>
-                                                        <span className="text-sm text-muted-foreground tabular-nums">
-                                                            {day.wake_time} –{' '}
-                                                            {day.bedtime}
-                                                        </span>
-                                                        <ChevronDown
-                                                            className={cn(
-                                                                'ml-auto size-4 shrink-0 text-muted-foreground transition-transform duration-[var(--duration-fluid)] ease-[var(--ease-fluid)]',
-                                                                isOpen &&
-                                                                    'rotate-180',
-                                                            )}
-                                                            aria-hidden="true"
-                                                        />
-                                                    </button>
-
-                                                    {/* Der Wecker sitzt an der
-                                                        Zeile, nicht am Konto:
-                                                        Montag ist eine andere
-                                                        Entscheidung als
-                                                        Sonntag. */}
-                                                    <span className="flex shrink-0 items-center gap-1.5">
-                                                        <AlarmClock
-                                                            className={cn(
-                                                                'size-4',
-                                                                day.alarm_enabled
-                                                                    ? 'text-primary'
-                                                                    : 'text-muted-foreground/50',
-                                                            )}
-                                                            strokeWidth={1.5}
-                                                            aria-hidden="true"
-                                                        />
-                                                        <ToggleSwitch
-                                                            checked={
-                                                                day.alarm_enabled
-                                                            }
-                                                            onChange={(
-                                                                enabled,
-                                                            ) =>
-                                                                updateDay(
-                                                                    day.weekday,
-                                                                    {
-                                                                        alarm_enabled:
-                                                                            enabled,
-                                                                    },
-                                                                )
-                                                            }
-                                                            label={`Wecker am ${WEEKDAY_NAMES[day.weekday]}`}
-                                                        />
-                                                    </span>
-                                                </div>
-
-                                                {isOpen && (
-                                                    <div className="flex flex-col gap-4 border-t border-border px-4 py-4 motion-safe:animate-in motion-safe:duration-[var(--duration-fluid)] motion-safe:ease-[var(--ease-fluid)] motion-safe:fade-in motion-safe:slide-in-from-top-1">
-                                                        <div className="grid grid-cols-2 gap-3">
-                                                            <div className="flex flex-col items-center gap-2 rounded-xl bg-sand/50 p-3">
-                                                                <p
-                                                                    className={
-                                                                        'type-eyebrow text-muted-foreground'
-                                                                    }
-                                                                >
-                                                                    Aufstehen
-                                                                </p>
-                                                                <TimeStepper
-                                                                    value={
-                                                                        day.wake_time
-                                                                    }
-                                                                    onChange={(
-                                                                        value,
-                                                                    ) =>
-                                                                        updateDay(
-                                                                            day.weekday,
-                                                                            {
-                                                                                wake_time:
-                                                                                    value,
-                                                                            },
-                                                                        )
-                                                                    }
-                                                                    label={`Aufstehzeit am ${WEEKDAY_NAMES[day.weekday]}`}
-                                                                    size="compact"
-                                                                />
-                                                            </div>
-                                                            <div className="flex flex-col items-center gap-2 rounded-xl bg-sand/50 p-3">
-                                                                <p
-                                                                    className={
-                                                                        'type-eyebrow text-muted-foreground'
-                                                                    }
-                                                                >
-                                                                    Schlafen
-                                                                </p>
-                                                                <TimeStepper
-                                                                    value={
-                                                                        day.bedtime
-                                                                    }
-                                                                    onChange={(
-                                                                        value,
-                                                                    ) =>
-                                                                        updateDay(
-                                                                            day.weekday,
-                                                                            {
-                                                                                bedtime:
-                                                                                    value,
-                                                                            },
-                                                                        )
-                                                                    }
-                                                                    label={`Schlafenszeit am ${WEEKDAY_NAMES[day.weekday]}`}
-                                                                    size="compact"
-                                                                />
-                                                            </div>
-                                                        </div>
-
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                applyToAll(day)
-                                                            }
-                                                            className={`${QUIET_LINK} self-start text-xs`}
-                                                        >
-                                                            Für alle Tage
-                                                            übernehmen
-                                                        </button>
-                                                    </div>
+                    <aside className="flex flex-col gap-4">
+                        {selectedDay !== undefined && (
+                            <Card className="gap-0 py-5 shadow-none">
+                                <CardContent className="flex flex-col gap-4 px-4">
+                                    {/* Der Name und die Dauer: Auf dem Handy
+                                        trägt die Zeile im Band keine Zahl
+                                        mehr, damit der Balken Platz hat. Hier
+                                        steht sie, für den Tag, den man gerade
+                                        anfasst. */}
+                                    <p className="flex flex-wrap items-baseline justify-between gap-x-3">
+                                        <span className="type-eyebrow text-muted-foreground">
+                                            {WEEKDAY_NAMES[selectedDay.weekday]}
+                                        </span>
+                                        <span className="text-xs text-muted-foreground">
+                                            <span className="font-semibold text-foreground tabular-nums">
+                                                {sleepDurationLabel(
+                                                    selectedDay.wake_time,
+                                                    selectedDay.bedtime,
                                                 )}
-                                            </CardContent>
-                                        </Card>
-                                    </li>
-                                );
-                            })}
-                        </ul>
-                    </section>
+                                            </span>{' '}
+                                            Schlaf
+                                        </span>
+                                    </p>
 
-                    <InputError message={dayError} />
-                    <InputError message={errors.bedtime_reminder_enabled} />
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="flex flex-col items-center gap-2 rounded-xl bg-sand/50 p-3">
+                                            <p className="type-eyebrow text-muted-foreground">
+                                                Schlafen
+                                            </p>
+                                            <TimeStepper
+                                                value={selectedDay.bedtime}
+                                                onChange={(value) =>
+                                                    updateDay(
+                                                        selectedDay.weekday,
+                                                        { bedtime: value },
+                                                    )
+                                                }
+                                                label={`Schlafenszeit am ${WEEKDAY_NAMES[selectedDay.weekday]}`}
+                                                size="compact"
+                                            />
+                                        </div>
+                                        <div className="flex flex-col items-center gap-2 rounded-xl bg-sand/50 p-3">
+                                            <p className="type-eyebrow text-muted-foreground">
+                                                Aufstehen
+                                            </p>
+                                            <TimeStepper
+                                                value={selectedDay.wake_time}
+                                                onChange={(value) =>
+                                                    updateDay(
+                                                        selectedDay.weekday,
+                                                        { wake_time: value },
+                                                    )
+                                                }
+                                                label={`Aufstehzeit am ${WEEKDAY_NAMES[selectedDay.weekday]}`}
+                                                size="compact"
+                                            />
+                                        </div>
+                                    </div>
 
-                    <button
-                        type="submit"
-                        disabled={processing || !isDirty}
-                        className={PRIMARY_BUTTON}
-                    >
-                        {processing && <Spinner className="size-4" />}
-                        Schlafplan speichern
-                    </button>
+                                    <div className="flex items-center justify-between gap-3 border-t border-border pt-4">
+                                        <span className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
+                                            <AlarmClock
+                                                className="size-4 shrink-0"
+                                                strokeWidth={1.5}
+                                                aria-hidden="true"
+                                            />
+                                            Wecker
+                                        </span>
+                                        <ToggleSwitch
+                                            checked={selectedDay.alarm_enabled}
+                                            onChange={(enabled) =>
+                                                updateDay(selectedDay.weekday, {
+                                                    alarm_enabled: enabled,
+                                                })
+                                            }
+                                            label={`Wecker am ${WEEKDAY_NAMES[selectedDay.weekday]}`}
+                                        />
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => applyToAll(selectedDay)}
+                                        className={`${QUIET_LINK} self-start text-xs`}
+                                    >
+                                        Diese Zeiten für alle Tage
+                                    </button>
+                                </CardContent>
+                            </Card>
+                        )}
+
+                        <Card className="gap-0 py-4 shadow-none">
+                            <CardContent className="flex items-center justify-between gap-3 px-4">
+                                <div className="min-w-0">
+                                    <p className="text-sm font-semibold">
+                                        Erinnerung {reminderLeadMinutes} Min
+                                        vorher
+                                    </p>
+                                    <p className="mt-0.5 text-xs text-muted-foreground">
+                                        Nur bei geöffneter App.
+                                    </p>
+                                </div>
+                                <ToggleSwitch
+                                    checked={data.bedtime_reminder_enabled}
+                                    onChange={(enabled) =>
+                                        setData(
+                                            'bedtime_reminder_enabled',
+                                            enabled,
+                                        )
+                                    }
+                                    label="Erinnerung vor der Schlafenszeit"
+                                />
+                            </CardContent>
+                        </Card>
+
+                        <InputError message={dayError} />
+                        <InputError message={errors.bedtime_reminder_enabled} />
+
+                        <button
+                            type="submit"
+                            disabled={processing || !isDirty}
+                            className={PRIMARY_BUTTON}
+                        >
+                            {processing && <Spinner className="size-4" />}
+                            Schlafplan speichern
+                        </button>
+                    </aside>
                 </form>
             </div>
         </>

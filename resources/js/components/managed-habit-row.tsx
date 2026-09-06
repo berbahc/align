@@ -204,7 +204,7 @@ export function ManagedHabitRow({
                     <Collapsible
                         open={explaining}
                         onOpenChange={setExplaining}
-                        className="flex flex-wrap items-end gap-x-4 gap-y-2 pl-14"
+                        className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2 pl-14"
                     >
                         <RhythmStrip days={habit.rhythm} title={habit.title} />
 
@@ -212,61 +212,81 @@ export function ManagedHabitRow({
                             Der Streifen zeigt die Woche und lässt sich
                             abzählen, die Konsistenz blickt über dreißig Tage
                             und springt bei einem Fehltag nicht. Daneben die
-                            Serie — {@see Habit::consistencyRate()} nennt sie
-                            „den Antrieb" und die Rate „den ehrlicheren Blick".
+                            Serie, die {@see Habit::consistencyRate()} „den
+                            Antrieb" nennt und die Rate „den ehrlicheren
+                            Blick".
 
                             Die Zahlen tragen Gewicht, die Wörter nicht: §3.3
                             hält gemischte Gewichte in einer Zeile als eigenes
-                            Muster fest („**85 %** Erreicht"). Vorher stand
-                            hier alles in `muted` — die Auskunft, die Lally
-                            2010 als wichtigsten Prädiktor nennt, war damit das
-                            Leiseste in der Karte. */}
-                        {(habit.consistency !== null ||
-                            habit.streak !== null) && (
-                            <p className="pb-3.5 text-xs text-muted-foreground">
-                                {habit.consistency !== null && (
+                            Muster fest („**85 %** Erreicht").
+
+                            **Am ersten Tag steht dort das Anfangsdatum.**
+                            „1 von 1" ist keine Auskunft, sondern eine
+                            Tautologie: Es gab eine Gelegenheit, du hast sie
+                            genutzt. Bei vier frisch angelegten Gewohnheiten
+                            stand dieselbe Zeile viermal untereinander, und der
+                            gefüllte Punkt im Streifen sagte es ohnehin schon.
+
+                            Verstecken wäre trotzdem falsch, denn hinter dem
+                            Zeichen liegt der Kasten mit dem Anfangsdatum, und
+                            genau danach fragt man am ersten Tag. Also wird die
+                            Zeile nicht leer, sondern nennt den Anfang, bis die
+                            Zahl etwas zu sagen hat. */}
+                        <p className="pb-3.5 text-xs text-muted-foreground">
+                            {habit.consistency !== null &&
+                            habit.consistency.scheduled > 1 ? (
+                                <>
+                                    <span className="font-semibold text-foreground tabular-nums">
+                                        {habit.consistency.done} von{' '}
+                                        {habit.consistency.scheduled}
+                                    </span>{' '}
+                                    {habit.consistency.sinceStart
+                                        ? 'Tagen seit dem Start'
+                                        : 'Tagen'}
+                                </>
+                            ) : (
+                                // Auch wenn es noch gar kein Fenster gibt:
+                                // Eine Gewohnheit, die erst morgen das erste
+                                // Mal ansteht, hat keine Gelegenheit gehabt.
+                                // Ihr Anfang ist trotzdem eine Auskunft, und
+                                // ohne ihn bliebe die Zeile leer.
+                                habit.startedOn !== null && (
                                     <>
+                                        Angefangen am{' '}
                                         <span className="font-semibold text-foreground tabular-nums">
-                                            {habit.consistency.done} von{' '}
-                                            {habit.consistency.scheduled}
-                                        </span>{' '}
-                                        {/* Bei einer jungen Gewohnheit reicht
-                                            das Fenster nur bis zum Anlegetag.
-                                            Ohne diesen Zusatz stünde dort „1
-                                            von 1", während die Legende einen
-                                            Monat verspricht. Die Zahl wäre
-                                            richtig und trotzdem nicht zu
-                                            lesen. */}
-                                        {habit.consistency.sinceStart
-                                            ? 'Tagen seit dem Start'
-                                            : 'Tagen'}
-                                        {/* Die Erklärung steht dort, wo die
-                                            Frage entsteht: „22 Tage wovon?"
-                                            fragt man an der Zahl, nicht am
-                                            Seitenkopf. Aufklappen statt
-                                            Tooltip, weil es auf dem Handy kein
-                                            Hover gibt. Derselbe Weg wie bei
-                                            {@see HabitLimitNote}. */}
-                                        <CollapsibleTrigger className="ml-1 inline-flex size-6 -translate-y-px cursor-pointer items-center justify-center rounded-full align-middle text-muted-foreground transition-colors duration-[var(--duration-press)] ease-out hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
-                                            <Info
-                                                className="size-3.5"
-                                                aria-hidden="true"
-                                            />
-                                            <span className="sr-only">
-                                                {explaining
-                                                    ? 'Erklärung ausblenden'
-                                                    : `Was zählt die Zahl bei ${habit.title}?`}
-                                            </span>
-                                        </CollapsibleTrigger>
+                                            {habit.startedOn}
+                                        </span>
                                     </>
-                                )}
-                                {habit.consistency !== null &&
-                                    habit.streak !== null && (
-                                        <span aria-hidden="true"> · </span>
-                                    )}
-                                {habit.streak}
-                            </p>
-                        )}
+                                )
+                            )}
+
+                            {/* Die Erklärung steht dort, wo die Frage
+                                entsteht: „22 Tage wovon?" fragt man an der
+                                Zahl, nicht am Seitenkopf. Aufklappen statt
+                                Tooltip, weil es auf dem Handy kein Hover
+                                gibt. Derselbe Weg wie bei
+                                {@see HabitLimitNote}. */}
+                            {habit.consistency !== null && (
+                                <CollapsibleTrigger className="ml-1 inline-flex size-6 -translate-y-px cursor-pointer items-center justify-center rounded-full align-middle text-muted-foreground transition-colors duration-[var(--duration-press)] ease-out hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+                                    <Info
+                                        className="size-3.5"
+                                        aria-hidden="true"
+                                    />
+                                    <span className="sr-only">
+                                        {explaining
+                                            ? 'Erklärung ausblenden'
+                                            : `Was zählt die Zahl bei ${habit.title}?`}
+                                    </span>
+                                </CollapsibleTrigger>
+                            )}
+
+                            {habit.streak !== null && (
+                                <>
+                                    <span aria-hidden="true"> · </span>
+                                    {habit.streak}
+                                </>
+                            )}
+                        </p>
 
                         {/* Mit den echten Zahlen dieser Gewohnheit statt
                             allgemein. „Sie zählt nur Tage, an denen die
@@ -314,15 +334,21 @@ export function ManagedHabitRow({
                                     {/* Der Anfang steht hier, weil er sonst
                                         nirgends steht: Das Archiv nennt „Beendet
                                         am", eine laufende Gewohnheit sagte bis
-                                        hierher nicht, seit wann es sie gibt. */}
-                                    {habit.startedOn !== null && (
-                                        <p className="mt-2 text-xs text-muted-foreground">
-                                            Angefangen am{' '}
-                                            <span className="font-semibold text-foreground tabular-nums">
-                                                {habit.startedOn}
-                                            </span>
-                                        </p>
-                                    )}
+                                        hierher nicht, seit wann es sie gibt.
+
+                                        Nicht, solange die Zeile draußen ihn
+                                        ohnehin nennt. Zweimal dasselbe Datum
+                                        in derselben Karte liest sich wie zwei
+                                        verschiedene Angaben. */}
+                                    {habit.startedOn !== null &&
+                                        habit.consistency.scheduled > 1 && (
+                                            <p className="mt-2 text-xs text-muted-foreground">
+                                                Angefangen am{' '}
+                                                <span className="font-semibold text-foreground tabular-nums">
+                                                    {habit.startedOn}
+                                                </span>
+                                            </p>
+                                        )}
                                 </div>
                             </CollapsibleContent>
                         )}
