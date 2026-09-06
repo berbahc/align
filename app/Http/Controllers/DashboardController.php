@@ -7,7 +7,6 @@ use App\Models\AppointmentNotice;
 use App\Models\Friendship;
 use App\Models\Habit;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -46,13 +45,6 @@ class DashboardController extends Controller
             // eine verschobene Gewohnheit weiter an ihrer alten Stelle, und
             // wer für eine Verabredung Platz gemacht hat, sähe davon nichts.
             ->with(['dayShifts' => fn (Relation $query) => $query->whereDate('shifted_on', $today)])
-            // Der Zähler der Konsistenz, in derselben Abfrage. Er braucht die
-            // Grenze am Anlegedatum nicht: Vor dem Anlegen kann es keine
-            // Erfüllung geben. Nur der Nenner braucht sie, und der rechnet in
-            // {@see Habit::consistencyWindow()} ohne Datenbank.
-            ->withCount(['completions as completions_in_window' => fn (Builder $query) => $query
-                ->where('completed_on', '>=', $today->copy()->subDays(29)->startOfDay()),
-            ])
             ->orderBy('position')
             ->get();
 
@@ -389,8 +381,15 @@ class DashboardController extends Controller
      *
      * Der Nenner kommt aus {@see Habit::consistencyWindow()} und schneidet am
      * Anlegedatum ab: Lally et al. 2010 nennt Konsistenz den Anteil genutzter
-     * Gelegenheiten, und ein Tag vor dem Anlegen war keine. Der Zähler steht
-     * schon in der Hauptabfrage und braucht die Grenze nicht.
+     * Gelegenheiten, und ein Tag vor dem Anlegen war keine.
+     *
+     * **Der Zähler stand einmal als `withCount` in der Hauptabfrage** und zählte
+     * damit jeden Haken der letzten dreißig Tage. Das ging so lange gut, wie
+     * niemand seinen Plan änderte: Danach rechnete der Nenner mit den neuen
+     * Wochentagen und der Zähler mit allen — „20 von 9". Er kommt jetzt aus
+     * {@see Habit::consistencyDone()}, das dieselbe Bedingung anlegt wie der
+     * Nenner. Eine Abfrage kostet das nicht: Die Termine liegen für die Serie
+     * ohnehin schon geladen bereit.
      *
      * @param  Collection<int, Habit>  $habits
      * @return array{done: int, scheduled: int}|null
@@ -410,7 +409,9 @@ class DashboardController extends Controller
         }
 
         return [
-            'done' => (int) $habits->sum('completions_in_window'),
+            'done' => (int) $habits->sum(
+                fn (Habit $habit): int => $habit->consistencyDone($today),
+            ),
             'scheduled' => (int) $possible,
         ];
     }

@@ -1626,16 +1626,59 @@ class Habit extends Model
             return null;
         }
 
-        $start = $until->copy()->subDays($days - 1)->max($this->created_at->copy()->startOfDay());
+        return ['done' => $this->consistencyDone($until, $days), ...$window];
+    }
+
+    /**
+     * Nur der Zähler: genutzte Gelegenheiten im Fenster.
+     *
+     * **Gezählt wird nur, was auf einen vorgesehenen Wochentag fällt** — nach
+     * derselben Regel, nach der {@see consistencyWindow()} den Nenner bildet.
+     * Ohne diese Bedingung war die Rate zerlegbar: Wer täglich abhakte und
+     * seinen Plan danach auf Sa+So stellte, las „20 von 9 Tagen". Der Nenner
+     * rechnet mit dem heutigen Plan, der Zähler zählte jeden Haken im Fenster,
+     * auch die von Tagen, an denen die Gewohnheit nach diesem Plan nie anstand.
+     *
+     * Neu ist die Regel nicht, nur ihre zweite Hälfte:
+     * {@see HabitCompletionController::completionDate()} weist ein Nachtragen
+     * an einem nicht vorgesehenen Tag längst ab, wörtlich weil „eine Erfüllung
+     * dort sie über 100 % treiben" würde. Was beim Schreiben gilt, muss beim
+     * Lesen auch gelten — sonst reicht eine Planänderung, um die Zahl kaputt
+     * zu machen.
+     *
+     * `isScheduledOn()` und nicht `isDueOn()`: Der Nenner fragt allein nach dem
+     * Wochentag. Prüfte der Zähler zusätzlich Auslöser und Vermerk, entstünde
+     * dieselbe Schieflage nur andersherum.
+     *
+     * Die geladene Beziehung wird bevorzugt — auf beiden Seiten, die diese Zahl
+     * zeigen, liegen die Termine ohnehin schon für die Serie im Speicher.
+     */
+    public function consistencyDone(?Carbon $until = null, int $days = 30): int
+    {
+        $until ??= Carbon::today();
+        $from = $until->copy()->subDays($days - 1)->startOfDay();
+        $to = $until->copy()->endOfDay();
+
+        if ($this->activeWeekdays() === []) {
+            return 0;
+        }
 
         // Carbon-Instanzen statt Datums-Strings: der `date`-Cast legt die Spalte
         // als "Y-m-d H:i:s" ab, ein String-Vergleich gegen "Y-m-d" würde den
         // letzten Tag lexikografisch aus dem Fenster schneiden.
-        $completed = $this->completions()
-            ->whereBetween('completed_on', [$start->copy()->startOfDay(), $until->copy()->endOfDay()])
-            ->count();
+        $dates = $this->relationLoaded('completionDates')
+            ? $this->completionDates->pluck('completed_on')
+            : $this->completions()->whereBetween('completed_on', [$from, $to])->pluck('completed_on');
 
-        return ['done' => $completed, ...$window];
+        return $dates
+            // Die geladene Beziehung trägt die ganze Historie, die eigene
+            // Abfrage nur das Fenster — geprüft wird deshalb hier, für beide.
+            //
+            // `CarbonInterface` und nicht `Carbon`: Je nachdem, woher die Zeile
+            // kommt, liegt im Cast eine unveränderliche Instanz.
+            ->filter(fn (CarbonInterface $date): bool => $date->betweenIncluded($from, $to)
+                && $this->isScheduledOn(Carbon::instance($date)))
+            ->count();
     }
 
     /**

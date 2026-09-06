@@ -394,3 +394,45 @@ test('a habit anchored to a situation leaves the clock column empty', function (
             ->where('habits.0.repeatLabel', 'nach dem Aufstehen')
         );
 });
+
+/**
+ * Auch die Summe über alle Gewohnheiten bleibt in ihrem Nenner.
+ *
+ * Der Zähler stand hier als `withCount` in der Hauptabfrage und zählte jeden
+ * Haken der letzten dreißig Tage, ohne nach dem Wochentag zu fragen. Der Nenner
+ * fragte danach sehr wohl — nach dem heutigen Plan. Eine Planänderung genügte
+ * damit, um „20 von 9 Mal erledigt" auf die Übersicht zu schreiben.
+ *
+ * Die Gewohnheiten-Seite hatte denselben Fehler auf einem anderen Weg. Beide
+ * Zahlen kommen jetzt aus {@see Habit::consistencyDone()} und legen dieselbe
+ * Bedingung an wie der Nenner.
+ */
+test('the overview keeps its numerator inside the denominator after a schedule change', function () {
+    // Ein Samstag. Die Gewohnheit gibt es seit sechzig Tagen.
+    Carbon::setTestNow(Carbon::parse('2026-08-08'));
+
+    $user = User::factory()->create();
+    $habit = Habit::factory()->for($user)->fixedSchedule(days: [1, 2, 3, 4, 5, 6, 7])->create();
+    $habit->forceFill(['created_at' => Carbon::today()->subDays(60)])->save();
+
+    // Zwanzig Tage am Stück abgehakt, Wochenenden eingeschlossen.
+    foreach (range(0, 19) as $daysAgo) {
+        $date = Carbon::today()->subDays($daysAgo);
+
+        $habit->completions()->create([
+            'completed_on' => $date,
+            'completed_at' => $date->copy()->setTime(17, 0),
+        ]);
+    }
+
+    // Ab jetzt gilt sie nur noch am Wochenende.
+    $habit->forceFill(['scheduled_days' => [6, 7]])->save();
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            // Neun Wochenendtage im Fenster, fünf davon abgehakt.
+            ->where('consistency.scheduled', 9)
+            ->where('consistency.done', 5)
+        );
+});

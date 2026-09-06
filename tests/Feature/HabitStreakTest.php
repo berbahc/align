@@ -464,3 +464,56 @@ test('jede Gewohnheit liefert dieselben sieben Tage für die Achse', function ()
             }
         });
 });
+
+/**
+ * Eine Planänderung treibt die Zahl nicht über ihren Nenner.
+ *
+ * Der Nenner rechnet mit dem **heutigen** Plan
+ * ({@see Habit::consistencyWindow()}), der Zähler zählte einmal jeden Haken im
+ * Fenster. Wer täglich abhakte und danach auf Sa+So umstellte, las damit „20
+ * von 9 Tagen" — eine Zahl, die größer ist als ihre eigene Bezugsgröße und
+ * eine Konsistenz von 222 % behauptet.
+ *
+ * Die Regel selbst ist alt:
+ * {@see HabitCompletionController::completionDate()} weist ein Nachtragen an
+ * einem nicht vorgesehenen Tag ab, wörtlich weil „eine Erfüllung dort sie über
+ * 100 % treiben" würde. Sie galt nur beim Schreiben und nicht beim Lesen, und
+ * eine Planänderung reichte, um sie auszuhebeln.
+ *
+ * Was dabei aus dem Zähler fällt, ist kein Verlust: Ein Montag zählt nicht mehr
+ * mit, weil er nach dem heutigen Plan keine Gelegenheit mehr ist — genau wie er
+ * im Nenner keine mehr ist.
+ */
+test('eine Planänderung treibt die Konsistenz nicht über ihren Nenner', function () {
+    // Ein Samstag. Die Gewohnheit gibt es seit sechzig Tagen.
+    Carbon::setTestNow(Carbon::parse('2026-08-08'));
+
+    $user = User::factory()->create();
+    $habit = existingSince(
+        Habit::factory()->for($user)->fixedSchedule(days: [1, 2, 3, 4, 5, 6, 7])->create(),
+        60,
+    );
+
+    // Zwanzig Tage am Stück abgehakt, Wochenenden eingeschlossen.
+    complete($habit, range(0, 19));
+
+    expect($habit->fresh()->consistency())
+        ->toMatchArray(['done' => 20, 'scheduled' => 30]);
+
+    // Jetzt gilt die Gewohnheit nur noch am Wochenende. Die alten Haken der
+    // Werktage bleiben liegen — gelöscht wird in dieser App nichts.
+    $habit->forceFill(['scheduled_days' => [6, 7]])->save();
+
+    $this->actingAs($user)
+        ->get(route('habits.index'))
+        ->assertInertia(function (AssertableInertia $page) {
+            /** @var array{done: int, scheduled: int} $consistency */
+            $consistency = $page->toArray()['props']['habits'][0]['consistency'];
+
+            // Das Fenster reicht vom Freitag, 10.07.2026, bis Samstag, den
+            // 08.08.2026. Darin liegen neun Wochenendtage — und fünf davon
+            // sind abgehakt: 25.07., 26.07., 01.08., 02.08. und 08.08.
+            expect($consistency['scheduled'])->toBe(9)
+                ->and($consistency['done'])->toBe(5);
+        });
+});
