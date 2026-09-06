@@ -3,6 +3,7 @@ import { TriangleAlert } from 'lucide-react';
 import { PersonCircle } from '@/components/person-circle';
 import { Button } from '@/components/ui/button';
 import { QUIET_LINK } from '@/lib/interaction';
+import { capitaliseDay } from '@/lib/utils';
 import { destroy, update } from '@/routes/appointments';
 import { create } from '@/routes/habits';
 import { store as shift } from '@/routes/habits/shifts';
@@ -129,7 +130,7 @@ export function AppointmentRequestNotice({
                             }
                         >
                             <p className="text-[15px] leading-relaxed">
-                                {capitalise(request.day)} zusammen{' '}
+                                {capitaliseDay(request.day)} zusammen{' '}
                                 <span className="font-semibold">
                                     {request.title}
                                 </span>
@@ -233,13 +234,4 @@ export function AppointmentRequestNotice({
             ))}
         </section>
     );
-}
-
-/**
- * Der Tag steht am Satzanfang und kommt klein vom Server („heute",
- * „nächsten Samstag"). Groß geschrieben wird deshalb hier — der Server liefert
- * dieselbe Zeile auch mitten in einen Satz.
- */
-function capitalise(day: string): string {
-    return day.charAt(0).toUpperCase() + day.slice(1);
 }

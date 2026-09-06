@@ -67,9 +67,10 @@ export function FriendRequestNotice({
                         </div>
                         {/* Was gefragt wird, steht in der Frage. „Fragt dich"
                             allein ließ offen, worum es geht — und die Antwort
-                            darauf ist ein Ja oder ein Nein, keine Frage des
-                            Passens. Ob eine Verabredung passt, entscheidet der
-                            Kalender; ob man befreundet sein will, nicht. */}
+                            darauf ist ein Annehmen oder ein Ablehnen, keine
+                            Frage des Passens. Ob eine Verabredung passt,
+                            entscheidet der Kalender; ob man befreundet sein
+                            will, nicht. */}
                         <p className="min-w-0 text-[15px] leading-snug">
                             <span className="font-semibold">{person.name}</span>
                             <span className="text-muted-foreground">
@@ -81,20 +82,27 @@ export function FriendRequestNotice({
 
                     {/* Beide Knöpfe gleich breit — §7.2 Regel 1. Ein grauer
                         Sekundärknopf neben einem farbigen wäre eine
-                        Empfehlung, keine Wahl. */}
+                        Empfehlung, keine Wahl.
+
+                        „Annehmen" und „Ablehnen" statt „Ja" und „Nein": Der
+                        Knopf benennt die Handlung, nicht die Zustimmung zu
+                        einem Satz. „Ja" allein trägt nur, solange man die
+                        Frage darüber noch im Kopf hat — wer nach dem Scrollen
+                        zurückkommt, liest zwei Wörter, die für sich nichts
+                        bedeuten. */}
                     <div className="mt-4 flex gap-3">
                         <Button
                             onClick={() => answer(person.id, true)}
                             className="h-11 flex-1 cursor-pointer rounded-xl"
                         >
-                            Ja
+                            Annehmen
                         </Button>
                         <Button
                             variant="outline"
                             onClick={() => answer(person.id, false)}
                             className="h-11 flex-1 cursor-pointer rounded-xl border-primary text-primary"
                         >
-                            Nein
+                            Ablehnen
                         </Button>
                     </div>
                 </div>

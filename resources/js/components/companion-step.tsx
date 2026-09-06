@@ -1,7 +1,7 @@
 import { router } from '@inertiajs/react';
 import { useState } from 'react';
 import { PersonCircle } from '@/components/person-circle';
-import { cn } from '@/lib/utils';
+import { capitaliseDay, cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { store } from '@/routes/appointments';
 import type { AppointmentDay, FriendshipPerson } from '@/types';
@@ -138,7 +138,9 @@ export function CompanionStep({
                                     : 'border-transparent hover:bg-accent',
                             )}
                         >
-                            {option.label}
+                            {/* Wie im Verabredungs-Sheet: Auf dem Knopf steht
+                                der Tag für sich und gehört groß. */}
+                            {capitaliseDay(option.label)}
                         </button>
                     ))}
                 </div>
@@ -147,7 +149,7 @@ export function CompanionStep({
             {ready && (
                 <div className="rounded-2xl bg-card p-4">
                     <p className="text-[15px] font-semibold">
-                        {chosenFriend.name} · {chosenDay.label}
+                        {chosenFriend.name} · {capitaliseDay(chosenDay.label)}
                     </p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
                         {anchor}

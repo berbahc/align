@@ -8,7 +8,7 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
-import { cn } from '@/lib/utils';
+import { capitaliseDay, cn } from '@/lib/utils';
 import { store } from '@/routes/appointments';
 import type { AppointmentDay, FriendshipPerson, Habit } from '@/types';
 
@@ -168,7 +168,13 @@ export function AppointmentSheet({
                                                     : 'border-transparent hover:bg-accent',
                                             )}
                                         >
-                                            {option.label}
+                                            {/* Auf dem Knopf steht der Tag für
+                                                sich — „morgen" klein ist eine
+                                                Satzmitte ohne Satz. Vom Server
+                                                kommt er klein, weil dieselbe
+                                                Zeile anderswo mitten in einen
+                                                Satz läuft. */}
+                                            {capitaliseDay(option.label)}
                                         </button>
                                     ))}
                                 </div>
@@ -180,7 +186,8 @@ export function AppointmentSheet({
                             {ready && (
                                 <div className="rounded-2xl bg-card p-4">
                                     <p className="text-[15px] font-semibold">
-                                        {chosenFriend.name} · {chosenDay.label}
+                                        {chosenFriend.name} ·{' '}
+                                        {capitaliseDay(chosenDay.label)}
                                     </p>
                                     <p className="mt-0.5 text-xs text-muted-foreground">
                                         {habit?.scheduleLabel}

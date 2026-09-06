@@ -3,7 +3,7 @@ import { Check } from 'lucide-react';
 import { PersonCircle } from '@/components/person-circle';
 import { SectionHeading } from '@/components/section-heading';
 import { Card, CardContent } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
+import { capitaliseDay, cn } from '@/lib/utils';
 import { destroy } from '@/routes/appointments';
 import {
     destroy as undone,
@@ -113,8 +113,7 @@ export function UpcomingAppointments({
                                     kommen klein aus dem Server, wo sie mitten
                                     in einer Zeile stehen. */}
                                 <span className="font-semibold text-foreground">
-                                    {appointment.day.charAt(0).toUpperCase() +
-                                        appointment.day.slice(1)}
+                                    {capitaliseDay(appointment.day)}
                                 </span>{' '}
                                 · {appointment.anchor} ·{' '}
                                 {appointment.accepted
