@@ -361,8 +361,18 @@ test('two places may share a weekday when applied together', function () {
 });
 
 test('each place names the day on which to look at it — the first lecture day', function () {
+    // Die Uhr steht fest, weil der erwartete Tag am Wochentag von „heute"
+    // hängt: Das Semester beginnt einen Monat später, und ob dessen erster
+    // Montag oder erster Mittwoch näher liegt, entscheidet allein, auf welchen
+    // Wochentag der heutige fällt. Ohne diese Zeile bestand der Test an einem
+    // Freitag und fiel am Samstag um.
+    //
+    // Am 05.09.2026 beginnt das Semester am Montag, dem 05.10.2026 — dem
+    // frühesten Tag, an dem der Vorschlag überhaupt gilt.
+    Carbon::setTestNow(Carbon::parse('2026-09-05'));
+
     $user = User::factory()->create();
-    $semester = Semester::factory()->for($user)->between(
+    Semester::factory()->for($user)->between(
         Carbon::today()->addMonth()->toDateString(),
         Carbon::today()->addMonths(5)->toDateString(),
     )->create();
@@ -373,16 +383,14 @@ test('each place names the day on which to look at it — the first lecture day'
         'places' => [['id' => $walk->id, 'time' => '11:45', 'days' => [1, 3], 'reason' => 'Nach Mathe.']],
     ]]);
 
-    $firstMonday = Carbon::parse($semester->starts_on->toDateString());
-
-    while ($firstMonday->dayOfWeekIso !== 1) {
-        $firstMonday->addDay();
-    }
-
+    // Der **früheste** der beiden Wochentage, nicht der erste Montag: Der
+    // Vorschlag gilt montags und mittwochs, und gezeigt wird der Tag, an dem
+    // er zuerst greift. Vorher rechnete der Test nur den Montag aus und traf
+    // damit nur zufällig das Richtige.
     $this->actingAs($user)
         ->postJson(route('calendar.semester.places.suggestions'))
         ->assertOk()
-        ->assertJsonPath('places.0.previewDate', $firstMonday->toDateString());
+        ->assertJsonPath('places.0.previewDate', '2026-10-05');
 });
 
 test('the day shows a suggested place as a ghost, and only where it would apply', function () {
