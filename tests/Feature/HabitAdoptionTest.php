@@ -413,11 +413,15 @@ test('a request of someone else cannot be answered by adopting', function () {
 
     $this->actingAs($owner)
         ->post(route('habits.adoptions.store'), [
-            'template_key' => $habit->template()?->value,
+            // Eine Vorlage, die dieser Person noch fehlt: Der Test fragt nach
+            // der Berechtigung, und die darf nicht daran hängen, ob das
+            // Formular vorher aus einem anderen Grund abweist. Die Gewohnheit
+            // aus der Einladung führt der Anfragende selbst — sie liefe hier
+            // in die Regel „läuft schon bei dir".
+            'template_key' => HabitTemplate::Meditieren->value,
             'target_amount' => 30,
             'schedule_type' => ScheduleType::Dynamic->value,
-            // Eine freie Situation: Der Test fragt nach der Berechtigung, und
-            // die darf nicht daran hängen, ob zufällig ein Platz frei ist.
+            // Eine freie Situation: aus demselben Grund.
             'trigger_situation' => 'nach der Vorlesung',
             'appointment_id' => $appointment->id,
         ])

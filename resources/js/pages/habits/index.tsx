@@ -12,10 +12,14 @@ import { requestReminderPermission } from '@/hooks/use-habit-reminders';
 import { OUTLINE_BUTTON, PRIMARY_BUTTON, QUIET_LINK } from '@/lib/interaction';
 import { calendar, dashboard } from '@/routes';
 import { create } from '@/routes/habits';
+import {
+    destroy as removeCompletion,
+    store as addCompletion,
+} from '@/routes/habits/completions';
 import { store as graduate } from '@/routes/habits/graduation';
 import { update } from '@/routes/habits/reminder';
 import { updateAll } from '@/routes/habits/reminders';
-import type { GraduatedHabit, ManagedHabit } from '@/types';
+import type { GraduatedHabit, ManagedHabit, RhythmDay } from '@/types';
 
 interface HabitsIndexProps {
     habits: ManagedHabit[];
@@ -159,6 +163,33 @@ export default function HabitsIndex({
     }
 
     /**
+     * Einen Tag der Woche abhaken — oder das Häkchen zurücknehmen.
+     *
+     * Der kürzeste Weg zum häufigsten Fall: Wer gestern vergessen hat, sieht
+     * die Lücke hier im Streifen und musste bisher über Kalender, Tag und
+     * Haken gehen. `completed_on` reist in beide Richtungen mit; der Server
+     * prüft damit das Nachtrag-Fenster und weist Tage ab, an denen die
+     * Gewohnheit nicht vorgesehen war — dieselbe Strecke wie in der
+     * Tagesansicht.
+     */
+    function toggleDay(habit: ManagedHabit, day: RhythmDay) {
+        if (day.completed) {
+            router.delete(removeCompletion.url(habit.id), {
+                data: { completed_on: day.date },
+                preserveScroll: true,
+            });
+
+            return;
+        }
+
+        router.post(
+            addCompletion.url(habit.id),
+            { completed_on: day.date },
+            { preserveScroll: true },
+        );
+    }
+
+    /**
      * Ohne Rückfrage: die Gewohnheit rutscht sichtbar ins Archiv, wo
      * „Wiederaufnehmen" einen Klick entfernt ist. Ein Dialog würde eine
      * Endgültigkeit behaupten, die hier nicht besteht.
@@ -273,6 +304,7 @@ export default function HabitsIndex({
                                     sections={sections}
                                     landed={landed}
                                     onToggleReminder={toggleOne}
+                                    onToggleDay={toggleDay}
                                     onEnd={endHabit}
                                 />
                             </CardContent>

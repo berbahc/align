@@ -17,6 +17,11 @@ export interface HabitTemplateOption {
     title: string;
     /** Startwert des Dauer-Steppers, in Minuten. */
     defaultMinutes: number;
+    /**
+     * Läuft diese Gewohnheit schon? Dann bleibt sie sichtbar, ist aber keine
+     * Wahl mehr — wie eine vergebene Situation.
+     */
+    taken: boolean;
 }
 
 /** Eine Kategorie samt ihrer Vorlagen — kommt aus `HabitCategory::options()`. */

@@ -64,6 +64,41 @@ class StoreHabitRequest extends HabitFormRequest
                     ));
                 }
             },
+            // Eine Vorlage trägt eine laufende Gewohnheit.
+            //
+            // Zwei „Joggen gehen" sind im Kalender nicht auseinanderzuhalten:
+            // gleicher Titel, gleiches Zeichen, gleicher Streifen. Sie ließen
+            // sich sogar aneinanderhängen — „Joggen gehen" nach „Joggen
+            // gehen" —, und keine Zeile der App könnte danach noch sagen,
+            // welche gemeint ist. Wer dieselbe Sache zweimal am Tag will,
+            // stellt die Dauer hoch; wer sie an zwei Stellen will, hat zwei
+            // verschiedene Vorhaben und dafür den Katalog.
+            //
+            // Nur aktive zählen: Eine beendete Gewohnheit steht im Archiv und
+            // belegt keinen Platz im Tag. Sie zurückzuholen ist ein eigener
+            // Weg, und wer stattdessen neu anfangen will, darf das.
+            function (Validator $validator): void {
+                if (! $this->filled('template_key')) {
+                    return;
+                }
+
+                $running = $this->user()->habits()
+                    ->active()
+                    ->where('template_key', $this->string('template_key')->toString())
+                    ->first();
+
+                if ($running === null) {
+                    return;
+                }
+
+                // §1.5 — benennt, was gilt, und wo es steht. Kein Vorwurf: Die
+                // Gewohnheit zweimal zu wollen ist kein Fehler, sie zweimal zu
+                // führen wäre nur keine Hilfe.
+                $validator->errors()->add('template_key', sprintf(
+                    '„%s" läuft schon bei dir. Zweimal dieselbe Gewohnheit lässt sich im Kalender nicht auseinanderhalten — pass lieber die bestehende an.',
+                    $running->title,
+                ));
+            },
         ];
     }
 

@@ -436,3 +436,37 @@ test('the overview keeps its numerator inside the denominator after a schedule c
             ->where('consistency.done', 5)
         );
 });
+
+/**
+ * Die Konsistenzrate bleibt auch an einem Tag ohne Gewohnheit.
+ *
+ * Sie lag einmal als Fußnote in der Tageskarte, und die Karte erschien nur,
+ * wenn heute etwas anstand. An einem Sonntag mit einer Mo–Fr-Gewohnheit fiel
+ * damit beides weg: erst der Tag, dann die Zahl, an der sich der Aufbau
+ * überhaupt ablesen lässt.
+ */
+test('the consistency rate survives a day with nothing due', function () {
+    $user = User::factory()->create();
+    $sunday = Carbon::today()->next(Carbon::SUNDAY);
+    Carbon::setTestNow($sunday->copy()->setTime(9, 0));
+
+    // Mo–Fr: heute ist Sonntag, also steht nichts an.
+    $habit = Habit::factory()->for($user)->fixedSchedule('08:00', [1, 2, 3, 4, 5])
+        ->withMeasure(20)->create();
+    $habit->forceFill(['created_at' => Carbon::today()->subDays(60)])->save();
+
+    $habit->completions()->create([
+        'completed_on' => $sunday->copy()->subDays(2),
+        'completed_at' => $sunday->copy()->subDays(2)->setTime(8, 0),
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('todayProgress.total', 0)
+            ->where('consistency.done', 1)
+            ->where('consistency.scheduled', fn (int $scheduled): bool => $scheduled > 0)
+        );
+
+    Carbon::setTestNow();
+});

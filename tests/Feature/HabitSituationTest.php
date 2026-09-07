@@ -178,8 +178,12 @@ test('the edit form does not report the habit blocking itself', function () {
  */
 test('a chained habit blocks no moment', function () {
     $user = User::factory()->create();
-    $walk = Habit::factory()->for($user)->fixedSchedule('17:00')->withMeasure(20)->create();
-    Habit::factory()->for($user)->withoutMeasure()->create([
+    // Feste Vorlagen, damit „Meditieren" unten frei bleibt: Eine Vorlage
+    // trägt genau eine laufende Gewohnheit, und der Test fragt nach der
+    // Situation, nicht nach dem Katalog.
+    $walk = Habit::factory()->for($user)->fromTemplate(HabitTemplate::Spazieren)
+        ->fixedSchedule('17:00')->withMeasure(20)->create();
+    Habit::factory()->for($user)->fromTemplate(HabitTemplate::Joggen)->withoutMeasure()->create([
         'schedule_type' => ScheduleType::Chained,
         'chained_to_habit_id' => $walk->id,
         'trigger_situation' => 'nach dem Aufstehen',

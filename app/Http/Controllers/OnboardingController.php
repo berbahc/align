@@ -31,7 +31,7 @@ class OnboardingController extends Controller
             'hasSleepSchedule' => $request->user()->sleepSchedules()->exists(),
             'defaultWakeTime' => SleepSchedule::DefaultWakeTime,
             'defaultBedtime' => SleepSchedule::DefaultBedtime,
-            'categories' => HabitCategory::options(),
+            'categories' => HabitCategory::options(Habit::takenTemplatesFor($request->user())),
             'triggerSuggestions' => Habit::situationChoicesFor($request->user()),
             'scheduleTypes' => ScheduleType::options(),
             'durationLimits' => MeasureUnit::minutesLimits(),

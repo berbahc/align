@@ -21,7 +21,7 @@ import {
 import { LEAD_MINUTES } from '@/hooks/use-habit-reminders';
 import { cn } from '@/lib/utils';
 import { edit } from '@/routes/habits';
-import type { HabitGroup, ManagedHabit } from '@/types';
+import type { HabitGroup, ManagedHabit, RhythmDay } from '@/types';
 
 /**
  * Die Spaltenbreiten des Blatts — eine Quelle für Achse, Zeilen und Trenner.
@@ -30,6 +30,20 @@ import type { HabitGroup, ManagedHabit } from '@/types';
  * Stellen, liefen Achse und Marken irgendwann ein paar Pixel auseinander — und
  * eine Achse, die nicht über ihrer Spalte sitzt, ist schlimmer als keine.
  */
+/**
+ * „Mittwoch, 3. September" — für die Vorlesehilfe.
+ *
+ * Die Marke zeigt nur einen Ton, der Knopf muss sagen, welchen Tag er meint.
+ * `RhythmDay.label` trägt bloß „Mi": genug als Spaltenkopf, nicht als Ansage.
+ */
+function dayName(date: string): string {
+    return new Date(`${date}T00:00:00`).toLocaleDateString('de-DE', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+    });
+}
+
 const DAY_CELL = 'w-[1.125rem] sm:w-7';
 const DAY_MARK = 'size-3.5 sm:size-5';
 const BALANCE_COLUMN = 'w-28 lg:w-32';
@@ -144,6 +158,7 @@ function BoardRow({
     tinted,
     highlighted,
     onToggleReminder,
+    onToggleDay,
     onEnd,
 }: {
     habit: ManagedHabit;
@@ -159,6 +174,8 @@ function BoardRow({
      */
     highlighted: boolean;
     onToggleReminder: (habit: ManagedHabit, enabled: boolean) => void;
+    /** Einen Tag der Woche abhaken oder zurücknehmen. */
+    onToggleDay: (habit: ManagedHabit, day: RhythmDay) => void;
     onEnd: (habit: ManagedHabit) => void;
 }) {
     // Ob der Erklärkasten unter dieser Zeile offen ist.
@@ -254,12 +271,20 @@ function BoardRow({
                         </span>
                     </div>
 
-                    {/* Die Marken sind für die Vorlesehilfe unsichtbar: Sieben
-                        Tage einzeln vorzulesen ergibt eine Litanei, aus der
-                        niemand etwas mitnimmt. Der Satz sagt dasselbe in einem
-                        Zug. */}
+                    {/* Die Woche ist nicht nur Auskunft, sondern der kürzeste
+                        Weg zum häufigsten Fall: Wer gestern vergessen hat, sieht
+                        die Lücke hier — und musste dafür bisher über Kalender,
+                        Tag und Haken gehen. Ein Tag, der anstand, lässt sich
+                        deshalb antippen.
+
+                        Aus `role="img"` wird eine Gruppe: Solange die Marken
+                        nichts konnten, war es richtig, sie nicht einzeln
+                        vorzulesen — sieben Tage nacheinander sind eine Litanei.
+                        Was sich bedienen lässt, muss sich aber auch ansagen
+                        lassen. Der Satz der Gruppe bleibt die Zusammenfassung,
+                        die Knöpfe darin nennen ihren eigenen Tag. */}
                     <div
-                        role="img"
+                        role="group"
                         aria-label={
                             scheduled === 0
                                 ? `${habit.title}: stand in den letzten sieben Tagen nicht an`
@@ -267,24 +292,8 @@ function BoardRow({
                         }
                         className="flex shrink-0"
                     >
-                        {habit.rhythm.map((day, index) => (
-                            <span
-                                key={day.date}
-                                className={cn(
-                                    'flex items-center justify-center',
-                                    DAY_CELL,
-                                    index === todayIndex && [
-                                        BAND,
-                                        // Nur ganz unten gerundet. Rundete
-                                        // jeder Abschnitt sein eigenes Ende,
-                                        // zerfiele die Spalte in Kapseln — und
-                                        // eine Kapsel neben einer Kapsel sieht
-                                        // aus wie zwei Sachen, nicht wie ein
-                                        // Tag.
-                                        bandBottom && 'rounded-b-lg border-b',
-                                    ],
-                                )}
-                            >
+                        {habit.rhythm.map((day, index) => {
+                            const mark = (
                                 <RhythmMark
                                     state={rhythmState(day)}
                                     size={DAY_MARK}
@@ -302,8 +311,62 @@ function BoardRow({
                                         animationDelay: `${index * 40}ms`,
                                     }}
                                 />
-                            </span>
-                        ))}
+                            );
+
+                            const cell = cn(
+                                'flex items-center justify-center',
+                                DAY_CELL,
+                                index === todayIndex && [
+                                    BAND,
+                                    // Nur ganz unten gerundet. Rundete jeder
+                                    // Abschnitt sein eigenes Ende, zerfiele die
+                                    // Spalte in Kapseln — und eine Kapsel neben
+                                    // einer Kapsel sieht aus wie zwei Sachen,
+                                    // nicht wie ein Tag.
+                                    bandBottom && 'rounded-b-lg border-b',
+                                ],
+                            );
+
+                            // Nur was anstand, lässt sich abhaken. An einem
+                            // Tag ohne Vorsehung gäbe es nichts nachzutragen —
+                            // der Server weist ihn ohnehin ab, und ein Knopf,
+                            // der das erst hinterher sagt, ist kein Angebot.
+                            if (!day.scheduled) {
+                                return (
+                                    <span
+                                        key={day.date}
+                                        aria-hidden="true"
+                                        className={cell}
+                                    >
+                                        {mark}
+                                    </span>
+                                );
+                            }
+
+                            return (
+                                <button
+                                    key={day.date}
+                                    type="button"
+                                    aria-pressed={day.completed}
+                                    aria-label={`${habit.title} am ${dayName(day.date)}: ${
+                                        day.completed
+                                            ? 'erledigt, antippen zum Zurücknehmen'
+                                            : 'offen, antippen zum Nachtragen'
+                                    }`}
+                                    onClick={() => onToggleDay(habit, day)}
+                                    className={cn(
+                                        cell,
+                                        'cursor-pointer transition-[background-color,scale] duration-[var(--duration-press)] ease-out',
+                                        'focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring',
+                                        'motion-safe:active:scale-[0.88]',
+                                        index !== todayIndex &&
+                                            'hover:bg-accent/60',
+                                    )}
+                                >
+                                    {mark}
+                                </button>
+                            );
+                        })}
                     </div>
 
                     <div
@@ -533,12 +596,15 @@ export function HabitBoard({
     sections,
     landed,
     onToggleReminder,
+    onToggleDay,
     onEnd,
 }: {
     sections: BoardSection[];
     /** Die Zeile, die gerade hier gelandet ist — kurz betont. */
     landed: string | null;
     onToggleReminder: (habit: ManagedHabit, enabled: boolean) => void;
+    /** Einen Tag der Woche abhaken oder zurücknehmen. */
+    onToggleDay: (habit: ManagedHabit, day: RhythmDay) => void;
     onEnd: (habit: ManagedHabit) => void;
 }) {
     // Die Achse kommt aus der ersten Zeile: Alle Gewohnheiten teilen dasselbe
@@ -662,6 +728,7 @@ export function HabitBoard({
                             tinted={section.group === 'displaced'}
                             highlighted={landed === `managed-habit-${habit.id}`}
                             onToggleReminder={onToggleReminder}
+                            onToggleDay={onToggleDay}
                             onEnd={onEnd}
                         />
                     )),

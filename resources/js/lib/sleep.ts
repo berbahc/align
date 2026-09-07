@@ -39,6 +39,25 @@ export function outsideSleepWindow(
 }
 
 /**
+ * Welche der gewählten Tage zu dieser Uhrzeit schlafen.
+ *
+ * {@see outsideSleepWindow} nennt den ersten — genug für den Satz, zu wenig
+ * für den Ausweg: Wer eine 07:30-Gewohnheit täglich plant, stolpert über
+ * Samstag *und* Sonntag und müsste sonst zweimal suchen, was ihn aufhält.
+ */
+export function asleepWeekdays(
+    time: string,
+    days: Weekday[],
+    windows: SleepWindow[],
+): Weekday[] {
+    return days.filter((day) => {
+        const window = windows.find((candidate) => candidate.weekday === day);
+
+        return window !== undefined && !isAwakeAt(window, time);
+    });
+}
+
+/**
  * Der Rahmen als eine Zeile — „07:00 bis 23:00".
  */
 export function formatWindow(window: SleepWindow): string {

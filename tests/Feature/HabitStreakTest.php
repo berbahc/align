@@ -1,8 +1,11 @@
 <?php
 
+use App\Enums\ScheduleType;
 use App\Models\Habit;
+use App\Models\Semester;
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Inertia\Testing\AssertableInertia;
 
 /**
@@ -516,4 +519,41 @@ test('eine Planänderung treibt die Konsistenz nicht über ihren Nenner', functi
             expect($consistency['scheduled'])->toBe(9)
                 ->and($consistency['done'])->toBe(5);
         });
+});
+
+/**
+ * Der Wochenstreifen darf keinen Tag als offen zeigen, an dem es den Auslöser
+ * gar nicht gab.
+ *
+ * {@see Habit::hasTriggerOn()} kommt ohne geladenen Nutzer an keinen
+ * Stundenplan und antwortet dann mit „ja" — richtig als Vorsicht, falsch als
+ * Aussage. Die Gewohnheiten-Seite lud die Beziehung nicht, die Übersicht schon:
+ * Dieselbe Woche las sich auf zwei Seiten verschieden, und „nach der Vorlesung"
+ * stand mit sieben offenen Tagen da, obwohl in dieser Woche keine Vorlesung war.
+ */
+test('the week strip marks days without a lecture as not scheduled', function () {
+    $user = User::factory()->create();
+    Semester::factory()->for($user)->create();
+    $habit = Habit::factory()->for($user)->withMeasure(30)->create([
+        'title' => 'Vorlesung nachbereiten',
+        'schedule_type' => ScheduleType::Dynamic,
+        'trigger_situation' => Habit::AfterLecture,
+        'scheduled_days' => null,
+    ]);
+
+    // Ein Semester ohne einen einzigen Kurs: An keinem Tag gibt es die
+    // Vorlesung, an die diese Gewohnheit hängt.
+    $this->actingAs($user)
+        ->get(route('habits.index'))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('habits.0.title', 'Vorlesung nachbereiten')
+            ->where(
+                'habits.0.rhythm',
+                fn (Collection $rhythm): bool => $rhythm
+                    ->every(fn (array $day): bool => $day['scheduled'] === false),
+            )
+            ->etc());
+
+    expect($habit->id)->toBeInt();
 });

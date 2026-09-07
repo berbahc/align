@@ -118,6 +118,13 @@ export function RhythmLegend({ className }: { className?: string }) {
                     {MARK_LABEL[state]}
                 </span>
             ))}
+            {/* Dass sich die Marken anfassen lassen, sieht man ihnen nicht an:
+                Sie sind klein, still und standen sieben Versionen lang nur da.
+                Ein Satz an der Stelle, an der ohnehin erklärt wird, was sie
+                bedeuten — nicht als Anleitung, sondern als Angebot. */}
+            <span className="basis-full">
+                Einen Tag antippen trägt ihn nach.
+            </span>
         </p>
     );
 }

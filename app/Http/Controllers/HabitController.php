@@ -149,6 +149,14 @@ class HabitController extends Controller
             ])
             ->values();
 
+        // Ohne geladenen Nutzer antwortet {@see Habit::hasTriggerOn()} mit
+        // „ja" — sie kommt an keinen Stundenplan und darf dann nichts
+        // behaupten. Für „nach der Vorlesung" hieß das: Der Streifen zeigte
+        // sieben offene Tage in einer Woche ganz ohne Vorlesung, während
+        // dieselbe Gewohnheit auf der Übersicht zu Recht gar nicht anstand.
+        // Zwei Seiten, zwei Antworten über dieselbe Woche.
+        $habits->each(fn (Habit $habit) => $habit->setRelation('user', $request->user()));
+
         // Die Zahl trägt das Archiv: sie beziffert, was ein endgültiges Löschen
         // kosten würde, und macht aus der Rückfrage mehr als eine Formalie.
         $graduated = $request->user()
@@ -278,7 +286,7 @@ class HabitController extends Controller
             // nicht erst als Absage hinter dem letzten Schritt.
             'activeCount' => $request->user()->habits()->active()->count(),
             'maxActive' => Habit::MaxActivePerUser,
-            'categories' => HabitCategory::options(),
+            'categories' => HabitCategory::options(Habit::takenTemplatesFor($request->user())),
             // Nur gesetzt, wenn der Weg aus einer Anfrage oder einer Absage
             // kommt. Der Assistent überspringt dann die Wahl aus dem Katalog.
             'adoption' => $this->adoption($request),

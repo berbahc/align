@@ -6,7 +6,7 @@ import {
     CHOICE_TILE_ON,
     QUIET_LINK,
 } from '@/lib/interaction';
-import { formatWindow, outsideSleepWindow } from '@/lib/sleep';
+import { asleepWeekdays, formatWindow, outsideSleepWindow } from '@/lib/sleep';
 import { findConflict, nextFreeTime } from '@/lib/slots';
 import { cn } from '@/lib/utils';
 import type {
@@ -34,6 +34,27 @@ const WEEKDAYS: { value: Weekday; label: string; full: string }[] = [
     { value: 6, label: 'Sa', full: 'Samstag' },
     { value: 7, label: 'So', full: 'Sonntag' },
 ];
+
+/**
+ * Die vollen Namen einiger Tage als Aufzählung — „Samstag und Sonntag".
+ *
+ * Voll ausgeschrieben und nicht „Sa, So": Der Satz daneben nennt den Tag auch
+ * ausgeschrieben, und ein Knopf, der etwas abwählt, sollte klar sagen, was.
+ */
+function namesOf(days: Weekday[]): string {
+    const names = [...days]
+        .sort((a, b) => a - b)
+        .map(
+            (day) =>
+                WEEKDAYS.find((candidate) => candidate.value === day)!.full,
+        );
+
+    if (names.length <= 1) {
+        return names[0] ?? '';
+    }
+
+    return `${names.slice(0, -1).join(', ')} und ${names.at(-1)}`;
+}
 
 /**
  * Wochentage als lesbare Aufzählung, zusammenhängende Läufe gerafft.
@@ -364,6 +385,12 @@ export function SchedulePicker({
     // ohnehin ab — die Oberfläche sagt es vorher, mit demselben Ergebnis.
     const asleep = outsideSleepWindow(time, days, sleepWindows);
 
+    // Und alle betroffenen Tage, für den Ausweg daneben. Er wird nur
+    // angeboten, wenn danach noch ein Tag übrig bleibt: Alles abzuwählen ist
+    // keine Lösung, sondern eine Gewohnheit ohne Tag.
+    const asleepDays = asleepWeekdays(time, days, sleepWindows);
+    const daysLeft = days.filter((day) => !asleepDays.includes(day));
+
     return (
         <div className="flex flex-col gap-4">
             {/* Kacheln statt einer Tab-Leiste: Drei Formen nebeneinander sind
@@ -532,6 +559,28 @@ export function SchedulePicker({
                                     )?.full
                                 }{' '}
                                 geht dein Tag von {formatWindow(asleep)} Uhr.
+                                {/* Der Ausweg steht neben der Absage, nicht
+                                    dahinter — wie „Frei ist es ab 08:15" beim
+                                    Überschneidungshinweis. Der Satz allein
+                                    erklärte zwar, ließ aber jemanden vor einem
+                                    gesperrten „Weiter" stehen und selbst
+                                    herausfinden, welcher Kreis daran schuld
+                                    ist. */}
+                                {daysLeft.length > 0 && (
+                                    <>
+                                        {' '}
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                onDaysChange(daysLeft)
+                                            }
+                                            className={QUIET_LINK}
+                                        >
+                                            {namesOf(asleepDays)} abwählen
+                                        </button>
+                                        .
+                                    </>
+                                )}
                             </span>
                         </p>
                     )}

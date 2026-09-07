@@ -29,9 +29,16 @@ enum HabitCategory: string
      * Die Kategorien samt ihrer Vorlagen — die eine Quelle des Katalogs für
      * die Oberfläche.
      *
-     * @return list<array{value: string, label: string, templates: list<array{key: string, title: string, defaultMinutes: int}>}>
+     * `$taken` sind die Vorlagen, die bei dieser Person schon laufen. Sie
+     * bleiben in der Liste und werden nur als vergeben ausgewiesen — dieselbe
+     * Behandlung wie eine belegte Situation in {@see Habit::situationChoicesFor()}:
+     * Was es gibt, verschwindet nicht, es ist nur keine Wahl mehr. Verstecken
+     * hieße, jemanden suchen zu lassen, was er gestern noch gesehen hat.
+     *
+     * @param  list<string>  $taken
+     * @return list<array{value: string, label: string, templates: list<array{key: string, title: string, defaultMinutes: int, taken: bool}>}>
      */
-    public static function options(): array
+    public static function options(array $taken = []): array
     {
         return array_map(fn (self $category): array => [
             'value' => $category->value,
@@ -40,6 +47,7 @@ enum HabitCategory: string
                 'key' => $template->value,
                 'title' => $template->title(),
                 'defaultMinutes' => $template->defaultMinutes(),
+                'taken' => in_array($template->value, $taken, strict: true),
             ], $category->templates()),
         ], self::cases());
     }

@@ -272,6 +272,32 @@ class Habit extends Model
     }
 
     /**
+     * Welche Vorlagen bei dieser Person schon laufen.
+     *
+     * Gegenstück zu {@see situationChoicesFor()} und aus demselben Grund an
+     * einer Stelle: Der Katalog weist sie als vergeben aus,
+     * {@see StoreHabitRequest} weist sie ab. Liefen beide auseinander, böte der
+     * Assistent etwas an, das beim Speichern scheitert.
+     *
+     * Nur aktive: Eine beendete Gewohnheit belegt keinen Platz im Tag.
+     *
+     * @return list<string>
+     */
+    public static function takenTemplatesFor(User $user): array
+    {
+        /** @var list<string> $keys */
+        $keys = $user->habits()
+            ->active()
+            ->whereNotNull('template_key')
+            ->pluck('template_key')
+            ->unique()
+            ->values()
+            ->all();
+
+        return $keys;
+    }
+
+    /**
      * Welche Situationen ueberhaupt zur Wahl stehen.
      *
      * Die Regel dahinter ist der Grund, warum es nur noch drei sind: Eine

@@ -184,8 +184,20 @@ test('a graduated habit frees a slot', function () {
 
     // Die vier hängen an Uhrzeiten, nicht an Momenten: Es gibt nur noch drei
     // Situationen, und der Test braucht genau eine davon frei.
+    //
+    // Feste Vorlagen, damit „Meditieren" unten frei bleibt: Eine Vorlage trägt
+    // eine laufende Gewohnheit, und dieser Test fragt nach dem Platz, nicht
+    // nach dem Katalog.
+    $vorlagen = [
+        HabitTemplate::Joggen,
+        HabitTemplate::Spazieren,
+        HabitTemplate::Karteikarten,
+        HabitTemplate::Aufraeumen,
+    ];
+
     foreach ([9, 11, 13, 15] as $index => $hour) {
         Habit::factory()->for($user)
+            ->fromTemplate($vorlagen[$index])
             ->fixedSchedule(sprintf('%02d:00', $hour), [1, 2, 3, 4, 5, 6, 7])
             ->withMeasure(30)
             ->create(['position' => $index]);
@@ -193,12 +205,13 @@ test('a graduated habit frees a slot', function () {
 
     // Die beendete Gewohnheit gibt ihren Moment mit frei — sie zählt weder
     // gegen die fünf Plätze noch gegen die Belegung.
-    $graduated = Habit::factory()->for($user)->graduated()->create([
-        'schedule_type' => ScheduleType::Dynamic,
-        'trigger_situation' => 'vor dem Schlafengehen',
-        'scheduled_time' => null,
-        'scheduled_days' => null,
-    ]);
+    $graduated = Habit::factory()->for($user)->fromTemplate(HabitTemplate::Meditieren)
+        ->graduated()->create([
+            'schedule_type' => ScheduleType::Dynamic,
+            'trigger_situation' => 'vor dem Schlafengehen',
+            'scheduled_time' => null,
+            'scheduled_days' => null,
+        ]);
 
     $this->actingAs($user)
         ->post(route('habits.store'), [

@@ -357,6 +357,26 @@ export function HabitWizard({
                             const isSelected =
                                 data.template_key === candidate.key;
 
+                            // Was schon läuft, ist keine Wahl: Zwei
+                            // gleichnamige Gewohnheiten lassen sich im
+                            // Kalender nicht auseinanderhalten. Die Zeile
+                            // bleibt trotzdem stehen — dieselbe Behandlung
+                            // wie eine vergebene Situation (§16), ohne
+                            // Kante, damit sie nicht wie ein Angebot aussieht.
+                            if (candidate.taken) {
+                                return (
+                                    <div
+                                        key={candidate.key}
+                                        className="flex items-baseline justify-between gap-3 px-4 py-2 text-[15px] text-muted-foreground/70"
+                                    >
+                                        <span>{candidate.title}</span>
+                                        <span className="shrink-0 text-xs">
+                                            läuft schon
+                                        </span>
+                                    </div>
+                                );
+                            }
+
                             return (
                                 <button
                                     key={candidate.key}

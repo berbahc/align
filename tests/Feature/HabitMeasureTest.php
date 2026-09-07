@@ -4,6 +4,7 @@ use App\Enums\HabitTemplate;
 use App\Enums\MeasureUnit;
 use App\Models\Habit;
 use App\Models\User;
+use Illuminate\Support\Collection;
 use Inertia\Testing\AssertableInertia as Assert;
 
 /**
@@ -113,6 +114,9 @@ test('the create page ships the catalog and the duration limits', function () {
                 ->has('key')
                 ->has('title')
                 ->has('defaultMinutes')
+                // Ob sie schon läuft: Der Assistent zeigt sie dann als
+                // vergeben, statt sie ein zweites Mal anzubieten.
+                ->has('taken')
             )
             // Schrittweite und Grenzen kommen vom Server, damit der Stepper
             // mit der Validierung deckungsgleich bleibt.
@@ -149,4 +153,66 @@ test('the duration can be changed later', function () {
         ->assertSessionHasNoErrors();
 
     expect($habit->refresh()->measureLabel())->toBe('35 Min');
+});
+
+/**
+ * Eine Vorlage trägt eine laufende Gewohnheit.
+ *
+ * Zwei „Joggen gehen" sind im Kalender nicht auseinanderzuhalten: gleicher
+ * Titel, gleiches Zeichen, gleicher Streifen — und sie ließen sich sogar
+ * aneinanderhängen. Der Katalog weist sie deshalb als vergeben aus, und das
+ * Formular weist sie ab; beides aus derselben Quelle, sonst böte der Assistent
+ * etwas an, das beim Speichern scheitert.
+ */
+test('a template that already runs cannot be taken twice', function () {
+    $user = User::factory()->create();
+    Habit::factory()->for($user)->fromTemplate(HabitTemplate::Joggen)
+        ->fixedSchedule('07:30')->withMeasure(30)->create();
+
+    $this->actingAs($user)
+        ->post(route('habits.store'), [
+            'template_key' => HabitTemplate::Joggen->value,
+            'target_amount' => 30,
+            'trigger_situation' => 'nach dem Aufstehen',
+        ])
+        ->assertSessionHasErrors([
+            'template_key' => '„Joggen gehen" läuft schon bei dir. Zweimal dieselbe Gewohnheit lässt sich im Kalender nicht auseinanderhalten — pass lieber die bestehende an.',
+        ]);
+
+    expect($user->habits()->count())->toBe(1);
+});
+
+test('the catalog marks a running habit as taken', function () {
+    $user = User::factory()->create();
+    Habit::factory()->for($user)->fromTemplate(HabitTemplate::Joggen)
+        ->fixedSchedule('07:30')->withMeasure(30)->create();
+
+    $this->actingAs($user)
+        ->get(route('habits.create'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('categories', fn (Collection $categories): bool => $categories
+                ->flatMap(fn (array $category): array => $category['templates'])
+                ->contains(fn (array $template): bool => $template['key'] === HabitTemplate::Joggen->value
+                    && $template['taken'] === true))
+            ->etc());
+});
+
+/**
+ * Eine beendete Gewohnheit belegt keinen Platz im Tag — sie steht im Archiv.
+ * Wer neu anfangen will, darf das; der andere Weg heißt „Wiederaufnehmen".
+ */
+test('a graduated habit leaves its template free again', function () {
+    $user = User::factory()->create();
+    Habit::factory()->for($user)->fromTemplate(HabitTemplate::Joggen)
+        ->fixedSchedule('07:30')->withMeasure(30)->graduated()->create();
+
+    $this->actingAs($user)
+        ->post(route('habits.store'), [
+            'template_key' => HabitTemplate::Joggen->value,
+            'target_amount' => 30,
+            'trigger_situation' => 'nach dem Aufstehen',
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect($user->habits()->active()->count())->toBe(1);
 });
