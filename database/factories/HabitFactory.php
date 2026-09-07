@@ -30,11 +30,11 @@ class HabitFactory extends Factory
      * Setzt die Vergabe zurück — je Test, aufgerufen in `tests/Pest.php`.
      *
      * Ohne das liefe der Zähler über die ganze Suite weiter, und welcher
-     * Moment eine Gewohnheit trifft, hinge davon ab, wie viele Tests vorher
-     * liefen. Ein Test, dessen Daten von seiner Position abhängen, ist kein
-     * Test.
+     * Moment und welche Vorlage eine Gewohnheit trifft, hinge davon ab, wie
+     * viele Tests vorher liefen. Ein Test, dessen Daten von seiner Position
+     * abhängen, ist kein Test.
      */
-    public static function resetSituations(): void
+    public static function resetRotation(): void
     {
         self::$created = 0;
     }
@@ -44,9 +44,6 @@ class HabitFactory extends Factory
      */
     public function definition(): array
     {
-        /** @var HabitTemplate $template */
-        $template = fake()->randomElement(HabitTemplate::cases());
-
         // Es gibt nur noch drei Situationen, und jede traegt genau eine
         // Gewohnheit. Wer mehr als drei erzeugt — die Fuenfergrenze etwa —
         // bekommt danach feste Uhrzeiten, sonst legte die Fabrik einen Moment
@@ -54,6 +51,20 @@ class HabitFactory extends Factory
         $situations = array_keys(Habit::TriggerSuggestions);
         $index = self::$created++;
         $situation = $situations[$index] ?? null;
+
+        // Die Vorlage lief reihum genauso wenig wie der Moment: Sie wurde
+        // **gewürfelt**. Seit eine Vorlage nur noch eine laufende Gewohnheit
+        // traegt, hiess das ein Test, der mal grün und mal rot ist — traf der
+        // Würfel zufaellig die Vorlage, die der Test gleich selbst anlegt,
+        // wies das Formular sie ab. Bei neunzehn Vorlagen ist das jeder
+        // zwanzigste Lauf, und ein Test, der von einem Würfel abhaengt, prueft
+        // nichts.
+        //
+        // Derselbe Zaehler wie beim Moment: Die ersten neunzehn Gewohnheiten
+        // eines Tests bekommen verschiedene Vorlagen, und welche es sind,
+        // steht fest.
+        $templates = HabitTemplate::cases();
+        $template = $templates[$index % count($templates)];
 
         return [
             'user_id' => User::factory(),

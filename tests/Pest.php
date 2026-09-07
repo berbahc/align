@@ -33,7 +33,7 @@ pest()->extend(TestCase::class)
         // Die Factory vergibt Situationen reihum; ohne diesen Reset hinge es
         // von der Zahl der vorherigen Tests ab, welchen Moment eine
         // Gewohnheit bekommt.
-        HabitFactory::resetSituations();
+        HabitFactory::resetRotation();
     })
     ->in('Feature');
 
