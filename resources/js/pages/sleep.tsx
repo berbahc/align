@@ -57,6 +57,8 @@ interface SleepProps {
     windows: SleepWindow[];
     bedtimeReminderEnabled: boolean;
     reminderLeadMinutes: number;
+    /** Der Tag, mit dem der Editor aufgeht — vom Kalender mitgegeben. */
+    selectedWeekday: Weekday | null;
 }
 
 /**
@@ -71,6 +73,7 @@ export default function Sleep({
     windows,
     bedtimeReminderEnabled,
     reminderLeadMinutes,
+    selectedWeekday,
 }: SleepProps) {
     const { data, setData, put, transform, processing, errors, isDirty } =
         useForm({
@@ -89,8 +92,13 @@ export default function Sleep({
      * Nie keiner: Der Editor ist die eine Stelle, an der Zeiten geändert
      * werden, und ein leerer Platz daneben wäre eine Lücke ohne Grund. Montag
      * ist der Anfang der Woche und damit der Anfang des Plans.
+     *
+     * Es sei denn, jemand kommt mit einem Tag im Sinn: Die Aufsteh- und
+     * Schlafensmarken im Kalender führen hierher und nennen den Tag, auf dem
+     * man gerade stand. Ohne das landete man beim Montag und müsste den Tag
+     * suchen, den man eben noch vor sich hatte.
      */
-    const [selected, setSelected] = useState<Weekday>(1);
+    const [selected, setSelected] = useState<Weekday>(selectedWeekday ?? 1);
 
     function updateDay(weekday: Weekday, patch: Partial<SleepDayForm>) {
         setData(

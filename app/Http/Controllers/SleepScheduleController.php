@@ -29,7 +29,26 @@ class SleepScheduleController extends Controller
             'windows' => array_values($request->user()->sleepWindows()),
             'bedtimeReminderEnabled' => $request->user()->bedtime_reminder_enabled,
             'reminderLeadMinutes' => SleepSchedule::BedtimeReminderLeadMinutes,
+            // Mit welchem Tag der Editor aufgeht. Der Kalender schickt ihn mit:
+            // Wer im Tag auf die Aufsteh-Marke tippt, meint diesen Tag und
+            // nicht den Montag. Ohne Angabe bleibt es beim Montag — der Anfang
+            // der Woche ist der Anfang des Plans.
+            'selectedWeekday' => $this->requestedWeekday($request),
         ]);
+    }
+
+    /**
+     * Der Wochentag aus der Adresse — oder nichts.
+     *
+     * Geprüft und nicht durchgereicht: `?weekday=99` würde sonst einen Editor
+     * ohne Tag ergeben. Was nicht zwischen 1 und 7 liegt, gilt als nicht
+     * gefragt.
+     */
+    private function requestedWeekday(Request $request): ?int
+    {
+        $weekday = $request->integer('weekday');
+
+        return $weekday >= 1 && $weekday <= 7 ? $weekday : null;
     }
 
     /**
