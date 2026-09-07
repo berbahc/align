@@ -616,8 +616,12 @@ test('a habit needs a quarter hour of air next to another habit', function () {
     Carbon::setTestNow(Carbon::parse('2026-08-05'));
 
     $user = User::factory()->create();
-    Habit::factory()->for($user)->fixedSchedule('14:00', [1])->withMeasure(30)
-        ->create(['title' => 'Essen vorkochen']);
+    // Vorlage statt bloßem Titel: Die Factory vergibt ihre Vorlagen reihum, und
+    // ein überschriebener Titel ändert daran nichts — die Gewohnheit hieß
+    // „Essen vorkochen" und war innen „Lesen", also genau das, was unten
+    // angelegt werden soll. Eine Vorlage trägt eine laufende Gewohnheit.
+    Habit::factory()->for($user)->fromTemplate(HabitTemplate::EssenVorkochen)
+        ->fixedSchedule('14:00', [1])->withMeasure(30)->create();
 
     $this->actingAs($user)
         ->post(route('habits.store'), fixedHabitPayload('14:30', [1]))
