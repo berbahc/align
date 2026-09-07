@@ -182,10 +182,10 @@ export default function Sleep({
     /**
      * Wie lange die Woche Schlaf lässt, als ein Satz.
      *
-     * Die Seite heißt „Schlaf & Rhythmus" und nannte bisher nur Uhrzeiten. Wie
-     * viel Schlaf dabei herauskommt, stand nirgends, obwohl es die eine Zahl
-     * ist, um die es hier geht. Sind alle Tage gleich, ist es eine Zahl; sonst
-     * eine Spanne, und die ist der Rhythmus, den der Titel verspricht.
+     * Die Seite nannte lange nur Uhrzeiten. Wie viel Schlaf dabei herauskommt,
+     * stand nirgends, obwohl es die eine Zahl ist, um die es hier geht. Sind
+     * alle Tage gleich, ist es eine Zahl; sonst eine Spanne, und die sagt mehr
+     * über die Woche als jede einzelne Uhrzeit.
      */
     const durations = data.days.map((day) =>
         sleepMinutes(day.wake_time, day.bedtime),
@@ -205,14 +205,24 @@ export default function Sleep({
 
     return (
         <>
-            <Head title="Schlaf" />
+            <Head title="Schlafplan" />
 
             <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 sm:p-6">
                 <header>
                     {/* Den Titel zeigt auf dem Telefon schon die Leiste oben.
-                        Der Satz darunter ist neu und gilt überall. */}
+                        Der Satz darunter ist neu und gilt überall.
+
+                        „Schlafplan" und nicht „Schlaf & Rhythmus": Die Seite
+                        misst nichts und zeigt kein Muster, sie stellt einen
+                        Plan — sieben Wochentage mit Aufstehen, Schlafenszeit
+                        und Wecker. „Rhythmus" versprach eine Beobachtung, die
+                        es hier nicht gibt. Und es ist derselbe Name, den die
+                        Seitenleiste, der Tab, der Knopf unten und jeder
+                        Verweis aus dem Kalender tragen: Eine Seite, die sich
+                        an fünf Stellen anders nennt, ist an vier davon eine
+                        andere Seite. */}
                     <h1 className="type-title text-primary max-md:hidden">
-                        Schlaf & Rhythmus
+                        Schlafplan
                     </h1>
 
                     {shortest !== undefined && longest !== undefined && (
@@ -486,6 +496,6 @@ export default function Sleep({
 Sleep.layout = {
     breadcrumbs: [
         { title: 'Übersicht', href: dashboard() },
-        { title: 'Schlaf', href: '' },
+        { title: 'Schlafplan', href: '' },
     ],
 };

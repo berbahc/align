@@ -24,7 +24,7 @@ import type { NavItem } from '@/types';
 // ein, mit Belegen: 20 von 25 Befragten planen ohnehin mit einem Kalender
 // oder Planer.
 //
-// „Schlaf" ist der fünfte und kommt aus dem Rahmen-Feature: Aufstehen und
+// „Schlafplan" ist der fünfte und kommt aus dem Rahmen-Feature: Aufstehen und
 // Schlafenszeit begrenzen, wann Gewohnheiten überhaupt Platz haben. Er steht
 // hinter dem Kalender, weil er dieselbe Frage von der anderen Seite stellt —
 // nicht „was steht an", sondern „wie lang ist der Tag".
@@ -49,7 +49,7 @@ export const mainNavItems: NavItem[] = [
         icon: CalendarDays,
     },
     {
-        title: 'Schlaf',
+        title: 'Schlafplan',
         href: sleepShow(),
         icon: Moon,
     },
