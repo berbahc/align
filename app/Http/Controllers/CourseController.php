@@ -9,6 +9,7 @@ use App\Http\Requests\UpdateCourseRequest;
 use App\Models\Course;
 use App\Models\Habit;
 use App\Support\DayPlan;
+use Carbon\CarbonInterface;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -133,15 +134,19 @@ class CourseController extends Controller
         // „braucht **jetzt** einen neuen Platz" und verwies auf eine Liste, in
         // der bis dahin nichts steht. Wer im September seinen Stundenplan
         // einträgt, suchte dort vergeblich.
+        // `CarbonInterface` und nicht `Carbon`: Je nachdem, woher die Zeile
+        // kommt, liegt im Cast eine unveränderliche Instanz — und eine
+        // Rückgabe-Angabe, die das nicht kennt, lässt das Anlegen eines Kurses
+        // mit einem TypeError enden, nachdem er längst geschrieben ist.
         $from = collect($displaced)
-            ->map(fn (Habit $habit): ?Carbon => $habit->displaced_at)
+            ->map(fn (Habit $habit): ?CarbonInterface => $habit->displaced_at)
             ->filter()
             ->min();
 
         Inertia::flash('coursePlaced', [
             'title' => $course,
-            'displacedFrom' => $from instanceof Carbon && $from->greaterThan(Carbon::today())
-                ? $from->isoFormat('D. MMMM')
+            'displacedFrom' => $from instanceof CarbonInterface && $from->greaterThan(Carbon::today())
+                ? $from->settings(['locale' => 'de'])->isoFormat('D. MMMM')
                 : null,
             'displaced' => array_map(fn (Habit $habit): array => [
                 'id' => $habit->id,

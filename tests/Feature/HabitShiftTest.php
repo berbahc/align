@@ -621,3 +621,58 @@ test('an appointment shift refuses when the chain would land in a lecture', func
         ->and($anchor->dayShifts()->count())->toBe(0)
         ->and($follower->fresh()->dayShifts()->count())->toBe(0);
 });
+
+/**
+ * Ein Kurs, der erst mit der Vorlesungszeit beginnt, blockt die Zeit trotzdem.
+ *
+ * Geprüft wurde einmal nur das **nächste** Vorkommen eines Wochentags — der
+ * nächste Mittwoch also, nicht der erste im Semester. Ein Kurs, der im Oktober
+ * anfängt, lag damit außerhalb des Blickfelds: Die Gewohnheit rutschte
+ * anstandslos auf zehn Uhr und stand ab Semesterbeginn neben der Vorlesung im
+ * Raster, als wäre dort Platz für beides.
+ *
+ * Und weil ein Kurs nicht rückt, trägt die Absage den Tag mit: Dorthin zu
+ * kommen soll kein Blättern über Wochen sein.
+ */
+test('a permanent move is blocked by a course that only starts with the semester', function () {
+    $user = User::factory()->create();
+
+    // Das Semester beginnt an einem Montag weit in der Zukunft.
+    $start = Carbon::today()->addWeeks(5)->next(Carbon::MONDAY);
+    $semester = Semester::factory()->for($user)->create([
+        'starts_on' => $start,
+        'ends_on' => $start->copy()->addMonths(4),
+    ]);
+
+    $mittwoch = $start->copy()->next(Carbon::WEDNESDAY);
+
+    Course::factory()->create([
+        'semester_id' => $semester->id,
+        'title' => 'Statistik I',
+        'weekday' => 3,
+        'starts_at' => '10:00',
+        'ends_at' => '11:30',
+    ]);
+
+    $habit = Habit::factory()->for($user)->fixedSchedule('07:30', [3])
+        ->withMeasure(20)->create(['title' => 'Lesen']);
+
+    $antwort = $this->actingAs($user)
+        ->put(route('habits.shifts.move', $habit), [
+            'date' => Carbon::today()->toDateString(),
+            'start_minute' => 10 * 60,
+            'scope' => 'always',
+        ])
+        ->assertSessionHasErrors('start_minute');
+
+    // Der Tag reist mit — er ist bei einem Kurs der einzige Weg weiter.
+    expect(session('errors')->first('start_minute'))
+        ->toContain('Statistik I')
+        ->toContain('der Kurs rückt nicht')
+        ->and(session('errors')->first('conflict_date'))->toBe($mittwoch->toDateString());
+
+    // Und die Gewohnheit liegt noch, wo sie lag.
+    expect($habit->fresh()->scheduled_time->format('H:i'))->toBe('07:30');
+
+    expect($antwort)->not->toBeNull();
+});

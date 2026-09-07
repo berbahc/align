@@ -486,3 +486,42 @@ test('a parked situation habit comes back on its own once the course is gone', f
 
     expect($habit->fresh()->displaced_at)->toBeNull();
 });
+
+/**
+ * Ein Kurs im noch nicht begonnenen Semester lässt sich anlegen.
+ *
+ * Die Meldung nennt seit Kurzem den Tag, ab dem der Platz weg ist — und holte
+ * ihn über eine Closure, die `?Carbon` versprach. `DisplaceHabits::effectiveFrom()`
+ * gibt aber zweierlei zurück: `now()`, solange das Semester läuft, und
+ * `starts_on->startOfDay()`, wenn es erst beginnt — und das ist eine
+ * unveränderliche Instanz. Wer im September seinen Stundenplan eintrug, bekam
+ * deshalb einen TypeError, **nachdem** der Kurs geschrieben war: Beim nächsten
+ * Aufschlagen stand er da, die Meldung dazu nie.
+ *
+ * Die Tests trafen den Fall nie, weil ihre Semester schon liefen.
+ */
+test('a course in a semester that has not started yet can be created', function () {
+    $user = User::factory()->create();
+    $start = Carbon::today()->addWeeks(4)->next(Carbon::MONDAY);
+
+    Semester::factory()->for($user)->create([
+        'starts_on' => $start,
+        'ends_on' => $start->copy()->addMonths(4),
+    ]);
+
+    Habit::factory()->for($user)->fixedSchedule('10:15', [1])->withMeasure(30)
+        ->create(['title' => 'Vorlesung nachbereiten']);
+
+    $this->actingAs($user)
+        ->post(route('calendar.semester.courses.store'), [
+            'title' => 'Mathe 1',
+            'kind' => CourseKind::Vorlesung->value,
+            'weekday' => 1,
+            'starts_at' => '10:00',
+            'ends_at' => '11:30',
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect();
+
+    expect($user->habits()->sole()->displaced_at?->toDateString())->toBe($start->toDateString());
+});

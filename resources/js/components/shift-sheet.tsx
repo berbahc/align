@@ -1,3 +1,4 @@
+import { Link } from '@inertiajs/react';
 import {
     Sheet,
     SheetContent,
@@ -11,8 +12,24 @@ import {
     BOTTOM_SHEET,
     OUTLINE_BUTTON,
     PRIMARY_BUTTON,
+    QUIET_LINK,
 } from '@/lib/interaction';
+import { day as calendarDay } from '@/routes/calendar';
 import type { CalendarBlock } from '@/types';
+
+/**
+ * „Montag, 13. Oktober" — der Tag, an dem es klemmt.
+ *
+ * Ausgeschrieben und nicht „2026-10-13": Der Satz daneben spricht von einem
+ * Kurs und einer Uhrzeit, nicht von einem Datensatz.
+ */
+function dayLabel(date: string): string {
+    return new Date(`${date}T00:00:00`).toLocaleDateString('de-DE', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+    });
+}
 
 const ACTION_BUTTON =
     'inline-flex h-12 flex-1 items-center justify-center rounded-xl px-4 text-[15px] font-semibold disabled:pointer-events-none disabled:opacity-50';
@@ -42,6 +59,7 @@ export function ShiftSheet({
     followers,
     conflict,
     error,
+    conflictDate,
     onOpenChange,
     onConfirm,
 }: {
@@ -60,6 +78,15 @@ export function ShiftSheet({
     conflict: BlockConflict | null;
     /** Was der Server abgewiesen hat, nachdem geklickt wurde. */
     error: string | null;
+    /**
+     * Der Tag, an dem es klemmt — „2026-10-13", oder `null`.
+     *
+     * Steht er da, führt ein Weg dorthin. Bei einem Kurs ist er der einzige:
+     * Der rückt nicht, also braucht die Gewohnheit an diesem Tag eine andere
+     * Zeit — und der Tag liegt oft Wochen entfernt, weil das Semester erst
+     * beginnt.
+     */
+    conflictDate: string | null;
     onOpenChange: (open: boolean) => void;
     onConfirm: (scope: 'today' | 'always') => void;
 }) {
@@ -137,12 +164,25 @@ export function ShiftSheet({
                 )}
 
                 {error !== null && (
-                    <p
+                    <div
                         role="alert"
-                        className="mt-4 rounded-[14px] border border-primary/25 bg-accent px-4 py-3 text-sm leading-relaxed"
+                        className="mt-4 flex flex-col items-start gap-2 rounded-[14px] border border-primary/25 bg-accent px-4 py-3 text-sm leading-relaxed"
                     >
-                        {error}
-                    </p>
+                        <p>{error}</p>
+                        {/* Der Weg zum Tag, an dem es klemmt. Er steht **in**
+                            der Absage, weil er ihre Fortsetzung ist: Wer hört,
+                            dass es dort nicht geht, will als Nächstes dorthin.
+                            Ohne ihn müsste man Wochen weit blättern — der
+                            Konflikt beginnt oft erst mit der Vorlesungszeit. */}
+                        {conflictDate !== null && (
+                            <Link
+                                href={calendarDay(conflictDate)}
+                                className={QUIET_LINK}
+                            >
+                                Zum {dayLabel(conflictDate)} springen
+                            </Link>
+                        )}
+                    </div>
                 )}
 
                 <div className="mt-5 flex gap-3">

@@ -159,6 +159,13 @@ class HabitDayShiftController extends Controller
      * Geprüft wird jeder Wochentag, an dem die Gewohnheit künftig läuft — das
      * ist der Fall „vielleicht liegt da in der Zukunft schon etwas".
      *
+     * **Und zwar nicht nur nächste Woche.** Geprüft wurde einmal allein der
+     * nächste Montag; ein Kurs, der erst mit der Vorlesungszeit beginnt, lag
+     * damit außerhalb des Blickfelds. Die Gewohnheit rutschte anstandslos auf
+     * zehn Uhr und stand ab Oktober neben der Vorlesung im Raster, als wäre
+     * dort Platz für beides. {@see SlotConflict::datesFor()} nimmt deshalb je
+     * Wochentag zwei Daten: das nächste Vorkommen und das erste im Semester.
+     *
      * Die Tage bleiben, wie sie waren; eine Gewohnheit ohne eigene Tage läuft
      * täglich. Dieselbe Regel wie in {@see DayOrderController::store()}, und
      * aus demselben Grund: Umgeordnet wird der Tag, nicht die Woche.
@@ -167,8 +174,8 @@ class HabitDayShiftController extends Controller
     {
         $days = $habit->activeWeekdays() ?: Habit::EveryDay;
 
-        foreach ($days as $weekday) {
-            $this->guard($user, $habit, SlotConflict::nextWeekday($weekday), $start);
+        foreach (SlotConflict::datesFor($days, $this->timetable($user)) as $date) {
+            $this->guard($user, $habit, $date, $start);
         }
 
         $habit->update([
@@ -234,6 +241,8 @@ class HabitDayShiftController extends Controller
             $conflict = $plan->collisionWith($span['from'], $span['to']);
 
             if ($conflict !== null) {
+                $istKurs = Timetable::isCourseBlock($conflict);
+
                 // Derselbe Satz wie überall sonst — nur das Ende ist hier ein
                 // anderes, weil es um eine dauerhafte Uhrzeit geht. Ein Kurs
                 // lässt sich nicht wegschieben; der Satz bietet das nicht an.
@@ -241,10 +250,17 @@ class HabitDayShiftController extends Controller
                     'start_minute' => SlotConflict::message(
                         $conflict,
                         $date,
-                        Timetable::isCourseBlock($conflict)
+                        $istKurs
                             ? 'Such der Gewohnheit eine andere Zeit — der Kurs rückt nicht.'
                             : 'Verschiebe die zuerst, dann lässt sich die Zeit hier umstellen.',
                     ),
+                    // Der Tag, an dem es klemmt. Beim Kurs ist er der einzige
+                    // Weg weiter: Verschieben lässt er sich nicht, also muss
+                    // die Gewohnheit dort eine andere Zeit bekommen — und
+                    // dorthin zu kommen soll kein Suchen sein. Der Konflikt
+                    // liegt oft Wochen entfernt, weil das Semester erst
+                    // beginnt.
+                    'conflict_date' => $date->toDateString(),
                 ]);
             }
         }

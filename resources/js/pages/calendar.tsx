@@ -198,6 +198,29 @@ export default function Calendar({
                                                 : `${habit.previousTime} · bis ${habit.fromLabel}`}
                                         </span>
                                     )}
+                                    {/* Der Weg zum Tag, an dem der Kurs liegt.
+                                        Er steht neben der Gewohnheit, weil jede
+                                        an einem anderen Tag klemmen kann — und
+                                        er führt dorthin, nicht zum
+                                        Semesterbeginn: Liegt „Statistik"
+                                        mittwochs, zeigte der Montag davor einen
+                                        freien Tag und keine Ursache.
+
+                                        Neben der KI und nicht statt ihr: Ein
+                                        Kurs rückt nicht, also braucht die
+                                        Gewohnheit eine andere Zeit — vorschlagen
+                                        lassen oder selbst hinlegen sind zwei
+                                        gleich gute Wege dahin. */}
+                                    {habit.conflictDate !== null && (
+                                        <Link
+                                            href={calendarDay(
+                                                habit.conflictDate,
+                                            )}
+                                            className={`${QUIET_LINK} basis-full text-xs`}
+                                        >
+                                            Zum {habit.conflictLabel} springen
+                                        </Link>
+                                    )}
                                 </li>
                             ))}
                         </ul>

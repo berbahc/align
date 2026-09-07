@@ -293,26 +293,42 @@ class CalendarController extends Controller
      * Was der Stundenplan verdrängt hat — die Liste, um die es beim
      * Semesterwechsel eigentlich geht.
      *
-     * @return list<array{id: int, title: string, previousTime: string|null, previousLabel: string, from: string|null, fromLabel: string|null}>
+     * @return list<array{id: int, title: string, previousTime: string|null, previousLabel: string, from: string|null, fromLabel: string|null, conflictDate: string|null, conflictLabel: string|null}>
      */
     private function displaced(User $user): array
     {
+        $timetable = Timetable::for($user);
+
         return array_values($user->habits()
             ->active()
             ->displaced()
             ->orderBy('position')
             ->get()
-            ->map(fn (Habit $habit): array => [
-                'id' => $habit->id,
-                'title' => $habit->title,
-                'previousTime' => $habit->scheduled_time?->format('H:i'),
-                'previousLabel' => $habit->scheduleLabel(),
-                // Ab wann der Platz weg ist — null, wenn schon jetzt. Ein
-                // Kurs im Oktober wird im September angekündigt, nicht
-                // verschwiegen: So kommt die Änderung nicht über Nacht.
-                'from' => $habit->isDisplaced() ? null : $habit->displaced_at?->toDateString(),
-                'fromLabel' => $habit->isDisplaced() ? null : $habit->displaced_at?->settings(['locale' => 'de'])->isoFormat('D. MMMM'),
-            ])
+            ->map(function (Habit $habit) use ($user, $timetable): array {
+                $habit->setRelation('user', $user);
+                $tag = $this->firstConflictDate($habit, $timetable);
+
+                return [
+                    'id' => $habit->id,
+                    'title' => $habit->title,
+                    'previousTime' => $habit->scheduled_time?->format('H:i'),
+                    'previousLabel' => $habit->scheduleLabel(),
+                    // Ab wann der Platz weg ist — null, wenn schon jetzt. Ein
+                    // Kurs im Oktober wird im September angekündigt, nicht
+                    // verschwiegen: So kommt die Änderung nicht über Nacht.
+                    'from' => $habit->isDisplaced() ? null : $habit->displaced_at?->toDateString(),
+                    'fromLabel' => $habit->isDisplaced() ? null : $habit->displaced_at?->settings(['locale' => 'de'])->isoFormat('D. MMMM'),
+                    // Der Tag, an dem der Kurs den Platz wirklich nimmt — nicht der
+                    // Semesterbeginn. Liegt „Statistik" mittwochs und beginnt das
+                    // Semester an einem Montag, zeigte der Montag einen freien Tag
+                    // und keine Ursache. Ein Kurs rückt nicht; wer die Gewohnheit
+                    // selbst umlegen will, muss genau dorthin.
+                    'conflictDate' => $tag,
+                    'conflictLabel' => $tag === null
+                        ? null
+                        : Carbon::parse($tag)->settings(['locale' => 'de'])->isoFormat('dddd, D. MMMM'),
+                ];
+            })
             ->all());
     }
 
@@ -621,7 +637,7 @@ class CalendarController extends Controller
     {
         $start = $habit->scheduled_time;
 
-        if (! $habit->isDisplaced() || $start === null) {
+        if ($habit->displaced_at === null || $start === null) {
             return null;
         }
 
@@ -629,7 +645,11 @@ class CalendarController extends Controller
         $to = $from + ($habit->durationMinutes() ?? DayPlan::AssumedMinutes);
         $days = $habit->activeWeekdays() ?: Habit::EveryDay;
 
-        $day = Carbon::today();
+        // Gesucht wird ab dem Tag, an dem der Platz weg ist — nicht ab heute.
+        // Ein Kurs, der mit der Vorlesungszeit beginnt, liegt Wochen entfernt;
+        // von heute aus zwei Wochen weit zu suchen fand ihn nie und schickte
+        // niemanden irgendwohin.
+        $day = Carbon::parse($habit->displaced_at->toDateString())->max(Carbon::today());
 
         for ($step = 0; $step < 14; $step++, $day->addDay()) {
             if (! in_array($day->dayOfWeekIso, $days, strict: true)) {

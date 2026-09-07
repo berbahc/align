@@ -98,6 +98,16 @@ export interface DisplacedHabit {
     from: string | null;
     /** „1. Oktober" — fertig formatiert. */
     fromLabel: string | null;
+    /**
+     * „YYYY-MM-DD" — der erste Tag, an dem der Kurs den Platz wirklich nimmt.
+     *
+     * Nicht dasselbe wie `from`: Der Platz fällt mit dem Semesterbeginn weg,
+     * der Kurs liegt aber vielleicht erst am Mittwoch danach. Ein Kurs rückt
+     * nicht — wer die Gewohnheit selbst umlegen will, muss genau dorthin.
+     */
+    conflictDate: string | null;
+    /** „Donnerstag, 1. Oktober" — fertig formatiert. */
+    conflictLabel: string | null;
 }
 
 /** Ein neuer Platz, den die KI für eine verdrängte Gewohnheit gefunden hat. */

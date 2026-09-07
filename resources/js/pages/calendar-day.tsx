@@ -218,6 +218,15 @@ export default function CalendarDay({
     const [dropped, setDropped] = useState<BlockDrag | null>(null);
     /** Was der Server an der Verschiebung auszusetzen hatte. */
     const [shiftError, setShiftError] = useState<string | null>(null);
+    /**
+     * Der Tag, an dem es klemmt — als Weg dorthin.
+     *
+     * Bei einem Kurs ist er der einzige: Verschieben lässt er sich nicht, also
+     * braucht die Gewohnheit dort eine andere Zeit. Und er liegt oft Wochen
+     * entfernt, weil das Semester erst beginnt — von Hand hinzublättern wäre
+     * Arbeit, die die App schon getan hat.
+     */
+    const [conflictDate, setConflictDate] = useState<string | null>(null);
 
     /**
      * Der Vorschlag an seiner möglichen neuen Stelle.
@@ -363,12 +372,18 @@ export default function CalendarDay({
                 onSuccess: () => {
                     setDropped(null);
                     setShiftError(null);
+                    setConflictDate(null);
                 },
-                onError: (errors) =>
+                onError: (errors) => {
+                    // Gezielt und nicht „der erste Eintrag": Neben dem Satz
+                    // reist jetzt ein Datum mit, und das ist keine Meldung.
                     setShiftError(
-                        Object.values(errors)[0] ??
+                        errors.start_minute ??
+                            Object.values(errors)[0] ??
                             'Das ließ sich gerade nicht verschieben.',
-                    ),
+                    );
+                    setConflictDate(errors.conflict_date ?? null);
+                },
             },
         );
     }
@@ -685,6 +700,7 @@ export default function CalendarDay({
                         : null
                 }
                 error={shiftError}
+                conflictDate={conflictDate}
                 onOpenChange={(open) => {
                     if (!open) {
                         setDropped(null);
