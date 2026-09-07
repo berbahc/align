@@ -10,7 +10,7 @@ import { SectionHeading } from '@/components/section-heading';
 import { SleepCard } from '@/components/sleep-card';
 import type { SleepCardData } from '@/components/sleep-card';
 import { StartingHelpSheet } from '@/components/starting-help-sheet';
-import { StreakCard } from '@/components/streak-card';
+import { StreakCards } from '@/components/streak-card';
 import type { Streak } from '@/components/streak-card';
 import { Card, CardContent } from '@/components/ui/card';
 import { UpcomingAppointments } from '@/components/upcoming-appointments';
@@ -64,7 +64,8 @@ interface DashboardProps {
      */
     consistency: { done: number; scheduled: number } | null;
     /** Die stärkste laufende Serie; null unterhalb von Habit::StreakMinimum. */
-    streak: Streak | null;
+    /** Die laufenden Serien — höchstens drei, sonst leer. */
+    streaks: Streak[];
     /** Nur die heute vorgesehenen Gewohnheiten. */
     habits: Habit[];
     /** Alle aktiven — auch die, die heute nicht anstehen. */
@@ -85,7 +86,7 @@ export default function Dashboard({
     sleepCard,
     todayProgress,
     consistency,
-    streak,
+    streaks,
     habits,
     activeCount,
     maxActive,
@@ -402,9 +403,10 @@ export default function Dashboard({
                 )}
 
                 {/* Unter dem Tagesfortschritt: erst was heute gilt, dann was
-                    über den Tag hinausreicht. §5.4 lässt genau eine farbige
-                    Fläche zu — deshalb steht hier nur die stärkste Serie. */}
-                {streak !== null && <StreakCard streak={streak} />}
+                    über den Tag hinausreicht. Bis zu drei Serien — sie sind
+                    Milchglas und keine Farbfläche mehr, deshalb steht §5.4
+                    ihrer Mehrzahl nicht mehr entgegen. */}
+                {streaks.length > 0 && <StreakCards streaks={streaks} />}
 
                 <section aria-labelledby="heutige-gewohnheiten">
                     {/* Die Zeile unter dem Titel erklärt die Uhrspalte links:

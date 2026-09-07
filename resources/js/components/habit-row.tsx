@@ -292,7 +292,7 @@ export function HabitRow({
                                         'flex size-7 items-center justify-center rounded-full transition-[background-color,border-color] duration-[var(--duration-fluid)] ease-[var(--ease-fluid)]',
                                         isDone
                                             ? 'bg-primary'
-                                            : 'border-2 border-dashed border-sand',
+                                            : 'hollow border-2',
                                     )}
                                 >
                                     {/* §4 — Überschwingen nur da, wo etwas einrastet.

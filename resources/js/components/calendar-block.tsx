@@ -100,7 +100,9 @@ export function CalendarBlock({
                     block.exact
                         ? 'border-l-[3px] border-primary'
                         : 'border-l-[3px] border-dashed border-olive-mid',
-                    ghost && 'border-2 border-dashed border-primary bg-sand/40',
+                    // Die Mulde gibt dem Vorschlag Tiefe; Farbe und Kante
+                    // bleiben die der KI.
+                    ghost && 'hollow border-2 border-primary bg-sand/40',
                     faded && 'opacity-40',
                     // Aufgenommen: Der Block hebt sich sichtbar von der Fläche
                     // ab, damit die Geste eine Rückmeldung hat (Apple §1 —
@@ -264,7 +266,7 @@ function Tick({ completed }: { completed: boolean }) {
         <span
             className={cn(
                 'flex size-6 items-center justify-center rounded-full transition-colors duration-[var(--duration-fluid)] ease-[var(--ease-fluid)]',
-                completed ? 'bg-primary' : 'border-2 border-dashed border-sand',
+                completed ? 'bg-primary' : 'hollow border-2',
             )}
         >
             {completed && (

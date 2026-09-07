@@ -94,9 +94,11 @@ export function AppointmentRequestNotice({
             </h2>
 
             {[...groups.values()].map((group) => (
+                /* Dieselbe Mulde wie die Freundschaftsanfrage: eine offene
+                   Frage wartet, sie liegt nicht über dem Blatt. */
                 <div
                     key={group[0].requesterId}
-                    className="rounded-2xl border-[1.5px] border-dashed border-sand bg-card p-4 sm:p-5"
+                    className="hollow rounded-2xl border-[1.5px] p-4 sm:p-5"
                 >
                     {/* Einmal, egal wie viele Fragen darunter stehen. */}
                     <div className="flex items-center gap-3">

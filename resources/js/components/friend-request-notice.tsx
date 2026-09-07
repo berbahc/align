@@ -52,13 +52,15 @@ export function FriendRequestNotice({
                     : `${requests.length} Freundschaftsanfragen`}
             </h2>
 
-            {/* Gestrichelt `sand`: designsprache.md §7.3 — vom Menschen
-                angelegt und noch offen. Nicht `accent` gestrichelt, das ist
-                der KI vorbehalten. */}
+            {/* Gestrichelt bleibt gestrichelt: designsprache.md §7.3 — vom
+                Menschen angelegt und noch offen. Eine Anfrage ist ein Zustand,
+                kein Erklärkasten; das Glas ist der Ebene über dem Blatt
+                vorbehalten. Neu ist nur die Tiefe: eine Mulde statt einer
+                gezeichneten Kontur. Nicht `accent`, das bleibt der KI. */}
             {requests.map((person) => (
                 <div
                     key={person.id}
-                    className="rounded-2xl border-[1.5px] border-dashed border-sand bg-card p-4 sm:p-5"
+                    className="hollow rounded-2xl border-[1.5px] p-4 sm:p-5"
                 >
                     <div className="flex items-center gap-3">
                         <div className="flex -space-x-2">

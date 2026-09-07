@@ -73,6 +73,10 @@
     --color-faintest: var(--faintest);
     --color-ai-fill: var(--ai-fill);
     --color-ai-line: var(--ai-line);
+    /* Die Schrift auf dem Milchglas — eigene Werte, weil das Glas in beiden
+       Themen dieselbe Seite der Leiter hat und `foreground` dort kippen würde. */
+    --color-glass-foreground: var(--glass-foreground);
+    --color-glass-muted: var(--glass-muted);
 
     /*
      * Bewegung — Apple, „Designing Fluid Interfaces" (WWDC 2018).
@@ -204,6 +208,43 @@
     --shadow-lift:
         0 1px 2px rgba(61, 47, 20, 0.05),
         0 10px 28px -12px rgba(61, 47, 20, 0.16);
+    /*
+     * Milchglas — die dritte Stufe neben flach und `lift`.
+     *
+     * **Blass und sandig** — Apples helles Material, aber im eigenen Ton:
+     * viel Unschärfe, hohe Sättigung, eine Fläche aus `track`. Der Ton ist
+     * der Punkt: Ein fast weißes Glas auf der weißen Blattkarte ist keine
+     * Ebene (Apple §12: „never stack a light translucent surface on another"),
+     * und ein dunkles wäre auf dieser Seite ein Loch. Dazwischen liegt der
+     * Sand, den das Blatt ohnehin spricht.
+     *
+     * Der Kasten trägt seinen Kontrast damit selbst — die Zeile darunter muss
+     * sich nicht tönen, und vier Beigetöne übereinander gibt es nicht mehr.
+     */
+    --glass: rgba(239, 232, 220, 0.82);
+    /* Die Oberkante fängt das Licht, die Kante ringsum gibt die Grenze. */
+    --glass-edge: rgba(255, 255, 255, 0.9);
+    --glass-line: var(--sand);
+    --glass-foreground: #1d1b1b;
+    --glass-muted: #494540;
+    --glass-shadow:
+        0 1px 2px rgba(61, 47, 20, 0.05),
+        0 14px 30px -16px rgba(61, 47, 20, 0.4);
+    /* Für alle, die keine Durchsicht bekommen: dieselbe Ebene, nur deckend. */
+    --glass-solid: var(--track);
+    /*
+     * Die Mulde — das Gegenstück zum Glas.
+     *
+     * Was noch nicht fest ist, war bisher eine gestrichelte Linie auf nichts.
+     * Eine Linie ist aber kein Material: Sie sagt „hier fehlt etwas" und sieht
+     * dabei aus wie eine Skizze. Die Mulde sagt dasselbe als Fläche — leicht
+     * vertieft, mit einer Lichtkante an der Unterseite. Glas liegt über dem
+     * Blatt, die Mulde liegt darin.
+     */
+    --hollow: rgba(61, 47, 20, 0.05);
+    --hollow-line: #cfc2a6;
+    --hollow-shadow:
+        inset 0 1px 3px rgba(61, 47, 20, 0.1), 0 1px 0 rgba(255, 255, 255, 0.65);
     /* §10 — Balken: aktiver Tag olive, Vergleichswert gold, leer track. */
     --chart-1: var(--olive);
     --chart-2: var(--gold);
@@ -282,6 +323,24 @@
        der Schatten stützt nur noch die Kante. */
     --shadow-lift:
         0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 28px -12px rgba(0, 0, 0, 0.7);
+    /* Im Dunkeln liegt das Glas heller als sein Grund, nicht dunkler: Was vorn
+       liegt, ist heller — dieselbe Leiter wie bei den Flächen. */
+    /* Im Dunkeln liegt derselbe Sand über dem Blatt — dort ist er die hellere
+       Fläche, und die Regel bleibt: Was vorn liegt, ist heller. */
+    --glass: rgba(79, 67, 50, 0.78);
+    --glass-edge: rgba(255, 255, 255, 0.16);
+    --glass-line: rgba(255, 255, 255, 0.1);
+    --glass-foreground: #f7f3ec;
+    --glass-muted: #ddd7cd;
+    --glass-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.3), 0 14px 30px -16px rgba(0, 0, 0, 0.7);
+    --glass-solid: #443a2c;
+    /* Im Dunkeln ist die Vertiefung dunkler als ihr Grund — dieselbe Leiter,
+       nur nach unten gelesen. */
+    --hollow: rgba(0, 0, 0, 0.25);
+    --hollow-line: #5d5040;
+    --hollow-shadow:
+        inset 0 1px 3px rgba(0, 0, 0, 0.55), 0 1px 0 rgba(255, 255, 255, 0.05);
     --chart-1: var(--olive);
     --chart-2: var(--gold);
     --chart-3: var(--olive-mid);
@@ -379,6 +438,143 @@
         letter-spacing: 0.11em;
         font-weight: 600;
         text-transform: uppercase;
+    }
+}
+
+/*
+ * Milchglas — die Ebene, die über der Zeile liegt, aus der sie kommt.
+ *
+ * Steht hier und nicht als Klassenkette an der Fundstelle, weil drei Sachen
+ * zusammengehören, die man einzeln vergisst: die Farbe in beiden Themen, die
+ * Ausweichwege für Nutzer, die Durchsicht oder Bewegung abbestellt haben, und
+ * das Einfahren. Eine davon zu vergessen, macht aus Material einen Fleck.
+ *
+ * **Glas lohnt nur, wo etwas dahinterliegt.** Der Erklärkasten im Blatt legt
+ * sich über die Spalte des heutigen Tages und über die Tönung seiner eigenen
+ * Zeile; beide scheinen durch, und daran liest man ab, dass er zu dieser Zeile
+ * gehört. Über einer leeren Fläche wäre dasselbe Glas nur eine hellere Karte —
+ * dort ist eine Kante die ehrlichere Antwort.
+ */
+@layer components {
+    .glass {
+        background-color: var(--glass);
+        /* `saturate` bringt die warme Palette durch das Glas zurück; ohne den
+           Wert wirkt jede Durchsicht ausgewaschen und grau. */
+        -webkit-backdrop-filter: blur(28px) saturate(180%);
+        backdrop-filter: blur(28px) saturate(180%);
+        border: 1px solid var(--glass-line);
+        border-top-color: var(--glass-edge);
+        box-shadow: var(--glass-shadow);
+        color: var(--glass-muted);
+    }
+
+    /*
+     * Die Mulde: dieselbe Idee wie das Glas, nur nach innen. Die Breite der
+     * Kante bleibt an der Fundstelle — ein Kreis von 24 Pixeln braucht eine
+     * andere Linie als eine Zeile.
+     */
+    .hollow {
+        background-color: var(--hollow);
+        border-style: dashed;
+        border-color: var(--hollow-line);
+        box-shadow: var(--hollow-shadow);
+    }
+
+    /* Wer mehr Kontrast bestellt hat, bekommt eine feste Kante statt einer
+       leisen — die Vertiefung bleibt, der Strich wird sichtbar. */
+    @media (prefers-contrast: more) {
+        .hollow {
+            border-color: var(--input);
+        }
+    }
+
+    /*
+     * Materialisieren statt einblenden (Apple §12): Unschärfe und Größe laufen
+     * zusammen an, während der Kasten auf seine Höhe fährt —
+     * `--radix-collapsible-content-height` misst Radix selbst.
+     *
+     * `clip` statt `hidden`, damit die aufgehende Höhe den Inhalt beschneidet,
+     * der Schatten des Glases aber trotzdem nach außen malen darf; ohne den
+     * Rand endete er an einer harten Kante mitten in der Fläche.
+     */
+    [data-slot='collapsible-content'] {
+        overflow: clip;
+        overflow-clip-margin: 24px;
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+        [data-slot='collapsible-content'][data-state='open'] {
+            animation: glass-open var(--duration-fluid) var(--ease-fluid);
+        }
+
+        /* Zu bleiben ist kein Ereignis: Der Weg zurück ist kürzer und ohne
+           Materialisieren, sonst kündigt sich das Schließen an wie ein
+           Öffnen. */
+        [data-slot='collapsible-content'][data-state='closed'] {
+            animation: glass-close var(--duration-press) var(--ease-fluid);
+        }
+
+        [data-slot='collapsible-content'][data-state='open'] .glass {
+            animation: glass-materialize var(--duration-fluid) var(--ease-fluid);
+        }
+    }
+
+    @keyframes glass-open {
+        from {
+            height: 0;
+        }
+        to {
+            height: var(--radix-collapsible-content-height);
+        }
+    }
+
+    @keyframes glass-close {
+        from {
+            height: var(--radix-collapsible-content-height);
+        }
+        to {
+            height: 0;
+        }
+    }
+
+    @keyframes glass-materialize {
+        from {
+            opacity: 0;
+            transform: scale(0.985) translateY(-4px);
+            -webkit-backdrop-filter: blur(0) saturate(100%);
+            backdrop-filter: blur(0) saturate(100%);
+        }
+    }
+
+    /* Wer Durchsicht abbestellt hat, bekommt dieselbe Ebene als feste Fläche —
+       nicht weniger Auskunft, nur weniger Glas (§14). */
+    @media (prefers-reduced-transparency: reduce) {
+        .glass {
+            background-color: var(--glass-solid);
+            -webkit-backdrop-filter: none;
+            backdrop-filter: none;
+        }
+    }
+
+    @media (prefers-contrast: more) {
+        .glass {
+            background-color: var(--glass-solid);
+            -webkit-backdrop-filter: none;
+            backdrop-filter: none;
+            border-color: var(--glass-foreground);
+            border-top-color: var(--glass-foreground);
+        }
+    }
+
+    /* Ältere Browser zeichnen sonst eine halbdurchsichtige Fläche ohne
+       Unschärfe — und darauf liegt der Text auf allem, was zufällig
+       dahintersteht. */
+    @supports not (
+        (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
+    ) {
+        .glass {
+            background-color: var(--card);
+        }
     }
 }
 

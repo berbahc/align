@@ -30,7 +30,7 @@ export function PersonCircle({
             className={cn(
                 'inline-flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold',
                 pending
-                    ? 'border-[1.5px] border-dashed border-sand text-faint'
+                    ? 'hollow border-[1.5px] text-faint'
                     : 'bg-primary text-primary-foreground',
                 className,
             )}

@@ -15,6 +15,7 @@ import { create } from '@/routes/habits';
 import { store as graduate } from '@/routes/habits/graduation';
 import { update } from '@/routes/habits/reminder';
 import { updateAll } from '@/routes/habits/reminders';
+import { store as showStreak } from '@/routes/habits/streak-card';
 import type { GraduatedHabit, ManagedHabit } from '@/types';
 
 interface HabitsIndexProps {
@@ -152,6 +153,16 @@ export default function HabitsIndex({
         );
     }
 
+    /**
+     * Holt die Serie zurück auf die Übersicht.
+     *
+     * Der Weg hin sitzt auf der Karte selbst — dort steht ein × —, der Weg
+     * zurück hier, weil es die Karte dann nicht mehr gibt.
+     */
+    function showStreakCard(habit: ManagedHabit) {
+        router.post(showStreak.url(habit.id), {}, { preserveScroll: true });
+    }
+
     function toggleAll(enabled: boolean) {
         void enable(enabled, () =>
             router.put(updateAll.url(), { enabled }, { preserveScroll: true }),
@@ -273,6 +284,7 @@ export default function HabitsIndex({
                                     sections={sections}
                                     landed={landed}
                                     onToggleReminder={toggleOne}
+                                    onShowStreak={showStreakCard}
                                     onEnd={endHabit}
                                 />
                             </CardContent>

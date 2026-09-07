@@ -17,6 +17,7 @@ use App\Http\Controllers\HabitController;
 use App\Http\Controllers\HabitDayShiftController;
 use App\Http\Controllers\HabitGraduationController;
 use App\Http\Controllers\HabitReminderController;
+use App\Http\Controllers\HabitStreakCardController;
 use App\Http\Controllers\NewPlaceController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\SemesterController;
@@ -226,6 +227,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('habits.completions.store');
         Route::delete('habits/{habit}/completions', [HabitCompletionController::class, 'destroy'])
             ->name('habits.completions.destroy');
+
+        // Die Serie auf der Übersicht: Das × auf der Karte nimmt sie weg, das
+        // ⋯-Menü der Gewohnheit holt sie zurück — ein Zustand, zwei Wege.
+        Route::post('habits/{habit}/streak-card', [HabitStreakCardController::class, 'store'])
+            ->name('habits.streak-card.store');
+        Route::delete('habits/{habit}/streak-card', [HabitStreakCardController::class, 'destroy'])
+            ->name('habits.streak-card.destroy');
 
         // Beenden und Wiederaufnehmen als ein Zustand, der gesetzt und
         // zurückgenommen wird — nicht als zwei Aktionen mit eigenen Verben.

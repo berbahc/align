@@ -43,6 +43,7 @@ use Illuminate\Support\Collection;
  * @property Carbon|null $committed_at
  * @property Carbon|null $graduated_at
  * @property Carbon|null $displaced_at
+ * @property Carbon|null $streak_hidden_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -1864,6 +1865,7 @@ class Habit extends Model
             'committed_at' => 'datetime',
             'graduated_at' => 'datetime',
             'displaced_at' => 'datetime',
+            'streak_hidden_at' => 'datetime',
         ];
     }
 }
