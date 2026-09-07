@@ -83,3 +83,33 @@ export function nextFreeTime(
 
     return null;
 }
+
+/**
+ * Der erste Konflikt über alle Tage — jeder mit **seiner** Uhrzeit.
+ *
+ * Seit ein Wochentag eine eigene Uhrzeit haben kann, ist „passt die Zeit?"
+ * keine Frage mehr, sondern sieben. Haben alle dieselbe, fällt die Schleife
+ * auf den alten Aufruf zurück.
+ */
+export function findConflictPerDay(
+    time: string,
+    times: Partial<Record<Weekday, string>>,
+    days: Weekday[],
+    slots: BusySlot[],
+    durationMinutes: number,
+): ReturnType<typeof findConflict> {
+    for (const day of days) {
+        const treffer = findConflict(
+            times[day] ?? time,
+            [day],
+            slots,
+            durationMinutes,
+        );
+
+        if (treffer !== null) {
+            return treffer;
+        }
+    }
+
+    return null;
+}

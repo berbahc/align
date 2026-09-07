@@ -178,6 +178,10 @@ class DayOrderController extends Controller
             // die Woche. Eine Gewohnheit ohne eigene Tage läuft täglich.
             $habit->update([
                 'schedule_type' => ScheduleType::Fixed,
+                // Eine Uhrzeit für alle Tage: Was die App hier setzt, gilt
+                // überall gleich — eine alte Abbildung je Wochentag stünde
+                // sonst darüber und machte die neue Zeit wirkungslos.
+                'scheduled_times' => null,
                 'scheduled_time' => $row['time'],
                 'scheduled_days' => $habit->activeWeekdays() ?: Habit::EveryDay,
                 'trigger_situation' => null,

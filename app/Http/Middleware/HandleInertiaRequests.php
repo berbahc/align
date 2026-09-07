@@ -126,8 +126,11 @@ class HandleInertiaRequests extends Middleware
             ->map(fn (Habit $habit): array => [
                 'id' => $habit->id,
                 'title' => $habit->title,
+                // Die Uhrzeit **von heute**: Wer dienstags um acht und
+                // donnerstags um zehn lernt, soll nicht an beiden Tagen um
+                // acht geweckt werden.
                 'scheduledTime' => $habit->shiftedTimeOn($today)
-                    ?? $habit->scheduled_time?->format('H:i')
+                    ?? $habit->timeOn($today)
                     ?? '',
                 'scheduledDays' => $habit->scheduled_days ?? [],
                 'completedToday' => (bool) $habit->completed_today,

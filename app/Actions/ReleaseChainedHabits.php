@@ -46,6 +46,9 @@ class ReleaseChainedHabits
                 'trigger_situation' => $habit->trigger_situation,
                 'scheduled_time' => $habit->scheduled_time?->format('H:i'),
                 'scheduled_days' => $habit->scheduled_days,
+                // Der Platz reist ganz mit, auch wenn er an jedem Tag ein
+                // anderer war.
+                'scheduled_times' => $habit->scheduled_times,
             ];
 
         // Nur der erste erbt den Platz; die übrigen hängen sich an ihn. Zwei

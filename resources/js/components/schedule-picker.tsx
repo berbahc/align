@@ -1,13 +1,18 @@
 import { TriangleAlert } from 'lucide-react';
 import { TimeStepper } from '@/components/time-stepper';
+import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import {
     CHOICE_TILE,
     CHOICE_TILE_OFF,
     CHOICE_TILE_ON,
     QUIET_LINK,
 } from '@/lib/interaction';
-import { asleepWeekdays, formatWindow, outsideSleepWindow } from '@/lib/sleep';
-import { findConflict, nextFreeTime } from '@/lib/slots';
+import {
+    asleepWeekdays,
+    formatWindow,
+    outsideSleepWindowPerDay,
+} from '@/lib/sleep';
+import { findConflictPerDay, nextFreeTime } from '@/lib/slots';
 import { cn } from '@/lib/utils';
 import type {
     BusySlot,
@@ -115,11 +120,20 @@ export function WeekdayPicker({
     onChange,
     blocked = [],
     blockedBy = null,
+    blockedHint,
 }: {
     days: Weekday[];
     onChange: (days: Weekday[]) => void;
     blocked?: Weekday[];
     blockedBy?: string | null;
+    /**
+     * Warum die Tage gesperrt sind — als fertiger Satz.
+     *
+     * Zwei Gründe teilen sich diese Reihe: Bei einer Situation hält den Tag
+     * schon jemand anderes, bei einer Kette läuft der Vorgänger dort gar
+     * nicht. „Hängt dort schon" wäre im zweiten Fall schlicht falsch.
+     */
+    blockedHint?: (blocked: Weekday[], owner: string) => string;
 }) {
     const free = WEEKDAYS.filter((day) => !blocked.includes(day.value));
     const isDaily =
@@ -210,7 +224,9 @@ export function WeekdayPicker({
                 unerklärt dastehen. */}
             {blocked.length > 0 && blockedBy !== null && (
                 <p className="text-xs leading-relaxed text-muted-foreground">
-                    {formatWeekdays(blocked)} hängt dort schon „{blockedBy}".
+                    {blockedHint === undefined
+                        ? `${formatWeekdays(blocked)} hängt dort schon „${blockedBy}".`
+                        : blockedHint(blocked, blockedBy)}
                 </p>
             )}
         </div>
@@ -347,6 +363,8 @@ export function SchedulePicker({
     onTimeChange,
     days,
     onDaysChange,
+    times,
+    onTimesChange,
     chainCandidates = [],
     chainedTo = null,
     onChainedToChange,
@@ -362,6 +380,14 @@ export function SchedulePicker({
     onTimeChange: (value: string) => void;
     days: Weekday[];
     onDaysChange: (days: Weekday[]) => void;
+    /**
+     * Abweichende Uhrzeiten je Wochentag — leer heißt: überall dieselbe.
+     *
+     * Der Regelfall bleibt damit eine Zahl. Erst wer den Schalter umlegt,
+     * bekommt sieben, und auch dann steht nur drin, was wirklich abweicht.
+     */
+    times: Partial<Record<Weekday, string>>;
+    onTimesChange: (times: Partial<Record<Weekday, string>>) => void;
     /** Woran sich anhängen lässt — leer heißt: es gibt noch nichts. */
     chainCandidates?: ChainCandidate[];
     chainedTo?: number | null;
@@ -375,7 +401,24 @@ export function SchedulePicker({
     /** Die Situationsauswahl — sie bleibt im Wizard, wo ihre Vorschläge herkommen. */
     children: React.ReactNode;
 }) {
-    const conflict = findConflict(time, days, busySlots, durationMinutes);
+    // Abweichende Zeiten sind kein eigener Zustand, sondern eine Beobachtung:
+    // Steht etwas in der Abbildung, gilt sie. So kann die Anzeige nicht von
+    // dem abweichen, was gespeichert wird.
+    const perDay = Object.keys(times).length > 0;
+
+    const chosenChain = chainCandidates.find(
+        (candidate) => candidate.id === chainedTo,
+    );
+
+    // Je Tag mit seiner Uhrzeit: Läge nur der Dienstag falsch, meldete eine
+    // Prüfung über die gemeinsame Zeit entweder nichts oder alles.
+    const conflict = findConflictPerDay(
+        time,
+        times,
+        days,
+        busySlots,
+        durationMinutes,
+    );
     const free =
         conflict === null
             ? null
@@ -383,7 +426,7 @@ export function SchedulePicker({
 
     // Der Rahmen aus dem Schlafplan: Der Server weist eine Uhrzeit außerhalb
     // ohnehin ab — die Oberfläche sagt es vorher, mit demselben Ergebnis.
-    const asleep = outsideSleepWindow(time, days, sleepWindows);
+    const asleep = outsideSleepWindowPerDay(time, times, days, sleepWindows);
 
     // Und alle betroffenen Tage, für den Ausweg daneben. Er wird nur
     // angeboten, wenn danach noch ein Tag übrig bleibt: Alles abzuwählen ist
@@ -464,9 +507,14 @@ export function SchedulePicker({
                                         key={candidate.id}
                                         type="button"
                                         aria-pressed={isSelected}
-                                        onClick={() =>
-                                            onChainedToChange?.(candidate.id)
-                                        }
+                                        onClick={() => {
+                                            onChainedToChange?.(candidate.id);
+                                            // Die Tage des neuen Vorgängers
+                                            // werden zur Vorgabe: Wer wechselt,
+                                            // nimmt sonst eine Auswahl mit, die
+                                            // beim anderen gar nicht existiert.
+                                            onDaysChange(candidate.weekdays);
+                                        }}
                                         className={cn(
                                             CHOICE_TILE,
                                             'flex flex-col gap-0.5 px-4 py-3',
@@ -490,6 +538,31 @@ export function SchedulePicker({
                                     </button>
                                 );
                             })}
+
+                            {/* An welchen der Tage des Vorgängers. „Immer wenn
+                                die andere läuft" war bisher die einzige
+                                Möglichkeit — wer montags und mittwochs joggt,
+                                will danach aber vielleicht nur mittwochs
+                                dehnen.
+
+                                Gesperrt ist, woran der Vorgänger nicht läuft:
+                                Dort gäbe es kein „danach". */}
+                            {chosenChain !== undefined && (
+                                <WeekdayPicker
+                                    days={days}
+                                    onChange={onDaysChange}
+                                    blocked={WEEKDAYS.map(
+                                        (day) => day.value,
+                                    ).filter(
+                                        (day) =>
+                                            !chosenChain.weekdays.includes(day),
+                                    )}
+                                    blockedBy={chosenChain.name}
+                                    blockedHint={(gesperrt, wer) =>
+                                        `„${wer}" läuft ${formatWeekdays(gesperrt)} nicht.`
+                                    }
+                                />
+                            )}
                         </>
                     )}
                 </div>
@@ -497,13 +570,94 @@ export function SchedulePicker({
                 children
             ) : (
                 <div className="flex flex-col gap-5">
-                    <div className="flex flex-col items-center gap-2 rounded-2xl bg-card p-6">
-                        <TimeStepper
-                            value={time}
-                            onChange={onTimeChange}
-                            label="Uhrzeit"
+                    {/* Eine Uhrzeit für alle Tage — der Regelfall, und deshalb
+                        der große Auftritt. Wer den Schalter darunter umlegt,
+                        bekommt stattdessen eine Zeile je Tag.
+
+                        Dieselbe Sprache wie im Schlafplan: dort steht „Diese
+                        Zeiten für alle Tage" neben den Zeiten eines einzelnen
+                        Tages. Zwei Wege für dieselbe Frage sähen aus wie zwei
+                        verschiedene Fragen. */}
+                    {!perDay && (
+                        <div className="flex flex-col items-center gap-2 rounded-2xl bg-card p-6">
+                            <TimeStepper
+                                value={time}
+                                onChange={onTimeChange}
+                                label="Uhrzeit"
+                            />
+                        </div>
+                    )}
+
+                    {perDay && (
+                        <div className="flex flex-col gap-3 rounded-2xl bg-card p-4">
+                            {days.length === 0 ? (
+                                <p className="text-sm leading-relaxed text-muted-foreground">
+                                    Wähl unten die Tage, dann steht hier für
+                                    jeden eine eigene Uhrzeit.
+                                </p>
+                            ) : (
+                                [...days]
+                                    .sort((a, b) => a - b)
+                                    .map((day) => (
+                                        <div
+                                            key={day}
+                                            className="flex items-center justify-between gap-3 border-b border-border pb-3 last:border-0 last:pb-0"
+                                        >
+                                            <span className="text-[15px] font-semibold">
+                                                {
+                                                    WEEKDAYS.find(
+                                                        (candidate) =>
+                                                            candidate.value ===
+                                                            day,
+                                                    )?.full
+                                                }
+                                            </span>
+                                            <TimeStepper
+                                                value={times[day] ?? time}
+                                                onChange={(value) =>
+                                                    onTimesChange({
+                                                        ...times,
+                                                        [day]: value,
+                                                    })
+                                                }
+                                                label={`Uhrzeit am ${
+                                                    WEEKDAYS.find(
+                                                        (candidate) =>
+                                                            candidate.value ===
+                                                            day,
+                                                    )?.full
+                                                }`}
+                                                size="compact"
+                                            />
+                                        </div>
+                                    ))
+                            )}
+                        </div>
+                    )}
+
+                    <label className="flex cursor-pointer items-center justify-between gap-4 rounded-2xl bg-card px-4 py-3">
+                        <span className="text-[15px] font-semibold">
+                            Jeden Tag zur selben Uhrzeit
+                        </span>
+                        <ToggleSwitch
+                            checked={!perDay}
+                            onChange={(gleich) =>
+                                // Aus heißt: jeder Tag startet bei der
+                                // gemeinsamen Zeit und lässt sich von dort
+                                // wegdrehen. An heißt: die Abweichungen fallen
+                                // weg — und zwar sichtbar, nicht still im
+                                // Hintergrund gespeichert.
+                                onTimesChange(
+                                    gleich
+                                        ? {}
+                                        : Object.fromEntries(
+                                              days.map((day) => [day, time]),
+                                          ),
+                                )
+                            }
+                            label="Jeden Tag zur selben Uhrzeit"
                         />
-                    </div>
+                    </label>
 
                     {/* Der Server weist dasselbe ab — hier steht es vorher,
                         mit der Erklärung dazu und einem Sprung zur nächsten

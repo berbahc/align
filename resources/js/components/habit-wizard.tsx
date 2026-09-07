@@ -23,8 +23,8 @@ import {
     PRIMARY_BUTTON,
     QUIET_BUTTON,
 } from '@/lib/interaction';
-import { outsideSleepWindow } from '@/lib/sleep';
-import { findConflict } from '@/lib/slots';
+import { outsideSleepWindowPerDay } from '@/lib/sleep';
+import { findConflictPerDay } from '@/lib/slots';
 import { cn } from '@/lib/utils';
 import { suggestions } from '@/routes/habits/smallest-step';
 import type {
@@ -115,6 +115,9 @@ export function HabitWizard({
         scheduled_days: (blueprint?.scheduledDays ?? [
             1, 2, 3, 4, 5, 6, 7,
         ]) as Weekday[],
+        // Leer heißt: jeden Tag zur selben Uhrzeit. Erst wer den Schalter
+        // umlegt, bekommt eine Zeile je Tag.
+        scheduled_times: {} as Partial<Record<Weekday, string>>,
         chained_to_habit_id: null as number | null,
         motivation: '',
         smallest_step: '',
@@ -138,8 +141,9 @@ export function HabitWizard({
     // — dann darf der Schritt auch nicht weitergehen, der Hinweis steht schon
     // im Picker.
     const asleep = isFixed
-        ? outsideSleepWindow(
+        ? outsideSleepWindowPerDay(
               data.scheduled_time,
+              data.scheduled_times,
               data.scheduled_days,
               sleepWindows,
           )
@@ -149,8 +153,9 @@ export function HabitWizard({
     // der Server verlangt. Der Hinweis steht im Picker; hier hält er den
     // Schritt an, damit die Absage nicht erst nach dem letzten Knopf kommt.
     const blocked = isFixed
-        ? findConflict(
+        ? findConflictPerDay(
               data.scheduled_time,
+              data.scheduled_times,
               data.scheduled_days,
               busySlots,
               data.target_amount,
@@ -162,7 +167,8 @@ export function HabitWizard({
         2: data.template_key !== '',
         3:
             data.schedule_type === 'chained'
-                ? data.chained_to_habit_id !== null
+                ? data.chained_to_habit_id !== null &&
+                  data.scheduled_days.length > 0
                 : isFixed
                   ? data.scheduled_days.length > 0 &&
                     asleep === null &&
@@ -440,6 +446,10 @@ export function HabitWizard({
                         }
                         days={data.scheduled_days}
                         onDaysChange={(days) => setData('scheduled_days', days)}
+                        times={data.scheduled_times}
+                        onTimesChange={(times) =>
+                            setData('scheduled_times', times)
+                        }
                         chainCandidates={chainCandidates}
                         chainedTo={data.chained_to_habit_id}
                         onChainedToChange={(id) =>

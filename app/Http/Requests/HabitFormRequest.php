@@ -96,6 +96,11 @@ abstract class HabitFormRequest extends FormRequest
                 Rule::requiredIf($type->hasClockTime()), 'nullable', 'array', 'min:1', 'max:7',
             ],
             'scheduled_days.*' => ['integer', 'between:1,7', 'distinct'],
+            // Eine Uhrzeit je Wochentag, als Abbildung `Tag => "HH:MM"`. Fehlt
+            // sie oder ist sie leer, gilt `scheduled_time` für alle Tage — der
+            // Regelfall bleibt eine Zahl statt sieben.
+            'scheduled_times' => ['nullable', 'array', 'max:7'],
+            'scheduled_times.*' => ['required', 'date_format:H:i'],
             'chained_to_habit_id' => [
                 Rule::requiredIf($type === ScheduleType::Chained), 'nullable', 'integer',
             ],
@@ -152,6 +157,80 @@ abstract class HabitFormRequest extends FormRequest
      */
     private function chosenDays(): array
     {
+        $days = $this->sentDays();
+
+        if ($days !== []) {
+            return $days;
+        }
+
+        return $this->editedHabit()?->activeWeekdays() ?: Habit::EveryDay;
+    }
+
+    /**
+     * Die Uhrzeiten je Wochentag — `null`, wenn alle Tage dieselbe haben.
+     *
+     * Aufgeräumt wird zweimal: Tage, an denen die Gewohnheit gar nicht läuft,
+     * fliegen raus, und eine Abbildung, in der überall dasselbe steht, ist
+     * keine — sie wäre `scheduled_time` in sieben Zeilen und liefe beim
+     * nächsten Ändern der gemeinsamen Zeit auseinander.
+     *
+     * @return array<int, string>|null
+     */
+    private function perDayTimes(): ?array
+    {
+        /** @var array<array-key, mixed> $sent */
+        $sent = $this->array('scheduled_times');
+
+        if ($sent === []) {
+            return null;
+        }
+
+        $days = $this->chosenDays();
+        $times = [];
+
+        foreach ($sent as $day => $time) {
+            $weekday = (int) $day;
+
+            if (is_string($time) && in_array($weekday, $days, strict: true)) {
+                $times[$weekday] = $time;
+            }
+        }
+
+        if ($times === [] || count(array_unique($times)) === 1) {
+            return null;
+        }
+
+        ksort($times);
+
+        return $times;
+    }
+
+    /**
+     * Wann die Gewohnheit an diesem Wochentag beginnt — geprüfte Eingabe.
+     *
+     * Die gemeinsame Uhrzeit, sofern der Tag keine eigene hat.
+     */
+    private function timeForDay(int $weekday): string
+    {
+        /** @var array<array-key, mixed> $sent */
+        $sent = $this->array('scheduled_times');
+        $time = $sent[$weekday] ?? $sent[(string) $weekday] ?? null;
+
+        return is_string($time) ? $time : $this->string('scheduled_time')->toString();
+    }
+
+    /**
+     * Die geschickten Wochentage, ungefiltert — leer, wenn keine kamen.
+     *
+     * Für die Kette ist der Unterschied wichtig: Dort heißt „keine geschickt"
+     * *alle Tage des Vorgängers* und nicht „alle sieben". Das steht als `null`
+     * in der Spalte, damit die Gewohnheit mitwandert, wenn ihr Vorgänger
+     * seine Tage ändert.
+     *
+     * @return list<int>
+     */
+    private function sentDays(): array
+    {
         /** @var list<int> $days */
         $days = array_values(array_unique(array_map(
             intval(...),
@@ -159,11 +238,7 @@ abstract class HabitFormRequest extends FormRequest
         )));
         sort($days);
 
-        if ($days !== []) {
-            return $days;
-        }
-
-        return $this->editedHabit()?->activeWeekdays() ?: Habit::EveryDay;
+        return $days;
     }
 
     /**
@@ -294,15 +369,27 @@ abstract class HabitFormRequest extends FormRequest
 
         /** @var list<int> $days */
         $days = array_values(array_unique(array_map(intval(...), $this->array('scheduled_days'))));
+        $minutes = (int) round($this->float('target_amount'));
+        $edited = $this->editedHabit();
 
-        $this->validateSlotIsFree(
-            $validator,
-            'scheduled_time',
-            $this->string('scheduled_time')->toString(),
-            $days,
-            (int) round($this->float('target_amount')),
-            $this->editedHabit(),
-        );
+        // Tag für Tag mit **seiner** Uhrzeit: Seit jeder Wochentag eine eigene
+        // haben kann, ist „die Uhrzeit an allen Tagen" keine Frage mehr,
+        // sondern sieben. Haben alle dieselbe, ist es genau eine Prüfung wie
+        // vorher — nur einzeln gestellt.
+        foreach ($days as $weekday) {
+            $this->validateSlotIsFree(
+                $validator,
+                'scheduled_time',
+                $this->timeForDay($weekday),
+                [$weekday],
+                $minutes,
+                $edited,
+            );
+
+            if ($validator->errors()->has('scheduled_time')) {
+                return;
+            }
+        }
     }
 
     /**
@@ -373,6 +460,8 @@ abstract class HabitFormRequest extends FormRequest
             return;
         }
 
+        $this->validateChainDays($validator, $previous);
+
         $edited = $this->editedHabit();
 
         if ($edited === null) {
@@ -409,6 +498,36 @@ abstract class HabitFormRequest extends FormRequest
 
             return;
         }
+    }
+
+    /**
+     * Eine Kette läuft nie an einem Tag, an dem ihr Vorgänger nicht läuft.
+     *
+     * Die Oberfläche sperrt diese Tage schon, aber ein Formular ist kein
+     * Beweis: „nach dem Joggen" an einem Tag ohne Joggen wäre ein Anschluss an
+     * nichts, und der Kalender hätte keine Stelle, an die er ihn legen könnte.
+     */
+    private function validateChainDays(Validator $validator, Habit $previous): void
+    {
+        $chosen = $this->sentDays();
+
+        if ($chosen === []) {
+            return;
+        }
+
+        $fremd = array_values(array_diff($chosen, $previous->activeWeekdays()));
+
+        if ($fremd === []) {
+            return;
+        }
+
+        // §1.5 — benennt, was gilt, und nennt die Tage beim Namen, statt „die
+        // Auswahl ist ungültig" zu sagen.
+        $validator->errors()->add('scheduled_days', sprintf(
+            '„%s" läuft %s nicht. Wähl aus den Tagen, an denen sie stattfindet.',
+            $previous->title,
+            Habit::weekdayLabel($fremd),
+        ));
     }
 
     /**
@@ -470,13 +589,19 @@ abstract class HabitFormRequest extends FormRequest
             'trigger_situation' => $type === ScheduleType::Dynamic
                 ? $this->string('trigger_situation')->trim()->toString()
                 : null,
+            'scheduled_times' => $type->hasClockTime() ? $this->perDayTimes() : null,
             'scheduled_time' => $type->hasClockTime()
                 ? $this->string('scheduled_time')->toString()
                 : null,
-            // Beide eigenen Anker haben Tage: „nach dem Aufstehen" heißt seit
-            // den Wochentagen nicht mehr zwangsläufig auch sonntags. Nur die
-            // Kette bleibt ohne — sie läuft, wenn ihr Vorgänger läuft.
-            'scheduled_days' => $type->hasOwnAnchor() ? $this->chosenDays() : null,
+            // Alle drei Formen haben Tage. Bei der Kette sind sie ein
+            // *Ausschnitt* aus denen des Vorgängers: Wer montags und mittwochs
+            // joggt, will danach vielleicht nur mittwochs dehnen. Kommen keine,
+            // bleibt die Spalte leer und die Kette folgt ihrem Vorgänger — auch
+            // dann noch, wenn der seine Tage später ändert.
+            'scheduled_days' => match (true) {
+                $type === ScheduleType::Chained => $this->sentDays() ?: null,
+                default => $this->chosenDays(),
+            },
             'chained_to_habit_id' => $type === ScheduleType::Chained
                 ? $this->integer('chained_to_habit_id')
                 : null,

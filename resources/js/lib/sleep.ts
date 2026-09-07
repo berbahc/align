@@ -110,3 +110,24 @@ export function sleepDurationLabel(
 
     return `${hours} Std ${rest} Min`;
 }
+
+/**
+ * Der erste Tag, an dem die Uhrzeit außerhalb des Rahmens liegt — je Tag mit
+ * seiner eigenen Zeit.
+ */
+export function outsideSleepWindowPerDay(
+    time: string,
+    times: Partial<Record<Weekday, string>>,
+    days: Weekday[],
+    windows: SleepWindow[],
+): SleepWindow | null {
+    for (const day of days) {
+        const draußen = outsideSleepWindow(times[day] ?? time, [day], windows);
+
+        if (draußen !== null) {
+            return draußen;
+        }
+    }
+
+    return null;
+}

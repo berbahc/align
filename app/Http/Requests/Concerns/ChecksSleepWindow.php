@@ -28,8 +28,9 @@ trait ChecksSleepWindow
             return;
         }
 
-        $time = $this->string('scheduled_time')->toString();
         $windows = $this->user()->sleepWindows();
+        /** @var array<array-key, mixed> $perDay */
+        $perDay = $this->array('scheduled_times');
 
         foreach ($this->array('scheduled_days') as $day) {
             $window = $windows[(int) $day] ?? null;
@@ -37,6 +38,13 @@ trait ChecksSleepWindow
             if ($window === null) {
                 continue;
             }
+
+            // Die Uhrzeit **dieses** Tages: Seit jeder Wochentag eine eigene
+            // haben kann, prüft ein einzelner Wert nur noch den Regelfall.
+            $eigene = $perDay[(int) $day] ?? $perDay[(string) (int) $day] ?? null;
+            $time = is_string($eigene)
+                ? $eigene
+                : $this->string('scheduled_time')->toString();
 
             if (! SleepSchedule::containsTime($window['wakeTime'], $window['bedtime'], $time)) {
                 $validator->errors()->add('scheduled_time', sprintf(

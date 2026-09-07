@@ -353,3 +353,106 @@ test('the overview carries the limit so the interface never hardcodes it', funct
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->where('maxActive', Habit::MaxActivePerUser));
 });
+
+/**
+ * Eine Uhrzeit je Wochentag.
+ *
+ * `scheduled_time` galt für alle Tage. Das reicht für die meisten, aber nicht
+ * für den Alltag, den es abbilden soll: Wer dienstags um acht Vorlesung hat
+ * und donnerstags um zehn, lernt nicht an beiden Tagen zur selben Zeit nach.
+ */
+test('a habit can start at a different time on each weekday', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('habits.store'), [
+            'template_key' => HabitTemplate::Karteikarten->value,
+            'target_amount' => 20,
+            'schedule_type' => ScheduleType::Fixed->value,
+            'scheduled_time' => '13:00',
+            'scheduled_days' => [1, 2],
+            'scheduled_times' => [1 => '13:00', 2 => '16:00'],
+        ])
+        ->assertSessionHasNoErrors();
+
+    $habit = $user->habits()->sole();
+    $montag = Carbon::today()->next(Carbon::MONDAY);
+    $dienstag = Carbon::today()->next(Carbon::TUESDAY);
+
+    expect($habit->scheduled_times)->toBe([1 => '13:00', 2 => '16:00'])
+        ->and($habit->startsAt($montag)?->format('H:i'))->toBe('13:00')
+        ->and($habit->startsAt($dienstag)?->format('H:i'))->toBe('16:00')
+        // Ohne Datum sagt die Zeile, dass es mehrere sind, statt eine zu
+        // behaupten: „13:00 · Mo, Di" wäre für den Dienstag gelogen.
+        ->and($habit->scheduleLabel())->toBe('wechselnd · Mo, Di')
+        ->and($habit->scheduleLabel($dienstag))->toBe('16:00 · Mo, Di');
+});
+
+/**
+ * Dieselbe Zeit an allen Tagen ist keine Abbildung, sondern eine Zahl.
+ *
+ * Sieben gleiche Einträge liefen beim nächsten Ändern der gemeinsamen Zeit
+ * auseinander — und die Beschriftung müsste „wechselnd" sagen, wo nichts
+ * wechselt.
+ */
+test('identical times collapse back into one', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('habits.store'), [
+            'template_key' => HabitTemplate::Karteikarten->value,
+            'target_amount' => 20,
+            'schedule_type' => ScheduleType::Fixed->value,
+            'scheduled_time' => '13:00',
+            'scheduled_days' => [1, 2],
+            'scheduled_times' => [1 => '13:00', 2 => '13:00'],
+        ])
+        ->assertSessionHasNoErrors();
+
+    $habit = $user->habits()->sole();
+
+    expect($habit->scheduled_times)->toBeNull()
+        ->and($habit->hasVaryingTimes())->toBeFalse()
+        ->and($habit->scheduleLabel())->toBe('13:00 · Mo, Di');
+});
+
+/**
+ * Jeder Tag wird mit seiner eigenen Zeit geprüft.
+ *
+ * Vorher stellte die Prüfung eine Frage für alle Tage; seit jeder Wochentag
+ * eine eigene Uhrzeit haben kann, sind es sieben. Eine Kollision, die nur den
+ * Dienstag trifft, muss den Dienstag treffen — und nur ihn.
+ */
+test('a per day time is checked against that day alone', function () {
+    $user = User::factory()->create();
+    Habit::factory()->for($user)->fromTemplate(HabitTemplate::Joggen)
+        ->fixedSchedule('16:00', [2])->withMeasure(30)->create();
+
+    $this->actingAs($user)
+        ->post(route('habits.store'), [
+            'template_key' => HabitTemplate::Karteikarten->value,
+            'target_amount' => 20,
+            'schedule_type' => ScheduleType::Fixed->value,
+            'scheduled_time' => '13:00',
+            'scheduled_days' => [1, 2],
+            // Montag ist frei, Dienstag läuft in „Joggen gehen".
+            'scheduled_times' => [1 => '13:00', 2 => '16:00'],
+        ])
+        ->assertSessionHasErrors('scheduled_time');
+
+    expect($user->habits()->count())->toBe(1);
+
+    // Derselbe Dienstag zwei Stunden später geht durch.
+    $this->actingAs($user)
+        ->post(route('habits.store'), [
+            'template_key' => HabitTemplate::Karteikarten->value,
+            'target_amount' => 20,
+            'schedule_type' => ScheduleType::Fixed->value,
+            'scheduled_time' => '13:00',
+            'scheduled_days' => [1, 2],
+            'scheduled_times' => [1 => '13:00', 2 => '18:00'],
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect($user->habits()->count())->toBe(2);
+});

@@ -173,6 +173,8 @@ class HabitDayShiftController extends Controller
 
         $habit->update([
             'schedule_type' => ScheduleType::Fixed,
+            // Siehe oben: eine Uhrzeit für alle Tage.
+            'scheduled_times' => null,
             'scheduled_time' => DayPlan::toTime($start),
             'scheduled_days' => $days,
             'trigger_situation' => null,

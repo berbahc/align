@@ -212,3 +212,81 @@ test('the busy slots name the window a fixed habit occupies', function () {
         ->and($slots[0]['to'])->toBe('17:20')
         ->and($slots[0]['days'])->toBe([1, 2, 3, 4, 5]);
 });
+
+/**
+ * Eine Kette darf seltener laufen als ihr Vorgänger — nur nie öfter.
+ *
+ * „Immer wenn die andere läuft" war bisher die einzige Möglichkeit. Wer
+ * montags, mittwochs und freitags joggt, will danach aber vielleicht nur
+ * mittwochs dehnen; an einem Tag ohne Joggen gäbe es dagegen kein „danach".
+ */
+test('a chain may run on a subset of its anchor days', function () {
+    $user = User::factory()->create();
+    $joggen = Habit::factory()->for($user)->fromTemplate(HabitTemplate::Joggen)
+        ->fixedSchedule('07:30', [1, 3, 5])->withMeasure(30)->create();
+
+    $this->actingAs($user)
+        ->post(route('habits.store'), [
+            'template_key' => HabitTemplate::Dehnen->value,
+            'target_amount' => 10,
+            'schedule_type' => ScheduleType::Chained->value,
+            'chained_to_habit_id' => $joggen->id,
+            'scheduled_days' => [3],
+        ])
+        ->assertSessionHasNoErrors();
+
+    $dehnen = $user->habits()->where('template_key', HabitTemplate::Dehnen->value)->sole();
+
+    expect($dehnen->scheduled_days)->toBe([3])
+        ->and($dehnen->activeWeekdays())->toBe([3])
+        ->and($dehnen->isScheduledOn(Carbon::today()->next(Carbon::WEDNESDAY)))->toBeTrue()
+        // Der Vorgänger läuft montags, die Kette nicht.
+        ->and($dehnen->isScheduledOn(Carbon::today()->next(Carbon::MONDAY)))->toBeFalse();
+});
+
+test('a chain cannot run on a day its anchor does not', function () {
+    $user = User::factory()->create();
+    $joggen = Habit::factory()->for($user)->fromTemplate(HabitTemplate::Joggen)
+        ->fixedSchedule('07:30', [1, 3, 5])->withMeasure(30)->create();
+
+    $this->actingAs($user)
+        ->post(route('habits.store'), [
+            'template_key' => HabitTemplate::Dehnen->value,
+            'target_amount' => 10,
+            'schedule_type' => ScheduleType::Chained->value,
+            'chained_to_habit_id' => $joggen->id,
+            'scheduled_days' => [2, 3],
+        ])
+        ->assertSessionHasErrors([
+            'scheduled_days' => '„Joggen gehen" läuft Di nicht. Wähl aus den Tagen, an denen sie stattfindet.',
+        ]);
+
+    expect($user->habits()->count())->toBe(1);
+});
+
+/**
+ * Ohne eigene Tage folgt die Kette ihrem Vorgänger — auch später noch.
+ *
+ * Die Spalte bleibt dafür leer statt „alle sieben" zu tragen: Ändert der
+ * Vorgänger seine Tage, wandert die Kette mit, statt auf einem Stand von
+ * damals stehen zu bleiben.
+ */
+test('a chain without own days follows its anchor', function () {
+    $user = User::factory()->create();
+    $joggen = Habit::factory()->for($user)->fromTemplate(HabitTemplate::Joggen)
+        ->fixedSchedule('07:30', [1, 3, 5])->withMeasure(30)->create();
+    $dehnen = Habit::factory()->for($user)->fromTemplate(HabitTemplate::Dehnen)
+        ->withMeasure(10)->create([
+            'schedule_type' => ScheduleType::Chained,
+            'chained_to_habit_id' => $joggen->id,
+            'trigger_situation' => null,
+            'scheduled_time' => null,
+            'scheduled_days' => null,
+        ]);
+
+    expect($dehnen->activeWeekdays())->toBe([1, 3, 5]);
+
+    $joggen->update(['scheduled_days' => [2, 4]]);
+
+    expect($dehnen->fresh()->activeWeekdays())->toBe([2, 4]);
+});

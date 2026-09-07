@@ -179,6 +179,10 @@ class AdjustHabitRequest extends FormRequest
             'trigger_situation' => null,
             'scheduled_time' => null,
             'scheduled_days' => null,
+            // Ein Vorschlag ist **eine** Uhrzeit. Eine alte Abbildung je
+            // Wochentag stünde sonst über ihr, und die Gewohnheit läge weiter
+            // dort, wo sie laut Vorschlag gerade nicht mehr liegen soll.
+            'scheduled_times' => null,
             'chained_to_habit_id' => null,
         ];
 

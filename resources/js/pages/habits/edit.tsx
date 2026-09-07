@@ -35,6 +35,8 @@ interface EditableHabit {
     scheduleType: ScheduleType;
     triggerSituation: string | null;
     scheduledTime: string | null;
+    /** Abweichende Uhrzeiten je Wochentag — leer, wenn alle dieselbe haben. */
+    scheduledTimes: Partial<Record<Weekday, string>>;
     scheduledDays: Weekday[] | null;
     chainedToHabitId: number | null;
     smallestStep: string | null;
@@ -84,6 +86,10 @@ export default function EditHabit({
         // wirklich läuft.
         scheduled_days:
             habit.scheduledDays ?? ([1, 2, 3, 4, 5, 6, 7] as Weekday[]),
+        // Leer heißt: jeden Tag zur selben Uhrzeit.
+        scheduled_times: (habit.scheduledTimes ?? {}) as Partial<
+            Record<Weekday, string>
+        >,
         chained_to_habit_id: habit.chainedToHabitId,
         motivation: habit.motivation ?? '',
         smallest_step: habit.smallestStep ?? '',
@@ -159,6 +165,10 @@ export default function EditHabit({
                             days={data.scheduled_days}
                             onDaysChange={(days) =>
                                 setData('scheduled_days', days)
+                            }
+                            times={data.scheduled_times}
+                            onTimesChange={(times) =>
+                                setData('scheduled_times', times)
                             }
                             chainCandidates={chainCandidates}
                             chainedTo={data.chained_to_habit_id}

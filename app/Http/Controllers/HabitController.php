@@ -14,6 +14,7 @@ use App\Models\AppointmentNotice;
 use App\Models\Course;
 use App\Models\Habit;
 use App\Models\User;
+use App\Support\DayPlan;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -31,7 +32,7 @@ class HabitController extends Controller
      * bearbeitete selbst. Ihre belegte Spanne reist mit, damit die Oberfläche
      * gleich sagen kann, wann der Anschluss anfinge.
      *
-     * @return list<array{id: int, title: string, anchor: string, startsAt: string|null}>
+     * @return list<array{id: int, title: string, name: string, anchor: string, startsAt: string|null, weekdays: list<int>}>
      */
     private function chainCandidates(User $user, ?Habit $except = null): array
     {
@@ -44,11 +45,19 @@ class HabitController extends Controller
             ->map(fn (Habit $habit): array => [
                 'id' => $habit->id,
                 'title' => $habit->titleWithMeasure(),
+                // Derselbe Name ohne die Dauer: In der Kachel gehört sie dazu,
+                // in einem Satz über die Gewohnheit nicht — „‚Joggen gehen ·
+                // 30 Min' läuft dienstags nicht" liest sich wie ein Zitat aus
+                // einer Tabelle.
+                'name' => $habit->title,
                 'anchor' => $habit->scheduleLabel(),
                 // Wo der Anschluss läge — nach dem Ende plus der Viertelstunde
                 // Luft. Null, wenn die Kette an einer Situation hängt und
                 // niemand die Uhrzeit kennt.
                 'startsAt' => $habit->followerStartsAt()?->format('H:i'),
+                // An welchen Tagen sie läuft: Wer sich anhängt, kann daraus
+                // auswählen — aber nicht darüber hinaus.
+                'weekdays' => $habit->activeWeekdays(),
             ])
             ->all());
     }
@@ -69,16 +78,51 @@ class HabitController extends Controller
             ->get()
             ->reject(fn (Habit $habit): bool => $except !== null && $habit->is($except))
             ->filter(fn (Habit $habit): bool => $habit->startsAt() !== null)
-            ->map(fn (Habit $habit): array => [
-                'id' => $habit->id,
-                'title' => $habit->title,
-                'days' => $habit->activeWeekdays(),
-                'from' => $habit->startsAt()?->format('H:i') ?? '',
-                'to' => ($habit->endsAt() ?? $habit->startsAt())?->format('H:i') ?? '',
-            ])
+            // Ein Eintrag je Uhrzeit, nicht je Gewohnheit: Seit jeder Wochentag
+            // eine eigene haben kann, belegt eine Gewohnheit unter Umständen
+            // mehrere Fenster. Haben alle Tage dieselbe Zeit, ist es wieder
+            // genau eines — die Gruppierung fällt dann auf sich selbst zurück.
+            ->flatMap(fn (Habit $habit): array => $this->slotsOf($habit))
             ->all();
 
         return [...$habits, ...$this->courseSlots($user)];
+    }
+
+    /**
+     * Die belegten Fenster **einer** Gewohnheit, nach Uhrzeit gruppiert.
+     *
+     * @return list<array{id: int, title: string, days: list<int>, from: string, to: string}>
+     */
+    private function slotsOf(Habit $habit): array
+    {
+        $minutes = $habit->durationMinutes() ?? DayPlan::AssumedMinutes;
+        $nachZeit = [];
+
+        foreach ($habit->activeWeekdays() as $weekday) {
+            $time = $habit->timeOnWeekday($weekday)
+                ?? $habit->startsAt()?->format('H:i');
+
+            if ($time === null) {
+                continue;
+            }
+
+            $nachZeit[$time][] = $weekday;
+        }
+
+        /** @var list<array{id: int, title: string, days: list<int>, from: string, to: string}> $slots */
+        $slots = [];
+
+        foreach ($nachZeit as $time => $days) {
+            $slots[] = [
+                'id' => $habit->id,
+                'title' => $habit->title,
+                'days' => $days,
+                'from' => (string) $time,
+                'to' => DayPlan::toTime(DayPlan::toMinutes((string) $time) + $minutes),
+            ];
+        }
+
+        return $slots;
     }
 
     /**
@@ -453,6 +497,9 @@ class HabitController extends Controller
                 'scheduleType' => $habit->schedule_type->value,
                 'triggerSituation' => $habit->trigger_situation,
                 'scheduledTime' => $habit->scheduled_time?->format('H:i'),
+                // Die abweichenden Zeiten je Wochentag — leer, solange alle
+                // Tage dieselbe haben.
+                'scheduledTimes' => $habit->scheduled_times ?? [],
                 'scheduledDays' => $habit->scheduled_days,
                 'chainedToHabitId' => $habit->chained_to_habit_id,
                 'smallestStep' => $habit->smallest_step,

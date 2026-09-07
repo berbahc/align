@@ -31,6 +31,7 @@ use Illuminate\Support\Collection;
  * @property string|null $trigger_situation
  * @property Carbon|null $scheduled_time
  * @property list<int>|null $scheduled_days
+ * @property array<int|string, string>|null $scheduled_times
  * @property int|null $chained_to_habit_id
  * @property Habit|null $chainedTo
  * @property bool $reminder_enabled
@@ -47,7 +48,7 @@ use Illuminate\Support\Collection;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['title', 'template_key', 'schedule_type', 'trigger_situation', 'scheduled_time', 'scheduled_days', 'chained_to_habit_id', 'reminder_enabled', 'motivation', 'smallest_step', 'behavior_type', 'target_amount', 'target_unit', 'position', 'committed_at'])]
+#[Fillable(['title', 'template_key', 'schedule_type', 'trigger_situation', 'scheduled_time', 'scheduled_days', 'scheduled_times', 'chained_to_habit_id', 'reminder_enabled', 'motivation', 'smallest_step', 'behavior_type', 'target_amount', 'target_unit', 'position', 'committed_at'])]
 class Habit extends Model
 {
     /** @use HasFactory<HabitFactory> */
@@ -559,8 +560,10 @@ class Habit extends Model
      *
      * Die eine Quelle dafür, und sie beantwortet drei verschiedene Fragen:
      *
-     * - Eine **gekoppelte** Gewohnheit läuft, wenn die läuft, an der sie hängt
-     *   — nicht öfter und nicht seltener. Ohne Vorgänger läuft sie nirgends.
+     * - Eine **gekoppelte** Gewohnheit läuft nie öfter als die, an der sie
+     *   hängt — seltener aber schon: Wer montags und mittwochs joggt, will
+     *   danach vielleicht nur mittwochs dehnen. Ohne eigene Tage sind es alle
+     *   des Vorgängers, und ohne Vorgänger läuft sie nirgends.
      * - Eine **feste** Uhrzeit ohne Tage ist kein Zeitpunkt: Das Formular
      *   verlangt die Tage, und eine leere Liste heißt hier deshalb „an keinem
      *   Tag", nicht „an allen".
@@ -574,13 +577,89 @@ class Habit extends Model
     public function activeWeekdays(): array
     {
         if (! $this->schedule_type->hasOwnAnchor()) {
-            return $this->anchorHabit()?->activeWeekdays() ?? [];
+            $anchor = $this->anchorHabit()?->activeWeekdays() ?? [];
+
+            // Die eigene Wahl schneidet, sie erweitert nicht: „nach dem
+            // Joggen" an einem Tag ohne Joggen wäre ein Anschluss an nichts.
+            // Ohne eigene Tage bleibt es bei allen des Vorgängers — so liefen
+            // alle Ketten, bevor sich hier etwas wählen ließ.
+            /** @var list<int> $own */
+            $own = $this->scheduled_days ?? [];
+
+            if ($own === []) {
+                return $anchor;
+            }
+
+            /** @var list<int> $days */
+            $days = array_values(array_intersect($anchor, $own));
+
+            return $days;
         }
 
         /** @var list<int> $days */
         $days = $this->scheduled_days ?? ($this->schedule_type->hasClockTime() ? [] : self::EveryDay);
 
         return $days;
+    }
+
+    /**
+     * Die Uhrzeit an diesem Wochentag — oder die eine, die für alle gilt.
+     *
+     * `scheduled_times` trägt eine Abbildung `Wochentag => "HH:MM"` und ist
+     * leer, solange alle Tage dieselbe Zeit haben. Der Regelfall bleibt damit
+     * eine Zahl, und jede Zeile aus der Zeit davor bedeutet unverändert
+     * dasselbe.
+     *
+     * Ohne Datum die gemeinsame Uhrzeit: Wer nicht sagt, welchen Tag er meint,
+     * bekommt keinen geraten. Für eine Gewohnheit mit wechselnden Zeiten ist
+     * das `scheduled_time` — der Wert, mit dem sie angelegt wurde, und die
+     * Grundlage, von der die Abweichungen abgehen.
+     */
+    public function timeOn(?Carbon $on = null): ?string
+    {
+        return $on === null
+            ? $this->scheduled_time?->format('H:i')
+            : $this->timeOnWeekday($on->dayOfWeekIso);
+    }
+
+    /**
+     * Dieselbe Frage, gestellt mit einem Wochentag statt einem Datum.
+     *
+     * Der Überschneidungshinweis und die Konflikt­suche rechnen in Wochentagen
+     * — sie fragen nicht nach dem 7. September, sondern nach „montags".
+     */
+    public function timeOnWeekday(int $weekday): ?string
+    {
+        $common = $this->scheduled_time?->format('H:i');
+
+        if ($this->scheduled_times === null) {
+            return $common;
+        }
+
+        $perDay = $this->scheduled_times[$weekday]
+            ?? $this->scheduled_times[(string) $weekday]
+            ?? null;
+
+        return is_string($perDay) ? $perDay : $common;
+    }
+
+    /**
+     * Haben nicht alle Tage dieselbe Uhrzeit?
+     *
+     * Die Beschriftung braucht das: „07:00 · Mo–Fr" wäre falsch, wenn der
+     * Donnerstag um zehn liegt.
+     */
+    public function hasVaryingTimes(): bool
+    {
+        $times = $this->scheduled_times;
+
+        if ($times === null || $times === []) {
+            return false;
+        }
+
+        $distinct = array_unique([...array_values($times), ...array_filter([$this->scheduled_time?->format('H:i')])]);
+
+        return count($distinct) > 1;
     }
 
     /**
@@ -1251,7 +1330,12 @@ class Habit extends Model
         }
 
         if ($this->schedule_type->hasClockTime()) {
-            return $this->scheduled_time?->copy();
+            // Nicht `scheduled_time`, sondern die Zeit **dieses** Tages: Wer
+            // dienstags um acht und donnerstags um zehn lernt, hat zwei, und
+            // die eine Spalte kennt nur die erste.
+            $time = $this->timeOn($on);
+
+            return $time === null ? null : Carbon::createFromFormat('H:i', $time);
         }
 
         if ($this->schedule_type !== ScheduleType::Chained) {
@@ -1415,13 +1499,22 @@ class Habit extends Model
             ];
         }
 
-        $time = $this->scheduled_time?->format('H:i');
+        $time = $this->timeOn($on);
 
         // Ohne Uhrzeit steht auch die Wochentag-Aufzählung nicht: Sie beschriebe
         // die Wiederholung eines Zeitpunkts, den es nicht gibt.
-        return $time === null
-            ? ['timeLabel' => null, 'repeatLabel' => null]
-            : ['timeLabel' => $time, 'repeatLabel' => self::weekdayLabel($this->scheduled_days ?? [])];
+        if ($time === null) {
+            return ['timeLabel' => null, 'repeatLabel' => null];
+        }
+
+        // Wechselnde Zeiten ohne Datum: „07:00 · Mo–Fr" wäre gelogen, wenn der
+        // Donnerstag um zehn liegt. Wo ein Tag bekannt ist — im Kalender, im
+        // Raster, in der Erinnerung — steht die echte Uhrzeit; die Liste sagt
+        // stattdessen, dass es mehrere sind.
+        return [
+            'timeLabel' => $on === null && $this->hasVaryingTimes() ? 'wechselnd' : $time,
+            'repeatLabel' => self::weekdayLabel($this->scheduled_days ?? []),
+        ];
     }
 
     /**
@@ -1897,6 +1990,7 @@ class Habit extends Model
             'schedule_type' => ScheduleType::class,
             'scheduled_time' => 'datetime:H:i',
             'scheduled_days' => 'array',
+            'scheduled_times' => 'array',
             'reminder_enabled' => 'boolean',
             'committed_at' => 'datetime',
             'graduated_at' => 'datetime',

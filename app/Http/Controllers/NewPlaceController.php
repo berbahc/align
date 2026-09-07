@@ -191,6 +191,10 @@ class NewPlaceController extends Controller
         foreach ($rows as $row) {
             $row['habit']->update([
                 'schedule_type' => ScheduleType::Fixed,
+                // Eine Uhrzeit für alle Tage: Was die App hier setzt, gilt
+                // überall gleich — eine alte Abbildung je Wochentag stünde
+                // sonst darüber und machte die neue Zeit wirkungslos.
+                'scheduled_times' => null,
                 'scheduled_time' => DayPlan::toTime($row['start']),
                 'scheduled_days' => $row['days'],
                 'trigger_situation' => null,

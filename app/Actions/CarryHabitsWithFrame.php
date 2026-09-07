@@ -73,7 +73,17 @@ class CarryHabitsWithFrame
                 array_column($habit->spansFrom(0), 'id'),
             ),
             function (Habit $habit, int $start): void {
-                $habit->update(['scheduled_time' => DayPlan::toTime($start)]);
+                // Eine Uhrzeit für die ganze Woche: Diese Rechnung sucht einen
+                // Platz, an dem die Gewohnheit an **allen** ihren Tagen im
+                // Rahmen liegt, und findet deshalb genau einen. Hatte sie
+                // vorher verschiedene Zeiten je Tag, fallen sie hier zusammen —
+                // sichtbar, denn der Rahmenwechsel meldet, was er verschoben
+                // hat. Sie stehen zu lassen hieße, den gefundenen Platz gleich
+                // wieder zu überschreiben.
+                $habit->update([
+                    'scheduled_times' => null,
+                    'scheduled_time' => DayPlan::toTime($start),
+                ]);
 
                 // Eine Uhrzeit im Rahmen ist wieder ein Platz — dieselbe
                 // Ansage wie bei jedem anderen Weg, der eine setzt.

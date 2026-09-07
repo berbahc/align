@@ -116,9 +116,19 @@ export interface SleepShared {
  */
 export interface ChainCandidate {
     id: number;
+    /** Mit der Dauer — so steht sie auf der Kachel. */
     title: string;
+    /** Ohne die Dauer — so steht sie in einem Satz. */
+    name: string;
     anchor: string;
     startsAt: string | null;
+    /**
+     * Die Tage, an denen sie läuft.
+     *
+     * Eine angehängte Gewohnheit kann daraus auswählen — an einem Tag ohne
+     * Vorgänger wäre „danach" ein Anschluss an nichts.
+     */
+    weekdays: Weekday[];
 }
 
 /**
