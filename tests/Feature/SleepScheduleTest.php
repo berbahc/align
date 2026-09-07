@@ -692,3 +692,50 @@ test('the same holds for a single day', function () {
     expect($one)->toBe('12:00')
         ->and($two)->toBe('12:30');
 });
+
+/**
+ * Der Schlafplan geht mit dem Tag auf, von dem aus man kommt.
+ *
+ * Die Aufsteh- und Schlafensmarken im Kalender führen hierher. Ohne den Tag
+ * in der Adresse landete man beim Montag und müsste den Tag suchen, den man
+ * eben noch vor sich hatte.
+ */
+test('the sleep plan opens on the weekday it was called with', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('sleep.show', ['weekday' => 4]))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('sleep')
+            ->where('selectedWeekday', 4)
+            ->etc()
+        );
+});
+
+/**
+ * Und was kein Wochentag ist, ist keine Auswahl.
+ *
+ * Durchgereicht ergäbe `?weekday=99` einen Editor ohne Tag — eine leere
+ * Stelle, wo die Zeiten stehen sollten.
+ */
+test('a weekday outside the week counts as none at all', function (int|string $weekday) {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('sleep.show', ['weekday' => $weekday]))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('selectedWeekday', null)
+            ->etc()
+        );
+})->with([0, 8, 99, -1, 'montag']);
+
+test('without a weekday the plan starts where it always did', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('sleep.show'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('selectedWeekday', null)
+            ->etc()
+        );
+});

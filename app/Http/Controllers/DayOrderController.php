@@ -42,6 +42,20 @@ class DayOrderController extends Controller
     private const int MinimumHabits = 2;
 
     /**
+     * Geordnet wird nur der heutige Tag.
+     *
+     * Das Übernehmen schreibt feste Uhrzeiten in die Gewohnheiten selbst und
+     * gilt damit ab sofort und für jeden weiteren Tag ({@see store()}). Für
+     * gestern bestellt hieße das: Ein vergangener Tag ordnet die kommende
+     * Woche — er ist vorbei, und ihn umzuräumen ändert nichts mehr an ihm.
+     * Für morgen hieße es dasselbe eine Nacht zu früh.
+     *
+     * Die Regel steht hier und nicht nur am Knopf: Was die Oberfläche nicht
+     * anbietet, soll der Server auch nicht annehmen.
+     */
+    private const string TodayOnly = 'Ordnen lässt sich nur der heutige Tag.';
+
+    /**
      * Der Vorschlag für einen Tag.
      */
     public function suggestions(Request $request): JsonResponse
@@ -53,6 +67,12 @@ class DayOrderController extends Controller
         $date = isset($validated['date'])
             ? Carbon::parse($validated['date'])->startOfDay()
             : Carbon::today();
+
+        if (! $date->isToday()) {
+            // 409 wie die anderen Absagen dieser Stelle: Das ist kein
+            // Formularfehler, sondern eine Auskunft über den Tag.
+            return response()->json(['message' => self::TodayOnly], 409);
+        }
 
         $due = $this->habitsOn($request->user(), $date);
 
@@ -163,6 +183,11 @@ class DayOrderController extends Controller
         ]);
 
         $date = Carbon::parse($validated['date'])->startOfDay();
+
+        if (! $date->isToday()) {
+            throw ValidationException::withMessages(['date' => self::TodayOnly]);
+        }
+
         $due = $this->habitsOn($request->user(), $date)->keyBy('id');
 
         $this->guard($request->user(), $date, $validated['order'], $due);

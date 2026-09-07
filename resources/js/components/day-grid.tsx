@@ -58,7 +58,7 @@ export function DayGrid({
     onOpenCourse,
     onToggleAppointment,
     onDrop,
-    onAdjustWake,
+    weekday,
     frameOverridden = false,
     ghost,
 }: {
@@ -91,13 +91,12 @@ export function DayGrid({
     /** Ein Block wurde losgelassen — jetzt kommt die Frage nach der Reichweite. */
     onDrop: (drag: BlockDrag) => void;
     /**
-     * Die Aufsteh-Marke antippen — „heute war das anders".
+     * Der Wochentag des gezeigten Tages, 1 bis 7.
      *
-     * Fehlt an vergangenen Tagen: Sie liegen hinter uns, und ihren Anfang
-     * nachträglich zu verschieben wäre eine Korrektur der eigenen Geschichte.
-     * Dann bleibt die Marke der Link zum Schlafplan, der sie immer war.
+     * Nur für die beiden Rahmenmarken: Sie führen zum Schlafplan, und der
+     * öffnet sich an diesem Tag statt am Montag.
      */
-    onAdjustWake?: () => void;
+    weekday: number;
     /** Gilt an diesem Tag schon ein eigener Rahmen? */
     frameOverridden?: boolean;
     /** Der Vorschlag der KI: sein Block, und wessen Platz er vorwegnimmt. */
@@ -237,13 +236,20 @@ export function DayGrid({
                 {/* Die beiden Ränder des Tages, an ihrer echten Minute. Sie
                     führen zum Schlafplan, weil sie dort herkommen — und sie
                     sind der Grund, aus dem „nach dem Aufstehen" genau hier
-                    liegt und nicht eine Stunde daneben. */}
+                    liegt und nicht eine Stunde daneben.
+
+                    Beide führen dorthin, und zwar auf den Tag, auf dem man
+                    gerade steht. Die Aufsteh-Marke öffnete hier einmal ein
+                    Sheet, das den Rahmen für diesen einen Tag verschob — zwei
+                    Stellen, an denen sich derselbe Rahmen ändern ließ, und
+                    zwei Ränder, die sich verschieden verhielten. Der Rahmen
+                    wird an einer Stelle gestellt. */}
                 <FrameMarker
                     icon={Sun}
                     label="Aufstehen"
                     time={wakeTime}
                     top={offsetOf(frameFrom, bounds)}
-                    onAdjust={onAdjustWake}
+                    weekday={weekday}
                     adjusted={frameOverridden}
                 />
                 <FrameMarker
@@ -251,6 +257,7 @@ export function DayGrid({
                     label="Schlafenszeit"
                     time={bedtime}
                     top={offsetOf(frameTo, bounds)}
+                    weekday={weekday}
                 />
 
                 <ul
@@ -398,7 +405,7 @@ function FrameMarker({
     label,
     time,
     top,
-    onAdjust,
+    weekday,
     adjusted = false,
 }: {
     icon: typeof Sun;
@@ -406,8 +413,9 @@ function FrameMarker({
     time: string;
     /** Die Pixelhöhe im Raster — die Marke sitzt auf ihrer eigenen Minute. */
     top: number;
-    /** Lässt sich dieser Rand für diesen einen Tag verschieben? */
-    onAdjust?: () => void;
+    /** Der Wochentag des gezeigten Tages — er öffnet den Plan an der
+     *  richtigen Stelle statt am Montag. */
+    weekday: number;
     /** Gilt hier schon eine Ausnahme? Dann ist die Uhrzeit eine eigene. */
     adjusted?: boolean;
 }) {
@@ -444,26 +452,12 @@ function FrameMarker({
         </>
     );
 
-    if (onAdjust !== undefined) {
-        return (
-            <button
-                type="button"
-                onClick={onAdjust}
-                aria-label={`${label} um ${time}, für diesen Tag ändern`}
-                style={{ top }}
-                className={`${shell} cursor-pointer`}
-            >
-                {inner}
-            </button>
-        );
-    }
-
     return (
         <Link
-            href={sleepShow()}
+            href={sleepShow({ query: { weekday } })}
             aria-label={`${label} um ${time}, zum Schlafplan`}
             style={{ top }}
-            className={shell}
+            className={`${shell} cursor-pointer`}
         >
             {inner}
         </Link>

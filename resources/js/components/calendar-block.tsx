@@ -7,12 +7,19 @@ import { cn } from '@/lib/utils';
 import type { CalendarBlock as Block } from '@/types';
 
 /**
- * Ab welcher Höhe auch die Icon-Kachel und der kleine erste Schritt Platz haben.
+ * Ab welcher Höhe auch der kleine erste Schritt Platz hat.
  *
  * Der Anker steht dagegen immer da, auch im kleinsten Block: Er ist der Grund,
  * aus dem die Gewohnheit an dieser Stelle liegt, und ein Block ohne ihn wäre
  * ein Titel, der irgendwo im Tag schwebt. Zwei Zeilen passen in 44 Pixel; die
  * dritte nicht.
+ *
+ * Die Kachel hing früher an derselben Grenze und tut es nicht mehr. Sie ist
+ * keine dritte Zeile, sondern eine Spalte: Bei 96 Pixeln je Stunde fiel sie
+ * unter 41 Minuten weg, und weil sie Platz einnimmt, sprang der Titel dann um
+ * 32 Pixel nach links. Ein Tag mit einer Stunde Sport und drei halben Stunden
+ * bekam ein Icon und drei Fehlstellen — die Spalte war keine mehr. Sie passt
+ * auch in 44 Pixel: 24 hoch, und zwei Textzeilen brauchen keine 36.
  */
 const SPACIOUS = 64;
 
@@ -204,33 +211,32 @@ function BlockBody({
                 weniger als die Startseite. Erledigt fällt sie weg — dann sagt
                 der gefüllte Haken schon alles, und zwei Zeichen für einen
                 Zustand sind eines zu viel. */}
-            {spacious &&
-                (block.companion !== null && !block.completed ? (
-                    <span
-                        aria-label={`Zusammen mit ${block.companion.name}`}
-                        className="mt-0.5 flex shrink-0 -space-x-1.5"
-                    >
-                        <PersonCircle
-                            initial={selfInitial}
-                            className="size-6 text-[10px]"
-                        />
-                        <PersonCircle
-                            initial={block.companion.initial}
-                            className="size-6 text-[10px] ring-2 ring-track"
-                        />
-                    </span>
-                ) : (
-                    <span
-                        className={cn(
-                            'mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-lg',
-                            block.completed
-                                ? 'bg-primary text-primary-foreground'
-                                : 'bg-sand text-primary',
-                        )}
-                    >
-                        <HabitGlyph habit={block} className="size-3.5" />
-                    </span>
-                ))}
+            {block.companion !== null && !block.completed ? (
+                <span
+                    aria-label={`Zusammen mit ${block.companion.name}`}
+                    className="mt-0.5 flex shrink-0 -space-x-1.5"
+                >
+                    <PersonCircle
+                        initial={selfInitial}
+                        className="size-6 text-[10px]"
+                    />
+                    <PersonCircle
+                        initial={block.companion.initial}
+                        className="size-6 text-[10px] ring-2 ring-track"
+                    />
+                </span>
+            ) : (
+                <span
+                    className={cn(
+                        'mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-lg',
+                        block.completed
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-sand text-primary',
+                    )}
+                >
+                    <HabitGlyph habit={block} className="size-3.5" />
+                </span>
+            )}
 
             <span className="min-w-0 flex-1">
                 <span className="type-eyebrow block truncate text-muted-foreground">

@@ -368,6 +368,21 @@ test('a habit in the way is named without pretending a lecture could move', func
 });
 
 /**
+ * Ein Montag, der zugleich heute ist.
+ *
+ * Die Tagesordnung nimmt nur den heutigen Tag an ({@see DayOrderController}).
+ * Diese Tests brauchen aber einen Wochentag, an dem ihre Gewohnheiten
+ * anstehen — also wird die Uhr auf einen Montag gestellt, statt in den
+ * nächsten zu springen.
+ */
+function orderableMonday(): Carbon
+{
+    Carbon::setTestNow(Carbon::parse('2026-09-07 09:00'));
+
+    return Carbon::parse('2026-09-07');
+}
+
+/**
  * Die Wege, auf denen sich bis hierher ein Überlapp erzeugen ließ.
  *
  * Alle vier sind erst nach der Frage „darf es einen Zustand geben, in dem auf
@@ -375,11 +390,14 @@ test('a habit in the way is named without pretending a lecture could move', func
  * Formularen, nicht am Tag.
  */
 test('applying a day order cannot drop a habit into a lecture', function () {
+    // Geordnet wird nur heute, also ist heute der Montag, an dem diese
+    // Gewohnheiten anstehen — sonst wiese schon das Datum die Anfrage ab und
+    // der Überlapp käme nie zur Sprache.
+    $monday = orderableMonday();
+
     $user = studentWithCourse('10:00', '11:30');
     $a = Habit::factory()->for($user)->fixedSchedule('14:00', [1])->withMeasure(30)->create(['title' => 'A']);
     $b = Habit::factory()->for($user)->fixedSchedule('16:00', [1])->withMeasure(30)->create(['title' => 'B']);
-
-    $monday = Carbon::today()->next(Carbon::MONDAY);
 
     $this->actingAs($user)
         ->post(route('calendar.order.store'), [
@@ -395,13 +413,15 @@ test('applying a day order cannot drop a habit into a lecture', function () {
 });
 
 test('applying a day order cannot stack two habits on each other', function () {
+    $monday = orderableMonday();
+
     $user = User::factory()->create();
     $a = Habit::factory()->for($user)->fixedSchedule('14:00', [1])->withMeasure(30)->create(['title' => 'A']);
     $b = Habit::factory()->for($user)->fixedSchedule('16:00', [1])->withMeasure(30)->create(['title' => 'B']);
 
     $this->actingAs($user)
         ->post(route('calendar.order.store'), [
-            'date' => Carbon::today()->next(Carbon::MONDAY)->toDateString(),
+            'date' => $monday->toDateString(),
             'order' => [
                 ['id' => $a->id, 'time' => '09:00'],
                 ['id' => $b->id, 'time' => '09:15'],

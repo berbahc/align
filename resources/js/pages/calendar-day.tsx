@@ -15,7 +15,6 @@ import { DayOrderSheet } from '@/components/day-order-sheet';
 import { ShiftSheet } from '@/components/shift-sheet';
 import { StartingHelpSheet } from '@/components/starting-help-sheet';
 import { Card, CardContent } from '@/components/ui/card';
-import { WakeSheet } from '@/components/wake-sheet';
 import type { BlockDrag } from '@/hooks/use-block-drag';
 import { useBlockDrag } from '@/hooks/use-block-drag';
 import { HOUR_HEIGHT, collisionOf, followersOf } from '@/lib/day-grid';
@@ -211,7 +210,6 @@ export default function CalendarDay({
     /** Steht die Frage nach der Tagesordnung offen? */
     const [ordering, setOrdering] = useState(false);
     /** „Heute bin ich später aufgestanden" — der Rahmen dieses einen Tages. */
-    const [adjustingWake, setAdjustingWake] = useState(false);
     /** Die vorgemerkte Alternative — sie erzeugt den Ghost im Raster. */
     const [preview, setPreview] = useState<AnchorAlternative | null>(null);
     /** Der eben losgelassene Block, solange die Frage nach der Reichweite offen ist. */
@@ -469,8 +467,15 @@ export default function CalendarDay({
                     denselben Ton wie der Vorschlagskasten darunter — hier
                     spricht dieselbe Stimme, und sie soll auch so aussehen.
 
-                    Ab zwei Gewohnheiten: bei einer gibt es keine Reihenfolge. */}
-                {blocks.length > 1 && canComplete && (
+                    Ab zwei Gewohnheiten: bei einer gibt es keine Reihenfolge.
+
+                    Und nur heute. Nicht `canComplete` — das reicht sieben Tage
+                    zurück, weil sich so weit nachtragen lässt. Ordnen ist etwas
+                    anderes als Abhaken: Es schreibt feste Uhrzeiten in die
+                    Gewohnheiten selbst und gilt ab dann für jeden Tag. Von
+                    Montag aus bestellt ordnete es am Donnerstag die Woche neu,
+                    und der vergangene Tag bliebe, wie er war. */}
+                {blocks.length > 1 && isToday && (
                     <div className="flex justify-center">
                         <button
                             type="button"
@@ -571,11 +576,7 @@ export default function CalendarDay({
                                 setShiftError(null);
                                 setDropped(drag);
                             }}
-                            onAdjustWake={
-                                canShift
-                                    ? () => setAdjustingWake(true)
-                                    : undefined
-                            }
+                            weekday={weekdayOf(date)}
                             frameOverridden={frameOverridden}
                             ghost={outline}
                         />
@@ -730,18 +731,6 @@ export default function CalendarDay({
                 onOpenChange={setOrdering}
             />
 
-            {/* Der Rahmen dieses einen Tages. Er hängt an der Aufsteh-Marke,
-                weil er dort sichtbar ist — und nicht am Schlafplan, weil
-                „heute war das anders" keine Änderung am Rhythmus ist. */}
-            <WakeSheet
-                key={`${date}-${wakeTime}-${String(adjustingWake)}`}
-                open={adjustingWake}
-                date={date}
-                wakeTime={wakeTime}
-                overridden={frameOverridden}
-                onOpenChange={setAdjustingWake}
-            />
-
             {/* Die Kurse liegen hier, also werden sie hier angefasst — mit
                 denselben Sheets, die es dafür gibt, nicht mit eigenen. */}
             <CourseDetailSheet
@@ -787,6 +776,16 @@ function previewStartMinute(alternative: AnchorAlternative): number {
     }
 
     return alternative.anchorHour * 60;
+}
+
+/**
+ * Der Wochentag eines Datums, 1 für Montag bis 7 für Sonntag.
+ *
+ * Dieselbe Zählung wie auf dem Server (`dayOfWeekIso`) und im Schlafplan.
+ * `getDay()` zählt ab Sonntag mit 0 — die Null wird deshalb zur Sieben.
+ */
+function weekdayOf(date: string): number {
+    return new Date(`${date}T00:00:00`).getDay() || 7;
 }
 
 /** Heute als „YYYY-MM-DD" in der Zeitzone des Geräts. */

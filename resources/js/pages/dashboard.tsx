@@ -95,14 +95,7 @@ export default function Dashboard({
     const firstName = auth.user?.name.split(' ')[0] ?? '';
     const selfInitial = (auth.user?.name.charAt(0) ?? '').toUpperCase();
 
-    const countedDone = useCountedNumber(todayProgress.completed);
-
-    // Die Konsistenzrate als Prozentwert — gerundet, damit „73,469 %" nicht
-    // eine Genauigkeit vorgibt, die die Zahl nicht hat.
-    const consistencyRate =
-        consistency === null || consistency.scheduled === 0
-            ? 0
-            : Math.round((consistency.done / consistency.scheduled) * 100);
+    const countedPercentage = useCountedNumber(todayProgress.percentage);
 
     // Welche Gewohnheit gerade im Starthilfe-Sheet steht; null heißt zu.
     const [stuckOn, setStuckOn] = useState<Habit | null>(null);
@@ -334,122 +327,77 @@ export default function Dashboard({
                     onCarryOn={carryOn}
                 />
 
-                {(todayProgress.total > 0 || consistency !== null) && (
+                {todayProgress.total > 0 && (
                     /* §12/§16 — auf dieser Seite trägt genau eine Fläche: die
                        des Tages. Sie liegt höher (warmer Schatten), ist innen
                        großzügiger und stellt die Zahl größer. Alles andere
                        ordnet sich flach darunter. Ohne diesen Unterschied
                        lesen drei gleich schwere weiße Karten als Liste, nicht
-                       als Hierarchie.
-
-                       Zwei Zahlen, zwei Zeiträume: oben der Tag, unten die
-                       Konsistenz über dreißig Tage. Sie stehen zusammen, weil
-                       die zweite die erste einordnet — ein leerer Vormittag
-                       heißt wenig, wenn der Monat steht. Die Karte bleibt
-                       deshalb auch an einem Tag ohne Gewohnheit: Vorher fiel
-                       sie ganz weg und nahm die Konsistenz mit. */
+                       als Hierarchie. */
                     <Card className="gap-0 border-transparent py-7 shadow-[var(--shadow-lift)]">
                         <CardContent className="px-6">
-                            {todayProgress.total > 0 && (
-                                <>
-                                    <p className="type-eyebrow text-muted-foreground">
-                                        Heute
-                                    </p>
+                            <p className={'type-eyebrow text-muted-foreground'}>
+                                Heute
+                            </p>
 
-                                    {/* §3.3 — gemischte Gewichte in einer
-                                        Zeile: Zahl 700/primary, Rest
-                                        400/muted. Gezählt wird, was erledigt
-                                        ist, nicht ein Prozentsatz davon: „0 %"
-                                        stand jeden Morgen als größte Zahl auf
-                                        dem Bildschirm und las sich wie ein
-                                        Rückstand, obwohl der Tag erst anfängt.
-                                        Ein Prozentwert gehört zur Konsistenz
-                                        unten — dort misst er dreißig Tage und
-                                        sagt wirklich etwas.
+                            {/* §3.3 — gemischte Gewichte in einer Zeile:
+                                Zahl 700/primary, Wort 400/muted. Die Zahl
+                                läuft mit dem Balken hoch statt zu springen;
+                                `tabular-nums` hält die Breite dabei ruhig. */}
+                            <p className="mt-2 flex items-baseline gap-2">
+                                <span className="text-[clamp(2.75rem,10vw,3.5rem)] leading-none font-bold tracking-[-0.03em] text-primary tabular-nums">
+                                    {countedPercentage} %
+                                </span>
+                                <span className="text-base text-muted-foreground">
+                                    Erledigt
+                                </span>
+                            </p>
 
-                                        Die Zahl läuft mit dem Balken hoch
-                                        statt zu springen; `tabular-nums` hält
-                                        die Breite dabei ruhig. */}
-                                    <p className="mt-2 flex flex-wrap items-baseline gap-x-2">
-                                        <span className="text-[clamp(2.75rem,10vw,3.5rem)] leading-none font-bold tracking-[-0.03em] text-primary tabular-nums">
-                                            {countedDone}
-                                        </span>
-                                        <span className="text-base text-muted-foreground">
-                                            von {todayProgress.total}{' '}
-                                            {todayProgress.total === 1
-                                                ? 'Gewohnheit'
-                                                : 'Gewohnheiten'}{' '}
-                                            erledigt
-                                        </span>
-                                    </p>
+                            {/* §5.3 — voll gerundet, Füllung primary, Spur sand,
+                                nie ein Prozentwert im Balken.
 
-                                    {/* §5.3 — voll gerundet, Füllung primary,
-                                        Spur sand, nie ein Prozentwert im
-                                        Balken.
-
-                                        Die Breite läuft auf der kritisch
-                                        gedämpften Grundkurve: schnell weg vom
-                                        alten Wert, ruhig in den neuen hinein,
-                                        ohne Überschwingen. Der Balken misst,
-                                        er feiert nicht. */}
-                                    <div
-                                        role="img"
-                                        aria-label={`${todayProgress.completed} von ${todayProgress.total} Gewohnheiten heute erledigt`}
-                                        className="mt-5 h-2.5 w-full overflow-hidden rounded-full bg-sand"
-                                    >
-                                        <div
-                                            className="h-full rounded-full bg-primary transition-[width] duration-[var(--duration-fluid)] ease-[var(--ease-fluid)] motion-reduce:transition-none"
-                                            style={{
-                                                width: `${todayProgress.percentage}%`,
-                                            }}
-                                        />
-                                    </div>
-                                </>
-                            )}
-
-                            {/* Die Konsistenzrate: der Anteil genutzter
-                                Gelegenheiten (Lally et al. 2010). Sie stand
-                                hier einmal als 11-px-Fußnote neben der
-                                Tageszahl und war damit da, ohne gelesen zu
-                                werden — dabei ist sie die Zahl, an der sich
-                                ein Aufbau wirklich ablesen lässt.
-
-                                „Gelegenheiten" und nicht „Tage": Die Zahl ist
-                                eine Summe über alle Gewohnheiten und kann
-                                größer sein als 30. „60 Tage in den letzten 30
-                                Tagen" wäre ein Widerspruch. Dieselbe
-                                Unterscheidung trifft {@see Habit::streakUnit()}
-                                schon für die Serie; je Gewohnheit stimmt
-                                „Tage", deshalb steht es so auf der
-                                Gewohnheiten-Seite. */}
-                            {consistency !== null && (
+                                Die Breite läuft auf der kritisch gedämpften
+                                Grundkurve: schnell weg vom alten Wert, ruhig
+                                in den neuen hinein, ohne Überschwingen. Der
+                                Balken misst, er feiert nicht. */}
+                            <div
+                                role="img"
+                                aria-label={`${todayProgress.completed} von ${todayProgress.total} Gewohnheiten heute erledigt`}
+                                className="mt-5 h-2.5 w-full overflow-hidden rounded-full bg-sand"
+                            >
                                 <div
-                                    className={
-                                        todayProgress.total > 0
-                                            ? 'mt-5 border-t border-border pt-4'
-                                            : ''
-                                    }
-                                >
-                                    <p className="type-eyebrow text-muted-foreground">
-                                        Konsistenz · letzte 30 Tage
-                                    </p>
-                                    <p className="mt-1.5 flex flex-wrap items-baseline gap-x-2">
-                                        <span className="text-2xl leading-none font-bold text-primary tabular-nums">
-                                            {consistencyRate} %
-                                        </span>
-                                        {/* Der Prozentwert trägt die Zeile,
-                                            die Grundlage steht daneben — ohne
-                                            eigenes Gewicht. Drei Schriftstärken
-                                            nebeneinander lesen sich wie drei
-                                            Aussagen, und es ist eine. */}
-                                        <span className="text-sm text-muted-foreground tabular-nums">
+                                    className="h-full rounded-full bg-primary transition-[width] duration-[var(--duration-fluid)] ease-[var(--ease-fluid)] motion-reduce:transition-none"
+                                    style={{
+                                        width: `${todayProgress.percentage}%`,
+                                    }}
+                                />
+                            </div>
+
+                            <p className="mt-2 flex flex-wrap justify-between gap-x-4 text-[11px] text-muted-foreground">
+                                <span>
+                                    {todayProgress.completed} von{' '}
+                                    {todayProgress.total} Gewohnheiten
+                                </span>
+                                {/* „Mal" und nicht „Tage": Die Zahl ist eine
+                                    Summe über alle Gewohnheiten und kann
+                                    deshalb größer sein als 30. „60 Tage in den
+                                    letzten 30 Tagen" wäre ein Widerspruch.
+                                    Dieselbe Unterscheidung trifft
+                                    {@see Habit::streakUnit()} schon für die
+                                    Serie. Je Gewohnheit stimmt „Tage",
+                                    deshalb steht es auf der
+                                    Gewohnheiten-Seite. */}
+                                {consistency !== null && (
+                                    <span>
+                                        Letzte 30 Tage:{' '}
+                                        <span className="font-semibold text-foreground tabular-nums">
                                             {consistency.done} von{' '}
-                                            {consistency.scheduled} Gelegenheiten
-                                            genutzt
-                                        </span>
-                                    </p>
-                                </div>
-                            )}
+                                            {consistency.scheduled}
+                                        </span>{' '}
+                                        Mal erledigt
+                                    </span>
+                                )}
+                            </p>
                         </CardContent>
                     </Card>
                 )}

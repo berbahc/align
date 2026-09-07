@@ -31,6 +31,10 @@ export function rhythmState(day: RhythmDay): DayState {
  *
  * Der offene Tag trägt denselben Haken, nur ungefüllt: Er ist die Stelle, an
  * die er gehört, nicht der Vorwurf, dass er fehlt (§1.4 — kein Alarm).
+ *
+ * Drei Zustände, drei Stufen derselben Form: Fläche, Kontur, gestrichelte
+ * Kontur. Der Haken ist da oder nicht. Ein Punkt kommt hier nicht mehr vor —
+ * er gehört dem Kalender, wo er eine Gewohnheit bedeutet.
  */
 const MARK: Record<DayState, string> = {
     // Die einzige gesättigte Farbe des Systems (§1.2) — sie sagt „hier ist
@@ -51,9 +55,16 @@ const MARK: Record<DayState, string> = {
     // auch ohne Farbwahrnehmung lesbar (§1.2 bleibt gewahrt — gesättigt und
     // flächig ist weiterhin nur das Erledigte).
     open: 'border border-primary/35 text-primary/75',
-    // Keine Fläche, nur ein Punkt — erkennbar keine Marke. Ein leerer Haken
-    // läse sich als versäumt; an diesen Tagen war nie etwas vorgesehen.
-    unplanned: 'bg-transparent',
+    // Keine Fläche und kein Haken: Ein leerer Haken läse sich als versäumt, und
+    // an diesen Tagen war nie etwas vorgesehen. Es bleibt die gestrichelte
+    // Kante — sie hält den Platz, damit die Woche ihre sieben Stellen behält,
+    // und sagt „hier war nichts geplant" statt „hier fehlt etwas".
+    //
+    // Vorher stand hier ein Punkt. Der ist im Kalender vergeben: Dort ist ein
+    // Punkt **eine Gewohnheit** — blass offen, gefüllt erledigt. Dieselbe Form
+    // hieß also auf der einen Seite „eine Gewohnheit" und auf der anderen
+    // „gar keine". Zwei Legenden, die sich widersprechen, erklären nichts.
+    unplanned: 'border border-dashed border-border bg-transparent',
 };
 
 /** Wie die drei Zustände heißen — §8: beobachtend, nicht wertend. */
@@ -100,13 +111,6 @@ export function RhythmMark({
                 und in der Legende gleich sitzt. */}
             {state !== 'unplanned' && (
                 <Check className="size-[70%]" strokeWidth={3.25} />
-            )}
-
-            {/* `border` statt `track`: Der Punkt muss auf drei Gründen stehen
-                können — auf der weißen Karte, im Band des heutigen Tages und
-                auf dem Seitengrund, wo die Legende steht. */}
-            {state === 'unplanned' && (
-                <span className="size-1.5 rounded-full bg-border" />
             )}
         </span>
     );
