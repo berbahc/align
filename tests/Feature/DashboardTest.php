@@ -438,14 +438,22 @@ test('the overview keeps its numerator inside the denominator after a schedule c
 });
 
 /**
- * Die Konsistenzrate bleibt auch an einem Tag ohne Gewohnheit.
+ * Die Konsistenzrate wird auch an einem Tag ohne Gewohnheit gerechnet.
  *
- * Sie lag einmal als Fußnote in der Tageskarte, und die Karte erschien nur,
- * wenn heute etwas anstand. An einem Sonntag mit einer Mo–Fr-Gewohnheit fiel
- * damit beides weg: erst der Tag, dann die Zahl, an der sich der Aufbau
- * überhaupt ablesen lässt.
+ * Sie misst dreißig Tage und hängt deshalb nicht daran, ob heute etwas ansteht:
+ * An einem Sonntag mit einer Mo–Fr-Gewohnheit ist `todayProgress.total` null
+ * und die Rate trotzdem eine Zahl. `consistency()` gibt hier bewusst nicht
+ * `null` zurück — das tut sie nur, wenn es im Fenster überhaupt keine
+ * Gelegenheit gab.
+ *
+ * **Der Test spricht über die Props, nicht über den Bildschirm.** Die
+ * Tageskarte erscheint nur an einem Tag, an dem etwas ansteht, und trägt die
+ * Rate als Fußnote — an einem leeren Sonntag ist sie also gerechnet, aber
+ * nicht zu sehen. Der Unterschied stand hier einmal andersherum; er gehört
+ * benannt, damit dieser Test nicht das Gegenteil dessen behauptet, was die
+ * Seite tut.
  */
-test('the consistency rate survives a day with nothing due', function () {
+test('the consistency rate is computed even on a day with nothing due', function () {
     $user = User::factory()->create();
     $sunday = Carbon::today()->next(Carbon::SUNDAY);
     Carbon::setTestNow($sunday->copy()->setTime(9, 0));
