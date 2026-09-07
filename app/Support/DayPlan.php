@@ -410,16 +410,32 @@ class DayPlan
             $window = $entry['window'];
             $window['to'] = max($window['to'], $window['from'] + $needed);
 
-            // Ist die Spanne zu, gilt der Rest des Tages: Später als der
-            // Anlass ist besser als übereinander, und die eine Regel wiegt
-            // schwerer als die genaue Stelle. Findet sich auch dort nichts,
-            // bekommt sie keine — dann steht sie unter dem Raster, sichtbar.
-            $start = $this->firstFreeWithin($window, $needed, $taken)
-                ?? $this->firstFreeWithin(
-                    ['from' => $window['from'], 'to' => $this->frame()['to']],
-                    $needed,
-                    $taken,
-                );
+            // Gesucht wird von der Kante her, an der die Situation klebt:
+            // „Nach dem Aufstehen" beginnt beim Aufstehen und weicht nach
+            // hinten aus, „vor dem Schlafengehen" endet an der Schlafenszeit
+            // und weicht nach vorn. Immer von vorn zu suchen legte den
+            // Abendblock an den Anfang seiner Stunde — also eine Stunde vor
+            // die Schlafenszeit, sobald dort gerade Platz ist. Das ist nicht,
+            // was „vor dem Schlafengehen" heißt.
+            //
+            // Ist die Spanne zu, gilt der Rest des Tages in derselben
+            // Richtung: Später als der Anlass ist besser als übereinander,
+            // und früher als der Abend besser als nach dem Zubettgehen.
+            // Findet sich auch dort nichts, bekommt sie keine Stelle — dann
+            // steht sie unter dem Raster, sichtbar.
+            $start = $entry['window']['anchor'] === 'end'
+                ? $this->lastFreeWithin($window, $needed, $taken)
+                    ?? $this->lastFreeWithin(
+                        ['from' => $this->frame()['from'], 'to' => $window['to']],
+                        $needed,
+                        $taken,
+                    )
+                : $this->firstFreeWithin($window, $needed, $taken)
+                    ?? $this->firstFreeWithin(
+                        ['from' => $window['from'], 'to' => $this->frame()['to']],
+                        $needed,
+                        $taken,
+                    );
 
             if ($start === null) {
                 continue;
@@ -432,6 +448,52 @@ class DayPlan
         }
 
         return $this->placements = $places;
+    }
+
+    /**
+     * Der **letzte** Platz im Fenster, an dem `$minutes` frei sind.
+     *
+     * Das Gegenstück zu {@see firstFreeWithin()} für die Situationen, die an
+     * ihrem Ende hängen: „Vor dem Schlafengehen" soll so spät wie möglich
+     * liegen, nicht so früh wie möglich. Gesucht wird deshalb von hinten —
+     * der Block endet an der Grenze und rückt nur so weit nach vorn, wie das,
+     * was dort schon liegt, es erzwingt.
+     *
+     * Dieselbe Viertelstunde Luft wie überall. `null`, wenn das Fenster nichts
+     * mehr hergibt.
+     *
+     * @param  array{from: int, to: int}  $window
+     * @param  list<array{from: int, to: int}>  $taken
+     */
+    private function lastFreeWithin(array $window, int $minutes, array $taken): ?int
+    {
+        $cursor = $window['to'] - $minutes;
+
+        // Höchstens so oft, wie es Blöcke gibt: Jeder schiebt den Zeiger
+        // einmal vor sich, danach ist entweder Platz oder das Fenster aus.
+        for ($step = 0; $step <= count($taken); $step++) {
+            if ($cursor < $window['from']) {
+                return null;
+            }
+
+            $blocking = null;
+
+            foreach ($taken as $block) {
+                if ($cursor < $block['to'] + self::BreatherMinutes
+                    && $cursor + $minutes + self::BreatherMinutes > $block['from']) {
+                    $candidate = $block['from'] - self::BreatherMinutes - $minutes;
+                    $blocking = $blocking === null ? $candidate : min($blocking, $candidate);
+                }
+            }
+
+            if ($blocking === null) {
+                return $cursor;
+            }
+
+            $cursor = $blocking;
+        }
+
+        return null;
     }
 
     /**

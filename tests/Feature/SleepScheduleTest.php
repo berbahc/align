@@ -352,3 +352,101 @@ test('a bedtime after midnight carries the evening habit with it', function () {
 
     expect($habit->sleepBoundStartMinute($monday))->toBe(24 * 60);
 });
+
+/**
+ * „Unmittelbar davor bzw. danach": Die beiden Situationen am Tagesrand kleben
+ * an ihrer Kante, nicht am Anfang ihrer Spanne.
+ *
+ * Der Morgen weicht nach hinten aus, der Abend nach vorn. Beides von vorn zu
+ * suchen legte den Abendblock an den Anfang seiner Stunde — also eine Stunde
+ * vor die Schlafenszeit, sobald dort gerade Platz ist. Das ist nicht, was
+ * „vor dem Schlafengehen" heißt.
+ */
+test('the evening habit ends at bedtime, not an hour before it', function () {
+    $monday = Carbon::today()->startOfWeek()->addWeek();
+    $user = User::factory()->create();
+
+    $user->sleepSchedules()->create([
+        'weekday' => 1, 'wake_time' => '07:00', 'bedtime' => '23:00',
+    ]);
+
+    Habit::factory()->for($user)->withMeasure(30)->create([
+        'title' => 'Lesen',
+        'schedule_type' => ScheduleType::Dynamic,
+        'trigger_situation' => 'vor dem Schlafengehen',
+        'scheduled_time' => null,
+        'scheduled_days' => [1],
+        'created_at' => Carbon::today()->subWeek(),
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('calendar.day', $monday->toDateString()))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            // 22:30 bis 23:00 — der Block endet an der Schlafenszeit.
+            ->where('blocks.0.startMinute', 22 * 60 + 30)
+        );
+});
+
+test('the evening habit slides forward when something blocks the last hour', function () {
+    $monday = Carbon::today()->startOfWeek()->addWeek();
+    $user = User::factory()->create();
+
+    $user->sleepSchedules()->create([
+        'weekday' => 1, 'wake_time' => '07:00', 'bedtime' => '23:00',
+    ]);
+
+    Habit::factory()->for($user)->withMeasure(60)->fixedSchedule('22:00', [1])->create([
+        'title' => 'Telefonat',
+        'created_at' => Carbon::today()->subWeek(),
+    ]);
+
+    Habit::factory()->for($user)->withMeasure(30)->create([
+        'title' => 'Lesen',
+        'schedule_type' => ScheduleType::Dynamic,
+        'trigger_situation' => 'vor dem Schlafengehen',
+        'scheduled_time' => null,
+        'scheduled_days' => [1],
+        'created_at' => Carbon::today()->subWeek(),
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('calendar.day', $monday->toDateString()))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            // 21:15 bis 21:45, dann die Viertelstunde Luft, dann das Telefonat
+            // — so spät wie möglich, aber nicht darüber.
+            ->where('blocks.0.startMinute', 21 * 60 + 15)
+            ->where('blocks.1.startMinute', 22 * 60)
+        );
+});
+
+test('the morning habit starts at the wake time and slides back if blocked', function () {
+    $monday = Carbon::today()->startOfWeek()->addWeek();
+    $user = User::factory()->create();
+
+    $user->sleepSchedules()->create([
+        'weekday' => 1, 'wake_time' => '07:00', 'bedtime' => '23:00',
+    ]);
+
+    Habit::factory()->for($user)->withMeasure(30)->fixedSchedule('07:00', [1])->create([
+        'title' => 'Duschen',
+        'created_at' => Carbon::today()->subWeek(),
+    ]);
+
+    Habit::factory()->for($user)->withMeasure(20)->create([
+        'title' => 'Meditieren',
+        'schedule_type' => ScheduleType::Dynamic,
+        'trigger_situation' => 'nach dem Aufstehen',
+        'scheduled_time' => null,
+        'scheduled_days' => [1],
+        'created_at' => Carbon::today()->subWeek(),
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('calendar.day', $monday->toDateString()))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('blocks.0.startMinute', 7 * 60)
+            // 07:30 plus die Viertelstunde Luft — direkt hinter dem, was im
+            // Weg lag, und nicht irgendwo im Vormittag.
+            ->where('blocks.1.startMinute', 7 * 60 + 45)
+        );
+});

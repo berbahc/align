@@ -942,7 +942,7 @@ class Habit extends Model
             return null;
         }
 
-        $window = $this->user->sleepWindowFor(($on ?? Carbon::today())->dayOfWeekIso);
+        $window = $this->user->sleepWindowOn($on ?? Carbon::today());
 
         $wake = DayPlan::toMinutes($window['wakeTime']);
         $bed = DayPlan::toMinutes($window['bedtime']);
@@ -966,16 +966,25 @@ class Habit extends Model
     /**
      * Die Spanne, in der eine Situations-Gewohnheit ausweichen darf.
      *
-     * Der Anfang ist die Stelle, an die der Kalender sie zuerst legt; das Ende
-     * sagt, wie weit sie rutschen kann, wenn dort schon etwas liegt. Für die
-     * beiden Situationen am Tagesrand hängt beides am Schlafplan, für die
-     * übrigen steht es in {@see SituationWindows}.
+     * Drei Werte, nicht zwei: die Spanne — und die Kante, an der die
+     * Gewohnheit klebt. Ohne sie ließe sich die Spanne nur von vorn
+     * durchsuchen, und für den Abend wäre das die falsche Richtung: „Vor dem
+     * Schlafengehen" hieße dann eine Stunde vor dem Schlafengehen, sobald dort
+     * gerade Platz ist, statt unmittelbar davor. Der Anfang einer Spanne ist
+     * nicht immer die gewünschte Stelle.
      *
-     * `null` heißt: keine Spanne, also auch kein Ausweichen — eine feste
-     * Uhrzeit, eine Kette, oder eine selbst getippte Situation, über die
-     * niemand etwas weiß.
+     * - `start` — die Gewohnheit beginnt am Anlass und rutscht **nach hinten**,
+     *   wenn dort etwas liegt: „nach dem Aufstehen" ist der Morgen, und wer
+     *   erst duscht, meditiert eben danach.
+     * - `end` — sie endet an der Grenze und rutscht **nach vorn**: „vor dem
+     *   Schlafengehen" ist die letzte Sache des Tages, und alles, was davor
+     *   liegt, macht sie früher, nicht später.
      *
-     * @return array{from: int, to: int}|null
+     * Die Spanne selbst sagt, wie weit das Rutschen gehen darf. `null` heißt:
+     * keine Spanne, also auch kein Ausweichen — eine feste Uhrzeit, eine
+     * Kette, oder eine selbst getippte Situation, über die niemand etwas weiß.
+     *
+     * @return array{from: int, to: int, anchor: 'start'|'end'}|null
      */
     public function situationWindow(?Carbon $on = null): ?array
     {
@@ -993,14 +1002,15 @@ class Habit extends Model
         // „Vor dem Schlafengehen" ist die einzige, die rückwärts zählt: Sie
         // endet an der Schlafenszeit, statt an einem Anlass zu beginnen.
         $window = $this->trigger_situation === 'vor dem Schlafengehen'
-            ? ['from' => max(0, $start - self::EveningWindowMinutes), 'to' => $start + $minutes]
-            : ['from' => $start, 'to' => $start + self::SituationWindowMinutes];
+            ? ['from' => max(0, $start - self::EveningWindowMinutes), 'to' => $start + $minutes, 'anchor' => 'end']
+            : ['from' => $start, 'to' => $start + self::SituationWindowMinutes, 'anchor' => 'start'];
 
         // Das Fenster fasst mindestens, was hineinsoll: Eine vierstündige
         // Gewohnheit „nach dem Mittagessen" liegt eben von 13:00 bis 17:00.
         // Sonst gäbe es Dauern, zu denen keine Situation mehr passt.
         $window['to'] = max($window['to'], $window['from'] + $minutes);
 
+        /** @var array{from: int, to: int, anchor: 'start'|'end'} $window */
         return $window;
     }
 
