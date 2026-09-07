@@ -20,7 +20,6 @@ import type { BlockDrag } from '@/hooks/use-block-drag';
 import { useBlockDrag } from '@/hooks/use-block-drag';
 import { HOUR_HEIGHT, collisionOf, followersOf } from '@/lib/day-grid';
 import {
-    AI_LINK,
     OUTLINE_BUTTON,
     PRIMARY_BUTTON,
     QUIET_BUTTON,
@@ -444,6 +443,34 @@ export default function CalendarDay({
                     )}
                 </div>
 
+                {/* Der Weg zur Tagesordnung betrifft den ganzen Tag, nicht eine
+                    Zeile — deshalb steht er über dem Raster und nicht darunter.
+                    Als leiser Link am Seitenende war er der letzte Satz einer
+                    langen Spalte: Wer den Tag ordnen will, will das, bevor er
+                    ihn durchgescrollt hat.
+
+                    Unterlegt, aber nicht gesättigt: Die eine kräftige Fläche
+                    dieser Seite ist das Raster selbst (§5.4). Der Knopf trägt
+                    denselben Ton wie der Vorschlagskasten darunter — hier
+                    spricht dieselbe Stimme, und sie soll auch so aussehen.
+
+                    Ab zwei Gewohnheiten: bei einer gibt es keine Reihenfolge. */}
+                {blocks.length > 1 && canComplete && (
+                    <div className="flex justify-center">
+                        <button
+                            type="button"
+                            onClick={() => setOrdering(true)}
+                            className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-full border border-primary/25 bg-accent px-5 text-sm font-semibold text-primary transition-[background-color,scale] duration-[var(--duration-press)] ease-out hover:bg-accent/70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-safe:active:scale-[0.97]"
+                        >
+                            <AiMascot
+                                variant="mark"
+                                className="size-4 shrink-0"
+                            />
+                            Tag neu ordnen
+                        </button>
+                    </div>
+                )}
+
                 {/* Der Vorschlag über dem Raster: Was er ist, warum, und die
                     zwei Wege — übernehmen oder selbst einordnen. Die Figur
                     steht nur hier, weil hier die KI spricht. */}
@@ -537,24 +564,6 @@ export default function CalendarDay({
                             frameOverridden={frameOverridden}
                             ghost={outline}
                         />
-
-                        {/* Der Weg zur Tagesordnung steht unter dem Raster, weil
-                            er den ganzen Tag betrifft und nicht eine Zeile. Ab
-                            zwei Gewohnheiten: bei einer gibt es keine
-                            Reihenfolge. */}
-                        {blocks.length > 1 && canComplete && (
-                            <button
-                                type="button"
-                                onClick={() => setOrdering(true)}
-                                className={`${AI_LINK} mt-5 text-xs`}
-                            >
-                                <AiMascot
-                                    variant="mark"
-                                    className="size-4 shrink-0"
-                                />
-                                Tag neu ordnen
-                            </button>
-                        )}
 
                         {/* Kein Fehler, sondern eine Grenze: Was der
                             Wochenstreifen nicht mehr zeigt, lässt sich auch
