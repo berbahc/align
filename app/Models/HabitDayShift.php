@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ShiftOrigin;
 use Database\Factories\HabitDayShiftFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -20,10 +21,11 @@ use Illuminate\Support\Carbon;
  * @property int $habit_id
  * @property Carbon $shifted_on
  * @property Carbon $scheduled_time
+ * @property ShiftOrigin $origin
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['habit_id', 'shifted_on', 'scheduled_time'])]
+#[Fillable(['habit_id', 'shifted_on', 'scheduled_time', 'origin'])]
 class HabitDayShift extends Model
 {
     /** @use HasFactory<HabitDayShiftFactory> */
@@ -42,6 +44,7 @@ class HabitDayShift extends Model
         return [
             'shifted_on' => 'date',
             'scheduled_time' => 'datetime:H:i',
+            'origin' => ShiftOrigin::class,
         ];
     }
 }

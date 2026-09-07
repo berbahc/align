@@ -21,6 +21,7 @@ use App\Http\Controllers\HabitStreakCardController;
 use App\Http\Controllers\NewPlaceController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\SemesterController;
+use App\Http\Controllers\SleepDayOverrideController;
 use App\Http\Controllers\SleepScheduleController;
 use App\Http\Controllers\SmallestStepController;
 use App\Http\Middleware\EnsureOnboarded;
@@ -117,6 +118,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // je Wochentag, Wecker und die Erinnerung vor der Schlafenszeit.
         Route::get('sleep', [SleepScheduleController::class, 'show'])->name('sleep.show');
         Route::put('sleep', [SleepScheduleController::class, 'update'])->name('sleep.update');
+
+        // Erst zeigen, dann übernehmen: Wandert der Rahmen, wandern die festen
+        // Uhrzeiten mit — aber nicht, ohne dass jemand gesehen hat, wohin.
+        Route::post('sleep/preview', [SleepScheduleController::class, 'preview'])
+            ->name('sleep.preview');
+
+        // Der Rahmen eines einzelnen Tages: „heute später aufgestanden" ist
+        // keine Änderung am Rhythmus, sondern eine Ausnahme davon.
+        Route::post('sleep/days/preview', [SleepDayOverrideController::class, 'preview'])
+            ->name('sleep.days.preview');
+        Route::post('sleep/days', [SleepDayOverrideController::class, 'store'])
+            ->name('sleep.days.store');
+        Route::delete('sleep/days', [SleepDayOverrideController::class, 'destroy'])
+            ->name('sleep.days.destroy');
 
         // Der Freundeskreis ist der Unterbau der Verabredung: Screen 1 aus
         // community_feature3.md wählt aus Personen, die es vorher geben muss.

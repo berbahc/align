@@ -1,17 +1,29 @@
 import { Head, useForm } from '@inertiajs/react';
 import { AlarmClock } from 'lucide-react';
 import { useState } from 'react';
+import { FrameCarryList } from '@/components/frame-carry-list';
 import InputError from '@/components/input-error';
 import { SleepWeek } from '@/components/sleep-week';
 import { TimeStepper } from '@/components/time-stepper';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+    Sheet,
+    SheetContent,
+    SheetDescription,
+    SheetHeader,
+    SheetTitle,
+} from '@/components/ui/sheet';
 import { Spinner } from '@/components/ui/spinner';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
-import { PRIMARY_BUTTON, QUIET_LINK } from '@/lib/interaction';
+import { isQuiet, useFrameCarry } from '@/hooks/use-frame-carry';
+import { BOTTOM_SHEET, PRIMARY_BUTTON, QUIET_LINK } from '@/lib/interaction';
 import { sleepDurationLabel, sleepMinutes } from '@/lib/sleep';
 import { dashboard } from '@/routes';
-import { update } from '@/routes/sleep';
+import { preview, update } from '@/routes/sleep';
 import type { SleepWindow, Weekday } from '@/types';
+
+const SHEET_ACTION =
+    'inline-flex h-12 flex-1 cursor-pointer items-center justify-center rounded-xl px-4 text-center text-[15px] font-semibold transition-[background-color,scale] duration-[var(--duration-press)] ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50 motion-safe:active:scale-[0.97]';
 
 /** Die Kurzform für die Zeilen im Nachtband, wo der volle Name nicht passt. */
 const WEEKDAY_SHORT: Record<Weekday, string> = {
@@ -60,15 +72,16 @@ export default function Sleep({
     bedtimeReminderEnabled,
     reminderLeadMinutes,
 }: SleepProps) {
-    const { data, setData, put, processing, errors, isDirty } = useForm({
-        days: windows.map((window): SleepDayForm => ({
-            weekday: window.weekday,
-            wake_time: window.wakeTime,
-            bedtime: window.bedtime,
-            alarm_enabled: window.alarmEnabled,
-        })),
-        bedtime_reminder_enabled: bedtimeReminderEnabled,
-    });
+    const { data, setData, put, transform, processing, errors, isDirty } =
+        useForm({
+            days: windows.map((window): SleepDayForm => ({
+                weekday: window.weekday,
+                wake_time: window.wakeTime,
+                bedtime: window.bedtime,
+                alarm_enabled: window.alarmEnabled,
+            })),
+            bedtime_reminder_enabled: bedtimeReminderEnabled,
+        });
 
     /**
      * Welcher Tag gerade im Editor steht.
@@ -107,10 +120,56 @@ export default function Sleep({
         );
     }
 
-    function submit(event: React.FormEvent) {
-        event.preventDefault();
+    /**
+     * Was der neue Rahmen mit den Gewohnheiten macht — gefragt, bevor
+     * gespeichert wird.
+     */
+    const carry = useFrameCarry({});
+    const [asking, setAsking] = useState(false);
+
+    /**
+     * Speichern, mit oder ohne die Gewohnheiten im Schlepptau.
+     *
+     * `transform` statt `setData`: Das Mitziehen ist eine Antwort auf die
+     * Vorschau und kein Feld des Formulars — es steht in keinem Eingabefeld
+     * und soll auch nirgends stehen bleiben.
+     */
+    function save(carryHabits: boolean) {
+        setAsking(false);
+        carry.forget();
+
+        transform((current) => ({ ...current, carry_habits: carryHabits }));
+
         put(update.url(), { preserveScroll: true });
     }
+
+    /**
+     * Erst fragen, dann speichern.
+     *
+     * Hat der neue Rahmen keine Folgen — und das ist der Normalfall —, wird
+     * direkt gespeichert: Ein Dialog, der „nichts passiert" meldet, ist ein
+     * Klick ohne Auskunft. Erst wenn etwas mitziehen würde, kommt die Frage.
+     *
+     * Fällt die Vorschau aus, wird ebenfalls gespeichert. Der Schlafplan
+     * gehört dem Nutzer, und ein Ausfall auf unserer Seite darf ihn nicht
+     * aufhalten — dann bleiben die Gewohnheiten eben liegen, wo sie liegen.
+     */
+    function submit(event: React.FormEvent) {
+        event.preventDefault();
+        setAsking(true);
+
+        void carry.ask(preview.url(), { ...data }, (result) => {
+            if (result === null || isQuiet(result)) {
+                save(false);
+            }
+        });
+    }
+
+    /** Steht etwas zur Entscheidung an? */
+    const decision =
+        asking && carry.preview !== null && !isQuiet(carry.preview)
+            ? carry.preview
+            : null;
 
     /**
      * Wie lange die Woche Schlaf lässt, als ein Satz.
@@ -349,15 +408,69 @@ export default function Sleep({
 
                         <button
                             type="submit"
-                            disabled={processing || !isDirty}
+                            disabled={processing || carry.asking || !isDirty}
                             className={PRIMARY_BUTTON}
                         >
-                            {processing && <Spinner className="size-4" />}
+                            {(processing || carry.asking) && (
+                                <Spinner className="size-4" />
+                            )}
                             Schlafplan speichern
                         </button>
                     </aside>
                 </form>
             </div>
+
+            {/* Erst zeigen, dann übernehmen: Der Rahmen ist der Rahmen von
+                allem, und ihn zu verschieben, ohne zu sagen, was mitgeht,
+                hieße den Tag hinter dem Rücken des Nutzers umzuräumen. */}
+            <Sheet
+                open={decision !== null}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setAsking(false);
+                        carry.forget();
+                    }
+                }}
+            >
+                <SheetContent side="bottom" className={BOTTOM_SHEET}>
+                    <SheetHeader className="gap-2 p-0">
+                        <SheetTitle className="type-eyebrow text-left text-primary">
+                            Dein Tag beginnt jetzt anders
+                        </SheetTitle>
+                        <SheetDescription className="text-left text-[15px] leading-relaxed text-foreground">
+                            {(decision?.moves.length ?? 0) > 0
+                                ? 'Diese festen Uhrzeiten liegen sonst außerhalb deines Tages. Sie können um dieselbe Zeit mitrücken.'
+                                : 'Diese festen Uhrzeiten liegen jetzt außerhalb deines Tages.'}
+                        </SheetDescription>
+                    </SheetHeader>
+
+                    <div className="mt-5">
+                        <FrameCarryList
+                            moves={decision?.moves ?? []}
+                            blocked={decision?.blocked ?? []}
+                        />
+                    </div>
+
+                    <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                        {(decision?.moves.length ?? 0) > 0 && (
+                            <button
+                                type="button"
+                                onClick={() => save(true)}
+                                className={`${SHEET_ACTION} bg-primary text-primary-foreground hover:bg-primary/90`}
+                            >
+                                Mitnehmen und speichern
+                            </button>
+                        )}
+                        <button
+                            type="button"
+                            onClick={() => save(false)}
+                            className={`${SHEET_ACTION} border border-primary text-primary hover:bg-accent`}
+                        >
+                            Nur den Schlafplan speichern
+                        </button>
+                    </div>
+                </SheetContent>
+            </Sheet>
         </>
     );
 }

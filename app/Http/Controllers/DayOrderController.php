@@ -70,7 +70,7 @@ class DayOrderController extends Controller
 
         $busy = Timetable::for($request->user())->blocksOn($date);
 
-        $plan = DayPlan::for($due, $date->dayOfWeekIso, $request->user()->sleepWindows(), $date, $busy);
+        $plan = DayPlan::for($due, $date->dayOfWeekIso, $request->user()->sleepWindowsOn($date), $date, $busy);
         $frame = $plan->frame();
 
         // Passt der Tag überhaupt? Die Summe aller Dauern plus die Luft

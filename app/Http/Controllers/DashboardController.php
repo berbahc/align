@@ -279,9 +279,8 @@ class DashboardController extends Controller
      */
     private function sleepCard(User $user, Carbon $today): array
     {
-        $windows = $user->sleepWindows();
-        $tonight = $windows[$today->dayOfWeekIso];
-        $tomorrow = $windows[$today->copy()->addDay()->dayOfWeekIso];
+        $tonight = $user->sleepWindowOn($today);
+        $tomorrow = $user->sleepWindowOn($today->copy()->addDay());
 
         return [
             'bedtime' => $tonight['bedtime'],
