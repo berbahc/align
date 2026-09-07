@@ -454,8 +454,15 @@ export default function CalendarDay({
                     denselben Ton wie der Vorschlagskasten darunter — hier
                     spricht dieselbe Stimme, und sie soll auch so aussehen.
 
-                    Ab zwei Gewohnheiten: bei einer gibt es keine Reihenfolge. */}
-                {blocks.length > 1 && canComplete && (
+                    Ab zwei Gewohnheiten: bei einer gibt es keine Reihenfolge.
+
+                    Und nur heute. Nicht `canComplete` — das reicht sieben Tage
+                    zurück, weil sich so weit nachtragen lässt. Ordnen ist etwas
+                    anderes als Abhaken: Es schreibt feste Uhrzeiten in die
+                    Gewohnheiten selbst und gilt ab dann für jeden Tag. Von
+                    Montag aus bestellt ordnete es am Donnerstag die Woche neu,
+                    und der vergangene Tag bliebe, wie er war. */}
+                {blocks.length > 1 && isToday && (
                     <div className="flex justify-center">
                         <button
                             type="button"

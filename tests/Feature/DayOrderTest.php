@@ -323,3 +323,62 @@ test('a day filled with lectures is refused before the model is asked', function
 
     SuggestDayOrder::assertNotPrompted(fn (AgentPrompt $prompt): bool => true);
 });
+
+/**
+ * Geordnet wird nur heute.
+ *
+ * Das Übernehmen schreibt feste Uhrzeiten in die Gewohnheiten selbst und gilt
+ * damit für jeden weiteren Tag. Von einem vergangenen Tag aus bestellt hieße
+ * das: Der Montag ordnet den Donnerstag, und am Montag selbst ändert sich
+ * nichts mehr. Der Knopf steht deshalb nur über dem heutigen Tag — und der
+ * Server nimmt auch nichts anderes an.
+ */
+test('only today can be ordered, not a day that has passed', function () {
+    $monday = orderingMonday();
+    $yesterday = $monday->copy()->subDay();
+
+    $user = User::factory()->create();
+    Habit::factory()->for($user)->fixedSchedule('17:00', [1, 7])->withMeasure(30)->create();
+    Habit::factory()->for($user)->fixedSchedule('18:00', [1, 7])->withMeasure(20)->create();
+
+    $this->actingAs($user)
+        ->postJson(route('calendar.order.suggestions'), ['date' => $yesterday->toDateString()])
+        ->assertStatus(409)
+        ->assertJsonPath('message', 'Ordnen lässt sich nur der heutige Tag.');
+
+    // Die KI wird gar nicht erst gefragt: Die Absage steht vor dem Vorschlag.
+    SuggestDayOrder::assertNeverPrompted();
+});
+
+test('a day still ahead cannot be ordered either', function () {
+    $monday = orderingMonday();
+    $tomorrow = $monday->copy()->addDay();
+
+    $user = User::factory()->create();
+    Habit::factory()->for($user)->fixedSchedule('17:00', [1, 2])->withMeasure(30)->create();
+    Habit::factory()->for($user)->fixedSchedule('18:00', [1, 2])->withMeasure(20)->create();
+
+    $this->actingAs($user)
+        ->postJson(route('calendar.order.suggestions'), ['date' => $tomorrow->toDateString()])
+        ->assertStatus(409);
+});
+
+/**
+ * Und was am Knopf vorbei ankommt, wird abgewiesen — die Uhrzeiten bleiben,
+ * wie sie waren.
+ */
+test('taking over an order for another day changes nothing', function () {
+    $monday = orderingMonday();
+
+    $user = User::factory()->create();
+    $habit = Habit::factory()->for($user)->fixedSchedule('18:00', [1])->withMeasure(20)->create();
+
+    $this->actingAs($user)
+        ->post(route('calendar.order.store'), [
+            'date' => $monday->copy()->addDay()->toDateString(),
+            'order' => [['id' => $habit->id, 'time' => '08:00']],
+        ])
+        ->assertSessionHasErrors('date');
+
+    expect($habit->refresh()->scheduled_time->format('H:i'))->toBe('18:00');
+});
