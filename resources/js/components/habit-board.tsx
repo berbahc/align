@@ -1,5 +1,12 @@
 import { Link } from '@inertiajs/react';
-import { Bell, CircleCheck, Info, MoreHorizontal, Pencil } from 'lucide-react';
+import {
+    Bell,
+    CircleCheck,
+    Info,
+    MoreHorizontal,
+    Pencil,
+    Repeat,
+} from 'lucide-react';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { HabitGlyph } from '@/components/habit-glyph';
@@ -44,11 +51,22 @@ function dayName(date: string): string {
     });
 }
 
-const DAY_CELL = 'w-[1.125rem] sm:w-7';
-const DAY_MARK = 'size-3.5 sm:size-5';
+const DAY_CELL = 'w-5 sm:w-7';
+// Zwei Pixel mehr als der Rest der Kleinschrift verlangt: Der offene Haken ist
+// eine Kontur, und eine Kontur verliert bei 14 Pixeln mehr als eine Fläche.
+const DAY_MARK = 'size-4 sm:size-5';
 const BALANCE_COLUMN = 'w-28 lg:w-32';
 const MENU_COLUMN = 'w-10 sm:w-11';
 const ROW = 'flex gap-2 sm:gap-3';
+/**
+ * Der Platz des ⓘ in der Bilanzspalte — für das Zeichen und für seine Lücke.
+ *
+ * Nicht jede Zeile hat etwas zu erklären: Wo noch keine Gelegenheit war, gibt
+ * es keine Zahl und damit keinen Kasten. Ohne diese eine Breite an beiden
+ * Stellen endete der Text solcher Zeilen 24 Pixel weiter rechts als der
+ * darüber — zwei Daten in einer Spalte, die nicht untereinander stehen.
+ */
+const EXPLAIN_SLOT = 'size-6';
 
 /**
  * Das Band des heutigen Tages.
@@ -61,7 +79,12 @@ const ROW = 'flex gap-2 sm:gap-3';
 const BAND = 'border-x border-border/70 bg-track';
 
 /**
- * Die zwei Zahlen der Konsistenz, das Zeichen dahinter und die Serie.
+ * Die zwei Zahlen der Konsistenz und das Zeichen dahinter.
+ *
+ * **Ohne die Serie.** Sie stand hier klein unter der Bilanz und steht auf der
+ * Übersicht als eigene Karte — zweimal dieselbe Zahl auf zwei Seiten, von
+ * denen die zweite nur die kleinere Schrift hatte. Wer sie wegnimmt, verliert
+ * nichts: Die Karte ist der Ort, an dem sie gelesen wird.
  *
  * Steht zweimal im Baum, weil sie zweimal woanders hingehört: auf breiten
  * Schirmen als eigene Spalte rechts, auf dem Telefon als Zeile unter dem Namen.
@@ -81,15 +104,31 @@ function Balance({
        man an der Zahl, nicht am Seitenkopf. Aufklappen statt Tooltip, weil es
        auf dem Handy kein Hover gibt — derselbe Weg wie bei
        {@see HabitLimitNote}. */
-    const trigger = habit.consistency !== null && (
-        <CollapsibleTrigger className="ml-1 inline-flex size-6 -translate-y-px cursor-pointer items-center justify-center rounded-full align-middle text-muted-foreground transition-colors duration-[var(--duration-press)] ease-out hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
-            <Info className="size-3.5" aria-hidden="true" />
-            <span className="sr-only">
-                {explaining
-                    ? 'Erklärung ausblenden'
-                    : `Was zählt die Zahl bei ${habit.title}?`}
-            </span>
-        </CollapsibleTrigger>
+    const trigger =
+        habit.consistency !== null ? (
+            <CollapsibleTrigger
+                className={cn(
+                    'ml-1 inline-flex -translate-y-px cursor-pointer items-center justify-center rounded-full align-middle text-muted-foreground transition-colors duration-[var(--duration-press)] ease-out hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+                    EXPLAIN_SLOT,
+                )}
+            >
+                <Info className="size-3.5" aria-hidden="true" />
+                <span className="sr-only">
+                    {explaining
+                        ? 'Erklärung ausblenden'
+                        : `Was steht bei ${habit.title} in dieser Spalte?`}
+                </span>
+            </CollapsibleTrigger>
+        ) : null;
+
+    /* Wo es nichts zu erklären gibt, bleibt der Platz trotzdem stehen. Sonst
+       rückte der Text dieser Zeile allein nach rechts und die Spalte sähe aus
+       wie zwei Spalten. */
+    const explain = trigger ?? (
+        <span
+            className={cn('ml-1 inline-block align-middle', EXPLAIN_SLOT)}
+            aria-hidden="true"
+        />
     );
 
     return (
@@ -102,46 +141,43 @@ function Balance({
                 Anfangsdatum, und genau danach fragt man am ersten Tag. */}
             {habit.consistency !== null && habit.consistency.scheduled > 1 ? (
                 <>
-                    {/* Zahl und Zeichen bleiben zusammen. In einer 112 Pixel
-                        schmalen Spalte brach das Zeichen sonst allein auf eine
-                        weitere Zeile und stand dort wie ein vergessener
-                        Punkt. */}
-                    <span className="font-semibold text-foreground tabular-nums">
+                    {/* **Nur „X von Y Tagen", ohne Zusatz.** Dort stand einmal
+                        „Tagen seit dem Start", sobald die Gewohnheit jünger als
+                        das Fenster war. Vier Wörter, die nicht umbrechen
+                        durften, in einer 112 Pixel schmalen Spalte — sie liefen
+                        nach links über die Tagesspalten und legten sich über
+                        den heutigen Tag.
+
+                        Weglassen kostet nichts, weil der Satz die Auskunft gar
+                        nicht brauchte: Der Nenner **ist** die Zahl der
+                        Gelegenheiten. Wo es zwei gab, stehen zwei. Der andere
+                        Fall nannte sein Fenster ohnehin nie — „Tagen" allein
+                        stand über dreißig Tagen. Ein Zusatz an nur einer von
+                        zwei Zeilen liest sich wie ein Unterschied in der Sache
+                        und ist doch nur einer im Fenster. Welches Fenster
+                        gemeint ist, sagt der Kasten hinter dem ⓘ, dort wo
+                        gefragt wird. */}
+                    <span className="font-semibold whitespace-nowrap text-foreground tabular-nums">
                         {habit.consistency.done} von{' '}
                         {habit.consistency.scheduled}
                     </span>{' '}
-                    <span className="whitespace-nowrap">
-                        {habit.consistency.sinceStart
-                            ? 'Tagen seit dem Start'
-                            : 'Tagen'}
-                        {trigger}
-                    </span>
+                    {/* Wort und Zeichen bleiben zusammen. Sonst brach das
+                        Zeichen allein auf eine weitere Zeile und stand dort wie
+                        ein vergessener Punkt. */}
+                    <span className="whitespace-nowrap">Tagen{explain}</span>
                 </>
             ) : habit.startedOn !== null ? (
                 <>
-                    Angefangen am{' '}
+                    {/* „Seit" und nicht „Angefangen am": Das Datum sagt schon,
+                        dass etwas angefangen hat. Zwei Wörter weniger sind hier
+                        eine Zeile weniger. */}
+                    Seit{' '}
                     <span className="font-semibold whitespace-nowrap text-foreground tabular-nums">
                         {habit.startedOn}
-                        {trigger}
+                        {explain}
                     </span>
                 </>
-            ) : (
-                trigger
-            )}
-
-            {/* Zwei Zeitachsen, die einander nicht wiederholen: Das Blatt zeigt
-                die Woche und lässt sich abzählen, die Konsistenz blickt über
-                dreißig Tage und springt bei einem Fehltag nicht. Daneben die
-                Serie, die {@see Habit::consistencyRate()} „den Antrieb" nennt
-                und die Rate „den ehrlicheren Blick".
-
-                Eigene Zeile statt „ · " dahinter: In einer 112 Pixel schmalen
-                Spalte bräche der Punkt an einer beliebigen Stelle um. */}
-            {habit.streak !== null && (
-                <span className="mt-0.5 block text-[10px] text-faintest">
-                    {habit.streak}
-                </span>
-            )}
+            ) : null}
         </p>
     );
 }
@@ -159,6 +195,7 @@ function BoardRow({
     highlighted,
     onToggleReminder,
     onToggleDay,
+    onShowStreak,
     onEnd,
 }: {
     habit: ManagedHabit;
@@ -176,6 +213,8 @@ function BoardRow({
     onToggleReminder: (habit: ManagedHabit, enabled: boolean) => void;
     /** Einen Tag der Woche abhaken oder zurücknehmen. */
     onToggleDay: (habit: ManagedHabit, day: RhythmDay) => void;
+    /** Holt die Serie zurück auf die Übersicht. */
+    onShowStreak: (habit: ManagedHabit) => void;
     onEnd: (habit: ManagedHabit) => void;
 }) {
     // Ob der Erklärkasten unter dieser Zeile offen ist.
@@ -195,6 +234,13 @@ function BoardRow({
                 // Was seinen Platz verloren hat, wartet auf eine Entscheidung.
                 // Accent statt Rot: Hier ist nichts schiefgegangen, hier fehlt
                 // eine Wahl (§1.4).
+                //
+                //
+                // **Keine Tönung, solange der Kasten offen ist.** Sie war
+                // einmal da, damit ein fast weißes Milchglas überhaupt einen
+                // Grund hatte. Damit lagen vier Beigetöne übereinander — Karte,
+                // Tönung, Band, Glas — und das Blatt wurde ein Fleck. Den
+                // Kontrast trägt jetzt der Kasten selbst.
                 tinted ? 'bg-accent' : 'hover:bg-accent/40',
                 // Kein Ring mit Abstand: Auf einem Blatt aus Haarlinien säße er
                 // zwischen zwei Zeilen und sähe aus wie eine dritte.
@@ -430,6 +476,24 @@ function BoardRow({
                                     </>
                                 )}
 
+                                {/* Nur wenn die Karte weggeklickt wurde: Ein
+                                    Eintrag, der sonst „schon sichtbar" sagt,
+                                    ist kein Angebot. Der Weg hin sitzt auf der
+                                    Karte selbst, der Weg zurück hier — dort
+                                    gibt es die Karte ja nicht mehr. */}
+                                {habit.streakHidden && (
+                                    <>
+                                        <DropdownMenuItem
+                                            className="cursor-pointer"
+                                            onSelect={() => onShowStreak(habit)}
+                                        >
+                                            <Repeat aria-hidden="true" />
+                                            Serie wieder auf der Übersicht
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                    </>
+                                )}
+
                                 {/* Der einzige Weg zum Bearbeiten in der App:
                                     Hier geht es um die Gewohnheit an sich, auf
                                     der Übersicht um den heutigen Tag. */}
@@ -459,36 +523,84 @@ function BoardRow({
                     die er gerade vor sich hat. */}
                 {habit.consistency !== null && (
                     <CollapsibleContent>
-                        <div className="mb-3 rounded-xl border border-dashed bg-card px-4 py-3 sm:ml-13">
-                            <p className="text-[13px] font-semibold">
-                                Was die Zahl bedeutet
+                        {/* Milchglas statt gestrichelter Kante: Der Kasten
+                            liegt über der Zeile, aus der er kommt, und das
+                            Band des heutigen Tages läuft sichtbar hinter ihm
+                            durch. Genau das macht ihn zu einer Ebene darüber
+                            statt zu einem zweiten Kasten daneben — Apple §12,
+                            „translucency conveys hierarchy". */}
+                        <div className="glass mb-3 rounded-xl px-4 py-3 sm:ml-13">
+                            {/* Die Überschrift nennt, was in der Zeile
+                                tatsächlich steht. „Was die Zahl bedeutet" über
+                                einem Datum erklärte eine Zahl, die dort nie
+                                stand. */}
+                            <p className="text-[13px] font-semibold text-glass-foreground">
+                                {habit.consistency.scheduled > 1
+                                    ? 'Was die Zahl bedeutet'
+                                    : 'Warum hier ein Datum steht'}
                             </p>
-                            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                                {habit.consistency.sinceStart
-                                    ? 'Seit du '
-                                    : 'In den letzten 30 Tagen stand '}
-                                <span className="font-semibold text-foreground">
-                                    {habit.title}
-                                </span>{' '}
-                                {habit.consistency.sinceStart
-                                    ? 'angelegt hast, stand sie an '
-                                    : 'an '}
-                                <span className="font-semibold text-foreground tabular-nums">
-                                    {habit.consistency.scheduled}
-                                </span>{' '}
-                                Tagen an. An{' '}
-                                <span className="font-semibold text-foreground tabular-nums">
-                                    {habit.consistency.done}
-                                </span>{' '}
-                                davon hast du sie erledigt.
-                            </p>
+
+                            {/* Etwas kräftiger als sonst: Über einer
+                                durchscheinenden Fläche wechselt der Grund,
+                                und blasses Grau verliert dort zuerst (§12
+                                Vibrancy). */}
+                            {habit.consistency.scheduled > 1 ? (
+                                <p className="mt-1 text-xs leading-relaxed text-glass-muted">
+                                    {habit.consistency.sinceStart
+                                        ? 'Seit du '
+                                        : 'In den letzten 30 Tagen stand '}
+                                    <span className="font-semibold text-glass-foreground">
+                                        {habit.title}
+                                    </span>{' '}
+                                    {habit.consistency.sinceStart
+                                        ? 'angelegt hast, stand sie an '
+                                        : 'an '}
+                                    <span className="font-semibold text-glass-foreground tabular-nums">
+                                        {habit.consistency.scheduled}
+                                    </span>{' '}
+                                    Tagen an.{' '}
+                                    {/* Gebeugt statt gezählt. „An 0 davon"
+                                        klingt nach Vorhaltung und „An 1 davon"
+                                        ist kein Deutsch — beides stand hier,
+                                        weil die Zahl unbesehen in den Satz
+                                        gesetzt wurde. */}
+                                    {habit.consistency.done === 0 ? (
+                                        'Erledigt hast du sie an keinem davon.'
+                                    ) : habit.consistency.done === 1 ? (
+                                        'An einem davon hast du sie erledigt.'
+                                    ) : (
+                                        <>
+                                            An{' '}
+                                            <span className="font-semibold text-glass-foreground tabular-nums">
+                                                {habit.consistency.done}
+                                            </span>{' '}
+                                            davon hast du sie erledigt.
+                                        </>
+                                    )}
+                                </p>
+                            ) : (
+                                /* Genau eine Gelegenheit. Zwei Zahlen wären
+                                   hier eine Tautologie — „1 von 1" sagt nur,
+                                   dass es einen Tag gab. Der Kasten erklärt
+                                   deshalb, warum draußen ein Datum steht, und
+                                   sagt, was an seine Stelle tritt. */
+                                <p className="mt-1 text-xs leading-relaxed text-glass-muted">
+                                    <span className="font-semibold text-glass-foreground">
+                                        {habit.title}
+                                    </span>{' '}
+                                    stand bisher an einem Tag an. Zwei Zahlen
+                                    wären dafür noch keine Auskunft. Sobald mehr
+                                    Tage dazukommen, steht hier, an wie vielen
+                                    du sie erledigt hast.
+                                </p>
+                            )}
 
                             {/* Das Blatt darüber zeigt schon, welche Tage nicht
                                 mitzählen. Ein Beispiel („bei einer
                                 Mo–Fr-Gewohnheit also keine Wochenenden") stand
                                 auch über einer täglichen Gewohnheit und
                                 erklärte dort nichts. */}
-                            <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                            <p className="mt-2 text-xs leading-relaxed text-glass-muted">
                                 Tage, an denen sie nicht anstand, zählen nicht
                                 mit.
                             </p>
@@ -503,9 +615,9 @@ function BoardRow({
                                 zwei verschiedene Angaben. */}
                             {habit.startedOn !== null &&
                                 habit.consistency.scheduled > 1 && (
-                                    <p className="mt-2 text-xs text-muted-foreground">
+                                    <p className="mt-2 text-xs text-glass-muted">
                                         Angefangen am{' '}
-                                        <span className="font-semibold text-foreground tabular-nums">
+                                        <span className="font-semibold text-glass-foreground tabular-nums">
                                             {habit.startedOn}
                                         </span>
                                     </p>
@@ -597,6 +709,7 @@ export function HabitBoard({
     landed,
     onToggleReminder,
     onToggleDay,
+    onShowStreak,
     onEnd,
 }: {
     sections: BoardSection[];
@@ -605,6 +718,8 @@ export function HabitBoard({
     onToggleReminder: (habit: ManagedHabit, enabled: boolean) => void;
     /** Einen Tag der Woche abhaken oder zurücknehmen. */
     onToggleDay: (habit: ManagedHabit, day: RhythmDay) => void;
+    /** Holt die Serie zurück auf die Übersicht. */
+    onShowStreak: (habit: ManagedHabit) => void;
     onEnd: (habit: ManagedHabit) => void;
 }) {
     // Die Achse kommt aus der ersten Zeile: Alle Gewohnheiten teilen dasselbe
@@ -646,7 +761,7 @@ export function HabitBoard({
 
                 {/* **Kein Kopf über der Bilanz.** Dort stand „30 Tage", und
                     das stimmte nur für einen ihrer drei Zustände: „12 von 14
-                    Tagen" passt, „Angefangen am 06.09.2026" ist ein Datum und
+                    Tagen" passt, „Seit 06.09.2026" ist ein Datum und
                     kein Fenster, und eine Serie hört nicht nach dreißig Tagen
                     auf — sie kann sechzig sein. Ein Kopf, der zwei von drei
                     Zellen widerspricht, erklärt nichts.
@@ -729,6 +844,7 @@ export function HabitBoard({
                             highlighted={landed === `managed-habit-${habit.id}`}
                             onToggleReminder={onToggleReminder}
                             onToggleDay={onToggleDay}
+                            onShowStreak={onShowStreak}
                             onEnd={onEnd}
                         />
                     )),

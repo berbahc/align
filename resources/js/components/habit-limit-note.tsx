@@ -39,11 +39,15 @@ export function HabitLimitNote({
             </p>
 
             <CollapsibleContent>
-                <div className="mt-3 rounded-xl border border-dashed px-4 py-3">
-                    <p className="text-[13px] font-semibold">
+                {/* Dieselbe Ebene wie der Erklärkasten im Blatt: eine sandige
+                    Fläche mit Kante und Schatten statt einer gestrichelten
+                    Skizze. Beide beantworten dieselbe Frage — „was steht da
+                    eigentlich?" — und sollen deshalb gleich aussehen. */}
+                <div className="glass mt-3 rounded-xl px-4 py-3">
+                    <p className="text-[13px] font-semibold text-glass-foreground">
                         Warum nur {max}?
                     </p>
-                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                    <p className="mt-1 text-xs leading-relaxed">
                         Läuft eine schon von allein, beende sie. Dann ist der
                         Platz frei für eine neue.
                     </p>

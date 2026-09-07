@@ -541,7 +541,7 @@ export function HabitWizard({
                             }}
                             className={cn(
                                 CHOICE_TILE,
-                                'border-dashed px-4 py-3 text-[15px] text-muted-foreground',
+                                'hollow px-4 py-3 text-[15px] text-muted-foreground',
                                 ownStep
                                     ? 'border-primary'
                                     : 'border-border hover:border-secondary',

@@ -193,6 +193,9 @@ class HabitController extends Controller
                 // auf der Übersicht, die nur die stärkste zeigt. Unterhalb der
                 // Mindestlänge bleibt die Zeile weg statt eine „1" zu behaupten.
                 'streak' => $this->streakLabel($habit),
+                // Nur für den einen Menüeintrag, der sie zurückholt: Ohne
+                // diese Auskunft stünde dort ein Schalter ohne Zustand.
+                'streakHidden' => $habit->streak_hidden_at !== null,
                 // Die letzten sieben Tage als Streifen. Drei Zustände, nicht
                 // zwei: Ein Samstag ohne Mo–Fr-Gewohnheit ist keine Lücke, und
                 // der Streifen darf ihn nicht wie eine aussehen lassen. Genau

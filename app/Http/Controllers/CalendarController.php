@@ -9,6 +9,7 @@ use App\Models\Course;
 use App\Models\Habit;
 use App\Models\HabitCompletion;
 use App\Models\Semester;
+use App\Models\SleepDayOverride;
 use App\Models\User;
 use App\Support\DayPlan;
 use App\Support\Timetable;
@@ -176,7 +177,7 @@ class CalendarController extends Controller
         // und endet bei der Schlafenszeit. Die Stunden davor und danach sind
         // Nacht — sie zu zeichnen hieße, den Tag mit Platz zu füllen, in den
         // nichts geplant werden darf.
-        $window = $request->user()->sleepWindowFor($day->dayOfWeekIso);
+        $window = $request->user()->sleepWindowOn($day);
         // `frame()` kennt die Schlafenszeit nach Mitternacht und zählt sie als
         // Minute jenseits von 1440 weiter — sonst risse die Achse am Tagesrand.
         $timetable = Timetable::for($request->user());
@@ -257,6 +258,10 @@ class CalendarController extends Controller
             'bedtime' => $window['bedtime'],
             'frameFrom' => $frame['from'],
             'frameTo' => $frame['to'],
+            // Hat dieser Tag einen eigenen Rahmen statt den seines Wochentags?
+            // Die Marke zeigt das, und nur dann gibt es einen Rückweg.
+            'frameOverridden' => $request->user()->sleepDayOverrides
+                ->contains(fn (SleepDayOverride $override): bool => $override->on_date->isSameDay($day)),
         ]);
     }
 

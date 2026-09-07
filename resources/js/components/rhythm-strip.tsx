@@ -1,3 +1,4 @@
+import { Check } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { cn } from '@/lib/utils';
 import type { RhythmDay } from '@/types';
@@ -19,15 +20,38 @@ export function rhythmState(day: RhythmDay): DayState {
     return day.scheduled ? 'open' : 'unplanned';
 }
 
-/** Die eine Quelle für das Aussehen einer Marke. */
+/**
+ * Die eine Quelle für das Aussehen einer Marke.
+ *
+ * **Ein Haken, kein Kästchen.** Zwei verschieden helle Quadrate waren eine
+ * Legende weit von ihrer Bedeutung entfernt: Man musste lernen, dass dunkel
+ * „erledigt" heißt. Der Haken sagt es von selbst, und die zwei Zustände
+ * unterscheiden sich in der Form, nicht nur im Ton — gefüllt gegen Kontur
+ * bleibt auch ohne Farbwahrnehmung lesbar.
+ *
+ * Der offene Tag trägt denselben Haken, nur ungefüllt: Er ist die Stelle, an
+ * die er gehört, nicht der Vorwurf, dass er fehlt (§1.4 — kein Alarm).
+ */
 const MARK: Record<DayState, string> = {
     // Die einzige gesättigte Farbe des Systems (§1.2) — sie sagt „hier ist
     // etwas passiert" und sonst nichts.
-    done: 'bg-primary',
-    // Dieselbe Stufe wie die Spur des Fortschrittsbalkens (§5.3): sichtbar
-    // vorhanden, aber leer.
-    open: 'bg-sand',
-    // Keine Fläche, nur ein Punkt — erkennbar keine Marke. Ein leeres Kästchen
+    done: 'bg-primary text-primary-foreground',
+    // Kontur statt Fläche — und der Haken trägt die Aussage, der Kasten nur
+    // seinen Platz. Deshalb sind die beiden verschieden stark: die Kante leise,
+    // der Haken lesbar.
+    //
+    // `sand` war für beides zu wenig. Als Füllung reichte der Ton, als Strich
+    // nicht: Eine Fläche liest sich über ihre Helligkeit, eine Linie über ihren
+    // Kontrast, und 1,55:1 ist für eine Linie schlicht zu wenig. Oliv bei 75 %
+    // erreicht 3,8:1 auf der Karte und 3,1:1 im Band des heutigen Tages — die
+    // 3:1, die WCAG 1.4.11 für ein bedeutungstragendes Zeichen verlangt.
+    //
+    // Derselbe Farbton wie „erledigt" und trotzdem keine Verwechslung: Der
+    // Unterschied liegt in der Form, nicht im Ton. Gefüllt gegen Kontur bleibt
+    // auch ohne Farbwahrnehmung lesbar (§1.2 bleibt gewahrt — gesättigt und
+    // flächig ist weiterhin nur das Erledigte).
+    open: 'border border-primary/35 text-primary/75',
+    // Keine Fläche, nur ein Punkt — erkennbar keine Marke. Ein leerer Haken
     // läse sich als versäumt; an diesen Tagen war nie etwas vorgesehen.
     unplanned: 'bg-transparent',
 };
@@ -70,6 +94,14 @@ export function RhythmMark({
                 className,
             )}
         >
+            {/* Die Strichstärke ist kräftiger als überall sonst: Bei 14 Pixeln
+                Kantenlänge verschwindet ein Haken mit 1,5 in seiner eigenen
+                Fläche. Die Größe ist relativ, damit derselbe Haken im Blatt
+                und in der Legende gleich sitzt. */}
+            {state !== 'unplanned' && (
+                <Check className="size-[70%]" strokeWidth={3.25} />
+            )}
+
             {/* `border` statt `track`: Der Punkt muss auf drei Gründen stehen
                 können — auf der weißen Karte, im Band des heutigen Tages und
                 auf dem Seitengrund, wo die Legende steht. */}

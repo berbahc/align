@@ -144,7 +144,7 @@ export function UpcomingAppointments({
                                             'flex size-7 items-center justify-center rounded-full transition-[background-color,border-color] duration-[var(--duration-fluid)] ease-[var(--ease-fluid)]',
                                             appointment.completed
                                                 ? 'bg-primary'
-                                                : 'border-2 border-dashed border-sand',
+                                                : 'hollow border-2',
                                         )}
                                     >
                                         {appointment.completed && (
@@ -204,9 +204,12 @@ export function UpcomingAppointments({
                         </CardContent>
                     </Card>
                 ) : (
+                    /* Dieselbe Mulde wie die Anfrage, aus der er hervorgeht:
+                       Was noch nicht zugesagt ist, wartet — und wartet überall
+                       gleich aussehend. */
                     <div
                         key={appointment.id}
-                        className="flex items-center gap-3 rounded-2xl border-[1.5px] border-dashed border-sand bg-card p-4 sm:p-5"
+                        className="hollow flex items-center gap-3 rounded-2xl border-[1.5px] p-4 sm:p-5"
                     >
                         {body}
                     </div>

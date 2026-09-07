@@ -58,6 +58,8 @@ export function DayGrid({
     onOpenCourse,
     onToggleAppointment,
     onDrop,
+    onAdjustWake,
+    frameOverridden = false,
     ghost,
 }: {
     blocks: Block[];
@@ -88,6 +90,16 @@ export function DayGrid({
     onToggleAppointment: (block: Appointment) => void;
     /** Ein Block wurde losgelassen — jetzt kommt die Frage nach der Reichweite. */
     onDrop: (drag: BlockDrag) => void;
+    /**
+     * Die Aufsteh-Marke antippen — „heute war das anders".
+     *
+     * Fehlt an vergangenen Tagen: Sie liegen hinter uns, und ihren Anfang
+     * nachträglich zu verschieben wäre eine Korrektur der eigenen Geschichte.
+     * Dann bleibt die Marke der Link zum Schlafplan, der sie immer war.
+     */
+    onAdjustWake?: () => void;
+    /** Gilt an diesem Tag schon ein eigener Rahmen? */
+    frameOverridden?: boolean;
     /** Der Vorschlag der KI: sein Block, und wessen Platz er vorwegnimmt. */
     ghost: { block: Block; replaces: number } | null;
 }) {
@@ -231,6 +243,8 @@ export function DayGrid({
                     label="Aufstehen"
                     time={wakeTime}
                     top={offsetOf(frameFrom, bounds)}
+                    onAdjust={onAdjustWake}
+                    adjusted={frameOverridden}
                 />
                 <FrameMarker
                     icon={Moon}
@@ -371,41 +385,87 @@ export function DayGrid({
  * Ein Rand des Tages — Aufstehen oben, Schlafenszeit unten.
  *
  * Kein Block, sondern eine Grenze: Der Marker hat keinen Haken und keine
- * Dauer, er sagt nur, wo das Raster anfängt und aufhört. Er führt zum
- * Schlafplan, weil er dort herkommt.
+ * Dauer, er sagt nur, wo das Raster anfängt und aufhört.
+ *
+ * Wohin er führt, hängt an der Frage, die man hier stellen kann. An einem
+ * vergangenen Tag gibt es nur eine — „wo kommt das her?" —, und die Antwort
+ * ist der Schlafplan. An einem Tag, der noch kommt, gibt es eine zweite:
+ * „heute war das anders". Sie ist die häufigere, und deshalb liegt sie auf
+ * der Marke selbst statt hinter einem Umweg über die Wocheneinstellung.
  */
 function FrameMarker({
     icon: Icon,
     label,
     time,
     top,
+    onAdjust,
+    adjusted = false,
 }: {
     icon: typeof Sun;
     label: string;
     time: string;
     /** Die Pixelhöhe im Raster — die Marke sitzt auf ihrer eigenen Minute. */
     top: number;
+    /** Lässt sich dieser Rand für diesen einen Tag verschieben? */
+    onAdjust?: () => void;
+    /** Gilt hier schon eine Ausnahme? Dann ist die Uhrzeit eine eigene. */
+    adjusted?: boolean;
 }) {
-    return (
-        <Link
-            href={sleepShow()}
-            aria-label={`${label} um ${time}, zum Schlafplan`}
-            style={{ top }}
-            className="absolute inset-x-0 z-20 flex -translate-y-1/2 items-center gap-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-        >
-            {/* Zeichen und Uhrzeit bleiben in der Stundenspalte: Dort kommt
-                kein Block hin, und die Grenze des Tages darf nicht dadurch
-                unsichtbar werden, dass eine Gewohnheit genau an ihr endet —
-                was seit „vor dem Schlafengehen" der Regelfall ist. */}
+    const shell =
+        'group absolute inset-x-0 z-20 flex -translate-y-1/2 items-center gap-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
+
+    /* Zeichen und Uhrzeit bleiben in der Stundenspalte: Dort kommt kein Block
+       hin, und die Grenze des Tages darf nicht dadurch unsichtbar werden, dass
+       eine Gewohnheit genau an ihr endet — was seit „vor dem Schlafengehen"
+       der Regelfall ist. */
+    const inner = (
+        <>
             <span
-                className="flex shrink-0 items-center justify-end gap-1 pr-1.5 text-[11px] leading-none font-semibold text-foreground tabular-nums transition-colors duration-[var(--duration-press)] ease-out group-hover:text-primary"
+                className={cn(
+                    'flex shrink-0 items-center justify-end gap-1 pr-1.5 text-[11px] leading-none font-semibold tabular-nums transition-colors duration-[var(--duration-press)] ease-out group-hover:text-primary',
+                    // Ein eigener Rahmen für diesen Tag ist eine Abweichung
+                    // und sieht auch so aus — sonst wäre nicht zu erkennen,
+                    // dass hier etwas anderes gilt als in der Woche.
+                    adjusted ? 'text-primary' : 'text-foreground',
+                )}
                 style={{ width: GUTTER }}
             >
                 <Icon className="size-3" strokeWidth={2} aria-hidden="true" />
                 {time}
             </span>
             {/* Die Grenze selbst, kräftiger als eine Stundenlinie. */}
-            <span className="h-px flex-1 bg-olive-mid/45" aria-hidden="true" />
+            <span
+                className={cn(
+                    'h-px flex-1',
+                    adjusted ? 'bg-primary/45' : 'bg-olive-mid/45',
+                )}
+                aria-hidden="true"
+            />
+        </>
+    );
+
+    if (onAdjust !== undefined) {
+        return (
+            <button
+                type="button"
+                onClick={onAdjust}
+                aria-label={`${label} um ${time}, für diesen Tag ändern`}
+                style={{ top }}
+                className={`${shell} cursor-pointer`}
+            >
+                {inner}
+            </button>
+        );
+    }
+
+    return (
+        <Link
+            href={sleepShow()}
+            aria-label={`${label} um ${time}, zum Schlafplan`}
+            style={{ top }}
+            className={shell}
+        >
+            {inner}
         </Link>
     );
 }

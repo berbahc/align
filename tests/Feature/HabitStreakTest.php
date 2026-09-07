@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\ScheduleType;
+use App\Http\Controllers\DashboardController;
 use App\Models\Habit;
 use App\Models\Semester;
 use App\Models\User;
@@ -118,7 +119,7 @@ test('die Einheit unterscheidet tägliche von festen Gewohnheiten', function () 
         ->and($workdays->streakLabel(12))->toBe('12× in Folge');
 });
 
-test('die Übersicht liefert die stärkste laufende Serie', function () {
+test('die Übersicht liefert die laufenden Serien in der Reihenfolge der Liste', function () {
     $user = User::factory()->create();
 
     $short = existingSince(Habit::factory()->for($user)->create(['title' => 'Trinken', 'position' => 0]), 30);
@@ -127,13 +128,100 @@ test('die Übersicht liefert die stärkste laufende Serie', function () {
     $long = existingSince(Habit::factory()->for($user)->create(['title' => 'Lesen', 'position' => 1]), 30);
     complete($long, [0, 1, 2, 3, 4, 5]);
 
+    // Nicht nach Länge sortiert: „Lesen" hat die längere Serie und steht
+    // trotzdem hinten, weil die Liste nach `position` läuft. Eine Rangliste
+    // wäre der Vergleich, den `progress-tracking.md` ausschließt.
     $this->actingAs($user)
         ->get(route('dashboard'))
         ->assertInertia(fn (AssertableInertia $page) => $page
-            ->where('streak.count', 6)
-            ->where('streak.title', 'Lesen')
-            ->where('streak.unit', 'Tage')
+            ->has('streaks', 2)
+            ->where('streaks.0.count', 3)
+            ->where('streaks.0.title', 'Trinken')
+            ->where('streaks.0.unit', 'Tage')
+            ->where('streaks.1.count', 6)
+            ->where('streaks.1.title', 'Lesen')
         );
+});
+
+test('die Übersicht zeigt höchstens drei Serien', function () {
+    $user = User::factory()->create();
+
+    // Vier Gewohnheiten, alle drei Tage am Stück erfüllt.
+    foreach (['Eins', 'Zwei', 'Drei', 'Vier'] as $position => $title) {
+        $habit = existingSince(
+            Habit::factory()->for($user)->create(['title' => $title, 'position' => $position]),
+            30,
+        );
+        complete($habit, [0, 1, 2]);
+    }
+
+    // Die vierte fällt weg — und zwar hinten, nicht irgendwo: Wer die Reihe
+    // liest, soll sie von oben lesen können.
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('streaks', DashboardController::StreaksShown)
+            ->where('streaks.0.title', 'Eins')
+            ->where('streaks.2.title', 'Drei')
+        );
+});
+
+/**
+ * Das × auf der Karte nimmt die Anzeige, nicht den Fortschritt.
+ *
+ * `progress-tracking.md` verlangt für den Fortschritt „einen ehrlichen, nicht
+ * strafenden Kontext". Dazu gehört, ihn wegklicken zu dürfen — und dass er
+ * dabei weiterläuft, statt zurückgesetzt zu werden.
+ */
+test('eine weggeklickte Serie verschwindet von der Übersicht und läuft weiter', function () {
+    $user = User::factory()->create();
+    $habit = existingSince(Habit::factory()->for($user)->create(['title' => 'Lesen']), 30);
+    complete($habit, [0, 1, 2, 3]);
+
+    $this->actingAs($user)
+        ->delete(route('habits.streak-card.destroy', $habit))
+        ->assertRedirect();
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (AssertableInertia $page) => $page->has('streaks', 0));
+
+    // Die Zahl selbst ist unberührt — weggenommen wurde die Karte.
+    expect($habit->fresh()->currentStreak())->toBe(4)
+        ->and($habit->fresh()->streak_hidden_at)->not->toBeNull();
+});
+
+test('das Menü holt die Serie zurück auf die Übersicht', function () {
+    $user = User::factory()->create();
+    $habit = existingSince(Habit::factory()->for($user)->create(['title' => 'Lesen']), 30);
+    complete($habit, [0, 1, 2]);
+    $habit->forceFill(['streak_hidden_at' => Carbon::now()])->save();
+
+    // Die Gewohnheiten-Seite trägt den Zustand, sonst stünde im Menü ein
+    // Schalter ohne Auskunft.
+    $this->actingAs($user)
+        ->get(route('habits.index'))
+        ->assertInertia(fn (AssertableInertia $page) => $page->where('habits.0.streakHidden', true));
+
+    $this->actingAs($user)
+        ->post(route('habits.streak-card.store', $habit))
+        ->assertRedirect();
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (AssertableInertia $page) => $page->has('streaks', 1));
+});
+
+test('fremde Serien lassen sich nicht ausblenden', function () {
+    $owner = User::factory()->create();
+    $habit = existingSince(Habit::factory()->for($owner)->create(), 30);
+    complete($habit, [0, 1, 2]);
+
+    $this->actingAs(User::factory()->create())
+        ->delete(route('habits.streak-card.destroy', $habit))
+        ->assertForbidden();
+
+    expect($habit->fresh()->streak_hidden_at)->toBeNull();
 });
 
 test('unter der Mindestlänge gibt es keine Streak-Karte', function () {
@@ -144,7 +232,7 @@ test('unter der Mindestlänge gibt es keine Streak-Karte', function () {
 
     $this->actingAs($user)
         ->get(route('dashboard'))
-        ->assertInertia(fn (AssertableInertia $page) => $page->where('streak', null));
+        ->assertInertia(fn (AssertableInertia $page) => $page->has('streaks', 0));
 });
 
 test('eine heute nicht vorgesehene Gewohnheit trägt ihre Serie trotzdem zur Karte bei', function () {
@@ -164,9 +252,9 @@ test('eine heute nicht vorgesehene Gewohnheit trägt ihre Serie trotzdem zur Kar
             // Sie steht nicht in `habits` …
             ->has('habits', 0)
             // … aber ihre Serie läuft und gehört auf die Karte.
-            ->where('streak.count', 5)
-            ->where('streak.unit', 'Mal')
-            ->where('streak.title', 'Sport')
+            ->where('streaks.0.count', 5)
+            ->where('streaks.0.unit', 'Mal')
+            ->where('streaks.0.title', 'Sport')
         );
 });
 

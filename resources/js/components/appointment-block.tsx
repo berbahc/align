@@ -160,7 +160,7 @@ function Tick({ completed }: { completed: boolean }) {
                 'flex size-6 items-center justify-center rounded-full transition-[background-color,border-color] duration-[var(--duration-fluid)] ease-[var(--ease-fluid)]',
                 completed
                     ? 'bg-primary'
-                    : 'border-2 border-dashed border-olive-mid/50',
+                    : 'hollow border-2 border-olive-mid/50',
             )}
         >
             {completed && (

@@ -15,6 +15,7 @@ import { DayOrderSheet } from '@/components/day-order-sheet';
 import { ShiftSheet } from '@/components/shift-sheet';
 import { StartingHelpSheet } from '@/components/starting-help-sheet';
 import { Card, CardContent } from '@/components/ui/card';
+import { WakeSheet } from '@/components/wake-sheet';
 import type { BlockDrag } from '@/hooks/use-block-drag';
 import { useBlockDrag } from '@/hooks/use-block-drag';
 import { HOUR_HEIGHT, collisionOf, followersOf } from '@/lib/day-grid';
@@ -88,6 +89,8 @@ interface CalendarDayProps {
     frameTo: number;
     /** Nur was noch kommt, lässt sich verlegen. */
     canShift: boolean;
+    /** Hat dieser Tag einen eigenen Rahmen statt den seines Wochentags? */
+    frameOverridden: boolean;
     /** Ein Vorschlag der KI, gestrichelt ins Raster gelegt — null ohne. */
     proposal: PlaceProposal | null;
 }
@@ -127,6 +130,7 @@ export default function CalendarDay({
     frameFrom,
     frameTo,
     canShift,
+    frameOverridden,
     proposal,
 }: CalendarDayProps) {
     const { auth } = usePage().props;
@@ -207,6 +211,8 @@ export default function CalendarDay({
     const [stuckOn, setStuckOn] = useState<Block | null>(null);
     /** Steht die Frage nach der Tagesordnung offen? */
     const [ordering, setOrdering] = useState(false);
+    /** „Heute bin ich später aufgestanden" — der Rahmen dieses einen Tages. */
+    const [adjustingWake, setAdjustingWake] = useState(false);
     /** Die vorgemerkte Alternative — sie erzeugt den Ghost im Raster. */
     const [preview, setPreview] = useState<AnchorAlternative | null>(null);
     /** Der eben losgelassene Block, solange die Frage nach der Reichweite offen ist. */
@@ -523,6 +529,12 @@ export default function CalendarDay({
                                 setShiftError(null);
                                 setDropped(drag);
                             }}
+                            onAdjustWake={
+                                canShift
+                                    ? () => setAdjustingWake(true)
+                                    : undefined
+                            }
+                            frameOverridden={frameOverridden}
                             ghost={outline}
                         />
 
@@ -691,6 +703,18 @@ export default function CalendarDay({
                 date={date}
                 blocks={blocks}
                 onOpenChange={setOrdering}
+            />
+
+            {/* Der Rahmen dieses einen Tages. Er hängt an der Aufsteh-Marke,
+                weil er dort sichtbar ist — und nicht am Schlafplan, weil
+                „heute war das anders" keine Änderung am Rhythmus ist. */}
+            <WakeSheet
+                key={`${date}-${wakeTime}-${String(adjustingWake)}`}
+                open={adjustingWake}
+                date={date}
+                wakeTime={wakeTime}
+                overridden={frameOverridden}
+                onOpenChange={setAdjustingWake}
             />
 
             {/* Die Kurse liegen hier, also werden sie hier angefasst — mit

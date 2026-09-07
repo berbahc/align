@@ -16,6 +16,15 @@ use Inertia\Response;
 
 class DashboardController extends Controller
 {
+    /**
+     * Wie viele laufende Serien die Übersicht zeigt.
+     *
+     * Drei, nicht fünf: Die Karten stehen nebeneinander, und drei ist die
+     * Reihe, die auf jeder Breite noch ohne Umbruch trägt. Wer mehr Serien
+     * hat, sieht sie auf der Gewohnheiten-Seite je Zeile.
+     */
+    public const int StreaksShown = 3;
+
     public function __invoke(Request $request): Response
     {
         $today = Carbon::today();
@@ -105,7 +114,7 @@ class DashboardController extends Controller
             'appointmentsEnabled' => $request->user()->appointments_enabled,
             'todayProgress' => $this->todayProgress($todaysHabits),
             'consistency' => $this->consistency($habits, $today),
-            'streak' => $this->streak($habits, $today),
+            'streaks' => $this->streaks($habits, $today),
             // Eine leere Tagesliste heißt nicht, dass es keine Gewohnheiten
             // gibt — eine Mo–Fr-Gewohnheit ist am Samstag schlicht nicht
             // vorgesehen. Ohne diese Zahl könnte die Oberfläche die beiden
@@ -270,9 +279,8 @@ class DashboardController extends Controller
      */
     private function sleepCard(User $user, Carbon $today): array
     {
-        $windows = $user->sleepWindows();
-        $tonight = $windows[$today->dayOfWeekIso];
-        $tomorrow = $windows[$today->copy()->addDay()->dayOfWeekIso];
+        $tonight = $user->sleepWindowOn($today);
+        $tomorrow = $user->sleepWindowOn($today->copy()->addDay());
 
         return [
             'bedtime' => $tonight['bedtime'],
@@ -321,35 +329,47 @@ class DashboardController extends Controller
     }
 
     /**
-     * Die stärkste laufende Serie — der Inhalt der Streak-Karte.
+     * Die laufenden Serien — bis zu drei, in der Reihenfolge der Gewohnheiten.
      *
      * Gerechnet wird über **alle** aktiven Gewohnheiten, nicht nur die heute
      * vorgesehenen: Die Serie einer Mo–Fr-Gewohnheit würde sonst jeden Samstag
      * von der Übersicht verschwinden, obwohl sie ungebrochen weiterläuft.
      *
-     * Genau eine Serie, nicht fünf. Designsprache §5.4: die Streak-Karte ist
-     * die einzige vollflächig farbige Fläche im mobilen Layout, „ihre Wirkung
-     * hängt davon ab, dass sie allein bleibt".
+     * **Drei statt einer.** Vorher stand hier die stärkste allein, weil die
+     * Karte vollflächig `primary` war und Designsprache §5.4 genau eine solche
+     * Fläche zulässt: „ihre Wirkung hängt davon ab, dass sie allein bleibt".
+     * Die Karten sind heute Milchglas und keine Farbfläche mehr — die Regel
+     * ist damit auf anderem Weg gewahrt, und wer drei Gewohnheiten trägt,
+     * sieht auch drei.
+     *
+     * Weggeklickte Serien fehlen: Das × auf der Karte ist keine Verneinung des
+     * Fortschritts, nur seiner Anzeige ({@see HabitStreakCardController}).
+     *
+     * Nicht nach Länge sortiert: Die Reihenfolge ist die der Liste
+     * (`position`), damit dieselbe Gewohnheit nicht heute vorn und morgen
+     * hinten steht, nur weil eine andere einen Tag aufgeholt hat. Eine
+     * Rangliste wäre außerdem der Vergleich, den `progress-tracking.md` für
+     * den Fortschritt ausschließt.
      *
      * @param  Collection<int, Habit>  $habits
-     * @return array{count: int, unit: string, title: string}|null
+     * @return list<array{id: int, count: int, unit: string, title: string}>
      */
-    private function streak(Collection $habits, Carbon $today): ?array
+    private function streaks(Collection $habits, Carbon $today): array
     {
-        $strongest = $habits
+        return $habits
+            // Was jemand weggeklickt hat, kommt nicht von selbst zurück — der
+            // Weg zurück steht im ⋯-Menü der Gewohnheit.
+            ->filter(fn (Habit $habit): bool => $habit->streak_hidden_at === null)
             ->map(fn (Habit $habit): array => [
+                'id' => $habit->id,
                 'count' => $habit->currentStreak($today),
                 'unit' => $habit->streakUnit(),
                 'title' => $habit->title,
             ])
-            ->sortByDesc('count')
-            ->first();
-
-        if ($strongest === null || $strongest['count'] < Habit::StreakMinimum) {
-            return null;
-        }
-
-        return $strongest;
+            ->filter(fn (array $streak): bool => $streak['count'] >= Habit::StreakMinimum)
+            ->take(self::StreaksShown)
+            ->values()
+            ->all();
     }
 
     /**

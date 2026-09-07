@@ -72,15 +72,15 @@ class HandleInertiaRequests extends Middleware
             return null;
         }
 
-        $windows = $user->sleepWindows();
-        $today = Carbon::today()->dayOfWeekIso;
-
-        $weekday = fn (int $offset): int => (($today - 1 + $offset + 7) % 7) + 1;
+        // Über das Datum und nicht über den Wochentag: Wer heute später
+        // aufgestanden ist, soll den Wecker und den Schlafenszeit-Hinweis auf
+        // seinen echten Tag bezogen bekommen, nicht auf den geplanten.
+        $today = Carbon::today();
 
         return [
-            'yesterday' => $windows[$weekday(-1)],
-            'today' => $windows[$weekday(0)],
-            'tomorrow' => $windows[$weekday(1)],
+            'yesterday' => $user->sleepWindowOn($today->copy()->subDay()),
+            'today' => $user->sleepWindowOn($today),
+            'tomorrow' => $user->sleepWindowOn($today->copy()->addDay()),
             'reminderEnabled' => $user->bedtime_reminder_enabled,
             'leadMinutes' => SleepSchedule::BedtimeReminderLeadMinutes,
         ];

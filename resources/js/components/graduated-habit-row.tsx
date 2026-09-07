@@ -57,7 +57,9 @@ export function GraduatedHabitRow({
         <li
             id={`graduated-habit-${habit.id}`}
             className={cn(
-                'flex items-center gap-3 rounded-xl border border-dashed px-4 py-3 transition-shadow duration-300',
+                /* Eine Mulde statt einer gestrichelten Kontur: Was gefestigt
+                   ist, liegt im Blatt und wartet — nicht darüber. */
+                'hollow flex items-center gap-3 rounded-xl border px-4 py-3 transition-shadow duration-300',
                 highlighted &&
                     'ring-2 ring-primary ring-offset-4 ring-offset-background',
             )}

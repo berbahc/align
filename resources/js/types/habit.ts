@@ -273,8 +273,20 @@ export interface ManagedHabit {
      *
      * Gezählt werden vorgesehene Termine, nicht Kalendertage — eine
      * Mo–Fr-Gewohnheit bricht am Wochenende nicht.
+     *
+     * **Wird auf dieser Seite nicht mehr gezeichnet.** Die Serien stehen auf
+     * der Übersicht als eigene Karten; hier standen sie ein zweites Mal, klein
+     * unter der Bilanz. Der Wert bleibt im Zug, weil er billig ist und die
+     * Zeile ihn jederzeit wieder zeigen könnte — wie {@see nextOccurrence}.
      */
     streak: string | null;
+    /**
+     * Ob die Serie dieser Gewohnheit von der Übersicht genommen wurde.
+     *
+     * Trägt genau einen Eintrag im ⋯-Menü: den Weg zurück. Das × auf der Karte
+     * nimmt sie weg, hier kommt sie wieder.
+     */
+    streakHidden: boolean;
     /**
      * Die letzten sieben Tage als Streifen — das Element, das die Zeilen
      * voneinander unterscheidbar macht.

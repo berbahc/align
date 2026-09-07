@@ -207,8 +207,8 @@ class HabitDayShiftController extends Controller
     private function guard(User $user, Habit $habit, Carbon $date, int $start): void
     {
         $others = $this->othersOn($user, $habit, $date);
-        $window = $user->sleepWindowFor($date->dayOfWeekIso);
-        $plan = DayPlan::forDate($others, $date, $user->sleepWindows(), $this->timetable($user)->blocksOn($date));
+        $window = $user->sleepWindowOn($date);
+        $plan = DayPlan::forDate($others, $date, $user->sleepWindowsOn($date), $this->timetable($user)->blocksOn($date));
         $frame = $plan->frame();
 
         // Die Ausnahme wird als Uhrzeit gespeichert. Alles jenseits von

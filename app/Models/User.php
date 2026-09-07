@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Support\DayPlan;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -73,6 +74,16 @@ class User extends Authenticatable implements PasskeyUser
     public function sleepSchedules(): HasMany
     {
         return $this->hasMany(SleepSchedule::class);
+    }
+
+    /**
+     * Die Tage, an denen der Rahmen ausnahmsweise ein anderer war.
+     *
+     * @return HasMany<SleepDayOverride, $this>
+     */
+    public function sleepDayOverrides(): HasMany
+    {
+        return $this->hasMany(SleepDayOverride::class);
     }
 
     /**
@@ -147,6 +158,65 @@ class User extends Authenticatable implements PasskeyUser
     public function sleepWindowFor(int $weekday): array
     {
         return $this->sleepWindows()[$weekday];
+    }
+
+    /**
+     * Der Rahmen eines konkreten Tages — mit seiner Ausnahme, falls es eine gibt.
+     *
+     * Der Unterschied zu {@see sleepWindowFor()} ist der Unterschied zwischen
+     * „montags" und „am 7. September": Der Wochenplan sagt, wie ein Montag
+     * üblicherweise anfängt; die Ausnahme sagt, wie dieser eine angefangen
+     * hat. Überall dort, wo ein Datum vorliegt, gilt diese Antwort — sonst
+     * zeichnete der Kalender einen Rahmen, in dem der Nutzer noch schlief.
+     *
+     * Weil hier nur die **geladene** Beziehung gelesen wird, kostet die Frage
+     * nichts, auch wenn sie je Gewohnheit gestellt wird
+     * ({@see Habit::sleepBoundStartMinute()}).
+     *
+     * @return array{weekday: int, wakeTime: string, bedtime: string, alarmEnabled: bool}
+     */
+    public function sleepWindowOn(Carbon $date): array
+    {
+        $window = $this->sleepWindowFor($date->dayOfWeekIso);
+
+        $override = $this->sleepDayOverrides
+            ->first(fn (SleepDayOverride $day): bool => $day->on_date->isSameDay($date));
+
+        if (! $override instanceof SleepDayOverride) {
+            return $window;
+        }
+
+        // Feld für Feld: Wer nur später aufsteht, behält seine Schlafenszeit
+        // aus dem Wochenplan — und behält sie auch dann, wenn er den Plan
+        // später ändert.
+        return [
+            ...$window,
+            'wakeTime' => $override->wake_time?->format('H:i') ?? $window['wakeTime'],
+            'bedtime' => $override->bedtime?->format('H:i') ?? $window['bedtime'],
+        ];
+    }
+
+    /**
+     * Die ganze Woche, aber mit der Ausnahme dieses einen Datums darin.
+     *
+     * Dieselbe wochentagsindizierte Form wie {@see sleepWindows()}, damit
+     * {@see DayPlan::for()} unverändert damit rechnen kann. Nur
+     * der Eintrag des betroffenen Wochentags ist ersetzt — die übrigen sechs
+     * kommen in dieser Rechnung ohnehin nie vor.
+     *
+     * @return array<int, array{weekday: int, wakeTime: string, bedtime: string, alarmEnabled: bool}>
+     */
+    public function sleepWindowsOn(?Carbon $date): array
+    {
+        $windows = $this->sleepWindows();
+
+        if ($date === null) {
+            return $windows;
+        }
+
+        $windows[$date->dayOfWeekIso] = $this->sleepWindowOn($date);
+
+        return $windows;
     }
 
     /**

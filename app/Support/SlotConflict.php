@@ -27,8 +27,8 @@ final class SlotConflict
     /**
      * Das Erste, was im Weg liegt — oder nichts.
      *
-     * Geprüft wird an konkreten Daten und nicht an „montags": Der Schlafrahmen
-     * hängt am Wochentag, die Ausnahmen des Stundenplans am Datum.
+     * Geprüft wird an konkreten Daten und nicht an „montags": Der Stundenplan
+     * hat Ausnahmen an einzelnen Daten, und der Schlafrahmen inzwischen auch.
      *
      * @param  list<array{id: int, title: string, from: int, to: int}>  $spans  Was hingelegt werden soll
      * @param  list<int>  $days  An welchen ISO-Wochentagen
@@ -131,7 +131,7 @@ final class SlotConflict
                     ->reject(fn (Habit $habit): bool => in_array($habit->id, $ignore, strict: true))
                     ->values(),
                 $date,
-                $user->sleepWindows(),
+                $user->sleepWindowsOn($date),
                 $timetable->blocksOn($date),
             );
 

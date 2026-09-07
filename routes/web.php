@@ -17,9 +17,11 @@ use App\Http\Controllers\HabitController;
 use App\Http\Controllers\HabitDayShiftController;
 use App\Http\Controllers\HabitGraduationController;
 use App\Http\Controllers\HabitReminderController;
+use App\Http\Controllers\HabitStreakCardController;
 use App\Http\Controllers\NewPlaceController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\SemesterController;
+use App\Http\Controllers\SleepDayOverrideController;
 use App\Http\Controllers\SleepScheduleController;
 use App\Http\Controllers\SmallestStepController;
 use App\Http\Middleware\EnsureOnboarded;
@@ -116,6 +118,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // je Wochentag, Wecker und die Erinnerung vor der Schlafenszeit.
         Route::get('sleep', [SleepScheduleController::class, 'show'])->name('sleep.show');
         Route::put('sleep', [SleepScheduleController::class, 'update'])->name('sleep.update');
+
+        // Erst zeigen, dann übernehmen: Wandert der Rahmen, wandern die festen
+        // Uhrzeiten mit — aber nicht, ohne dass jemand gesehen hat, wohin.
+        Route::post('sleep/preview', [SleepScheduleController::class, 'preview'])
+            ->name('sleep.preview');
+
+        // Der Rahmen eines einzelnen Tages: „heute später aufgestanden" ist
+        // keine Änderung am Rhythmus, sondern eine Ausnahme davon.
+        Route::post('sleep/days/preview', [SleepDayOverrideController::class, 'preview'])
+            ->name('sleep.days.preview');
+        Route::post('sleep/days', [SleepDayOverrideController::class, 'store'])
+            ->name('sleep.days.store');
+        Route::delete('sleep/days', [SleepDayOverrideController::class, 'destroy'])
+            ->name('sleep.days.destroy');
 
         // Der Freundeskreis ist der Unterbau der Verabredung: Screen 1 aus
         // community_feature3.md wählt aus Personen, die es vorher geben muss.
@@ -226,6 +242,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('habits.completions.store');
         Route::delete('habits/{habit}/completions', [HabitCompletionController::class, 'destroy'])
             ->name('habits.completions.destroy');
+
+        // Die Serie auf der Übersicht: Das × auf der Karte nimmt sie weg, das
+        // ⋯-Menü der Gewohnheit holt sie zurück — ein Zustand, zwei Wege.
+        Route::post('habits/{habit}/streak-card', [HabitStreakCardController::class, 'store'])
+            ->name('habits.streak-card.store');
+        Route::delete('habits/{habit}/streak-card', [HabitStreakCardController::class, 'destroy'])
+            ->name('habits.streak-card.destroy');
 
         // Beenden und Wiederaufnehmen als ein Zustand, der gesetzt und
         // zurückgenommen wird — nicht als zwei Aktionen mit eigenen Verben.

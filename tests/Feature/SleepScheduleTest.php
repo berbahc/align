@@ -352,3 +352,343 @@ test('a bedtime after midnight carries the evening habit with it', function () {
 
     expect($habit->sleepBoundStartMinute($monday))->toBe(24 * 60);
 });
+
+/**
+ * Wandert der Rahmen, wandern die festen Uhrzeiten mit.
+ *
+ * Situative Gewohnheiten hielten sich immer schon an den Schlafplan; feste
+ * blieben liegen, wo sie lagen — und landeten im Nachtband, sobald jemand
+ * später aufstand. Diese Gruppe ist die Gegenprobe dazu.
+ */
+test('a fixed habit moves by the same amount the wake time did', function () {
+    $user = User::factory()->create();
+
+    $breakfast = Habit::factory()->for($user)
+        ->withMeasure(20)
+        ->fixedSchedule('08:00', [1])
+        ->create(['title' => 'Frühstück']);
+
+    $reading = Habit::factory()->for($user)
+        ->withMeasure(30)
+        ->fixedSchedule('20:00', [1])
+        ->create(['title' => 'Lesen']);
+
+    $this->actingAs($user)
+        ->put(route('sleep.update'), [
+            ...sleepPlan([1 => ['wake_time' => '10:00']]),
+            'carry_habits' => true,
+        ])
+        ->assertSessionHasNoErrors();
+
+    // Drei Stunden später aufgestanden, drei Stunden später gefrühstückt.
+    expect($breakfast->refresh()->scheduled_time->format('H:i'))->toBe('11:00')
+        // Der Abend lag ohnehin im Rahmen und bleibt deshalb, wo er war.
+        ->and($reading->refresh()->scheduled_time->format('H:i'))->toBe('20:00');
+});
+
+test('an earlier bedtime pulls the evening forward', function () {
+    $user = User::factory()->create();
+
+    $habit = Habit::factory()->for($user)
+        ->withMeasure(30)
+        ->fixedSchedule('22:00', [1])
+        ->create(['title' => 'Lesen']);
+
+    $this->actingAs($user)
+        ->put(route('sleep.update'), [
+            ...sleepPlan([1 => ['bedtime' => '21:00']]),
+            'carry_habits' => true,
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect($habit->refresh()->scheduled_time->format('H:i'))->toBe('20:00');
+});
+
+test('without the go-ahead the plan saves and the habits stay put', function () {
+    $user = User::factory()->create();
+
+    $habit = Habit::factory()->for($user)
+        ->withMeasure(20)
+        ->fixedSchedule('08:00', [1])
+        ->create(['title' => 'Frühstück']);
+
+    $this->actingAs($user)
+        ->put(route('sleep.update'), sleepPlan([1 => ['wake_time' => '10:00']]))
+        ->assertSessionHasNoErrors();
+
+    // Der Schlafplan gehört dem Nutzer — er wird gespeichert, ob etwas
+    // mitzieht oder nicht.
+    expect($user->refresh()->sleepWindowFor(1)['wakeTime'])->toBe('10:00')
+        ->and($habit->refresh()->scheduled_time->format('H:i'))->toBe('08:00');
+});
+
+/**
+ * Eine Uhrzeit gilt an allen Tagen der Gewohnheit. Verschiebt sich nur der
+ * Montag, darf die neue Zeit den Dienstag nicht sprengen.
+ */
+test('the new time has to work on every day the habit runs', function () {
+    $user = User::factory()->create();
+
+    $habit = Habit::factory()->for($user)
+        ->withMeasure(30)
+        ->fixedSchedule('08:00', [1, 2])
+        ->create(['title' => 'Frühstück']);
+
+    // Montags erst um zehn auf, dienstags um sieben ins Bett — der Schnitt
+    // beider Tage lässt nur noch 10:00 bis 18:30 zu.
+    $this->actingAs($user)
+        ->put(route('sleep.update'), [
+            ...sleepPlan([
+                1 => ['wake_time' => '10:00'],
+                2 => ['bedtime' => '19:00'],
+            ]),
+            'carry_habits' => true,
+        ])
+        ->assertSessionHasNoErrors();
+
+    $moved = $habit->refresh()->scheduled_time->format('H:i');
+
+    expect($moved)->toBe('11:00')
+        ->and(SleepSchedule::containsTime('10:00', '23:00', $moved))->toBeTrue()
+        ->and(SleepSchedule::containsTime('07:00', '19:00', $moved))->toBeTrue();
+});
+
+test('what fits nowhere stays where it is and says why', function () {
+    $user = User::factory()->create();
+
+    // Sechs Stunden am Stück, in einem Tag von 10:00 bis 14:00.
+    $habit = Habit::factory()->for($user)
+        ->withMeasure(360)
+        ->fixedSchedule('08:00', [1])
+        ->create(['title' => 'Lernblock']);
+
+    $response = $this->actingAs($user)
+        ->postJson(route('sleep.preview'), [
+            ...sleepPlan([1 => ['wake_time' => '10:00', 'bedtime' => '14:00']]),
+        ]);
+
+    $response->assertOk()
+        ->assertJsonCount(0, 'moves')
+        ->assertJsonCount(1, 'blocked')
+        ->assertJsonPath('blocked.0.title', 'Lernblock');
+
+    $this->actingAs($user)
+        ->put(route('sleep.update'), [
+            ...sleepPlan([1 => ['wake_time' => '10:00', 'bedtime' => '14:00']]),
+            'carry_habits' => true,
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect($habit->refresh()->scheduled_time->format('H:i'))->toBe('08:00');
+});
+
+test('a habit carried onto an occupied slot moves to the next free one', function () {
+    $user = User::factory()->create();
+
+    $breakfast = Habit::factory()->for($user)
+        ->withMeasure(30)
+        ->fixedSchedule('08:00', [1])
+        ->create(['title' => 'Frühstück']);
+
+    // Genau dort, wo das Frühstück landen würde.
+    Habit::factory()->for($user)
+        ->withMeasure(30)
+        ->fixedSchedule('11:00', [1])
+        ->create(['title' => 'Telefonat']);
+
+    $this->actingAs($user)
+        ->put(route('sleep.update'), [
+            ...sleepPlan([1 => ['wake_time' => '10:00']]),
+            'carry_habits' => true,
+        ])
+        ->assertSessionHasNoErrors();
+
+    // 11:30 plus die Viertelstunde Luft — der nächste Rasterpunkt ist 11:45.
+    expect($breakfast->refresh()->scheduled_time->format('H:i'))->toBe('11:45');
+});
+
+test('the preview shows exactly what saving would do', function () {
+    $user = User::factory()->create();
+
+    Habit::factory()->for($user)
+        ->withMeasure(20)
+        ->fixedSchedule('08:00', [1])
+        ->create(['title' => 'Frühstück']);
+
+    $plan = sleepPlan([1 => ['wake_time' => '10:00']]);
+
+    $this->actingAs($user)
+        ->postJson(route('sleep.preview'), $plan)
+        ->assertOk()
+        ->assertJsonPath('moves.0.title', 'Frühstück')
+        ->assertJsonPath('moves.0.from', '08:00')
+        ->assertJsonPath('moves.0.to', '11:00');
+
+    // Die Vorschau hat nichts gespeichert.
+    expect($user->refresh()->sleepWindowFor(1)['wakeTime'])->toBe('07:00');
+});
+
+/**
+ * „Unmittelbar davor bzw. danach": Die beiden Situationen am Tagesrand kleben
+ * an ihrer Kante, nicht am Anfang ihrer Spanne.
+ *
+ * Der Morgen weicht nach hinten aus, der Abend nach vorn. Beides von vorn zu
+ * suchen legte den Abendblock an den Anfang seiner Stunde — also eine Stunde
+ * vor die Schlafenszeit, sobald dort gerade Platz ist. Das ist nicht, was
+ * „vor dem Schlafengehen" heißt.
+ */
+test('the evening habit ends at bedtime, not an hour before it', function () {
+    $monday = Carbon::today()->startOfWeek()->addWeek();
+    $user = User::factory()->create();
+
+    $user->sleepSchedules()->create([
+        'weekday' => 1, 'wake_time' => '07:00', 'bedtime' => '23:00',
+    ]);
+
+    Habit::factory()->for($user)->withMeasure(30)->create([
+        'title' => 'Lesen',
+        'schedule_type' => ScheduleType::Dynamic,
+        'trigger_situation' => 'vor dem Schlafengehen',
+        'scheduled_time' => null,
+        'scheduled_days' => [1],
+        'created_at' => Carbon::today()->subWeek(),
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('calendar.day', $monday->toDateString()))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            // 22:30 bis 23:00 — der Block endet an der Schlafenszeit.
+            ->where('blocks.0.startMinute', 22 * 60 + 30)
+        );
+});
+
+test('the evening habit slides forward when something blocks the last hour', function () {
+    $monday = Carbon::today()->startOfWeek()->addWeek();
+    $user = User::factory()->create();
+
+    $user->sleepSchedules()->create([
+        'weekday' => 1, 'wake_time' => '07:00', 'bedtime' => '23:00',
+    ]);
+
+    Habit::factory()->for($user)->withMeasure(60)->fixedSchedule('22:00', [1])->create([
+        'title' => 'Telefonat',
+        'created_at' => Carbon::today()->subWeek(),
+    ]);
+
+    Habit::factory()->for($user)->withMeasure(30)->create([
+        'title' => 'Lesen',
+        'schedule_type' => ScheduleType::Dynamic,
+        'trigger_situation' => 'vor dem Schlafengehen',
+        'scheduled_time' => null,
+        'scheduled_days' => [1],
+        'created_at' => Carbon::today()->subWeek(),
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('calendar.day', $monday->toDateString()))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            // 21:15 bis 21:45, dann die Viertelstunde Luft, dann das Telefonat
+            // — so spät wie möglich, aber nicht darüber.
+            ->where('blocks.0.startMinute', 21 * 60 + 15)
+            ->where('blocks.1.startMinute', 22 * 60)
+        );
+});
+
+test('the morning habit starts at the wake time and slides back if blocked', function () {
+    $monday = Carbon::today()->startOfWeek()->addWeek();
+    $user = User::factory()->create();
+
+    $user->sleepSchedules()->create([
+        'weekday' => 1, 'wake_time' => '07:00', 'bedtime' => '23:00',
+    ]);
+
+    Habit::factory()->for($user)->withMeasure(30)->fixedSchedule('07:00', [1])->create([
+        'title' => 'Duschen',
+        'created_at' => Carbon::today()->subWeek(),
+    ]);
+
+    Habit::factory()->for($user)->withMeasure(20)->create([
+        'title' => 'Meditieren',
+        'schedule_type' => ScheduleType::Dynamic,
+        'trigger_situation' => 'nach dem Aufstehen',
+        'scheduled_time' => null,
+        'scheduled_days' => [1],
+        'created_at' => Carbon::today()->subWeek(),
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('calendar.day', $monday->toDateString()))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('blocks.0.startMinute', 7 * 60)
+            // 07:30 plus die Viertelstunde Luft — direkt hinter dem, was im
+            // Weg lag, und nicht irgendwo im Vormittag.
+            ->where('blocks.1.startMinute', 7 * 60 + 45)
+        );
+});
+
+/**
+ * Zwei Gewohnheiten, die zusammen ausweichen müssen, dürfen nicht auf
+ * demselben Platz landen.
+ *
+ * Der Fehler war, alle Züge zu rechnen und danach zu schreiben: Der zweite
+ * wurde gegen einen Tag geprüft, in dem der erste noch an seiner alten Stelle
+ * stand. Im Browser wanderten so „Tagebuch schreiben" und „Frühstücken" beide
+ * auf 13:15.
+ */
+test('two carried habits do not land on the same slot', function () {
+    $user = User::factory()->create();
+
+    $first = Habit::factory()->for($user)
+        ->withMeasure(15)
+        ->fixedSchedule('08:30', [1])
+        ->create(['title' => 'Tagebuch schreiben']);
+
+    $second = Habit::factory()->for($user)
+        ->withMeasure(30)
+        ->fixedSchedule('09:00', [1])
+        ->create(['title' => 'Frühstücken']);
+
+    $this->actingAs($user)
+        ->put(route('sleep.update'), [
+            ...sleepPlan([1 => ['wake_time' => '10:30']]),
+            'carry_habits' => true,
+        ])
+        ->assertSessionHasNoErrors();
+
+    $one = $first->refresh()->scheduled_time->format('H:i');
+    $two = $second->refresh()->scheduled_time->format('H:i');
+
+    // Beide um dieselben dreieinhalb Stunden versetzt (07:00 → 10:30): die
+    // frühere auf 12:00, die spätere dahinter, mit der Viertelstunde Luft
+    // hinter deren fünfzehn Minuten.
+    expect($one)->toBe('12:00')
+        ->and($two)->toBe('12:30')
+        ->and($one)->not->toBe($two);
+});
+
+test('the same holds for a single day', function () {
+    $monday = Carbon::today()->startOfWeek()->addWeek();
+    $user = User::factory()->create();
+
+    $first = Habit::factory()->for($user)
+        ->withMeasure(15)
+        ->fixedSchedule('08:30', [1])
+        ->create(['title' => 'Tagebuch schreiben']);
+
+    $second = Habit::factory()->for($user)
+        ->withMeasure(30)
+        ->fixedSchedule('09:00', [1])
+        ->create(['title' => 'Frühstücken']);
+
+    $this->actingAs($user)->post(route('sleep.days.store'), [
+        'date' => $monday->toDateString(),
+        'wake_time' => '10:30',
+        'carry_habits' => true,
+    ])->assertSessionHasNoErrors();
+
+    $one = $first->dayShifts()->firstOrFail()->scheduled_time->format('H:i');
+    $two = $second->dayShifts()->firstOrFail()->scheduled_time->format('H:i');
+
+    expect($one)->toBe('12:00')
+        ->and($two)->toBe('12:30');
+});
