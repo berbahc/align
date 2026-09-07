@@ -229,6 +229,12 @@ test('a habit that already sits there blocks the move and is named', function ()
  * Der Fall, um den es geht: Heute ist frei, aber montags liegt dort etwas.
  */
 test('a collision on another weekday stops the permanent move', function () {
+    // Ein Mittwoch — und der Tag gehört zum Fall selbst: „Heute ist frei, aber
+    // montags liegt dort etwas" stimmt nur, solange heute kein Montag ist.
+    // `SlotConflict::weekdayLabel()` schriebe dann „heute" statt „montags", und
+    // der Test prüfte einmal pro Woche etwas anderes als seine eigene Aussage.
+    Carbon::setTestNow(Carbon::parse('2026-08-05'));
+
     $user = User::factory()->create();
     Habit::factory()->for($user)->fixedSchedule('14:00', [1])->withMeasure(30)
         ->create(['title' => 'Essen vorkochen']);

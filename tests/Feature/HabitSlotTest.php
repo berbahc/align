@@ -608,6 +608,13 @@ test('a course in a semester that has not started yet already blocks its slot', 
 });
 
 test('a habit needs a quarter hour of air next to another habit', function () {
+    // Ein Mittwoch. Der Tag muss festgenagelt sein, weil die Meldung ihn nennt:
+    // `SlotConflict::weekdayLabel()` schreibt „heute", wenn der Konflikt auf den
+    // heutigen Tag fällt, und sonst den Wochentag. Ohne diese Zeile prüfte der
+    // Test montags „heute" gegen „montags" und fiel um — an einem einzigen
+    // Wochentag pro Woche.
+    Carbon::setTestNow(Carbon::parse('2026-08-05'));
+
     $user = User::factory()->create();
     Habit::factory()->for($user)->fixedSchedule('14:00', [1])->withMeasure(30)
         ->create(['title' => 'Essen vorkochen']);
