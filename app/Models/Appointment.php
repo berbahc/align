@@ -124,10 +124,21 @@ class Appointment extends Model
             $days = array_values(array_filter($days, fn (string $day): bool => $day >= $cut));
         }
 
-        return array_map(fn (string $day): array => [
-            'value' => $day,
-            'label' => self::dayLabel(Carbon::parse($day)),
-        ], array_slice($days, 0, self::DayChoices));
+        return array_map(function (string $day) use ($habit): array {
+            $date = Carbon::parse($day);
+
+            return [
+                'value' => $day,
+                'label' => self::dayLabel($date),
+                // Die Uhrzeit **dieses** Tages, und zwar genau die, die die
+                // Verabredung tragen wird ({@see startTimeFor()}). Das Sheet
+                // zeigte bislang die Zeile von heute — und die trug an einem
+                // Tag, an dem schon etwas verschoben war, „07:00 · nur an
+                // diesem Tag" für einen Donnerstag, an dem beides nicht galt.
+                // Eine Situation löst sich ohnehin je Tag anders auf.
+                'time' => self::startTimeFor($habit, $date),
+            ];
+        }, array_slice($days, 0, self::DayChoices));
     }
 
     /**
@@ -674,6 +685,13 @@ class Appointment extends Model
      */
     public static function startTimeFor(Habit $habit, Carbon $date): string
     {
+        // Ohne geladenen Nutzer kennt eine Situation ihre Minute nicht:
+        // `sleepBoundStartMinute()` steigt dann aus, und „nach dem Aufstehen"
+        // fiele auf die Stunde aus der Vorschlagsliste zurück statt auf die
+        // wirkliche Aufstehzeit. `loadMissing` und nicht `setRelation`, damit
+        // jeder Aufrufer richtig liegt und keiner eine Abfrage zu viel macht.
+        $habit->loadMissing('user');
+
         return DayPlan::toTime(
             $habit->dayStartMinute($date) ?? Habit::UnknownAnchorHour * 60,
         );

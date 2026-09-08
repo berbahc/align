@@ -25,6 +25,17 @@ export type AppointmentDay = {
     value: string;
     /** „heute", „morgen" oder der Wochentag. */
     label: string;
+    /**
+     * Die Uhrzeit **dieses** Tages — genau die, die die Verabredung tragen
+     * wird.
+     *
+     * Je Tag und nicht einmal für die Gewohnheit: Eine Situation („nach dem
+     * Aufstehen") löst sich an jedem Tag anders auf, und eine Ausnahme für
+     * einen einzelnen Tag gilt auch nur für den. Das Sheet zeigte vorher die
+     * Zeile von heute und nannte für einen Donnerstag eine Zeit, die dort
+     * nie galt.
+     */
+    time: string;
 };
 
 /**

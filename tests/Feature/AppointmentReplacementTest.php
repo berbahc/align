@@ -479,3 +479,71 @@ test('a slept-in day moves the situation with it', function () {
 
     expect(Appointment::query()->sole()->starts_at->format('H:i'))->toBe('10:30');
 });
+
+/**
+ * Jeder angebotene Tag trägt seine eigene Uhrzeit.
+ *
+ * Das Sheet zeigte die Zeile von **heute**. An einem Tag, an dem schon etwas
+ * verschoben war — etwa weil eine Verabredung die eigene Zeile mitgezogen hat
+ * —, stand dort „07:00 · nur an diesem Tag", und zwar auch dann, wenn der
+ * gewählte Tag der Donnerstag war. Zwei Tage, eine Uhrzeit: falsch für einen
+ * von beiden.
+ */
+test('every offered day carries its own time', function () {
+    Carbon::setTestNow(Carbon::parse('2026-09-07 05:00'));
+
+    [$aileen, $me, $appointment] = sharedMeal(time: '07:00');
+    $breakfast = ownHabit($me, HabitTemplate::Fruehstuecken, '09:00');
+
+    // Heute zieht die Zusage die eigene Zeile auf sieben.
+    $this->actingAs($me)->patch(route('appointments.update', $appointment));
+
+    $this->actingAs($me)
+        ->get(route('dashboard'))
+        ->assertInertia(function (AssertableInertia $page) {
+            $days = collect($page->toArray()['props']['habits'][0]['appointmentDays']);
+
+            // Heute: die verschobene Zeit. Jeder andere Tag: die eigene.
+            expect($days->firstWhere('value', Carbon::today()->toDateString())['time'])->toBe('07:00')
+                ->and($days->where('value', '!=', Carbon::today()->toDateString())->pluck('time')->unique()->all())
+                ->toBe(['09:00']);
+        });
+});
+
+/**
+ * Und bei einer Situation ist jeder Tag ohnehin ein anderer.
+ */
+test('a situation gives every offered day its own clock time', function () {
+    Carbon::setTestNow(Carbon::parse('2026-09-07 05:00'));
+
+    $berkay = User::factory()->create(['name' => 'Berkay']);
+    $aylin = User::factory()->create(['name' => 'Aylin']);
+
+    Friendship::factory()->accepted()->create([
+        'requester_id' => $berkay->id,
+        'addressee_id' => $aylin->id,
+    ]);
+
+    foreach ([1 => '06:00', 2 => '07:30', 3 => '09:00'] as $weekday => $wake) {
+        $berkay->sleepSchedules()->create([
+            'weekday' => $weekday,
+            'wake_time' => $wake,
+            'bedtime' => '23:00',
+            'alarm_enabled' => false,
+        ]);
+    }
+
+    Habit::factory()->for($berkay)
+        ->fromTemplate(HabitTemplate::Fruehstuecken)
+        ->withMeasure(30)
+        ->create(['trigger_situation' => 'nach dem Aufstehen']);
+
+    $this->actingAs($berkay->refresh())
+        ->get(route('dashboard'))
+        ->assertInertia(function (AssertableInertia $page) {
+            $days = collect($page->toArray()['props']['habits'][0]['appointmentDays']);
+
+            // Montag, Dienstag, Mittwoch — drei Aufstehzeiten, drei Uhrzeiten.
+            expect($days->pluck('time')->all())->toBe(['06:00', '07:30', '09:00']);
+        });
+});

@@ -92,7 +92,17 @@ export function AppointmentSheet({
             <SheetContent side="bottom" className="mx-auto max-w-lg">
                 <SheetHeader>
                     <SheetTitle>{habit?.title}</SheetTitle>
-                    <SheetDescription>{habit?.scheduleLabel}</SheetDescription>
+                    {/* Vor der Wahl der Plan der Gewohnheit, danach die
+                        Uhrzeit des gewählten Tages. Der Plan von heute stand
+                        hier lange auch dann, wenn der gewählte Tag ein anderer
+                        war — und an einem Tag mit einer Ausnahme („nur an
+                        diesem Tag") nannte er für Donnerstag eine Zeit, die
+                        dort nie galt. */}
+                    <SheetDescription>
+                        {chosenDay === undefined
+                            ? habit?.scheduleLabel
+                            : `${capitaliseDay(chosenDay.label)} um ${chosenDay.time}`}
+                    </SheetDescription>
                 </SheetHeader>
 
                 <div className="flex flex-col gap-6 px-4 pb-6">
@@ -189,8 +199,11 @@ export function AppointmentSheet({
                                         {chosenFriend.name} ·{' '}
                                         {capitaliseDay(chosenDay.label)}
                                     </p>
+                                    {/* Die Uhrzeit dieses Tages — sie steht
+                                        gleich an der Verabredung, und die
+                                        gefragte Person liest genau sie. */}
                                     <p className="mt-0.5 text-xs text-muted-foreground">
-                                        {habit?.scheduleLabel}
+                                        um {chosenDay.time}
                                     </p>
                                 </div>
                             )}
