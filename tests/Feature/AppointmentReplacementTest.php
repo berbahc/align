@@ -371,3 +371,111 @@ test('a situation is checked against the day like anything else', function () {
 
     expect($appointment->refresh()->accepted_at)->toBeNull();
 });
+
+/**
+ * „Nochmal ausmachen?" — wer drückt, bringt seine eigene Zeit mit.
+ *
+ * Die Wiederholung ist keine Kopie der alten Verabredung, sondern eine neue
+ * Frage: Sie hängt an der Gewohnheit dessen, der fragt
+ * ({@see Appointment::repeatableHabitFor()}). Bei Berkay ist das eine
+ * Situation, bei Aylin eine Uhr — und beide Male gilt, was in **seinem** Tag
+ * steht, nicht was beim letzten Mal galt.
+ */
+test('asking again brings the asker own time, situation or clock', function () {
+    // Ein Montag. Die Wiederholung zielt auf den Mittwoch.
+    Carbon::setTestNow(Carbon::parse('2026-09-07 05:00'));
+
+    $berkay = User::factory()->create(['name' => 'Berkay']);
+    $aylin = User::factory()->create(['name' => 'Aylin']);
+
+    Friendship::factory()->accepted()->create([
+        'requester_id' => $berkay->id,
+        'addressee_id' => $aylin->id,
+    ]);
+
+    // Berkay steht mittwochs später auf als montags. Genau das muss die
+    // Situation am gefragten Tag lesen — nicht die Aufstehzeit von heute.
+    foreach ([1 => '06:00', 3 => '09:00'] as $weekday => $wake) {
+        $berkay->sleepSchedules()->create([
+            'weekday' => $weekday,
+            'wake_time' => $wake,
+            'bedtime' => '23:00',
+            'alarm_enabled' => false,
+        ]);
+    }
+
+    $his = Habit::factory()->for($berkay)
+        ->fromTemplate(HabitTemplate::Fruehstuecken)
+        ->withMeasure(30)
+        ->create(['trigger_situation' => 'nach dem Aufstehen']);
+
+    $hers = ownHabit($aylin, HabitTemplate::Fruehstuecken, '08:00');
+
+    $wednesday = Carbon::parse('2026-09-09');
+
+    // Berkay fragt: seine Situation, aufgelöst am Mittwoch.
+    $this->actingAs($berkay->refresh())
+        ->post(route('appointments.store', $his), [
+            'friend_id' => $aylin->id,
+            'scheduled_for' => $wednesday->toDateString(),
+        ])->assertSessionHasNoErrors();
+
+    expect(Appointment::query()->sole()->starts_at->format('H:i'))->toBe('09:00');
+
+    Appointment::query()->delete();
+
+    // Aylin fragt: ihre feste Uhrzeit, unberührt von Berkays Anker.
+    $this->actingAs($aylin)
+        ->post(route('appointments.store', $hers), [
+            'friend_id' => $berkay->id,
+            'scheduled_for' => $wednesday->toDateString(),
+        ])->assertSessionHasNoErrors();
+
+    expect(Appointment::query()->sole()->starts_at->format('H:i'))->toBe('08:00');
+});
+
+/**
+ * Und die Ausnahme eines einzelnen Tages schlägt den Wochenplan.
+ *
+ * Wer am Mittwoch ausnahmsweise um halb elf aufsteht, frühstückt an dem
+ * Mittwoch um halb elf — auch wenn sein Wochenplan neun sagt.
+ */
+test('a slept-in day moves the situation with it', function () {
+    Carbon::setTestNow(Carbon::parse('2026-09-07 05:00'));
+
+    $berkay = User::factory()->create(['name' => 'Berkay']);
+    $aylin = User::factory()->create(['name' => 'Aylin']);
+
+    Friendship::factory()->accepted()->create([
+        'requester_id' => $berkay->id,
+        'addressee_id' => $aylin->id,
+    ]);
+
+    $berkay->sleepSchedules()->create([
+        'weekday' => 3,
+        'wake_time' => '09:00',
+        'bedtime' => '23:00',
+        'alarm_enabled' => false,
+    ]);
+
+    $wednesday = Carbon::parse('2026-09-09');
+
+    $berkay->sleepDayOverrides()->create([
+        'on_date' => $wednesday,
+        'wake_time' => '10:30',
+        'bedtime' => null,
+    ]);
+
+    $his = Habit::factory()->for($berkay)
+        ->fromTemplate(HabitTemplate::Fruehstuecken)
+        ->withMeasure(30)
+        ->create(['trigger_situation' => 'nach dem Aufstehen']);
+
+    $this->actingAs($berkay->refresh())
+        ->post(route('appointments.store', $his), [
+            'friend_id' => $aylin->id,
+            'scheduled_for' => $wednesday->toDateString(),
+        ])->assertSessionHasNoErrors();
+
+    expect(Appointment::query()->sole()->starts_at->format('H:i'))->toBe('10:30');
+});
