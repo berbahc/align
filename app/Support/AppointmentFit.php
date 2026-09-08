@@ -100,6 +100,13 @@ final class AppointmentFit
         }
 
         $timetable = Timetable::for($invitee);
+
+        // Und was schon zugesagt ist: Zwei Freunde konnten sich für dieselbe
+        // Minute je eine Zusage holen, weil eine fremde Gewohnheit in keinem
+        // eigenen Plan steht. Eine Verabredung belegt den Tag wie ein Kurs —
+        // seit sie im Kalender liegt, sagt das auch die Überlappungs-Invariante.
+        $promised = Appointment::blocksOnDates($invitee, [$date], $habits, $appointment)[$date->toDateString()] ?? [];
+
         $plan = DayPlan::forDate($habits, $date, $invitee->sleepWindowsOn($date), $timetable->blocksOn($date));
 
         // Zuerst der Rahmen, dann was darin liegt: Wer um drei Uhr nachts
@@ -129,17 +136,24 @@ final class AppointmentFit
         // seit die Verabredung im Kalender liegt, meldet die
         // Überlappungs-Invariante genau das als Verstoß. Zwei Maßstäbe für
         // denselben Tag sind einer zu viel.
-        foreach (self::blocksOn($habits, $timetable, $date) as $block) {
+        foreach (self::blocksOn($habits, $timetable, $date, $promised) as $block) {
             if ($block['from'] < $window['to'] + DayPlan::BreatherMinutes
                 && $window['from'] < $block['to'] + DayPlan::BreatherMinutes) {
-                $istKurs = Timetable::isCourseBlock($block);
+                $kind = match (true) {
+                    Appointment::isAppointmentBlock($block) => AppointmentConflictKind::Appointment,
+                    Timetable::isCourseBlock($block) => AppointmentConflictKind::Course,
+                    default => AppointmentConflictKind::Habit,
+                };
 
                 return new self(
-                    $istKurs ? AppointmentConflictKind::Course : AppointmentConflictKind::Habit,
+                    $kind,
                     $block,
-                    // Der Kurs kommt nicht aus den Gewohnheiten und trägt eine
-                    // negative Kennung; die Suche liefe dort ins Leere.
-                    $istKurs ? null : $habits->firstWhere('id', $block['id']),
+                    // Kurs und Verabredung kommen nicht aus den Gewohnheiten
+                    // und tragen keine positive Kennung; die Suche liefe dort
+                    // ins Leere.
+                    $kind === AppointmentConflictKind::Habit
+                        ? $habits->firstWhere('id', $block['id'])
+                        : null,
                     $window,
                     $date,
                     $invitee,
@@ -177,6 +191,10 @@ final class AppointmentFit
             ),
             AppointmentConflictKind::Course => sprintf(
                 'Um diese Zeit läuft bei dir „%s" aus deinem Semesterplan. Ein Kurs rückt nicht.',
+                $this->span['title'],
+            ),
+            AppointmentConflictKind::Appointment => sprintf(
+                'Um diese Zeit bist du schon verabredet: „%s". Zwei Zusagen für eine Minute gehen nicht.',
                 $this->span['title'],
             ),
             AppointmentConflictKind::Habit => sprintf(
@@ -285,9 +303,10 @@ final class AppointmentFit
      * genannt gehört der erste im Tag.
      *
      * @param  Collection<int, Habit>  $habits
+     * @param  list<array{id: int, title: string, from: int, to: int}>  $promised  Was schon zugesagt ist
      * @return list<array{id: int, title: string, from: int, to: int}>
      */
-    private static function blocksOn(Collection $habits, Timetable $timetable, Carbon $date): array
+    private static function blocksOn(Collection $habits, Timetable $timetable, Carbon $date, array $promised): array
     {
         $blocks = $habits
             ->map(function (Habit $habit) use ($date): ?array {
@@ -301,6 +320,7 @@ final class AppointmentFit
             })
             ->filter()
             ->concat($timetable->blocksOn($date))
+            ->concat($promised)
             ->sortBy('from')
             ->values()
             ->all();

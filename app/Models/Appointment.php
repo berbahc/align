@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Support\AppointmentFit;
 use App\Support\DayPlan;
+use App\Support\Timetable;
 use Carbon\CarbonInterface;
 use Database\Factories\AppointmentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -500,6 +501,96 @@ class Appointment extends Model
         }
 
         return $replacements;
+    }
+
+    /**
+     * Was zugesagte Verabredungen an diesen Tagen belegen.
+     *
+     * **Die eine Stelle, an der aus Zusagen die Belegung eines Tages wird** —
+     * das Gegenstück zu {@see Timetable::blocksOn()} für Kurse, und aus
+     * demselben Grund an einem Ort: {@see DayPlan} nimmt Fremdblöcke von
+     * mehreren Aufrufern entgegen, und gäbe einer eine andere Belegung heraus
+     * als die übrigen, säße dieselbe Minute auf zwei Wegen an zwei Stellen.
+     *
+     * Zwei Arten fallen dabei heraus, weil sie schon als Gewohnheit im Tag
+     * stehen und sonst doppelt zählten:
+     *
+     * - **Die eigene Frage.** Sie hängt an der eigenen Gewohnheit; die ist
+     *   ohnehin im Plan.
+     * - **Die ersetzte Sache.** Wer zum Frühstück zusagt und selbst
+     *   Frühstück führt, hat seine Zeile für den Tag mitgezogen
+     *   ({@see replaces()}) — sie belegt die Zeit bereits.
+     *
+     * Die Kennung ist `0`: positive Zahlen sind Gewohnheiten, negative Kurse
+     * ({@see Timetable::isCourseBlock()}).
+     *
+     * Eine Abfrage für alle gefragten Tage — die Kollisionsprüfung fragt bis
+     * zu vierzehn davon.
+     *
+     * @param  list<Carbon>  $dates
+     * @param  Collection<int, Habit>  $habits  Der eigene Plan, einmal geladen
+     * @return array<string, list<array{id: int, title: string, from: int, to: int}>> Schlüssel „Y-m-d"
+     */
+    public static function blocksOnDates(User $user, array $dates, Collection $habits, ?self $except = null): array
+    {
+        if ($dates === []) {
+            return [];
+        }
+
+        // Als Carbon um Mitternacht und nicht als Zeichenkette: Die Spalte ist
+        // ein Datum, abgelegt wird „2026-09-08 00:00:00", und ein Vergleich
+        // gegen „2026-09-08" fände keine Zeile. Dieselbe Falle wie in
+        // {@see HabitDayShiftController::store()}.
+        $days = array_map(fn (Carbon $date): Carbon => $date->copy()->startOfDay(), $dates);
+
+        $appointments = self::query()
+            ->accepted()
+            ->where('invitee_id', $user->id)
+            ->whereIn('scheduled_for', $days)
+            ->with(['habit', 'requester'])
+            ->get();
+
+        $appointments->each(
+            fn (self $appointment) => $appointment->habit->setRelation('user', $appointment->requester),
+        );
+
+        $blocks = [];
+
+        foreach ($appointments as $appointment) {
+            if ($except !== null && $appointment->is($except)) {
+                continue;
+            }
+
+            if ($appointment->replaces($user, $habits) !== null) {
+                continue;
+            }
+
+            $from = $appointment->startMinute();
+
+            $blocks[$appointment->scheduled_for->toDateString()][] = [
+                'id' => 0,
+                // Mit Namen, weil der Satz danach ihn braucht: „Such eine
+                // andere Zeit" hilft nicht, wenn unklar bleibt, wofür.
+                'title' => sprintf('%s mit %s', $appointment->habit->title, $appointment->requester->name),
+                'from' => $from,
+                'to' => $from + ($appointment->habit->durationMinutes() ?? DayPlan::AssumedMinutes),
+            ];
+        }
+
+        return $blocks;
+    }
+
+    /**
+     * Gehört dieser Fremdblock zu einer Verabredung?
+     *
+     * Die eine Stelle, an der die Kennung gelesen wird — wie
+     * {@see Timetable::isCourseBlock()} für Kurse.
+     *
+     * @param  array{id: int, title: string, from: int, to: int}  $block
+     */
+    public static function isAppointmentBlock(array $block): bool
+    {
+        return $block['id'] === 0;
     }
 
     /**

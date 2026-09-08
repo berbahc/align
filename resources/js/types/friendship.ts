@@ -92,7 +92,8 @@ export type AppointmentRequest = {
  *
  * `kind` entscheidet über den Ausweg und damit über den Satz auf der Karte:
  * Eine eigene Gewohnheit lässt sich für diesen einen Tag verlegen, ein Kurs
- * nicht, und gegen den eigenen Schlafrahmen hilft nur ein anderer Tag. Ohne
+ * nicht, eine schon zugesagte Verabredung ließe sich nur absagen, und gegen
+ * den eigenen Schlafrahmen hilft nur ein anderer Tag. Ohne
  * das Feld müsste die Karte aus einer leeren `options`-Liste raten, welcher
  * der drei Fälle vorliegt — und der Grund ist genau das, was der Gefragte
  * wissen will.
@@ -101,7 +102,7 @@ export type AppointmentRequest = {
  * selbst bleibt, wo sie ist. Bei `course` und `night` ist die Liste leer.
  */
 export type AppointmentConflict = {
-    kind: 'habit' | 'course' | 'night';
+    kind: 'habit' | 'course' | 'appointment' | 'night';
     /** Die Gewohnheit, die rücken könnte — null bei Kurs und Nacht. */
     habitId: number | null;
     /** Was im Weg liegt — null in der Nacht, dort liegt nichts. */

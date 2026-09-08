@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\HabitTemplate;
+use App\Enums\ScheduleType;
 use App\Models\Appointment;
 use App\Models\Course;
 use App\Models\Friendship;
@@ -488,4 +489,90 @@ test('the reminder follows the habit to where it was moved', function () {
         ->assertInertia(fn (AssertableInertia $page) => $page
             ->where('habitReminders.0.scheduledTime', '20:00')
         );
+});
+
+/**
+ * Zwei Freunde, dieselbe Minute.
+ *
+ * Eine fremde Gewohnheit steht in keinem eigenen Plan — deshalb sah die
+ * Prüfung sie nicht, und beide Zusagen gingen durch. Danach lagen zwei
+ * gemeinsame Frühstücke übereinander, jedes mit jemand anderem.
+ */
+test('a promise already given blocks the next one', function () {
+    [, $guest, $appointment] = morningInvitation();
+
+    // Eine zweite Anfrage von einer dritten Person, zur selben Zeit.
+    $other = User::factory()->create(['name' => 'Aylin']);
+    Friendship::factory()->accepted()->create([
+        'requester_id' => $other->id,
+        'addressee_id' => $guest->id,
+    ]);
+
+    $theirs = Habit::factory()->for($other)
+        ->fromTemplate(HabitTemplate::Spazieren)
+        ->fixedSchedule('07:30', [1, 2, 3, 4, 5])
+        ->withMeasure(30)
+        ->create();
+
+    $second = Appointment::factory()->create([
+        'habit_id' => $theirs->id,
+        'requester_id' => $other->id,
+        'invitee_id' => $guest->id,
+        'scheduled_for' => $appointment->scheduled_for,
+    ]);
+
+    // Die erste geht durch — der Tag ist frei.
+    $this->actingAs($guest)
+        ->patch(route('appointments.update', $appointment))
+        ->assertSessionHasNoErrors();
+
+    // Die zweite nicht mehr.
+    $this->actingAs($guest)
+        ->from(route('dashboard'))
+        ->patch(route('appointments.update', $second))
+        ->assertSessionHasErrors('appointment');
+
+    expect($second->refresh()->accepted_at)->toBeNull();
+
+    // Und die Karte sagt, warum — mit dem Namen, nicht nur mit der Uhrzeit.
+    $this->actingAs($guest)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('appointmentRequests.0.conflict.kind', 'appointment')
+            ->where('appointmentRequests.0.conflict.title', 'Joggen gehen mit Berkay')
+            // Absagen ist der einzige Weg — Ausweichzeiten gäbe es nicht.
+            ->where('appointmentRequests.0.conflict.options', [])
+            ->etc()
+        );
+});
+
+/**
+ * Und die Gegenrichtung: eine neue Gewohnheit auf eine Zusage legen.
+ *
+ * `SlotConflict` baute den Tag aus Gewohnheiten und Stundenplan — die Zusage
+ * fehlte darin. Man konnte also anlegen, was gleich neben dem gemeinsamen
+ * Frühstück lag, und niemand widersprach.
+ */
+test('a new habit cannot be laid on a promise', function () {
+    [, $guest, $appointment] = morningInvitation();
+
+    $this->actingAs($guest)
+        ->patch(route('appointments.update', $appointment))
+        ->assertSessionHasNoErrors();
+
+    // Die Verabredung läuft 07:30 bis 08:00 an einem Dienstag.
+    expect($appointment->scheduled_for->dayOfWeekIso)->toBe(2);
+
+    $this->actingAs($guest)
+        ->from(route('habits.create'))
+        ->post(route('habits.store'), [
+            'template_key' => HabitTemplate::Lesen->value,
+            'target_amount' => 30,
+            'schedule_type' => ScheduleType::Fixed->value,
+            'scheduled_time' => '07:45',
+            'scheduled_days' => [2],
+        ])
+        ->assertSessionHasErrors();
+
+    expect($guest->habits()->count())->toBe(0);
 });

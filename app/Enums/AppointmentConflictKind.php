@@ -23,6 +23,9 @@ enum AppointmentConflictKind: string
     /** Ein Kurs aus dem Semesterplan. Er rückt nicht. */
     case Course = 'course';
 
+    /** Eine andere Zusage. Auch sie rückt nicht — sie ließe sich nur absagen. */
+    case Appointment = 'appointment';
+
     /** Die Zeit liegt außerhalb des eigenen Tages — dort wird geschlafen. */
     case Night = 'night';
 }

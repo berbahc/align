@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\Appointment;
 use App\Models\Habit;
 use App\Models\User;
 use Illuminate\Support\Carbon;
@@ -16,11 +17,11 @@ use Illuminate\Support\Carbon;
  * dieselbe Antwort bekommen. Fünf Rechnungen wären fünf Wahrheiten über
  * denselben Tag.
  *
- * Der Unterschied zwischen den beiden Arten steckt nicht in der Rechnung,
- * sondern im Satz danach: Ein Kurs kommt von der Uni und rückt nicht, eine
- * eigene Gewohnheit schon. Einen Ausweg anzubieten, den es nicht gibt, ist
- * schlimmer als keiner — deshalb steht der Text hier und nicht bei den
- * Aufrufern.
+ * Der Unterschied zwischen den Arten steckt nicht in der Rechnung, sondern im
+ * Satz danach: Ein Kurs kommt von der Uni und rückt nicht, eine Zusage gehört
+ * zu zweit und ließe sich nur absagen, eine eigene Gewohnheit rückt. Einen
+ * Ausweg anzubieten, den es nicht gibt, ist schlimmer als keiner — deshalb
+ * steht der Text hier und nicht bei den Aufrufern.
  */
 final class SlotConflict
 {
@@ -124,6 +125,13 @@ final class SlotConflict
 
         $habits->each(fn (Habit $habit) => $habit->setRelation('user', $user));
 
+        // Was zugesagt ist, belegt den Tag wie ein Kurs. Ohne diese Zeile ließ
+        // sich eine neue Gewohnheit auf ein gemeinsames Frühstück legen, ohne
+        // dass jemand widersprach: Die fremde Gewohnheit steht in keinem
+        // eigenen Plan, und der Stundenplan kennt sie erst recht nicht. Eine
+        // Abfrage für alle gefragten Tage.
+        $promised = Appointment::blocksOnDates($user, $dates, $habits);
+
         foreach ($dates as $date) {
             $plan = DayPlan::forDate(
                 $habits
@@ -132,7 +140,10 @@ final class SlotConflict
                     ->values(),
                 $date,
                 $user->sleepWindowsOn($date),
-                $timetable->blocksOn($date),
+                [
+                    ...$timetable->blocksOn($date),
+                    ...$promised[$date->toDateString()] ?? [],
+                ],
             );
 
             foreach ($spans as $span) {
@@ -164,6 +175,19 @@ final class SlotConflict
         // Wer weiß, bis wann und ab wann Platz ist, muss nicht raten.
         $before = DayPlan::toTime($block['from'] - DayPlan::BreatherMinutes);
         $after = DayPlan::toTime($block['to'] + DayPlan::BreatherMinutes);
+
+        if (Appointment::isAppointmentBlock($block)) {
+            return sprintf(
+                '%s bist du von %s bis %s verabredet: „%s". Davor und danach hält Align eine Viertelstunde Luft — zum Hinkommen und Umschalten. Platz ist bis %s und wieder ab %s. %s',
+                ucfirst($when),
+                DayPlan::toTime($block['from']),
+                DayPlan::toTime($block['to']),
+                $block['title'],
+                $before,
+                $after,
+                $remedy ?? 'Such eine andere Zeit — oder sag die Verabredung ab.',
+            );
+        }
 
         if (Timetable::isCourseBlock($block)) {
             return sprintf(

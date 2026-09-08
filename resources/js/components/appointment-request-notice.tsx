@@ -166,6 +166,7 @@ export function AppointmentRequestNotice({
                                                 {
                                                     habit: `Um diese Zeit läuft bei dir schon „${request.conflict.title}" von ${request.conflict.from} bis ${request.conflict.to}.`,
                                                     course: `Um diese Zeit läuft bei dir „${request.conflict.title}" von ${request.conflict.from} bis ${request.conflict.to} — aus deinem Semesterplan.`,
+                                                    appointment: `Um diese Zeit bist du schon verabredet: „${request.conflict.title}", von ${request.conflict.from} bis ${request.conflict.to}.`,
                                                     night: `Um diese Zeit schläfst du. Dein Tag geht von ${request.conflict.from} bis ${request.conflict.to} Uhr.`,
                                                 }[request.conflict.kind]
                                             }
@@ -179,9 +180,15 @@ export function AppointmentRequestNotice({
                                            schlimmer als keine — §1.5, benannt
                                            wird, was gilt. */
                                         <p className="text-xs leading-relaxed text-muted-foreground">
-                                            {request.conflict.kind === 'course'
-                                                ? 'Ein Kurs rückt nicht. An diesem Tag geht es deshalb nicht.'
-                                                : 'An diesem Tag geht es deshalb nicht.'}
+                                            {
+                                                {
+                                                    course: 'Ein Kurs rückt nicht. An diesem Tag geht es deshalb nicht.',
+                                                    appointment:
+                                                        'Zwei Zusagen für eine Minute gehen nicht. Sag die andere ab, wenn dir diese lieber ist.',
+                                                    night: 'An diesem Tag geht es deshalb nicht.',
+                                                    habit: '',
+                                                }[request.conflict.kind]
+                                            }
                                         </p>
                                     ) : request.conflict.options.length > 0 ? (
                                         <div className="flex flex-col gap-2">
