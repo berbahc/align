@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Http\Requests\Concerns\ChecksSleepWindow;
 use App\Models\Habit;
 use App\Support\DayPlan;
+use App\Support\PromiseLock;
 use App\Support\SlotConflict;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -128,6 +129,20 @@ class ShiftHabitDayRequest extends FormRequest
         }
 
         $habit = $this->habit();
+
+        // Was ausgemacht ist, rückt nicht: Steht an diesem Tag eine Zusage an
+        // dieser Gewohnheit, liest die andere Person ihre Uhrzeit — und die
+        // steht fest ({@see PromiseLock}).
+        $locked = PromiseLock::on($this->user(), $habit, [$date]);
+
+        if ($locked !== null) {
+            $validator->errors()->add(
+                'scheduled_time',
+                PromiseLock::message($locked['appointment'], $locked['date'], $this->user()),
+            );
+
+            return;
+        }
         $spans = $habit->spansFrom(DayPlan::toMinutes($this->string('scheduled_time')->toString()));
 
         $conflict = SlotConflict::findOn(

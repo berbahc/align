@@ -101,22 +101,44 @@ class AppointmentController extends Controller
      */
     private function moveOwnHabitAlong(Appointment $appointment, User $user): void
     {
-        $replaced = $appointment->replacementFor($user);
-
-        if ($replaced === null) {
-            return;
-        }
-
         $date = Carbon::parse($appointment->scheduled_for)->startOfDay();
         $together = DayPlan::toTime($appointment->startMinute());
 
-        if ($together === $replaced->startsAt($date)?->format('H:i')) {
+        $this->pin($appointment->replacementFor($user), $date, $together);
+
+        // Und die fragende Seite, wenn ihre Gewohnheit an einer Situation
+        // hängt: „Nach dem Aufstehen" rechnet sich jeden Tag neu aus dem
+        // Schlafplan aus. Verstellt sie später ihren Wecker, wanderte ihr
+        // Block — die Verabredung aber nicht, denn deren Uhrzeit steht seit
+        // dem Fragen fest. Zwei Kalender, zwei Uhrzeiten, beide überzeugt.
+        //
+        // Die Ausnahme für diesen Tag hält sie an Ort und Stelle: Sie schlägt
+        // jede Regel ({@see Habit::resolveStart()}). Eine feste Uhrzeit
+        // braucht das nicht — sie wandert nicht von selbst, und die Wege, sie
+        // von Hand zu ändern, sind verriegelt ({@see PromiseLock}).
+        $asking = $appointment->habit;
+
+        if ($asking->startsAt($date) === null) {
+            $this->pin($asking, $date, $together);
+        }
+    }
+
+    /**
+     * Die Gewohnheit für diesen einen Tag auf die ausgemachte Zeit festlegen.
+     *
+     * Nichts zu tun, wenn sie ohnehin dort liegt: Eine Ausnahme, die nichts
+     * ändert, schriebe „nur an diesem Tag" an eine Zeile, an der sich nichts
+     * geändert hat.
+     */
+    private function pin(?Habit $habit, Carbon $date, string $time): void
+    {
+        if ($habit === null || $time === $habit->startsAt($date)?->format('H:i')) {
             return;
         }
 
         HabitDayShift::query()->updateOrCreate(
-            ['habit_id' => $replaced->id, 'shifted_on' => $date],
-            ['scheduled_time' => $together],
+            ['habit_id' => $habit->id, 'shifted_on' => $date],
+            ['scheduled_time' => $time],
         );
     }
 
@@ -158,18 +180,14 @@ class AppointmentController extends Controller
      */
     private function undoOwnHabitMove(Appointment $appointment, User $user): void
     {
-        $replaced = $appointment->replacementFor($user);
-
-        if ($replaced === null) {
-            return;
-        }
-
         $date = Carbon::parse($appointment->scheduled_for)->startOfDay();
         $together = DayPlan::toTime($appointment->startMinute());
 
-        $replaced->dayShifts()
-            ->whereDate('shifted_on', $date)
-            ->where('scheduled_time', $together)
-            ->delete();
+        foreach ([$appointment->replacementFor($user), $appointment->habit] as $habit) {
+            $habit?->dayShifts()
+                ->whereDate('shifted_on', $date)
+                ->where('scheduled_time', $together)
+                ->delete();
+        }
     }
 }

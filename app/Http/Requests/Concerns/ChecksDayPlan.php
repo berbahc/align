@@ -4,7 +4,9 @@ namespace App\Http\Requests\Concerns;
 
 use App\Models\Habit;
 use App\Support\DayPlan;
+use App\Support\PromiseLock;
 use App\Support\SlotConflict;
+use App\Support\Timetable;
 use Illuminate\Validation\Validator;
 
 /**
@@ -36,6 +38,22 @@ trait ChecksDayPlan
 
         if ($user === null || $validator->errors()->has($field)) {
             return;
+        }
+
+        // Was ausgemacht ist, rückt nicht: Eine dauerhaft geänderte Uhrzeit
+        // zöge auch den Tag mit, für den schon jemand zugesagt hat, und die
+        // andere Person läse weiter die alte ({@see PromiseLock}).
+        if ($habit !== null) {
+            $locked = PromiseLock::on($user, $habit, SlotConflict::datesFor($days, Timetable::for($user)));
+
+            if ($locked !== null) {
+                $validator->errors()->add(
+                    $field,
+                    PromiseLock::message($locked['appointment'], $locked['date'], $user),
+                );
+
+                return;
+            }
         }
 
         $start = DayPlan::toMinutes($time);

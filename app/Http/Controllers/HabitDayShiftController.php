@@ -8,6 +8,7 @@ use App\Models\Habit;
 use App\Models\HabitDayShift;
 use App\Models\User;
 use App\Support\DayPlan;
+use App\Support\PromiseLock;
 use App\Support\SlotConflict;
 use App\Support\Timetable;
 use Illuminate\Http\RedirectResponse;
@@ -123,7 +124,13 @@ class HabitDayShiftController extends Controller
             'date' => ['required', 'date_format:Y-m-d'],
         ]);
 
-        $habit->dayShifts()->whereDate('shifted_on', $validated['date'])->delete();
+        $date = Carbon::createFromFormat('!Y-m-d', $validated['date']);
+
+        // Auch das Zurücknehmen verschiebt: Die Gewohnheit spränge an ihre
+        // gewohnte Zeit, und für den Tag ist eine andere ausgemacht.
+        $this->guardPromise($request->user(), $habit, [$date]);
+
+        $habit->dayShifts()->whereDate('shifted_on', $date)->delete();
 
         return back();
     }
@@ -171,7 +178,13 @@ class HabitDayShiftController extends Controller
     {
         $days = $habit->activeWeekdays() ?: Habit::EveryDay;
 
-        foreach (SlotConflict::datesFor($days, $this->timetable($user)) as $date) {
+        $dates = SlotConflict::datesFor($days, $this->timetable($user));
+
+        // Dauerhaft umstellen trifft auch die Tage, für die schon etwas
+        // ausgemacht ist.
+        $this->guardPromise($user, $habit, $dates);
+
+        foreach ($dates as $date) {
             $this->guard($user, $habit, $date, $start);
         }
 
@@ -203,6 +216,25 @@ class HabitDayShiftController extends Controller
     }
 
     /**
+     * Weist ab, was für einen dieser Tage ausgemacht ist.
+     *
+     * Vor jeder anderen Prüfung: Ob an der neuen Stelle Platz wäre, ist
+     * gleichgültig, wenn die alte gar nicht frei wird ({@see PromiseLock}).
+     *
+     * @param  list<Carbon>  $dates
+     */
+    private function guardPromise(User $user, Habit $habit, array $dates): void
+    {
+        $locked = PromiseLock::on($user, $habit, $dates);
+
+        if ($locked !== null) {
+            throw ValidationException::withMessages([
+                'start_minute' => PromiseLock::message($locked['appointment'], $locked['date'], $user),
+            ]);
+        }
+    }
+
+    /**
      * Weist ab, was an diesem Tag nicht ginge — mit dem Grund und dem Ausweg.
      *
      * Zwei Grenzen: der Schlafrahmen und die Blöcke, die dort schon liegen.
@@ -212,6 +244,8 @@ class HabitDayShiftController extends Controller
      */
     private function guard(User $user, Habit $habit, Carbon $date, int $start): void
     {
+        $this->guardPromise($user, $habit, [$date]);
+
         $others = $this->othersOn($user, $habit, $date);
         $window = $user->sleepWindowOn($date);
         $plan = DayPlan::forDate($others, $date, $user->sleepWindowsOn($date), $this->timetable($user)->blocksOn($date));
