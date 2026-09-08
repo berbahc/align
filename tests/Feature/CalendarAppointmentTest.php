@@ -65,7 +65,7 @@ test('an accepted appointment appears in the calendar of the invited person', fu
             ->where('appointmentBlocks.0.initial', 'S')
             // Der Moment, nicht die Wiederholung: „Mo, Di …" gehört zur
             // Gewohnheit der fragenden Person, nicht zu diesem einen Tag.
-            ->where('appointmentBlocks.0.anchor', '17:00')
+            ->where('appointmentBlocks.0.anchor', 'um 17:00')
             ->where('appointmentBlocks.0.startMinute', 17 * 60)
             ->where('appointmentBlocks.0.exact', true)
             ->etc()

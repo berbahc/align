@@ -157,6 +157,10 @@ test('the overview carries the tick and who may set it', function () {
                 'name' => 'Silas',
                 'initial' => 'S',
                 'pending' => false,
+                // Null auf der fragenden Seite: Ihre eigene Zeit gilt weiter.
+                // Das Feld steht nur, wenn eine Zusage die eigene Gewohnheit
+                // an diesem Tag auf eine andere Uhrzeit zieht.
+                'insteadOf' => null,
                 'repeatHabitId' => null,
                 'repeatDays' => [],
             ])

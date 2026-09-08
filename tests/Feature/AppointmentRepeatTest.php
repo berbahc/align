@@ -96,11 +96,16 @@ test('the asked side gets it through the habit they adopted', function () {
 
     $adopted = $guest->habits()->sole();
 
+    // Seit die Übernahme dieselbe Sache in den eigenen Plan holt, steht die
+    // Verabredung nicht mehr als eigene Karte darunter: Sie sitzt in der
+    // Zeile, die es jetzt gibt — mit dem Doppel-Zeichen, wie auf der fragenden
+    // Seite. Der Weg zurück hängt an derselben Stelle.
     $this->actingAs($guest)
         ->get(route('dashboard'))
         ->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('upcomingAppointments', 0)
             // Die **eigene**, nicht die fremde.
-            ->where('upcomingAppointments.0.repeatHabitId', $adopted->id)
+            ->where('habits.0.companion.repeatHabitId', $adopted->id)
             ->etc());
 
     expect($adopted->id)->not->toBe($habit->id);

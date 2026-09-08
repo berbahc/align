@@ -336,6 +336,53 @@ function attemptOverlap(object $test, User $user, string $way): void
             $test->actingAs($user)->patch(route('appointments.update', $appointment));
         })(),
 
+        'verabredung-zusagen-im-kurs' => (function () use ($test, $user) {
+            // Und dieselbe Zusage in die Vorlesung. `AppointmentFit` sah lange
+            // nur die eigenen Gewohnheiten: „Mathe 1" läuft montags von zehn
+            // bis halb zwölf, die Zusage ging durch, und danach lagen zwei
+            // Dinge auf derselben Minute. Der eigene Tag ist hier absichtlich
+            // leer — im Weg liegt allein der Kurs.
+            $other = User::factory()->create();
+            $theirs = Habit::factory()->for($other)
+                ->fixedSchedule('10:30', [1])
+                ->withMeasure(30)
+                ->create();
+
+            $appointment = Appointment::factory()->create([
+                'habit_id' => $theirs->id,
+                'requester_id' => $other->id,
+                'invitee_id' => $user->id,
+                'scheduled_for' => invariantMonday(),
+            ]);
+
+            $test->actingAs($user)->patch(route('appointments.update', $appointment));
+        })(),
+
+        'verabredung-zusagen-nachts' => (function () use ($test, $user) {
+            // Drei Uhr nachts: Im Tag liegt dort nichts, weil dort kein Tag
+            // ist. Die Zusage ging trotzdem durch, und danach stand ein Block
+            // außerhalb des Rahmens — nicht über einem anderen, aber ebenso
+            // wenig im Plan.
+            $other = User::factory()->create();
+            $theirs = Habit::factory()->for($other)
+                ->fixedSchedule('03:00', [1])
+                ->withMeasure(30)
+                ->create();
+
+            $appointment = Appointment::factory()->create([
+                'habit_id' => $theirs->id,
+                'requester_id' => $other->id,
+                'invitee_id' => $user->id,
+                'scheduled_for' => invariantMonday(),
+            ]);
+
+            $test->actingAs($user)->patch(route('appointments.update', $appointment));
+
+            // Der Rahmen ist keine Überlappung — hier steht deshalb, was
+            // `overlapOn()` nicht sieht: Zugesagt werden durfte das nicht.
+            expect($appointment->fresh()->accepted_at)->toBeNull();
+        })(),
+
         'verabredung-zusagen-im-freien' => (function () use ($test, $user) {
             // Und dieselbe Zusage dort, wo wirklich Platz ist: Sie geht durch,
             // und danach darf trotzdem nichts übereinanderliegen.
@@ -404,6 +451,8 @@ test('no path leaves two things on the same minute', function (string $way) {
     'für eine Verabredung Platz machen, mit Kette' => 'verabredung-mit-kette',
     'eine Verabredung zusagen' => 'verabredung-zusagen',
     'eine Verabredung ins Freie zusagen' => 'verabredung-zusagen-im-freien',
+    'eine Verabredung in die Vorlesung zusagen' => 'verabredung-zusagen-im-kurs',
+    'eine Verabredung in die Nacht zusagen' => 'verabredung-zusagen-nachts',
     'eine Verabredung knapp dahinter zusagen' => 'verabredung-zusagen-knapp',
 ]);
 

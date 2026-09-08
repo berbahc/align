@@ -43,6 +43,15 @@ class DayPlan
     public const int AssumedMinutes = 15;
 
     /**
+     * Wo der Kalendertag endet — jenseits davon gibt es keine Uhrzeit mehr.
+     *
+     * Hier und nicht bei einem Aufrufer: Der Rahmen reicht über Mitternacht
+     * hinaus, wenn jemand später ins Bett geht ({@see frame()}), und jede
+     * Stelle, die eine Uhrzeit daraus macht, braucht dieselbe Deckelung.
+     */
+    public const int MinutesPerDay = 1440;
+
+    /**
      * Die Luft innerhalb einer Kette — kürzer als zwischen zwei Blöcken.
      *
      * Wer „danach" plant, ist schon dabei: Er muss nirgends hinkommen und

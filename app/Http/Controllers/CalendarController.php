@@ -163,6 +163,18 @@ class CalendarController extends Controller
         // gesetzt, damit alle denselben geladenen Nutzer teilen.
         $habits->each(fn (Habit $habit) => $habit->setRelation('user', $request->user()));
 
+        // Was heute mit jemandem ansteht — vor der Liste, weil eine zugesagte
+        // Verabredung eine eigene Zeile ersetzen kann.
+        $appointments = Appointment::acceptedOn($request->user(), $day);
+
+        // Dieselbe Sache steht einmal im Tag, nicht zweimal: Wer zum
+        // Frühstück zugesagt hat und selbst Frühstück im Plan hat, sieht
+        // **seinen** Block — mit dem Doppel-Zeichen und an diesem Tag auf der
+        // gemeinsamen Uhrzeit ({@see AppointmentController::update()} schreibt
+        // dafür dieselbe Tagesausnahme wie das Platzmachen). Ein zweiter Block
+        // daneben wäre derselbe Morgen zweimal.
+        $replaced = Appointment::replacementsIn($appointments, $request->user(), $habits);
+
         $scheduled = $habits
             ->filter(fn (Habit $habit): bool => $this->existedOn($habit, $day))
             ->filter(fn (Habit $habit): bool => $habit->isScheduledOn($day))
@@ -183,14 +195,24 @@ class CalendarController extends Controller
         $timetable = Timetable::for($request->user());
         $courseBlocks = $timetable->blocksOn($day);
 
-        // Was heute mit jemandem ansteht. Dieselbe Zeile trägt zwei Fälle:
-        // Bei einer fremden Gewohnheit gibt es nichts Eigenes, an das sich
-        // etwas hängen ließe — sie braucht einen eigenen Block. Bei der
-        // eigenen steht der Block längst da und es fehlt nur das Zeichen,
-        // dass jemand mitmacht.
-        $appointments = Appointment::acceptedOn($request->user(), $day);
-        $companions = $this->companions($appointments, $request->user());
-        $appointmentBlocks = $this->appointmentBlocks($appointments, $request->user());
+        // Dieselbe Zeile trägt zwei Fälle: Bei einer fremden Gewohnheit gibt
+        // es nichts Eigenes, an das sich etwas hängen ließe — sie braucht
+        // einen eigenen Block. Bei der eigenen steht der Block längst da und
+        // es fehlt nur das Zeichen, dass jemand mitmacht.
+        $companions = $this->companions($appointments, $request->user())
+            // Und die Zusagen zu einer eigenen Sache: Sie hängen an einer
+            // fremden Gewohnheit, gehören im Tag aber an die eigene Zeile.
+            + array_map(
+                fn (Appointment $appointment): array => $appointment->companion($request->user()),
+                $replaced,
+            );
+
+        $appointmentBlocks = $this->appointmentBlocks(
+            $appointments->reject(
+                fn (Appointment $appointment): bool => in_array($appointment, $replaced, strict: true),
+            ),
+            $request->user(),
+        );
 
         // Die Verabredung belegt den Tag wie ein Kurs: Ohne sie im Plan
         // rutschte eine eigene Situation genau dorthin, wo gleich gemeinsam
@@ -505,12 +527,25 @@ class CalendarController extends Controller
                     // Nur der Moment, nicht die Wiederholung: Die Wochentage
                     // gehören der Gewohnheit der anderen Person, und die
                     // Verabredung gilt für diesen einen Tag.
-                    'anchor' => $habit->momentLabel(),
+                    // Die festgehaltene Uhrzeit der Verabredung, nicht die
+                    // Stelle, die diese Gewohnheit im eigenen Tag hätte: Der
+                    // Anker der anderen Person („nach dem Aufstehen") rechnete
+                    // sich hier aus dem **eigenen** Schlafplan aus, und
+                    // derselbe Morgen stand in zwei Kalendern an zwei Stellen
+                    // ({@see Appointment::startMinute()}).
+                    'anchor' => $appointment->timeLabel(),
                     ...$appointment->companion($user),
-                    'startMinute' => $habit->dayStartMinute() ?? Habit::UnknownAnchorHour * 60,
+                    'startMinute' => $appointment->startMinute(),
                     'durationMinutes' => $habit->durationMinutes(),
-                    'exact' => $habit->startsAt() !== null,
-                    'timeRange' => $habit->timeRangeLabel(),
+                    // Eine Verabredung hat immer eine Uhrzeit — seit sie eine
+                    // eigene trägt, ist sie nie mehr eine Näherung.
+                    'exact' => true,
+                    'timeRange' => sprintf(
+                        '%s – %s',
+                        DayPlan::toTime($appointment->startMinute()),
+                        DayPlan::toTime($appointment->startMinute()
+                            + ($habit->durationMinutes() ?? DayPlan::AssumedMinutes)),
+                    ),
                     'behaviorType' => $habit->behavior_type->value,
                     // Entscheidet das Zeichen: Die Vorlage weiß, worum es
                     // geht, die Verhaltensrichtung ordnet nur fachlich ein.

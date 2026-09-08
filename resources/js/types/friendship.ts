@@ -64,21 +64,40 @@ export type AppointmentRequest = {
      * ließe. Solange etwas hier steht, wäre eine Zusage eine Doppelbuchung.
      */
     conflict: AppointmentConflict | null;
+    /**
+     * Die eigene Gewohnheit, die diese Zusage ersetzt — dieselbe Sache am
+     * selben Tag.
+     *
+     * Wer zum Frühstück zusagt und selbst Frühstück im Plan hat, frühstückt
+     * einmal: Die eigene Zeile fällt an dem Tag weg, der gemeinsame Eintrag
+     * nimmt ihren Platz, und ein Haken zählt für beides. Null heißt: Die
+     * Zusage kommt zum Tag hinzu.
+     */
+    replaces: { title: string; moment: string } | null;
 };
 
 /**
- * Eine eigene Gewohnheit, die zur Zeit der Verabredung schon läuft.
+ * Was einer Zusage im Weg steht.
+ *
+ * `kind` entscheidet über den Ausweg und damit über den Satz auf der Karte:
+ * Eine eigene Gewohnheit lässt sich für diesen einen Tag verlegen, ein Kurs
+ * nicht, und gegen den eigenen Schlafrahmen hilft nur ein anderer Tag. Ohne
+ * das Feld müsste die Karte aus einer leeren `options`-Liste raten, welcher
+ * der drei Fälle vorliegt — und der Grund ist genau das, was der Gefragte
+ * wissen will.
  *
  * `options` sind Ausweichzeiten für **diesen einen Tag** — die Gewohnheit
- * selbst bleibt, wo sie ist. Eine leere Liste heißt: An dem Tag ist sonst
- * nirgends Platz.
+ * selbst bleibt, wo sie ist. Bei `course` und `night` ist die Liste leer.
  */
 export type AppointmentConflict = {
-    habitId: number;
-    title: string;
-    /** „07:30" — Beginn der eigenen Gewohnheit an diesem Tag. */
+    kind: 'habit' | 'course' | 'night';
+    /** Die Gewohnheit, die rücken könnte — null bei Kurs und Nacht. */
+    habitId: number | null;
+    /** Was im Weg liegt — null in der Nacht, dort liegt nichts. */
+    title: string | null;
+    /** „07:30" — Beginn dessen, was im Weg liegt; nachts der Start des Tages. */
     from: string;
-    /** „08:00" — und wann der Platz wieder frei wäre. */
+    /** „08:00" — und wann der Platz wieder frei wäre; nachts das Tagesende. */
     to: string;
     options: { time: string; label: string }[];
 };

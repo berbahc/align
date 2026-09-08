@@ -28,9 +28,6 @@ class HabitDayShiftController extends Controller
      */
     private const int SnapMinutes = 15;
 
-    /** Wo der Kalendertag endet — jenseits davon gibt es keine Uhrzeit mehr. */
-    private const int MinutesPerDay = 1440;
-
     /** Der geladene Stundenplan, damit `always()` ihn nicht siebenmal holt. */
     private ?Timetable $timetable = null;
 
@@ -224,7 +221,7 @@ class HabitDayShiftController extends Controller
         // Mitternacht läse sich beim nächsten Aufschlagen als früher Vormittag
         // — wer nach Mitternacht ins Bett geht, kann bis dorthin schieben und
         // keine Minute weiter.
-        $latest = min($frame['to'], self::MinutesPerDay);
+        $latest = min($frame['to'], DayPlan::MinutesPerDay);
 
         foreach ($habit->spansFrom($start) as $span) {
             if ($span['from'] < $frame['from'] || $span['to'] > $latest) {

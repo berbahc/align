@@ -102,6 +102,10 @@ export function HabitRow({
                   (companion.pending
                       ? `${companion.name} ist gefragt`
                       : `mit ${companion.name}`),
+              // Die eigene Zeit, wenn heute die gemeinsame gilt. Ohne sie
+              // stünde in der Uhrspalte eine Zahl, die niemand einsortieren
+              // kann — „09:00" statt „09:00 statt 08:00".
+              companion?.insteadOf && `statt ${companion.insteadOf}`,
               habit.repeatLabel,
               habit.measureLabel,
           ]

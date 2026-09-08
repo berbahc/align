@@ -188,7 +188,11 @@ test('the invitee sees the request on the dashboard', function () {
                 ->where('id', $appointment->id)
                 ->where('name', 'Berkay')
                 ->where('title', 'Laufen gehen')
-                ->where('anchor', 'nach der Vorlesung')
+                // Die Uhrzeit und nicht mehr der Anker: „nach der Vorlesung"
+                // las die gefragte Person als **ihre** Vorlesung, und die
+                // liegt woanders. Die Verabredung trägt jetzt die Stelle, die
+                // sie im Tag der fragenden Person hat — einmal festgehalten.
+                ->where('anchor', 'um 11:00')
                 ->where('day', 'morgen')
                 ->etc())
             ->etc());
@@ -424,7 +428,7 @@ test('an appointment names the moment, never the other persons weekdays', functi
     $this->actingAs($friend)
         ->get(route('dashboard'))
         ->assertInertia(fn (AssertableInertia $page) => $page
-            ->where('appointmentRequests.0.anchor', '17:00')
+            ->where('appointmentRequests.0.anchor', 'um 17:00')
             ->etc());
 
     // … und dieselbe Verabredung, nachdem sie zugesagt hat. Nicht über
@@ -436,7 +440,7 @@ test('an appointment names the moment, never the other persons weekdays', functi
     $this->actingAs($friend)
         ->get(route('dashboard'))
         ->assertInertia(fn (AssertableInertia $page) => $page
-            ->where('upcomingAppointments.0.anchor', '17:00')
+            ->where('upcomingAppointments.0.anchor', 'um 17:00')
             ->etc());
 });
 
@@ -597,7 +601,7 @@ test('the community page shows what is arranged with whom', function () {
                 ->has('upcomingAppointments', 1, fn (AssertableInertia $row) => $row
                     ->where('title', 'Laufen gehen')
                     ->where('day', 'morgen')
-                    ->where('anchor', 'nach der Vorlesung')
+                    ->where('anchor', 'um 11:00')
                     ->where('accepted', true)
                     ->etc())
                 ->etc());

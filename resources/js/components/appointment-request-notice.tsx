@@ -57,12 +57,14 @@ export function AppointmentRequestNotice({
      * um halb acht. Die Gewohnheit selbst bleibt unberührt.
      */
     function makeRoom(request: AppointmentRequest, time: string) {
-        if (request.conflict === null) {
+        const habitId = request.conflict?.habitId;
+
+        if (!habitId) {
             return;
         }
 
         router.post(
-            shift.url(request.conflict.habitId),
+            shift.url(habitId),
             { date: request.date, scheduled_time: time },
             { preserveScroll: true },
         );
@@ -152,15 +154,36 @@ export function AppointmentRequestNotice({
                                             strokeWidth={1.5}
                                             aria-hidden="true"
                                         />
+                                        {/* In einem Stück und nicht aus drei
+                                            Ausdrücken zusammengesetzt: JSX
+                                            schluckt Leerzeichen an
+                                            Zeilenenden, und ein Satz, dessen
+                                            Lücken von der Einrückung
+                                            abhängen, bricht beim nächsten
+                                            Formatierer. */}
                                         <span>
-                                            Um diese Zeit läuft bei dir schon „
-                                            {request.conflict.title}" von{' '}
-                                            {request.conflict.from} bis{' '}
-                                            {request.conflict.to}.
+                                            {
+                                                {
+                                                    habit: `Um diese Zeit läuft bei dir schon „${request.conflict.title}" von ${request.conflict.from} bis ${request.conflict.to}.`,
+                                                    course: `Um diese Zeit läuft bei dir „${request.conflict.title}" von ${request.conflict.from} bis ${request.conflict.to} — aus deinem Semesterplan.`,
+                                                    night: `Um diese Zeit schläfst du. Dein Tag geht von ${request.conflict.from} bis ${request.conflict.to} Uhr.`,
+                                                }[request.conflict.kind]
+                                            }
                                         </span>
                                     </p>
 
-                                    {request.conflict.options.length > 0 ? (
+                                    {request.conflict.kind !== 'habit' ? (
+                                        /* Weder ein Kurs noch die Nacht rücken.
+                                           Drei Ausweichzeiten anzubieten, von
+                                           denen keine etwas bewirkt, wäre
+                                           schlimmer als keine — §1.5, benannt
+                                           wird, was gilt. */
+                                        <p className="text-xs leading-relaxed text-muted-foreground">
+                                            {request.conflict.kind === 'course'
+                                                ? 'Ein Kurs rückt nicht. An diesem Tag geht es deshalb nicht.'
+                                                : 'An diesem Tag geht es deshalb nicht.'}
+                                        </p>
+                                    ) : request.conflict.options.length > 0 ? (
                                         <div className="flex flex-col gap-2">
                                             <p className="type-eyebrow text-muted-foreground">
                                                 An diesem Tag stattdessen
@@ -196,6 +219,18 @@ export function AppointmentRequestNotice({
                                         </p>
                                     )}
                                 </div>
+                            )}
+
+                            {/* Was die Zusage aus dem eigenen Tag nimmt.
+                                Steht vor den Knöpfen, weil es die Antwort
+                                mitentscheidet — hinterher im Kalender wäre es
+                                eine Überraschung. */}
+                            {request.replaces !== null && (
+                                <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                                    {request.replaces.moment === request.anchor
+                                        ? `Dein „${request.replaces.title}" um ${request.replaces.moment} macht ihr an dem Tag zusammen, statt zweimal. Ein Haken zählt für beides.`
+                                        : `Dein „${request.replaces.title}" um ${request.replaces.moment} rückt an dem Tag auf ${request.anchor} — ihr macht es zusammen, statt zweimal. Ein Haken zählt für beides.`}
+                                </p>
                             )}
 
                             <div className="mt-4 flex gap-3">

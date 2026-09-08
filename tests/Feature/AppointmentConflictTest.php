@@ -2,9 +2,12 @@
 
 use App\Enums\HabitTemplate;
 use App\Models\Appointment;
+use App\Models\Course;
 use App\Models\Friendship;
 use App\Models\Habit;
 use App\Models\HabitDayShift;
+use App\Models\Semester;
+use App\Models\SleepSchedule;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia;
@@ -59,6 +62,23 @@ function collidingHabit(User $guest, string $time = '07:40'): Habit
         ->create();
 }
 
+/**
+ * Ein Kurs der gefragten Person, der im Weg steht.
+ *
+ * Am Dienstag, weil die Verabredung dort liegt, und großzügig um sie herum:
+ * Der Fall soll an der Überschneidung scheitern, nicht an der Viertelstunde
+ * Luft daneben.
+ */
+function collidingCourse(User $guest, string $from = '07:00', string $to = '08:30'): Course
+{
+    $semester = Semester::factory()->for($guest)->create();
+
+    return Course::factory()->for($semester)
+        ->onWeekday(2)
+        ->at($from, $to)
+        ->create(['title' => 'Mathe 1']);
+}
+
 test('a free day carries no conflict', function () {
     [, $guest] = morningInvitation();
 
@@ -84,6 +104,172 @@ test('an overlapping habit reaches the card with its span and a way out', functi
             // wäre nur eine Absage mit mehr Worten.
             ->has('appointmentRequests.0.conflict.options')
         );
+});
+
+test('a course reaches the card, and it names that a course does not move', function () {
+    [, $guest] = morningInvitation();
+    collidingCourse($guest);
+
+    // Lange sah nur `options()` den Stundenplan: Die Ausweichzeiten mieden die
+    // Vorlesung, die Prüfung darüber kannte sie nicht. Wer um sieben Mathe
+    // hatte und für halb acht gefragt wurde, sagte zu — und hatte danach zwei
+    // Dinge zur selben Zeit.
+    $this->actingAs($guest)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('appointmentRequests.0.conflict.title', 'Mathe 1')
+            ->where('appointmentRequests.0.conflict.from', '07:00')
+            ->where('appointmentRequests.0.conflict.to', '08:30')
+            // Kein Ausweg und nichts, was ihn tragen könnte: Ein Kurs rückt
+            // nicht, und drei Zeiten anzubieten, die nichts bewirken, wäre
+            // schlimmer als keine.
+            ->where('appointmentRequests.0.conflict.kind', 'course')
+            ->where('appointmentRequests.0.conflict.habitId', null)
+            ->where('appointmentRequests.0.conflict.options', [])
+        );
+});
+
+test('accepting is refused while a course runs at that time', function () {
+    [, $guest, $appointment] = morningInvitation();
+    collidingCourse($guest);
+
+    $this->actingAs($guest)
+        ->from(route('dashboard'))
+        ->patch(route('appointments.update', $appointment))
+        ->assertSessionHasErrors('appointment');
+
+    expect($appointment->refresh()->accepted_at)->toBeNull();
+});
+
+test('a course on another day leaves the promise alone', function () {
+    [, $guest] = morningInvitation();
+
+    // Derselbe Kurs, nur mittwochs — die Verabredung liegt am Dienstag.
+    $semester = Semester::factory()->for($guest)->create();
+    Course::factory()->for($semester)->onWeekday(3)->at('07:00', '08:30')->create();
+
+    $this->actingAs($guest)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('appointmentRequests.0.conflict', null)
+        );
+});
+
+test('a cancelled lecture is a free morning', function () {
+    [, $guest, $appointment] = morningInvitation();
+    $course = collidingCourse($guest);
+
+    // An diesem einen Dienstag fällt sie aus. Ein Kurs, der nicht
+    // stattfindet, belegt auch keine Zeit — sonst stünde eine ausgefallene
+    // Vorlesung einer Zusage im Weg.
+    $course->exceptions()->create([
+        'on_date' => $appointment->scheduled_for,
+        'starts_at' => null,
+        'ends_at' => null,
+    ]);
+
+    $this->actingAs($guest)
+        ->from(route('dashboard'))
+        ->patch(route('appointments.update', $appointment))
+        ->assertSessionHasNoErrors();
+
+    expect($appointment->refresh()->accepted_at)->not->toBeNull();
+});
+
+test('an own habit still wins the card when both are in the way', function () {
+    [, $guest] = morningInvitation();
+
+    // Der Kurs liegt später am Tag und trotzdem noch im Weg; genannt gehört
+    // das Erste im Tag — sonst entschiede die Reihenfolge der Datenbank,
+    // welcher von zwei Konflikten auf der Karte steht.
+    $reading = collidingHabit($guest, '07:20');
+    collidingCourse($guest, '08:05', '09:30');
+
+    $this->actingAs($guest)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('appointmentRequests.0.conflict.habitId', $reading->id)
+            ->where('appointmentRequests.0.conflict.kind', 'habit')
+        );
+});
+
+test('the night is no place for a promise', function () {
+    [$owner, $guest, $appointment] = morningInvitation();
+
+    // Die fragende Gewohnheit rückt auf drei Uhr nachts. Beim Gefragten steht
+    // dort nichts — genau deshalb ging die Zusage lange durch. Der Rahmen des
+    // Tages gilt überall sonst ({@see HabitDayShiftController::guard()}); die
+    // Zusage war der eine Weg, auf dem er nicht galt.
+    $owner->habits()->first()->update(['scheduled_time' => '03:00']);
+
+    $this->actingAs($guest)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('appointmentRequests.0.conflict.kind', 'night')
+            // Nichts liegt im Weg — der Rahmen ist es, der nicht so weit reicht.
+            ->where('appointmentRequests.0.conflict.title', null)
+            ->where('appointmentRequests.0.conflict.habitId', null)
+            ->where('appointmentRequests.0.conflict.options', [])
+            ->where('appointmentRequests.0.conflict.from', SleepSchedule::DefaultWakeTime)
+            ->where('appointmentRequests.0.conflict.to', SleepSchedule::DefaultBedtime)
+        );
+
+    $this->actingAs($guest)
+        ->from(route('dashboard'))
+        ->patch(route('appointments.update', $appointment))
+        ->assertSessionHasErrors('appointment');
+
+    expect($appointment->refresh()->accepted_at)->toBeNull();
+});
+
+test('a later riser can be asked later, and only then', function () {
+    [$owner, $guest, $appointment] = morningInvitation();
+
+    // Um sechs, eine Stunde vor dem üblichen Aufstehen.
+    $owner->habits()->first()->update(['scheduled_time' => '06:00']);
+
+    $this->actingAs($guest)
+        ->from(route('dashboard'))
+        ->patch(route('appointments.update', $appointment))
+        ->assertSessionHasErrors('appointment');
+
+    // Und mit einem Schlafplan, der an diesem Wochentag früher beginnt, geht
+    // dieselbe Zusage durch. Der Rahmen entscheidet, nicht die Uhrzeit.
+    $guest->sleepSchedules()->create([
+        'weekday' => $appointment->scheduled_for->dayOfWeekIso,
+        'wake_time' => '05:30',
+        'bedtime' => '22:00',
+        'alarm_enabled' => false,
+    ]);
+
+    $this->actingAs($guest->refresh())
+        ->from(route('dashboard'))
+        ->patch(route('appointments.update', $appointment))
+        ->assertSessionHasNoErrors();
+
+    expect($appointment->refresh()->accepted_at)->not->toBeNull();
+});
+
+test('the frame of that one day counts, not the one of that weekday', function () {
+    [$owner, $guest, $appointment] = morningInvitation();
+
+    $owner->habits()->first()->update(['scheduled_time' => '06:00']);
+
+    // An diesem einen Tag steht der Gefragte um fünf auf — als Ausnahme, nicht
+    // im Wochenplan. Die Ausweichzeiten lasen lange den Wochenplan und hätten
+    // den Tag hier zu spät beginnen lassen.
+    $guest->sleepDayOverrides()->create([
+        'on_date' => $appointment->scheduled_for,
+        'wake_time' => '05:00',
+        'bedtime' => null,
+    ]);
+
+    $this->actingAs($guest->refresh())
+        ->from(route('dashboard'))
+        ->patch(route('appointments.update', $appointment))
+        ->assertSessionHasNoErrors();
+
+    expect($appointment->refresh()->accepted_at)->not->toBeNull();
 });
 
 test('a habit next to the appointment is no conflict', function () {

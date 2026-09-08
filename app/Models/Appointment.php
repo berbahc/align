@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Support\AppointmentFit;
+use App\Support\DayPlan;
 use Carbon\CarbonInterface;
 use Database\Factories\AppointmentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -22,12 +23,13 @@ use Illuminate\Support\Carbon;
  * @property int $requester_id
  * @property int $invitee_id
  * @property Carbon $scheduled_for
+ * @property Carbon|null $starts_at
  * @property Carbon|null $accepted_at
  * @property Carbon|null $completed_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['habit_id', 'requester_id', 'invitee_id', 'scheduled_for'])]
+#[Fillable(['habit_id', 'requester_id', 'invitee_id', 'scheduled_for', 'starts_at'])]
 class Appointment extends Model
 {
     /** @use HasFactory<AppointmentFactory> */
@@ -277,7 +279,7 @@ class Appointment extends Model
      */
     public static function pendingFor(User $user): array
     {
-        return self::query()
+        $pending = self::query()
             ->pending()
             ->where('invitee_id', $user->id)
             ->whereDate('scheduled_for', '>=', Carbon::today())
@@ -290,7 +292,15 @@ class Appointment extends Model
             // zwischen zwei Aufrufen nicht springt.
             ->orderBy('scheduled_for')
             ->orderBy('id')
-            ->get()
+            ->get();
+
+        // Einmal für alle Anfragen: Ob eine von ihnen eine eigene Zeile
+        // ersetzt, hängt am eigenen Plan, und der ändert sich zwischen zwei
+        // Anfragen nicht.
+        $habits = $user->habits()->active()->get();
+        $habits->each(fn (Habit $habit) => $habit->setRelation('user', $user));
+
+        return $pending
             ->map(fn (self $appointment): array => [
                 'id' => $appointment->id,
                 // Wer fragt — als Kennung und nicht nur als Name: Fragt
@@ -299,7 +309,7 @@ class Appointment extends Model
                 'requesterId' => $appointment->requester_id,
                 ...$appointment->companion($user),
                 'title' => $appointment->habit->title,
-                'anchor' => $appointment->habit->momentLabel(),
+                'anchor' => $appointment->timeLabel(),
                 'day' => self::dayLabel($appointment->scheduled_for),
                 // Das Datum roh dazu: Wer seinen Tag umstellen muss, um
                 // zusagen zu können, braucht den Tag, nicht sein Wort.
@@ -312,6 +322,11 @@ class Appointment extends Model
                 // Und was dagegen steht: Wer zur selben Zeit schon etwas
                 // vorhat, soll das sehen, bevor er zusagt — nicht danach.
                 'conflict' => AppointmentFit::conflict($appointment, $user)?->present(),
+                // Und was die Zusage aus dem eigenen Tag nimmt: Wer zum
+                // Frühstück zusagt und selbst Frühstück im Plan hat,
+                // frühstückt einmal. Das gehört vor die Zusage und nicht
+                // hinterher in den Kalender.
+                'replaces' => self::replacedRow($appointment->replaces($user, $habits)),
             ])
             ->all();
     }
@@ -375,6 +390,108 @@ class Appointment extends Model
     }
 
     /**
+     * Die ersetzte Gewohnheit für die Karte — Titel und Zeitpunkt.
+     *
+     * Nicht die ganze Zeile: Verschwinden soll sie an diesem Tag, angefasst
+     * wird sie hier nicht.
+     *
+     * @return array{title: string, moment: string}|null
+     */
+    private static function replacedRow(?Habit $habit): ?array
+    {
+        return $habit === null ? null : [
+            'title' => $habit->title,
+            'moment' => $habit->momentLabel(),
+        ];
+    }
+
+    /**
+     * Die eigene Gewohnheit, die diese Verabredung an diesem Tag ersetzt.
+     *
+     * Wer Aileen zum Frühstück zusagt und selbst Frühstück im Plan hat, will
+     * an dem Tag einmal frühstücken und nicht zweimal. Dieselbe Sache am
+     * selben Tag ist dieselbe Sache — die eigene Zeile fällt weg, der Eintrag
+     * der Verabredung nimmt ihren Platz, und ein Haken zählt für beides
+     * ({@see wasDoneBy()}).
+     *
+     * Woran „dieselbe Sache" hängt: an der Vorlage aus dem Katalog, nicht am
+     * Titel. „Frühstücken" und „Frühstück" wären zwei Zeichenketten und
+     * dasselbe Essen; wer seine Gewohnheit umbenennt, soll nicht plötzlich
+     * zweimal radeln. Ohne Vorlage — alte Zeilen aus der Zeit der freien
+     * Eingabe — gibt es nichts zu vergleichen, und dann bleibt es beim
+     * gewöhnlichen Konflikt.
+     *
+     * Die Uhrzeit entscheidet ausdrücklich **nicht** mit: Ob gemeinsam um
+     * neun statt allein um acht gefrühstückt wird, ändert nichts daran, dass
+     * es ein Frühstück ist.
+     *
+     * @param  Collection<int, Habit>  $habits  Der eigene Plan, einmal geladen
+     */
+    public function replaces(User $user, Collection $habits): ?Habit
+    {
+        // Nur auf der gefragten Seite: Die fragende führt die Gewohnheit
+        // selbst, dort ist die Verabredung ohnehin ihr eigener Block.
+        if ($this->invitee_id !== $user->id) {
+            return null;
+        }
+
+        $template = $this->habit->template_key;
+
+        if ($template === null) {
+            return null;
+        }
+
+        $date = Carbon::parse($this->scheduled_for)->startOfDay();
+
+        return $habits->first(fn (Habit $habit): bool => $habit->template_key === $template
+            && $habit->id !== $this->habit_id
+            && $habit->isScheduledOn($date));
+    }
+
+    /**
+     * Dieselbe Frage, wenn der eigene Plan nicht schon zur Hand ist.
+     *
+     * Für die einzelne Zusage — eine Liste fragt {@see replacementsIn()} und
+     * lädt einmal statt je Zeile.
+     */
+    public function replacementFor(User $user): ?Habit
+    {
+        if ($this->invitee_id !== $user->id || $this->habit->template_key === null) {
+            return null;
+        }
+
+        $habits = $user->habits()->active()->get();
+        $habits->each(fn (Habit $habit) => $habit->setRelation('user', $user));
+
+        return $this->replaces($user, $habits);
+    }
+
+    /**
+     * Dieselbe Frage für einen ganzen Tag: Welche eigene Gewohnheit ist ersetzt?
+     *
+     * Nach der Kennung der ersetzten Gewohnheit abgelegt, weil die Aufrufer
+     * genau so fragen — „steht diese Zeile heute noch?".
+     *
+     * @param  Collection<int, self>  $appointments
+     * @param  Collection<int, Habit>  $habits
+     * @return array<int, self>
+     */
+    public static function replacementsIn(Collection $appointments, User $user, Collection $habits): array
+    {
+        $replacements = [];
+
+        foreach ($appointments as $appointment) {
+            $replaced = $appointment->replaces($user, $habits);
+
+            if ($replaced !== null) {
+                $replacements[$replaced->id] = $appointment;
+            }
+        }
+
+        return $replacements;
+    }
+
+    /**
      * An welchen Tagen eines Zeitraums etwas Gemeinsames ansteht.
      *
      * Dieselbe Form wie {@see Timetable::lectureDays()} — der Monat fragt
@@ -412,6 +529,12 @@ class Appointment extends Model
             return false;
         }
 
+        // Wer die Sache selbst im Plan hat, hakt seine Zeile ab und nicht die
+        // Zusage. Zwei Häkchen für einen Morgen wären eines zu viel.
+        if ($this->replacementFor($user) !== null) {
+            return false;
+        }
+
         $day = Carbon::parse($this->scheduled_for)->startOfDay();
         $today = Carbon::today();
 
@@ -428,6 +551,22 @@ class Appointment extends Model
      */
     public function wasDoneBy(User $user): bool
     {
+        // Steht die Verabredung an der Stelle einer eigenen Gewohnheit, hängt
+        // der Haken an dieser Gewohnheit — genau wie auf der fragenden Seite.
+        // Ein zweiter Haken an der Zusage wäre derselbe Morgen zweimal.
+        $replaced = $this->replacementFor($user);
+
+        if ($replaced !== null) {
+            // Oder-Verknüpfung und nicht nur die Gewohnheit: Wer die Zusage
+            // abgehakt hat und die Gewohnheit erst danach übernimmt, hat den
+            // Morgen trotzdem hinter sich. Ein Haken, der beim Übernehmen
+            // wieder verschwände, wäre eine Strafe für den dritten Weg.
+            return $this->completed_at !== null
+                || $replaced->completions()
+                    ->whereDate('completed_on', $this->scheduled_for)
+                    ->exists();
+        }
+
         if ($this->invitee_id === $user->id) {
             return $this->completed_at !== null;
         }
@@ -493,7 +632,7 @@ class Appointment extends Model
             'id' => $this->id,
             ...$this->companion($user),
             'title' => $this->habit->title,
-            'anchor' => $this->habit->momentLabel(),
+            'anchor' => $this->timeLabel(),
             'day' => self::dayLabel($this->scheduled_for),
             'accepted' => $this->accepted_at !== null,
             'iAsked' => $this->requester_id === $user->id,
@@ -504,6 +643,52 @@ class Appointment extends Model
                 : $this->completed_at !== null,
             'canComplete' => $this->isCompletableBy($user),
         ];
+    }
+
+    /**
+     * Wann die Verabredung stattfindet, als Minute seit Mitternacht.
+     *
+     * **Die eine Uhrzeit für beide Seiten.** Sie wird beim Vorschlagen aus dem
+     * Tag der fragenden Person genommen und dann festgehalten: Eine Situation
+     * („nach dem Aufstehen") hat keine Uhrzeit, sondern eine Stelle im Tag —
+     * und die rechnet jeder aus seinem eigenen Schlafplan aus. Berkay steht um
+     * sieben auf, Aylin frühstückt um neun; ohne diese Zeile stand derselbe
+     * Morgen in zwei Kalendern an zwei Stellen.
+     *
+     * Für Zeilen aus der Zeit davor fällt sie auf die alte Rechnung zurück.
+     */
+    public function startMinute(): int
+    {
+        if ($this->starts_at !== null) {
+            return $this->starts_at->hour * 60 + $this->starts_at->minute;
+        }
+
+        return $this->habit->dayStartMinute(Carbon::parse($this->scheduled_for)->startOfDay())
+            ?? Habit::UnknownAnchorHour * 60;
+    }
+
+    /**
+     * Die Stelle im Tag der fragenden Person, einmal als Uhrzeit.
+     *
+     * Beim Anlegen gerufen — danach steht sie fest ({@see startMinute()}).
+     */
+    public static function startTimeFor(Habit $habit, Carbon $date): string
+    {
+        return DayPlan::toTime(
+            $habit->dayStartMinute($date) ?? Habit::UnknownAnchorHour * 60,
+        );
+    }
+
+    /**
+     * Wie die Uhrzeit auf einer Karte steht: „um 07:00".
+     *
+     * Und nicht mehr der Anker der fragenden Gewohnheit: „nach dem Aufstehen"
+     * las die gefragte Person als **ihr** Aufstehen, und genau daraus entstand
+     * das Missverständnis, das diese Uhrzeit beendet.
+     */
+    public function timeLabel(): string
+    {
+        return 'um '.DayPlan::toTime($this->startMinute());
     }
 
     /**
@@ -535,6 +720,7 @@ class Appointment extends Model
     {
         return [
             'scheduled_for' => 'date',
+            'starts_at' => 'datetime',
             'accepted_at' => 'datetime',
             'completed_at' => 'datetime',
         ];

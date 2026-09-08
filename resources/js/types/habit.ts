@@ -196,6 +196,14 @@ export interface Habit {
         initial: string;
         pending: boolean;
         /**
+         * Die eigene Uhrzeit, wenn heute die gemeinsame gilt — „statt 08:00".
+         *
+         * Null, solange die Gewohnheit zu ihrer gewohnten Zeit läuft. Ohne
+         * diese Angabe sähe die Zeile aus, als hätte sich die Gewohnheit
+         * dauerhaft verschoben.
+         */
+        insteadOf: string | null;
+        /**
          * Die **eigene** Gewohnheit für „Nochmal ausmachen?" — null, solange
          * der eigene Anteil offen ist. Sagt nichts über die andere Person.
          */

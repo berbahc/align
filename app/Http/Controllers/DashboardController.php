@@ -70,6 +70,19 @@ class DashboardController extends Controller
         // zuletzt — dieselbe Achse wie im Kalender. Die Anlege-Reihenfolge
         // entscheidet nur noch bei gleicher Stunde; als alleinige Sortierung
         // stellte sie das Abendritual über die Gewohnheit nach dem Aufstehen.
+        // Dieselbe Sache steht einmal im Tag, nicht zweimal: Wer zum Frühstück
+        // zugesagt hat und selbst Frühstück im Plan hat, sieht **seine** Zeile
+        // — mit dem Doppel-Zeichen, genau wie die fragende Seite. Sie zu
+        // entfernen wäre falsch: Frühstücken ist eine tägliche Gewohnheit, an
+        // ihr hängen Ketten („nach dem Frühstück"), und sie zählt in die
+        // Serie. Weg fällt nur die zweite Zeile darunter
+        // ({@see upcomingAppointments()}).
+        $replaced = Appointment::replacementsIn(
+            Appointment::acceptedOn($request->user(), $today),
+            $request->user(),
+            $habits,
+        );
+
         $todaysHabits = $habits
             // Was gerade keinen Platz hat, steht nicht an — es wartet auf
             // einen neuen. Unter „heute" wäre es eine Aufgabe, die niemand
@@ -146,8 +159,8 @@ class DashboardController extends Controller
                 // §6: Zwei Häkchen? Nein — eines. Der Fortschritt der anderen
                 // Person steht hier bewusst nicht, sonst wäre die Verabredung
                 // durch die Hintertür doch ein Dauerstatus.
-                'companion' => $this->companion($habit, $request->user()),
-                'appointmentId' => $habit->appointments->first()?->id,
+                'companion' => $this->companion($habit, $request->user(), $replaced[$habit->id] ?? null),
+                'appointmentId' => ($replaced[$habit->id] ?? $habit->appointments->first())?->id,
                 // Die Tage, an denen sich genau diese Gewohnheit zu zweit
                 // angehen lässt. Sie stehen an der Zeile und nicht einmal für
                 // die ganze Seite: Eine Mo–Fr-Gewohnheit lässt sich freitags
@@ -190,9 +203,17 @@ class DashboardController extends Controller
     {
         return Appointment::upcomingFor($user, $today)
             ->reject(fn (Appointment $appointment): bool => $appointment->awaitsAnswerFrom($user) || (
-                $appointment->requester_id === $user->id
-                && $appointment->scheduled_for->isToday()
-                && in_array($appointment->habit_id, $shownHabitIds, true)
+                $appointment->scheduled_for->isToday()
+                && (
+                    // Die eigene Gewohnheit, für die ich gefragt habe …
+                    ($appointment->requester_id === $user->id
+                        && in_array($appointment->habit_id, $shownHabitIds, true))
+                    // … und die eigene, die eine Zusage ersetzt: Beide Male
+                    // trägt die Zeile in der Tagesliste das Doppel-Zeichen
+                    // schon, und die Karte sagte nur noch einmal, was zwei
+                    // Zentimeter darüber steht.
+                    || in_array($appointment->replacementFor($user)?->id, $shownHabitIds, true)
+                )
             ))
             ->map(fn (Appointment $appointment): array => [
                 ...$appointment->present($user),
@@ -250,9 +271,12 @@ class DashboardController extends Controller
      *
      * @return array{name: string, initial: string, pending: bool, repeatHabitId: int|null, repeatDays: list<array{value: string, label: string}>}|null
      */
-    private function companion(Habit $habit, User $user): ?array
+    private function companion(Habit $habit, User $user, ?Appointment $replacement = null): ?array
     {
-        $appointment = $habit->appointments->first();
+        // Die eigene Anfrage hängt an der eigenen Gewohnheit; die Zusage zu
+        // derselben Sache hängt an der fremden und kommt deshalb von außen
+        // ({@see Appointment::replaces()}). Zwei Wege, ein Doppel-Zeichen.
+        $appointment = $replacement ?? $habit->appointments->first();
 
         if ($appointment === null) {
             return null;
@@ -261,6 +285,10 @@ class DashboardController extends Controller
         return [
             ...$appointment->companion($user),
             'pending' => $appointment->accepted_at === null,
+            // Die eigene Uhrzeit, wenn heute eine andere gilt: „mit Berkay ·
+            // statt 09:00". Ohne sie sähe die Zeile aus, als hätte sich die
+            // Gewohnheit dauerhaft verschoben.
+            'insteadOf' => $replacement === null ? null : $habit->scheduled_time?->format('H:i'),
             // Für „Nochmal ausmachen?" im erledigten Zustand der Zeile. Steht
             // erst da, wenn der eigene Anteil erledigt ist — siehe repeat().
             ...$this->repeat($appointment, $user),
