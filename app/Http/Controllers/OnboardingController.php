@@ -31,19 +31,11 @@ class OnboardingController extends Controller
      */
     public function show(Request $request): Response
     {
-        $hasSleepSchedule = $request->user()->sleepSchedules()->exists();
-
-        // Steht der Rahmen schon, gilt er auch als Vorbelegung: Der erste
-        // Schritt des Assistenten führt zurück hierher, und wer dort nur
-        // nachsehen wollte, darf seine Zeiten nicht durch die Voreinstellung
-        // ersetzt vorfinden.
-        $frame = $hasSleepSchedule ? $request->user()->sleepWindowFor(1) : null;
-
         return Inertia::render('onboarding', [
             'hasSeenIntro' => $request->user()->intro_seen_at !== null,
-            'hasSleepSchedule' => $hasSleepSchedule,
-            'defaultWakeTime' => $frame['wakeTime'] ?? SleepSchedule::DefaultWakeTime,
-            'defaultBedtime' => $frame['bedtime'] ?? SleepSchedule::DefaultBedtime,
+            'hasSleepSchedule' => $request->user()->sleepSchedules()->exists(),
+            'defaultWakeTime' => SleepSchedule::DefaultWakeTime,
+            'defaultBedtime' => SleepSchedule::DefaultBedtime,
             'categories' => HabitCategory::options(Habit::takenTemplatesFor($request->user())),
             'triggerSuggestions' => Habit::situationChoicesFor($request->user()),
             'scheduleTypes' => ScheduleType::options(),

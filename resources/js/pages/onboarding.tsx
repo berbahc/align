@@ -71,15 +71,6 @@ export default function Onboarding({
     const [fromIntro, setFromIntro] = useState(false);
     /** Geht es zurück in den Film? Dann steigt er bei seinem letzten Bild ein. */
     const [replayingIntro, setReplayingIntro] = useState(false);
-    /**
-     * Der Rahmen wird noch einmal geöffnet, obwohl er schon steht.
-     *
-     * Sonst führt der erste Schritt des Assistenten nirgendwohin zurück: Der
-     * Server sagt „Rahmen gespeichert", und die Seite zeigt ab da nur noch
-     * den Assistenten. Wer die Aufstehzeit vertippt hat, käme nicht mehr
-     * heran, ohne den ganzen Ablauf zu verlassen.
-     */
-    const [reopenFrame, setReopenFrame] = useState(false);
 
     const frame = useForm({
         wake_time: defaultWakeTime,
@@ -117,23 +108,9 @@ export default function Onboarding({
         setIntroDone(false);
     }
 
-    /**
-     * Zurück aus dem Rahmen in den Assistenten, ohne etwas zu speichern.
-     *
-     * Nur, wenn der Rahmen schon stand: Wer ihn gerade zum ersten Mal
-     * ausfüllt, hat dahinter noch nichts, wohin er zurückkönnte.
-     */
-    function closeFrame() {
-        setReopenFrame(false);
-    }
-
     function submitFrame(event: React.FormEvent) {
         event.preventDefault();
-        // `updateOrCreate` je Wochentag: Ein zweites Absenden korrigiert den
-        // Rahmen, es legt keinen zweiten an.
-        frame.post(sleep.url(), {
-            onSuccess: () => setReopenFrame(false),
-        });
+        frame.post(sleep.url());
     }
 
     return (
@@ -196,7 +173,7 @@ export default function Onboarding({
                             onDone={finishIntro}
                             startAtEnd={replayingIntro}
                         />
-                    ) : hasSleepSchedule && !reopenFrame ? (
+                    ) : hasSleepSchedule ? (
                         <>
                             <div className="mb-8">
                                 <h1 className="type-title text-primary">
@@ -211,7 +188,7 @@ export default function Onboarding({
                                 durationLimits={durationLimits}
                                 sleepWindows={sleepWindows}
                                 action={store.url()}
-                                onBackFromStart={() => setReopenFrame(true)}
+                                onBackFromStart={replayIntro}
                             />
                         </>
                     ) : (
@@ -225,14 +202,10 @@ export default function Onboarding({
                             {/* Der Weg zurück. Er steht über der Frage und
                                 nicht neben dem Ausgang oben: Zurück ist keine
                                 Alternative zum Abbrechen, sondern ein Schritt
-                                in demselben Ablauf.
-
-                                Wohin er führt, hängt davon ab, woher man
-                                kommt — aus dem Film oder aus dem Assistenten,
-                                der den Rahmen noch einmal aufgemacht hat. */}
+                                in demselben Ablauf. */}
                             <button
                                 type="button"
-                                onClick={reopenFrame ? closeFrame : replayIntro}
+                                onClick={replayIntro}
                                 className={cn(
                                     QUIET_BUTTON,
                                     'mb-6 flex items-center gap-1.5 self-start',
@@ -242,9 +215,7 @@ export default function Onboarding({
                                     className="size-3.5"
                                     aria-hidden="true"
                                 />
-                                {reopenFrame
-                                    ? 'Zurück zur Gewohnheit'
-                                    : 'Zurück zum Film'}
+                                Zurück zum Film
                             </button>
 
                             <div className="mb-8">

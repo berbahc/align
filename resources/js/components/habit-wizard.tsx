@@ -88,8 +88,8 @@ export function HabitWizard({
      * Wohin „Zurück" auf dem ersten Schritt führt.
      *
      * Der Assistent kennt nur seine eigenen Schritte; was davor liegt, weiß
-     * die Seite, die ihn zeigt. Im Onboarding ist das die Frage nach dem
-     * Rahmen, sonst nichts — dann bleibt der erste Schritt ohne Rückweg.
+     * die Seite, die ihn zeigt. Im Onboarding ist das der Auftakt, sonst
+     * nichts — dann bleibt der erste Schritt ohne Rückweg.
      */
     onBackFromStart?: (() => void) | null;
     action: string;
