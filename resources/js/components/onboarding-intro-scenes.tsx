@@ -18,11 +18,13 @@ export interface IntroScene {
     /** Die leise Zeile darunter. */
     aside: ReactNode;
     /**
-     * Das Kapitel, in dem die Szene steht.
+     * Die Überschrift der Szene, klein über dem Satz.
      *
-     * Es beantwortet die Frage, die ein Film ohne Kapitel offen lässt: Sehe
-     * ich gerade ein Problem oder eine Antwort? Zwei Wörter genügen dafür —
-     * und die Zeile trägt zugleich den Strich, der den Umschlag zeigt.
+     * Sie benennt, wovon dieses eine Bild handelt, und nicht, in welcher
+     * Hälfte des Films es steht: „Dein Alltag" dreimal hintereinander sagt
+     * beim zweiten Mal nichts mehr. Der Umschlag zur Antwort trägt sich
+     * ohnehin selbst — ab Bild 04 ist die Oberfläche der App zu sehen, und
+     * das Bild heißt dann auch so.
      */
     chapter: string;
     /**
@@ -272,7 +274,7 @@ export const INTRO_SCENES: IntroScene[] = [
                 bist du zu müde.
             </>
         ),
-        chapter: 'Dein Alltag',
+        chapter: 'Sport',
         duration: 7000,
         visual: (
             <IntroClip
@@ -297,7 +299,7 @@ export const INTRO_SCENES: IntroScene[] = [
                 Ruhe zu kochen.
             </>
         ),
-        chapter: 'Dein Alltag',
+        chapter: 'Essen',
         duration: 7000,
         visual: (
             <IntroClip
@@ -320,7 +322,7 @@ export const INTRO_SCENES: IntroScene[] = [
                 vollen Semester hat nichts davon einen festen Platz im Tag.
             </>
         ),
-        chapter: 'Dein Alltag',
+        chapter: 'Freunde',
         duration: 7000,
         visual: (
             <IntroClip
@@ -344,7 +346,7 @@ export const INTRO_SCENES: IntroScene[] = [
                 schon bist.
             </>
         ),
-        chapter: 'Mit Align',
+        chapter: 'Dein Tag mit Align',
         duration: 6500,
         visual: (
             <IntroSurface>
@@ -374,7 +376,7 @@ export const INTRO_SCENES: IntroScene[] = [
                 Anfang leicht fällt. <Strong>Entscheiden tust du.</Strong>
             </>
         ),
-        chapter: 'Mit Align',
+        chapter: 'Der erste Schritt',
         duration: 6000,
         visual: (
             <IntroSurface>
@@ -414,7 +416,7 @@ export const INTRO_SCENES: IntroScene[] = [
                 <Strong>Mehr braucht es nicht.</Strong>
             </>
         ),
-        chapter: 'Mit Align',
+        chapter: 'Zu zweit',
         duration: 6000,
         visual: (
             <IntroSurface>
