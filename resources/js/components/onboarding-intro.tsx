@@ -1,8 +1,12 @@
-import { Pause, Play } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { INTRO_SCENES } from '@/components/onboarding-intro-scenes';
 import type { IntroScene } from '@/components/onboarding-intro-scenes';
-import { PRIMARY_BUTTON, QUIET_BUTTON } from '@/lib/interaction';
+import {
+    PRIMARY_BUTTON,
+    QUIET_BUTTON,
+    STEPPER_BUTTON,
+} from '@/lib/interaction';
 import { cn } from '@/lib/utils';
 
 /** Wie lange eine abtretende Szene noch im Raster liegt — siehe `intro-leave`. */
@@ -26,14 +30,14 @@ function usesMotion(): boolean {
 /**
  * Der Auftakt — sieben Bilder bis zur ersten Frage.
  *
- * Er läuft von selbst und lässt sich trotzdem in die Hand nehmen: Tippen
- * rechts geht weiter, links zurück, Halten pausiert, `Esc` überspringt. Die
- * beiden Tippflächen sind echte Knöpfe und keine Klickfänger auf einem `div`,
- * sonst wäre der Film mit Tastatur und Vorlesehilfe nicht zu bedienen.
+ * Er läuft von selbst und lässt sich trotzdem in die Hand nehmen: zwei
+ * Pfeile unter dem Bild blättern, die Pfeiltasten tun dasselbe, `Esc`
+ * überspringt. Über dem Bild liegt nichts Anfassbares — wer darauf zeigt,
+ * soll es ansehen und nicht aus Versehen eine Szene weiterspringen.
  *
  * WCAG 2.2.2 verlangt für alles, was länger als fünf Sekunden von selbst
- * läuft, eine erreichbare Pause. Halten allein genügt dafür nicht — es gibt
- * deshalb einen sichtbaren Knopf und die Leertaste.
+ * läuft, eine erreichbare Pause. Sie steht zwischen den Pfeilen, und die
+ * Leertaste tut dasselbe.
  *
  * Der Zähler hängt an nichts als sich selbst. Ein Clip, der noch lädt, hält
  * den Film nicht auf: Er zeigt so lange seine ruhige Fläche, und die Szene
@@ -97,15 +101,21 @@ export function OnboardingIntro({
         [index],
     );
 
+    /**
+     * Ein Bild weiter — und auf dem letzten nirgendwohin.
+     *
+     * Der Pfeil blättert durch den Film, er verlässt ihn nicht. Aus dem Film
+     * heraus führen der Knopf darunter, `Esc` und „Überspringen" oben; ein
+     * Pfeil, der beim sechsten Druck plötzlich im Formular landet, wäre einer
+     * zu viel.
+     */
     const forward = useCallback(() => {
         if (isLast) {
-            onDone();
-
             return;
         }
 
         go(index + 1, 1);
-    }, [go, index, isLast, onDone]);
+    }, [go, index, isLast]);
 
     const back = useCallback(() => {
         if (index === 0) {
@@ -249,36 +259,8 @@ export function OnboardingIntro({
                 </div>
             </div>
 
-            {/* Die beiden Tippflächen. Sie liegen über dem Bild, aber unter
-                den Knöpfen darunter — und sie sind Knöpfe, keine Fangflächen:
-                Ein Film, den man nur mit dem Daumen bedienen kann, ist für
-                einen Teil der Nutzer kein Film. */}
-            {motion && (
-                <div className="pointer-events-none absolute inset-x-0 top-0 bottom-24 flex">
-                    <button
-                        type="button"
-                        aria-label="Vorige Szene"
-                        disabled={index === 0}
-                        onClick={back}
-                        onPointerDown={() => setPaused(true)}
-                        onPointerUp={() => setPaused(false)}
-                        onPointerCancel={() => setPaused(false)}
-                        className="pointer-events-auto w-1/3 cursor-pointer focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-ring disabled:cursor-default"
-                    />
-                    <button
-                        type="button"
-                        aria-label="Nächste Szene"
-                        onClick={forward}
-                        onPointerDown={() => setPaused(true)}
-                        onPointerUp={() => setPaused(false)}
-                        onPointerCancel={() => setPaused(false)}
-                        className="pointer-events-auto flex-1 cursor-pointer focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-ring"
-                    />
-                </div>
-            )}
-
-            <div className="relative mx-auto flex w-full max-w-md flex-col gap-3">
-                {isLast ? (
+            <div className="relative mx-auto flex w-full max-w-md flex-col gap-4">
+                {isLast && (
                     <button
                         type="button"
                         onClick={onDone}
@@ -286,45 +268,67 @@ export function OnboardingIntro({
                     >
                         Fangen wir mit deinem Tag an
                     </button>
-                ) : (
-                    !motion && (
-                        <button
-                            type="button"
-                            onClick={forward}
-                            className={PRIMARY_BUTTON}
-                        >
-                            Weiter
-                        </button>
-                    )
                 )}
 
-                {!motion && index > 0 && (
+                {/* Die Bedienleiste: zurück, anhalten, weiter.
+                
+                    Vorher lagen zwei unsichtbare Flächen über dem Bild. Das
+                    ist die Geste, die man aus Stories kennt — und genau
+                    deshalb falsch: Wer hier nicht damit rechnet, springt beim
+                    Zeigen auf das Bild eine Szene weiter und weiß nicht,
+                    warum. Zwei sichtbare Pfeile sagen, was sie tun, und lassen
+                    das Bild in Ruhe. */}
+                <div className="flex items-center justify-center gap-2">
                     <button
                         type="button"
+                        aria-label="Vorige Szene"
+                        disabled={index === 0}
                         onClick={back}
-                        className={QUIET_BUTTON}
+                        className={cn(STEPPER_BUTTON, 'size-11')}
                     >
-                        Zurück
+                        <ChevronLeft className="size-5" aria-hidden="true" />
                     </button>
-                )}
 
-                {motion && !isLast && (
+                    {/* Die Pause bleibt zwischen den Pfeilen: WCAG 2.2.2
+                        verlangt sie für alles, was länger als fünf Sekunden
+                        von selbst läuft. Auf dem letzten Bild läuft nichts
+                        mehr, dort hält die Leiste nur noch den Weg zurück. */}
+                    <span className="flex min-w-40 justify-center">
+                        {motion && !isLast && (
+                            <button
+                                type="button"
+                                onClick={() => setPaused((current) => !current)}
+                                className={cn(
+                                    QUIET_BUTTON,
+                                    'flex items-center gap-1.5',
+                                )}
+                            >
+                                {paused ? (
+                                    <Play
+                                        className="size-3.5"
+                                        aria-hidden="true"
+                                    />
+                                ) : (
+                                    <Pause
+                                        className="size-3.5"
+                                        aria-hidden="true"
+                                    />
+                                )}
+                                {paused ? 'Weiterlaufen lassen' : 'Anhalten'}
+                            </button>
+                        )}
+                    </span>
+
                     <button
                         type="button"
-                        onClick={() => setPaused((current) => !current)}
-                        className={cn(
-                            QUIET_BUTTON,
-                            'flex items-center gap-1.5 self-center',
-                        )}
+                        aria-label="Nächste Szene"
+                        disabled={isLast}
+                        onClick={forward}
+                        className={cn(STEPPER_BUTTON, 'size-11')}
                     >
-                        {paused ? (
-                            <Play className="size-3.5" aria-hidden="true" />
-                        ) : (
-                            <Pause className="size-3.5" aria-hidden="true" />
-                        )}
-                        {paused ? 'Weiterlaufen lassen' : 'Anhalten'}
+                        <ChevronRight className="size-5" aria-hidden="true" />
                     </button>
-                )}
+                </div>
             </div>
         </section>
     );

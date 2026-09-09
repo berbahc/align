@@ -78,20 +78,6 @@ function Strong({ children }: { children: ReactNode }) {
 const STAGE = 'h-[min(38vh,19rem)] w-full lg:aspect-video lg:h-auto';
 
 /**
- * Wie schnell ein Clip abläuft.
- *
- * Die Clips sind gut fünf Sekunden lang, und fünf Sekunden sind zu wenig, um
- * das Bild anzusehen und den Satz daneben zu lesen. Statt sie zu wiederholen —
- * ein Sprung zurück auf das erste Bild ist ein Schnitt, den niemand gesetzt
- * hat — laufen sie langsamer: Aus 5,0 Sekunden werden 7,2, und die Szene ist
- * vorbei, bevor der Clip von vorn beginnt.
- *
- * Es tut dem Material zudem gut. Gemächlichere Bewegung ist genau die Haltung,
- * die der Rest der App hat — hier fällt sie nebenbei ab.
- */
-const CLIP_RATE = 0.7;
-
-/**
  * Die Fläche, auf der ein Filmbild liegt.
  *
  * Der Clip füllt sie ganz und läuft unten in den Seitengrund aus — deshalb
@@ -119,13 +105,6 @@ function IntroClip({
             className={`intro-figure relative overflow-hidden rounded-[18px] bg-track ${STAGE}`}
         >
             <video
-                // `playbackRate` gibt es nur am Element, nicht als Attribut —
-                // und ein neu montiertes `video` steht wieder auf 1.
-                ref={(element) => {
-                    if (element) {
-                        element.playbackRate = CLIP_RATE;
-                    }
-                }}
                 src={src}
                 poster={poster}
                 muted
@@ -269,6 +248,10 @@ function DemoHabitRow({ habit }: { habit: Habit }) {
  * sechs bis sechseinhalb für die Bilder aus der App. Ein Bild und ein Satz
  * daneben brauchen zusammen länger als das Bild allein — und sieben gleich
  * lange Szenen wären eine Diaschau, ungleiche lesen sich als Schnitt.
+ *
+ * Sie sind länger als die Clips, und die laufen deshalb einmal von vorn los.
+ * Das ist gewollt: Ein Clip in halber Geschwindigkeit sähe aus wie eine
+ * Zeitlupe, und die Szene soll stehen dürfen, ohne dass das Bild schleicht.
  *
  * Die letzte Dauer zählt niemand ab: Auf dem sechsten Bild hält der Abspieler
  * an und wartet auf den Knopf.
