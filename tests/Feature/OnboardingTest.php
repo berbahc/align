@@ -87,6 +87,46 @@ test('the onboarding frame is stored for all seven weekdays', function () {
         );
 });
 
+test('the frame can be corrected a second time without a second set of days', function () {
+    $user = User::factory()->notOnboarded()->seenIntro()->create();
+
+    // Der erste Schritt des Assistenten führt zurück auf den Rahmen. Wer dort
+    // die Aufstehzeit korrigiert, schickt dieselbe Route noch einmal — und
+    // bekommt sieben Tage, nicht vierzehn.
+    $this->actingAs($user)->post(route('onboarding.sleep'), [
+        'wake_time' => '06:30',
+        'bedtime' => '22:30',
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('onboarding.sleep'), [
+            'wake_time' => '08:00',
+            'bedtime' => '23:15',
+        ])
+        ->assertRedirect(route('onboarding.show'));
+
+    expect($user->sleepSchedules()->count())->toBe(7)
+        ->and($user->sleepWindowFor(1)['wakeTime'])->toBe('08:00')
+        ->and($user->sleepWindowFor(7)['bedtime'])->toBe('23:15');
+});
+
+test('a stored frame comes back as its own default', function () {
+    $user = User::factory()->notOnboarded()->seenIntro()->create();
+
+    $this->actingAs($user)->post(route('onboarding.sleep'), [
+        'wake_time' => '06:30',
+        'bedtime' => '22:30',
+    ]);
+
+    // Sonst stünde beim Zurückgehen wieder 07:00/23:00 im Feld, und ein
+    // Druck auf „Weiter" ersetzte stillschweigend, was der Nutzer gewählt hat.
+    $this->get(route('onboarding.show'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('defaultWakeTime', '06:30')
+            ->where('defaultBedtime', '22:30')
+        );
+});
+
 test('every category carries templates so the second step is never empty', function () {
     foreach (HabitCategory::cases() as $category) {
         expect($category->templates())->not->toBeEmpty()

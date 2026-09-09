@@ -72,6 +72,7 @@ export function HabitWizard({
     chainCandidates = [],
     busySlots = [],
     adoption = null,
+    onBackFromStart = null,
     action,
 }: {
     categories: HabitCategoryOption[];
@@ -83,6 +84,14 @@ export function HabitWizard({
     busySlots?: BusySlot[];
     /** Gesetzt, wenn eine fremde Gewohnheit zur eigenen wird — sonst null. */
     adoption?: HabitAdoption | null;
+    /**
+     * Wohin „Zurück" auf dem ersten Schritt führt.
+     *
+     * Der Assistent kennt nur seine eigenen Schritte; was davor liegt, weiß
+     * die Seite, die ihn zeigt. Im Onboarding ist das die Frage nach dem
+     * Rahmen, sonst nichts — dann bleibt der erste Schritt ohne Rückweg.
+     */
+    onBackFromStart?: (() => void) | null;
     action: string;
 }) {
     const blueprint = adoption?.blueprint ?? null;
@@ -707,10 +716,14 @@ export function HabitWizard({
                     </>
                 )}
 
-                {position > 0 && (
+                {(position > 0 || onBackFromStart !== null) && (
                     <button
                         type="button"
-                        onClick={() => setStep(steps[position - 1] ?? step)}
+                        onClick={
+                            position > 0
+                                ? () => setStep(steps[position - 1] ?? step)
+                                : onBackFromStart!
+                        }
                         className={QUIET_BUTTON}
                     >
                         Zurück
