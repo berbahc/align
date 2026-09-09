@@ -267,8 +267,9 @@ export const INTRO_SCENES: IntroScene[] = [
         ),
         aside: (
             <>
-                <Strong>Seit Montag steht sie da.</Strong> Und jeden Abend gehst
-                du auf dem Weg ins Bett daran vorbei.
+                <Strong>Seit Montag steht sie neben der Tür.</Strong> Jeden
+                Abend gehst du daran vorbei, und jeden Abend ist es zu spät
+                geworden.
             </>
         ),
         chapter: 'Dein Alltag',
@@ -292,7 +293,8 @@ export const INTRO_SCENES: IntroScene[] = [
         aside: (
             <>
                 <Strong>Zum dritten Mal diese Woche.</Strong> Nicht, weil du
-                nicht kochen willst, sondern weil vom Tag nichts mehr übrig ist.
+                nicht willst, sondern weil am Ende des Tages die Zeit fehlt, in
+                Ruhe zu kochen.
             </>
         ),
         chapter: 'Dein Alltag',
@@ -314,8 +316,8 @@ export const INTRO_SCENES: IntroScene[] = [
         ),
         aside: (
             <>
-                <Strong>Nichts davon ist Faulheit.</Strong> In einem vollen
-                Semester hat nur nichts davon einen festen Platz.
+                <Strong>Das hat nichts mit Faulheit zu tun.</Strong> In einem
+                vollen Semester hat nichts davon einen festen Platz im Tag.
             </>
         ),
         chapter: 'Dein Alltag',
@@ -337,9 +339,9 @@ export const INTRO_SCENES: IntroScene[] = [
         ),
         aside: (
             <>
-                Nicht um 17 Uhr, sondern{' '}
-                <Strong>direkt nach der Vorlesung</Strong>. Also da, wo du
-                ohnehin schon bist.
+                Nicht irgendwann um 17 Uhr, sondern{' '}
+                <Strong>direkt nach der Vorlesung</Strong>. Da, wo du ohnehin
+                schon bist.
             </>
         ),
         chapter: 'Mit Align',
@@ -368,8 +370,8 @@ export const INTRO_SCENES: IntroScene[] = [
         ),
         aside: (
             <>
-                <Strong>Align denkt mit</Strong> und schlägt dir den kleinsten
-                ersten Schritt vor. Entscheiden tust du.
+                Sie schlägt dir den kleinsten ersten Schritt vor, damit der
+                Anfang leicht fällt. <Strong>Entscheiden tust du.</Strong>
             </>
         ),
         chapter: 'Mit Align',
@@ -403,12 +405,12 @@ export const INTRO_SCENES: IntroScene[] = [
         id: 'zuzweit',
         headline: (
             <>
-                Und wenn du willst, gehst du das <Mark>nicht allein</Mark> an.
+                Und wenn du willst, machst du das <Mark>nicht allein</Mark>.
             </>
         ),
         aside: (
             <>
-                Eine Person, ein Tag, eine Zusage.{' '}
+                Du fragst eine Person für einen einzigen Tag.{' '}
                 <Strong>Mehr braucht es nicht.</Strong>
             </>
         ),
