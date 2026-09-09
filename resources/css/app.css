@@ -773,3 +773,233 @@
         }
     }
 }
+
+/*
+ * Der Auftakt — der Kurzfilm vor dem ersten Schritt.
+ *
+ * Die zweite eigene Bewegung dieser Datei nach dem Maskottchen, und aus
+ * demselben Grund geschlossen an einer Stelle: Sieben Bilder, die
+ * ineinandergreifen, sind kein Übergang mehr, den man an der Fundstelle
+ * nebenbei mitschreibt.
+ *
+ * **Filmisch heißt hier Kontinuität, nicht Effekt.** §6 der Designsprache
+ * verbietet Bounce, Blinken und alles, was Aufmerksamkeit fordert — und das
+ * gilt auch für einen Film. Was ihn trotzdem zu einem macht, sind drei Dinge:
+ * Szenen überblenden, statt umzuschalten; sie tragen eine Richtung, damit ein
+ * Schnitt nach vorn und ein Schritt zurück nicht dasselbe Bild ergeben; und
+ * innerhalb einer Szene kommen die Teile nacheinander, nicht gemeinsam.
+ *
+ * Alles Bewegte steht unter `prefers-reduced-motion: no-preference`. Was dann
+ * fehlt, ist die Bewegung: Jede Szene steht sofort vollständig da, und
+ * geblättert wird von Hand. Ein Film, der ohne seine Bewegung keinen Inhalt
+ * mehr hätte, wäre für einen Teil der Nutzer gar kein Film.
+ */
+@layer components {
+    /*
+     * Beide Szenen liegen in derselben Rasterzelle übereinander — die
+     * abtretende und die eintretende. Ohne diese Überlappung gäbe es keine
+     * Überblendung, sondern nur ein Umschalten, und der Film zerfiele in
+     * sieben Bilder mit Pausen dazwischen.
+     */
+    .intro-stage {
+        display: grid;
+        grid-template-areas: 'scene';
+    }
+
+    .intro-scene {
+        grid-area: scene;
+    }
+
+    /* Was gerade abtritt, ist nicht mehr anfassbar — sonst läge zwei Zehntel
+       lang eine unsichtbare Szene über der neuen. */
+    .intro-leaving {
+        pointer-events: none;
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+        .intro-entering {
+            animation: intro-enter var(--duration-fluid) var(--ease-fluid) both;
+        }
+
+        /*
+         * Kürzer als das Eintreten und ohne Versatz nach hinten: Der Blick
+         * gehört dem neuen Bild. Liefe das alte genauso lang aus, stünden
+         * beide eine halbe Sekunde gleich stark da, und das liest sich als
+         * Doppelbelichtung statt als Schnitt.
+         */
+        .intro-leaving {
+            animation: intro-leave 320ms var(--ease-fluid) both;
+        }
+
+        /*
+         * Die Teile einer Szene kommen nacheinander: erst das Bild, dann der
+         * Kapitel, dann der Satz. `--beat` steht an der Fundstelle, weil nur
+         * dort bekannt ist, was zuerst gemeint ist.
+         */
+        .intro-entering [data-beat] {
+            animation: intro-rise var(--duration-fluid) var(--ease-fluid) both;
+            animation-delay: calc(var(--beat, 0) * 80ms);
+        }
+    }
+
+    @keyframes intro-enter {
+        from {
+            opacity: 0;
+            transform: translate3d(calc(var(--intro-dir, 1) * 1.75rem), 0, 0);
+        }
+    }
+
+    @keyframes intro-leave {
+        to {
+            opacity: 0;
+            transform: translate3d(calc(var(--intro-dir, 1) * -1.25rem), 0, 0);
+        }
+    }
+
+    @keyframes intro-rise {
+        from {
+            opacity: 0;
+            transform: translate3d(0, 0.75rem, 0);
+        }
+    }
+
+    /*
+     * Das eine Einrasten des Films.
+     *
+     * §4 erlaubt Überschwingen nur dort, wo der Geste Schwung vorausging oder
+     * etwas einrastet — im Rest der App ist das genau einmal der Fall, beim
+     * Abhaken. Hier ist es das zweite Mal, und aus demselben Grund: Die
+     * Gewohnheit fährt unter die Vorlesung und rastet an ihr ein. Die Feder
+     * ist die Aussage der Szene, nicht ihre Verzierung.
+     */
+    @media (prefers-reduced-motion: no-preference) {
+        .intro-entering .intro-snap {
+            animation: intro-snap var(--duration-pop) var(--ease-pop) both;
+            animation-delay: 200ms;
+        }
+    }
+
+    @keyframes intro-snap {
+        from {
+            opacity: 0;
+            transform: translate3d(0, -0.5rem, 0) scale(0.96);
+        }
+    }
+
+    /*
+     * Der große Satz des Films.
+     *
+     * Größer als jede Überschrift der App und bewusst so: Ein Film hat einen
+     * Satz je Bild, und der trägt ihn allein. `type-heading` (24px) las sich
+     * daneben wie eine Zwischenüberschrift auf einer Einstellungsseite.
+     *
+     * Die Laufweite ist stärker negativ als in der Skala, weil Sora in dieser
+     * Größe sonst auseinanderfällt — dieselbe Begründung, aus der die Skala
+     * bei den großen Zahlen auf -0.03em geht.
+     */
+    .intro-headline {
+        font-size: clamp(1.75rem, 3.2vw, 2.75rem);
+        line-height: 1.06;
+        letter-spacing: -0.03em;
+        font-weight: 700;
+        text-wrap: balance;
+    }
+
+    /*
+     * Die Bühne als Bild — Clip wie Oberfläche.
+     *
+     * Vorher war der Clip gerahmt und die App-Szene stand frei; das las sich
+     * als zwei Filme. Jetzt liegt beides in derselben Fassung: eine Haarlinie
+     * in der Farbe der offenen Linie, damit die Kante auf dem warmen Grund
+     * überhaupt eine ist, und ein tiefer, warm getönter Schatten, der das Bild
+     * von der Seite abhebt, ohne es auszuschneiden.
+     *
+     * Der Schatten ist tiefer als `--shadow-lift`: Der trägt eine Karte, die
+     * angefasst wird. Hier trägt er ein Bild, das angesehen wird.
+     */
+    .intro-figure {
+        border: 1px solid
+            color-mix(in oklab, var(--hollow-line) 55%, transparent);
+        box-shadow:
+            0 2px 4px rgba(61, 47, 20, 0.04),
+            0 32px 64px -28px rgba(61, 47, 20, 0.28);
+    }
+
+    /*
+     * Der Grund, auf dem ein Bild aus der App liegt.
+     *
+     * Eine glatte Fläche in Seitenfarbe hat wie ein vergessener Kasten
+     * ausgesehen. Ein sehr flacher Verlauf von der oberen Kante nach unten
+     * gibt ihr Tiefe, ohne eine Linie zu ziehen — genau die Art Atmosphäre,
+     * die die Designsprache meint, wenn sie Fläche statt Kontur verlangt.
+     */
+    .intro-ground {
+        background: radial-gradient(
+            120% 90% at 50% 0%,
+            var(--track) 0%,
+            var(--canvas) 72%
+        );
+    }
+
+    .dark .intro-figure {
+        border-color: color-mix(in oklab, var(--hollow-line) 70%, transparent);
+        box-shadow:
+            0 2px 4px rgba(0, 0, 0, 0.45),
+            0 32px 64px -28px rgba(0, 0, 0, 0.8);
+    }
+
+    /*
+     * Der Filmstreifen am Kopf — dieselbe Form wie die Schrittleiste des
+     * Assistenten, damit Film und Anlegen als ein Ablauf gelesen werden.
+     *
+     * Der laufende Balken ist eine Animation über die Dauer seiner Szene und
+     * nicht ein Wert, den JavaScript sechzigmal je Sekunde neu setzt. Pausiert
+     * wird er damit über `animation-play-state` — dieselbe Pause, die der
+     * Zähler daneben einlegt.
+     */
+    /*
+     * Der leere Grundzustand steht **in** der Abfrage, nicht davor: Ohne
+     * laufende Animation bliebe die Spur der aktuellen Szene sonst für immer
+     * auf null, und wer Bewegung abbestellt hat, sähe an der Leiste nie, wo im
+     * Film er gerade ist.
+     */
+    @media (prefers-reduced-motion: no-preference) {
+        .intro-progress {
+            transform-origin: left;
+            transform: scaleX(0);
+        }
+
+        .intro-progress[data-running] {
+            animation: intro-progress var(--intro-duration, 4s) linear both;
+        }
+
+        .intro-progress[data-paused] {
+            animation-play-state: paused;
+        }
+    }
+
+    @keyframes intro-progress {
+        to {
+            transform: scaleX(1);
+        }
+    }
+
+    /*
+     * Die Filmbilder.
+     *
+     * Ein erzeugter Clip trifft die Palette nie ganz. Der Filter zieht ihn in
+     * den warmen Bereich zurück, und der Verlauf an der Unterkante lässt ihn
+     * in den Seitengrund auslaufen, statt als Rechteck darin zu stehen. Beides
+     * zusammen ist der Grund, warum Film und Oberfläche wie eine Seite wirken.
+     *
+     * Im Dunkeln kommt nur Helligkeit dazu: Ein zweiter Schnitt derselben
+     * Clips wäre zweimal Ladezeit für dasselbe Bild.
+     */
+    .intro-clip {
+        filter: saturate(0.85) sepia(0.08);
+    }
+
+    .dark .intro-clip {
+        filter: saturate(0.7) brightness(0.55);
+    }
+}

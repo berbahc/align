@@ -26,6 +26,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property string $email
  * @property Carbon|null $email_verified_at
  * @property Carbon|null $onboarded_at
+ * @property Carbon|null $intro_seen_at
  * @property bool $appointments_enabled
  * @property bool $bedtime_reminder_enabled
  * @property string $password
@@ -311,6 +312,7 @@ class User extends Authenticatable implements PasskeyUser
         return [
             'email_verified_at' => 'datetime',
             'onboarded_at' => 'datetime',
+            'intro_seen_at' => 'datetime',
             'appointments_enabled' => 'boolean',
             'bedtime_reminder_enabled' => 'boolean',
             'password' => 'hashed',

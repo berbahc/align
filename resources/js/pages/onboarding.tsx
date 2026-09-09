@@ -1,13 +1,16 @@
-import { Form, Head, useForm } from '@inertiajs/react';
-import { ArrowRight } from 'lucide-react';
+import { Form, Head, router, useForm } from '@inertiajs/react';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { useState } from 'react';
 import AppLogoIcon from '@/components/app-logo-icon';
 import { HabitWizard } from '@/components/habit-wizard';
 import InputError from '@/components/input-error';
+import { OnboardingIntro } from '@/components/onboarding-intro';
 import type { ScheduleTypeOption } from '@/components/schedule-picker';
 import { TimeStepper } from '@/components/time-stepper';
 import { Spinner } from '@/components/ui/spinner';
 import { PRIMARY_BUTTON, QUIET_BUTTON } from '@/lib/interaction';
-import { skip, sleep, store } from '@/routes/onboarding';
+import { cn } from '@/lib/utils';
+import { intro, skip, sleep, store } from '@/routes/onboarding';
 import type {
     DurationLimits,
     HabitCategoryOption,
@@ -16,6 +19,8 @@ import type {
 } from '@/types';
 
 interface OnboardingProps {
+    /** Lief der Auftakt schon? Erst danach beginnt das Einrichten. */
+    hasSeenIntro: boolean;
     /** Gibt es schon einen gespeicherten Rahmen? Dann beginnt die Gewohnheit. */
     hasSleepSchedule: boolean;
     defaultWakeTime: string;
@@ -28,14 +33,25 @@ interface OnboardingProps {
 }
 
 /**
- * Der erste Schritt in der App — in zwei Stufen.
+ * Der erste Schritt in der App — in drei Stufen.
  *
- * Zuerst der Rahmen: Aufsteh- und Schlafenszeit spannen den Tag auf, in dem
+ * Zuerst der Auftakt: sieben Bilder, die zeigen, woran Vorsätze im Studium
+ * scheitern und was Align dagegen tut. Er steht vorn, weil er die Frage
+ * beantwortet, die alle folgenden erst sinnvoll macht — warum eine App nach
+ * der Aufstehzeit fragt, bevor sie nach einer Gewohnheit fragt.
+ *
+ * Dann der Rahmen: Aufsteh- und Schlafenszeit spannen den Tag auf, in dem
  * alles Weitere geplant wird. Ein Paar für alle Tage reicht hier; je
  * Wochentag verfeinern geht später unter „Schlaf". Danach die erste
  * Gewohnheit, aus dem Katalog.
+ *
+ * Zwischen Film und Rahmen gibt es keinen Schnitt: Das letzte Bild wird zur
+ * ersten Frage. Deshalb wechselt die Stufe hier im Browser, und der Server
+ * erfährt erst danach davon — eine Antwort, die neu rendert, wäre genau der
+ * Schnitt, den es nicht geben soll.
  */
 export default function Onboarding({
+    hasSeenIntro,
     hasSleepSchedule,
     defaultWakeTime,
     defaultBedtime,
@@ -45,10 +61,52 @@ export default function Onboarding({
     durationLimits,
     sleepWindows,
 }: OnboardingProps) {
+    const [introDone, setIntroDone] = useState(hasSeenIntro);
+    /**
+     * Kommt der Rahmen gerade aus dem Film? Dann fährt er wie eine Szene ein.
+     *
+     * Nur beim Übergang und nicht bei jedem Aufruf: Wer die Seite neu lädt,
+     * kommt aus keinem Film und soll auch nicht so behandelt werden.
+     */
+    const [fromIntro, setFromIntro] = useState(false);
+    /** Geht es zurück in den Film? Dann steigt er bei seinem letzten Bild ein. */
+    const [replayingIntro, setReplayingIntro] = useState(false);
+
     const frame = useForm({
         wake_time: defaultWakeTime,
         bedtime: defaultBedtime,
     });
+
+    /**
+     * Der Auftakt ist durch — die Seite wechselt sofort, die Notiz geht
+     * nebenher raus.
+     *
+     * `preserveState` hält den Stand, den der Browser gerade zeigt: Die
+     * Antwort setzt nur `hasSeenIntro`, und darauf muss niemand warten.
+     */
+    function finishIntro() {
+        setIntroDone(true);
+        setFromIntro(true);
+        setReplayingIntro(false);
+        router.post(
+            intro.url(),
+            {},
+            { preserveState: true, preserveScroll: true },
+        );
+    }
+
+    /**
+     * Zurück in den Film.
+     *
+     * Nur im Browser und ohne den Server zu fragen: Gesehen bleibt gesehen,
+     * hier geht es um dieselbe Sitzung. Der Film steigt bei seinem letzten
+     * Bild wieder ein, damit der Weg zurück so kurz ist wie der Weg hin.
+     */
+    function replayIntro() {
+        setFromIntro(false);
+        setReplayingIntro(true);
+        setIntroDone(false);
+    }
 
     function submitFrame(event: React.FormEvent) {
         event.preventDefault();
@@ -58,7 +116,13 @@ export default function Onboarding({
     return (
         <>
             <Head
-                title={hasSleepSchedule ? 'Erste Gewohnheit' : 'Dein Rahmen'}
+                title={
+                    !introDone
+                        ? 'Willkommen'
+                        : hasSleepSchedule
+                          ? 'Erste Gewohnheit'
+                          : 'Dein Rahmen'
+                }
             />
 
             <div className="flex min-h-screen flex-col bg-background">
@@ -71,16 +135,45 @@ export default function Onboarding({
                     </span>
 
                     {/* Überspringen ist gleichwertig sichtbar — die App fordert
-                        nichts ein (Designsprache §1.5). */}
-                    <Form {...skip.form()}>
-                        <button type="submit" className={QUIET_BUTTON}>
-                            Später einrichten
+                        nichts ein (Designsprache §1.5).
+
+                        Genau ein Ausgang je Bild: Während des Films führt er
+                        aus dem Film, danach aus dem ganzen Ablauf. Beide
+                        nebeneinander wären eine Frage, die niemand gestellt
+                        hat — „überspringen" wohin? */}
+                    {introDone ? (
+                        <Form {...skip.form()}>
+                            <button type="submit" className={QUIET_BUTTON}>
+                                Später einrichten
+                            </button>
+                        </Form>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={finishIntro}
+                            className={QUIET_BUTTON}
+                        >
+                            Überspringen
                         </button>
-                    </Form>
+                    )}
                 </header>
 
-                <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-6 pb-16">
-                    {hasSleepSchedule ? (
+                {/* Der Auftakt darf auf dem großen Schirm die Breite
+                    nehmen, alles danach nicht: Der Assistent ist für eine
+                    schmale Spalte gebaut, und eine Kachelreihe über die ganze
+                    Seite wäre eine andere App. */}
+                <main
+                    className={cn(
+                        'mx-auto flex w-full flex-1 flex-col justify-center px-6 pb-16',
+                        introDone ? 'max-w-md' : 'max-w-md lg:max-w-6xl',
+                    )}
+                >
+                    {!introDone ? (
+                        <OnboardingIntro
+                            onDone={finishIntro}
+                            startAtEnd={replayingIntro}
+                        />
+                    ) : hasSleepSchedule ? (
                         <>
                             <div className="mb-8">
                                 <h1 className="type-title text-primary">
@@ -98,7 +191,32 @@ export default function Onboarding({
                             />
                         </>
                     ) : (
-                        <>
+                        <div
+                            className={cn(
+                                'flex flex-col',
+                                fromIntro && 'intro-entering',
+                            )}
+                            style={{ '--intro-dir': 1 } as React.CSSProperties}
+                        >
+                            {/* Der Weg zurück. Er steht über der Frage und
+                                nicht neben dem Ausgang oben: Zurück ist keine
+                                Alternative zum Abbrechen, sondern ein Schritt
+                                in demselben Ablauf. */}
+                            <button
+                                type="button"
+                                onClick={replayIntro}
+                                className={cn(
+                                    QUIET_BUTTON,
+                                    'mb-6 flex items-center gap-1.5 self-start',
+                                )}
+                            >
+                                <ArrowLeft
+                                    className="size-3.5"
+                                    aria-hidden="true"
+                                />
+                                Zurück zum Film
+                            </button>
+
                             <div className="mb-8">
                                 <h1 className="type-title text-primary">
                                     Wann beginnt dein Tag?
@@ -175,7 +293,7 @@ export default function Onboarding({
                                     />
                                 </button>
                             </form>
-                        </>
+                        </div>
                     )}
                 </main>
             </div>

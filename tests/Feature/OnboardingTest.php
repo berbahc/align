@@ -15,8 +15,42 @@ test('a freshly registered user is sent to onboarding instead of an empty dashbo
         ->assertRedirect(route('onboarding.show'));
 });
 
-test('onboarding starts with the frame, then offers the catalog', function () {
+test('a fresh user is met by the intro before anything is asked of them', function () {
     $user = User::factory()->notOnboarded()->create();
+
+    $this->actingAs($user)
+        ->get(route('onboarding.show'))
+        ->assertOk()
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->component('onboarding')
+            // Der Auftakt steht vor der ersten Frage: Er erklärt, warum die
+            // App gleich nach der Aufstehzeit fragt.
+            ->where('hasSeenIntro', false)
+            ->where('hasSleepSchedule', false)
+        );
+});
+
+test('the intro is put behind you once and does not come back', function () {
+    $user = User::factory()->notOnboarded()->create();
+
+    $this->actingAs($user)
+        ->from(route('onboarding.show'))
+        ->post(route('onboarding.intro'))
+        ->assertRedirect(route('onboarding.show'));
+
+    expect($user->refresh()->intro_seen_at)->not->toBeNull()
+        // Den Film gesehen zu haben heißt nicht, eingerichtet zu haben.
+        ->and($user->onboarded_at)->toBeNull();
+
+    $this->get(route('onboarding.show'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('hasSeenIntro', true)
+            ->where('hasSleepSchedule', false)
+        );
+});
+
+test('onboarding starts with the frame, then offers the catalog', function () {
+    $user = User::factory()->notOnboarded()->seenIntro()->create();
 
     $this->actingAs($user)
         ->get(route('onboarding.show'))
@@ -33,7 +67,7 @@ test('onboarding starts with the frame, then offers the catalog', function () {
 });
 
 test('the onboarding frame is stored for all seven weekdays', function () {
-    $user = User::factory()->notOnboarded()->create();
+    $user = User::factory()->notOnboarded()->seenIntro()->create();
 
     $this->actingAs($user)
         ->post(route('onboarding.sleep'), [
@@ -94,6 +128,9 @@ test('skipping onboarding is equivalent to finishing it', function () {
         ->assertRedirect(route('dashboard'));
 
     expect($user->refresh()->onboarded_at)->not->toBeNull()
+        // Der Auftakt geht mit: Wer den Ablauf verlässt, bekommt beim nächsten
+        // Besuch keine Erklärung für etwas, das er gerade weggeklickt hat.
+        ->and($user->intro_seen_at)->not->toBeNull()
         ->and($user->habits()->count())->toBe(0);
 
     // Wer abbricht, wird nicht erneut in den Ablauf gedrängt.

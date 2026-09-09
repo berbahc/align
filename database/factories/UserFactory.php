@@ -35,6 +35,9 @@ class UserFactory extends Factory
             // sich hat — sonst würde jeder Aufruf dorthin umgeleitet.
             // Für den frischen Fall gibt es `notOnboarded()`.
             'onboarded_at' => now(),
+            // Und den Auftakt ebenso: Ein Test, der auf den Rahmen zielt,
+            // soll nicht zuerst durch einen Film müssen.
+            'intro_seen_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
             'two_factor_secret' => null,
@@ -55,11 +58,26 @@ class UserFactory extends Factory
 
     /**
      * Indicate that the user has not been through onboarding yet.
+     *
+     * Der wirklich frische Nutzer: Er hat weder den Auftakt gesehen noch
+     * irgendetwas eingerichtet — genau der Zustand nach einer Registrierung.
+     * Wer nur die Stufen danach prüfen will, hängt {@see seenIntro()} an.
      */
     public function notOnboarded(): static
     {
         return $this->state(fn (array $attributes) => [
             'onboarded_at' => null,
+            'intro_seen_at' => null,
+        ]);
+    }
+
+    /**
+     * Indicate that the user has already watched the intro.
+     */
+    public function seenIntro(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'intro_seen_at' => now(),
         ]);
     }
 

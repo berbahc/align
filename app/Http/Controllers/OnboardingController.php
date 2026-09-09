@@ -17,7 +17,11 @@ use Inertia\Response;
 class OnboardingController extends Controller
 {
     /**
-     * Zwei Stufen: erst der Rahmen, dann die erste Gewohnheit.
+     * Drei Stufen: erst der Auftakt, dann der Rahmen, dann die erste Gewohnheit.
+     *
+     * Der Auftakt steht vorn, weil er die Frage beantwortet, die alle
+     * folgenden erst sinnvoll macht: warum eine App nach der Aufstehzeit
+     * fragt, bevor sie nach einer Gewohnheit fragt.
      *
      * Der Schlafplan kommt zuerst, weil er die Frage beantwortet, in der
      * alles Weitere stattfindet — eine Gewohnheit um 6:30 ist ein anderes
@@ -28,6 +32,7 @@ class OnboardingController extends Controller
     public function show(Request $request): Response
     {
         return Inertia::render('onboarding', [
+            'hasSeenIntro' => $request->user()->intro_seen_at !== null,
             'hasSleepSchedule' => $request->user()->sleepSchedules()->exists(),
             'defaultWakeTime' => SleepSchedule::DefaultWakeTime,
             'defaultBedtime' => SleepSchedule::DefaultBedtime,
@@ -73,6 +78,22 @@ class OnboardingController extends Controller
         return to_route('onboarding.show');
     }
 
+    /**
+     * Der Auftakt ist gelaufen — einmal und nicht wieder.
+     *
+     * Kommt ohne Weiterleitung zurück (`back()`), weil die Seite die Stufe im
+     * selben Augenblick schon selbst gewechselt hat: Der Film geht ohne Schnitt
+     * in die Frage nach dem Rahmen über, und eine Antwort, die neu rendert,
+     * wäre genau der Schnitt, den es hier nicht geben soll. Dieser Aufruf hält
+     * nur fest, was der Browser bereits zeigt.
+     */
+    public function markIntroSeen(Request $request): RedirectResponse
+    {
+        $request->user()->forceFill(['intro_seen_at' => now()])->save();
+
+        return back();
+    }
+
     public function store(StoreHabitRequest $request, CreateHabit $createHabit): RedirectResponse
     {
         $createHabit->handle($request->user(), $request->habitAttributes());
@@ -87,10 +108,17 @@ class OnboardingController extends Controller
      *
      * Die App fordert nichts ein — wer jetzt keine Gewohnheit anlegen möchte,
      * landet auf dem leeren Dashboard und wird nicht erneut hierher geleitet.
+     *
+     * Der Auftakt geht mit: Wer den ganzen Ablauf verlässt, ist auch mit dem
+     * Film fertig. Ihn beim nächsten Besuch nachzuholen hieße, jemandem eine
+     * Erklärung für etwas zu zeigen, das er gerade weggeklickt hat.
      */
     public function skip(Request $request): RedirectResponse
     {
-        $request->user()->forceFill(['onboarded_at' => now()])->save();
+        $request->user()->forceFill([
+            'onboarded_at' => now(),
+            'intro_seen_at' => now(),
+        ])->save();
 
         return to_route('dashboard');
     }

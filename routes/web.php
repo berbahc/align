@@ -36,6 +36,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Der Rahmen kommt vor der ersten Gewohnheit: Erst wenn der Tag Anfang
     // und Ende hat, gibt es etwas, worin sich planen lässt.
     Route::post('onboarding/sleep', [OnboardingController::class, 'storeSleep'])->name('onboarding.sleep');
+    // Der Auftakt meldet sich selbst ab, während sein letztes Bild noch steht.
+    Route::post('onboarding/intro', [OnboardingController::class, 'markIntroSeen'])->name('onboarding.intro');
     Route::post('onboarding/skip', [OnboardingController::class, 'skip'])->name('onboarding.skip');
 
     // Der kleinste Schritt wird **im** Onboarding gebraucht — dort legt jemand
