@@ -95,7 +95,7 @@ class DashboardController extends Controller
             ->values();
 
         return Inertia::render('dashboard', [
-            'greeting' => $this->greeting($today),
+            'greeting' => $this->greeting(Carbon::now()),
             'today' => $localisedToday->isoFormat('dddd, D. MMMM'),
             // Der Rahmen des heutigen Tages: Schlafenszeit heute Abend,
             // Aufstehen morgen früh, Weckerstand für morgen. Die Karte führt
@@ -317,11 +317,28 @@ class DashboardController extends Controller
         ];
     }
 
+    /**
+     * Die Anrede über der Übersicht, passend zur Tageszeit.
+     *
+     * Sie braucht die **Uhrzeit**, nicht das Datum. Vorher stand hier
+     * `Carbon::today()` — Mitternacht, jeden Aufruf —, und damit hat die Seite
+     * rund um die Uhr „Guten Morgen" gesagt.
+     *
+     * Fünf Stufen statt drei: Eine App, die den Tag einteilt, darf ihn auch
+     * benennen. Die Nacht bekommt ihre eigene Anrede und keine Ermahnung —
+     * wer um drei die Übersicht öffnet, hat dafür seinen Grund
+     * (Designsprache §1.5).
+     *
+     * Die Zeitzone ist die der App (`Europe/Berlin`); einen eigenen Zeitraum
+     * je Nutzer kennt das Modell nicht.
+     */
     private function greeting(Carbon $now): string
     {
         return match (true) {
+            $now->hour < 5 => 'Gute Nacht',
             $now->hour < 11 => 'Guten Morgen',
-            $now->hour < 18 => 'Schönen Tag',
+            $now->hour < 14 => 'Guten Mittag',
+            $now->hour < 18 => 'Guten Nachmittag',
             default => 'Guten Abend',
         };
     }

@@ -19,6 +19,24 @@ test('authenticated users can visit the dashboard', function () {
     $response->assertOk();
 });
 
+test('the greeting follows the clock, not the date', function (string $at, string $expected) {
+    // Die Anrede hing an `Carbon::today()` — Mitternacht, jeden Aufruf — und
+    // damit stand rund um die Uhr „Guten Morgen" über der Seite.
+    Carbon::setTestNow(Carbon::parse($at));
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('dashboard'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('greeting', $expected)
+        );
+})->with([
+    'nachts' => ['2026-09-09 03:15', 'Gute Nacht'],
+    'morgens' => ['2026-09-09 07:30', 'Guten Morgen'],
+    'mittags' => ['2026-09-09 12:00', 'Guten Mittag'],
+    'nachmittags' => ['2026-09-09 15:45', 'Guten Nachmittag'],
+    'abends' => ['2026-09-09 21:00', 'Guten Abend'],
+]);
+
 test('the dashboard lists the active habits of the current user', function () {
     $user = User::factory()->create();
     // Gleicher Anker für beide: die Tagesliste sortiert nach Tageszeit, hier
