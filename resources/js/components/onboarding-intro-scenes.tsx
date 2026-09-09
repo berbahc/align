@@ -261,15 +261,15 @@ export const INTRO_SCENES: IntroScene[] = [
         id: 'sport',
         headline: (
             <>
-                Der Tag an der Uni wird lang. <Mark>Die Sporttasche</Mark>{' '}
-                bleibt stehen.
+                Der Tag an der Uni ist voll. <Mark>Die Sporttasche</Mark> bleibt
+                liegen.
             </>
         ),
         aside: (
             <>
-                <Strong>Seit Montag steht sie neben der Tür.</Strong> Jeden
-                Abend gehst du daran vorbei, und jeden Abend ist es zu spät
-                geworden.
+                <Strong>Seit Montag liegt sie neben der Tür.</Strong> Morgens
+                ist es zu früh, zwischen den Vorlesungen zu knapp, und abends
+                bist du zu müde.
             </>
         ),
         chapter: 'Dein Alltag',
