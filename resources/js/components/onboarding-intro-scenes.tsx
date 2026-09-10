@@ -720,23 +720,22 @@ export const INTRO_SCENES: IntroScene[] = [
         id: 'freunde',
         headline: (
             <>
-                Deine Dozenten siehst du fast täglich. Deine Freunde{' '}
-                <Mark>seit zwei Wochen nicht</Mark>.
+                Deine Dozenten siehst du täglich. Freunde nur,{' '}
+                <Mark>wenn der Tag passt</Mark>.
             </>
         ),
         aside: (
             <>
-                <Strong>Es liegt nicht am Wollen.</Strong> Die Uni füllt den
-                Tag, und was keinen festen Platz darin hat, fällt als Erstes
-                weg.
+                <Strong>Es liegt nicht am Wollen.</Strong> Jeder hat einen
+                anderen Stundenplan, und irgendwann fragt keiner mehr.
             </>
         ),
         chapter: 'Freunde',
         duration: 7000,
         visual: (
             <IntroClip
-                src="/onboarding/freunde.mp4"
-                poster="/onboarding/freunde.jpg"
+                src="/onboarding/hoersaal.mp4"
+                poster="/onboarding/hoersaal.jpg"
             />
         ),
     },
