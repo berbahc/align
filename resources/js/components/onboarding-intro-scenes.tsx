@@ -1,9 +1,19 @@
-import { GraduationCap, Plus } from 'lucide-react';
+import {
+    AlarmClock,
+    Check,
+    ChevronLeft,
+    ChevronRight,
+    GraduationCap,
+    LayoutGrid,
+    Moon,
+    Sun,
+} from 'lucide-react';
 import type { ReactNode } from 'react';
+import { AiMascot } from '@/components/ai-mascot';
 import { AiSuggestion } from '@/components/ai-suggestion';
 import AppLogoIcon from '@/components/app-logo-icon';
 import { HabitRow } from '@/components/habit-row';
-import { CHOICE_TILE, OUTLINE_BUTTON } from '@/lib/interaction';
+import { CHOICE_TILE } from '@/lib/interaction';
 import { cn } from '@/lib/utils';
 import type { Habit } from '@/types';
 
@@ -90,7 +100,7 @@ const STAGE = 'h-[min(38vh,19rem)] w-full lg:aspect-video lg:h-auto';
  * Textkante wandert dadurch genau einmal, beim Schnitt von Bild 03 auf 04 —
  * und das ist ohnehin die Stelle, an der der Film seine Hälfte wechselt.
  */
-const PHONE_STAGE = 'h-[min(50vh,27rem)] w-full lg:aspect-[4/3] lg:h-auto';
+const PHONE_STAGE = 'h-[min(56vh,30rem)] w-full lg:aspect-[4/3] lg:h-auto';
 
 /**
  * Die Fläche, auf der ein Filmbild liegt.
@@ -186,7 +196,12 @@ function IntroPhone({
                         <div className="intro-phone-screen bg-background">
                             <PhoneStatusBar />
                             <PhoneAppBar title={title} />
-                            <div className="px-4 pt-5">{children}</div>
+                            {/* `overflow-hidden`, damit ein gescrollter
+                                Bildschirm oben abgeschnitten wird und nicht
+                                über der Kopfzeile liegt. */}
+                            <div className="overflow-hidden px-4 pt-5">
+                                {children}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -296,73 +311,254 @@ function PhoneAppBar({ title }: { title: string }) {
     );
 }
 
+/** Die Stundenspalte links — dieselbe Breite wie `GUTTER` im echten Raster. */
+const GUTTER = 52;
+
+/** Wie hoch eine Stunde im Raster steht. */
+const HOUR = 46;
+
+/** Der erste Strich des Rasters: Hier beginnt der Tag. */
+const DAY_FROM = 7;
+
+/** Eine Uhrzeit als Pixelhöhe im Raster. */
+function at(time: number) {
+    return (time - DAY_FROM) * HOUR;
+}
+
 /**
- * Der Kalendertag, wie ihn {@see DayGrid} zeichnet.
+ * Ein Block im Stundenraster, wie ihn {@see CalendarBlock} zeichnet.
  *
- * Nachgebaut in klein: Der echte Tag rechnet aus Aufsteh- und Schlafenszeit
- * eine Höhe und setzt jeden Block absolut hinein. Was ihn erkennbar macht,
- * steht hier unverändert — die Stundenspalte in `text-faintest` mit
- * Tabellenziffern, die Haarlinien in `border`, und die Blöcke mit ihrer
- * linken Kante: **durchgezogen** für eine echte Uhrzeit (die Vorlesung),
- * **gestrichelt** für einen Anker (§7.3 — was an einem Moment hängt, hat
- * keine feste Stunde).
+ * Die Kante trägt die Auskunft: **durchgezogen** heißt Uhrzeit, **gestrichelt**
+ * heißt ungefähr hier (§7.3). Erledigt füllt sich der Block auf `accent`, der
+ * Haken wird voll und der Titel geht nach `olive-mid` — dieselben drei
+ * Merkmale wie in der App.
+ */
+function DayBlock({
+    top,
+    height,
+    label,
+    title,
+    icon: Icon,
+    exact = true,
+    done = false,
+    snap = false,
+}: {
+    top: number;
+    height: number;
+    /** Die Zeile über dem Titel: Spanne bei fester Uhrzeit, sonst der Anker. */
+    label: string;
+    title: string;
+    icon: typeof Sun;
+    exact?: boolean;
+    done?: boolean;
+    /** Fährt der Block gerade an seinen Platz? */
+    snap?: boolean;
+}) {
+    return (
+        <div
+            className={cn('absolute right-0', snap && 'intro-snap')}
+            // Dieselbe Mindesthöhe wie im echten Raster (`MIN_BLOCK_HEIGHT`):
+            // Darunter bleibt vom Titel ein Wort und drei Punkte.
+            style={{ top, height: Math.max(height, 44), left: GUTTER }}
+        >
+            <div
+                className={cn(
+                    'flex h-full overflow-hidden rounded-[10px]',
+                    exact
+                        ? 'border-l-[3px] border-primary'
+                        : 'border-l-[3px] border-dashed border-olive-mid',
+                    done ? 'bg-accent' : 'bg-track',
+                )}
+            >
+                <span className="flex min-w-0 flex-1 items-start gap-2 px-2.5 py-1">
+                    <span
+                        className={cn(
+                            'mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-lg',
+                            done
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-sand text-primary',
+                        )}
+                    >
+                        <Icon className="size-3.5" strokeWidth={1.75} />
+                    </span>
+
+                    <span className="min-w-0 flex-1">
+                        <span className="type-eyebrow block truncate text-muted-foreground">
+                            {label}
+                        </span>
+                        <span
+                            className={cn(
+                                'block truncate text-[13px] leading-tight font-semibold',
+                                done ? 'text-olive-mid' : 'text-foreground',
+                            )}
+                        >
+                            {title}
+                        </span>
+                    </span>
+                </span>
+
+                <span className="flex w-11 shrink-0 items-center justify-center self-stretch">
+                    <span
+                        className={cn(
+                            'flex size-6 items-center justify-center rounded-full',
+                            done ? 'bg-primary' : 'hollow border-2',
+                        )}
+                    >
+                        {done && (
+                            <Check
+                                className="size-3.5 text-primary-foreground"
+                                strokeWidth={2.5}
+                            />
+                        )}
+                    </span>
+                </span>
+            </div>
+        </div>
+    );
+}
+
+/** Eine Vorlesung im Raster, wie {@see CourseBlock} sie zeichnet. */
+function DayCourse({
+    top,
+    height,
+    range,
+    title,
+}: {
+    top: number;
+    height: number;
+    range: string;
+    title: string;
+}) {
+    return (
+        <div className="absolute right-0" style={{ top, height, left: GUTTER }}>
+            <div className="flex h-full w-full items-center gap-2.5 overflow-hidden rounded-xl border-l-[3px] border-l-olive-mid bg-sand px-2.5 py-2">
+                <GraduationCap
+                    className="size-5 shrink-0 text-olive-mid"
+                    strokeWidth={1.5}
+                />
+                <span className="min-w-0 flex-1">
+                    <span className="type-eyebrow block truncate text-olive-mid">
+                        {range}
+                    </span>
+                    <span className="block truncate text-sm font-semibold text-foreground">
+                        {title}
+                    </span>
+                </span>
+            </div>
+        </div>
+    );
+}
+
+/**
+ * Der Kalendertag, wie ihn die App zeigt.
+ *
+ * Nachgebaut in klein, aber Stück für Stück dasselbe: die Datumszeile mit den
+ * beiden Pfeilen, der Weg zurück in den Monat, der Knopf „Tag neu ordnen" mit
+ * der Figur davor, und darunter das Raster auf seiner Blattkarte — Stunden
+ * links in `text-faintest`, Haarlinien in `border`, die Aufsteh-Marke an ihrer
+ * echten Minute.
+ *
+ * Der echte Tag rechnet seine Höhen aus Aufsteh- und Schlafenszeit und legt
+ * jeden Block über `PlacedBlock` hinein. Hier stehen die Minuten fest — es ist
+ * ein Bild und kein Kalender.
  */
 function PhoneDay() {
-    /** Eine Stunde in Pixeln — dieselbe Rechnung wie im echten Raster. */
-    const HOUR = 62;
-    const from = 8;
-    const hours = [8, 9, 10, 11, 12, 13];
-
-    const at = (time: number) => (time - from) * HOUR;
+    const hours = [8, 9, 10, 11, 12];
 
     return (
-        <div className="flex flex-col gap-4">
-            <p className="type-eyebrow text-muted-foreground">
-                Mittwoch, 9. September
-            </p>
+        <div className="flex flex-col gap-3">
+            <header className="flex items-center gap-2">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-full text-primary opacity-30">
+                    <ChevronLeft className="size-5" />
+                </span>
+                <span className="flex-1 text-center text-[16px] leading-tight font-bold text-primary">
+                    Heute · Mittwoch, 9. September
+                </span>
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-full text-primary">
+                    <ChevronRight className="size-5" />
+                </span>
+            </header>
 
-            <div className="relative" style={{ height: hours.length * HOUR }}>
-                {hours.map((hour) => (
+            <div className="flex items-center justify-center">
+                <span className="flex items-center gap-1.5 text-sm font-semibold text-primary">
+                    <LayoutGrid className="size-3.5" />
+                    Monat
+                </span>
+            </div>
+
+            {/* Der Knopf, mit dem die KI den Tag umsortiert — die Figur steht
+                davor, weil hier die KI spricht (§8). */}
+            <div className="flex justify-center">
+                <span className="inline-flex h-11 items-center gap-2 rounded-full border border-primary/25 bg-accent px-5 text-sm font-semibold text-primary">
+                    <AiMascot variant="mark" className="size-4 shrink-0" />
+                    Tag neu ordnen
+                </span>
+            </div>
+
+            <div className="rounded-2xl bg-card px-4 py-5">
+                <div className="relative" style={{ height: 5.75 * HOUR }}>
+                    {hours.map((hour) => (
+                        <div
+                            key={hour}
+                            className="absolute inset-x-0 flex h-0 items-center gap-2"
+                            style={{ top: at(hour) }}
+                        >
+                            <span
+                                className="shrink-0 pr-2 text-right text-[11px] leading-none font-medium text-faintest tabular-nums"
+                                style={{ width: GUTTER }}
+                            >
+                                {String(hour).padStart(2, '0')}:00
+                            </span>
+                            <span className="h-px flex-1 bg-border" />
+                        </div>
+                    ))}
+
+                    {/* Die Aufsteh-Marke an ihrer echten Minute. */}
                     <div
-                        key={hour}
-                        className="absolute inset-x-0 flex h-0 items-center gap-2"
-                        style={{ top: at(hour) }}
+                        className="absolute inset-x-0 flex h-0 -translate-y-1/2 items-center gap-2"
+                        style={{ top: at(7) }}
                     >
-                        <span className="w-8 shrink-0 pr-2 text-right text-[11px] leading-none font-medium text-faintest tabular-nums">
-                            {String(hour).padStart(2, '0')}
+                        <span
+                            className="flex shrink-0 items-center justify-end gap-1 pr-1.5 text-[11px] leading-none font-semibold text-foreground tabular-nums"
+                            style={{ width: GUTTER }}
+                        >
+                            <Sun className="size-3" strokeWidth={2} />
+                            07:00
                         </span>
                         <span className="h-px flex-1 bg-border" />
                     </div>
-                ))}
 
-                {/* Die Vorlesung: feste Stunde, also durchgezogene Kante. */}
-                <div
-                    className="absolute right-0 left-10 overflow-hidden rounded-xl border-l-[3px] border-olive-mid bg-sand px-3 py-2"
-                    style={{ top: at(10), height: 1.5 * HOUR - 6 }}
-                >
-                    <p className="flex items-center gap-1.5 text-[12px] leading-none font-semibold text-olive-mid">
-                        <GraduationCap className="size-3.5" strokeWidth={1.5} />
-                        10:00 – 11:30
-                    </p>
-                    <p className="mt-1 text-[14px] leading-snug font-semibold">
-                        Statistik
-                    </p>
-                </div>
+                    {/* Was heute schon getan ist. */}
+                    <DayBlock
+                        top={at(8)}
+                        height={0.5 * HOUR - 4}
+                        label="08:00 – 08:30"
+                        title="Frühstücken"
+                        icon={Sun}
+                        done
+                    />
 
-                {/* Die Gewohnheit rastet darunter ein. Gestrichelt, weil sie
-                    an der Vorlesung hängt und nicht an einer Uhrzeit. Das ist
-                    die eine Stelle des Films, an der die Feder gilt: §4
-                    erlaubt Überschwingen nur, wenn etwas einrastet. */}
-                <div
-                    className="intro-snap absolute right-0 left-10 overflow-hidden rounded-xl border-l-[3px] border-dashed border-primary bg-card px-3 py-2 shadow-[var(--shadow-lift)]"
-                    style={{ top: at(11.75), height: 0.78 * HOUR }}
-                >
-                    <p className="text-[11px] leading-none font-semibold text-muted-foreground">
-                        nach der Vorlesung
-                    </p>
-                    <p className="mt-1 truncate text-[14px] leading-snug font-semibold">
-                        Karteikarten wiederholen
-                    </p>
+                    <DayCourse
+                        top={at(10)}
+                        height={1.5 * HOUR - 4}
+                        range="10:00 – 11:30"
+                        title="Englisch"
+                    />
+
+                    {/* Die Gewohnheit rastet nach der Vorlesung ein.
+                        Gestrichelt, weil sie an einem Moment hängt und nicht
+                        an einer Uhrzeit — und das ist die eine Stelle des
+                        Films, an der die Feder gilt: §4 erlaubt Überschwingen
+                        nur, wenn etwas einrastet. */}
+                    <DayBlock
+                        top={at(11.75)}
+                        height={0.75 * HOUR}
+                        label="nach der Vorlesung"
+                        title="Karteikarten wiederholen"
+                        icon={LayoutGrid}
+                        exact={false}
+                        snap
+                    />
                 </div>
             </div>
         </div>
@@ -389,17 +585,24 @@ const FLASHCARDS: Habit = {
     appointmentDays: [],
 };
 
-/** Die zweite Zeile der Liste — erledigt, damit die Quote stimmt. */
-const MORNING_WALK: Habit = {
+/**
+ * Was heute schon getan ist — dieselbe Gewohnheit wie im Kalendertag.
+ *
+ * Sie steht in der Liste, weil die Quote darüber sonst nicht aufgeht: „1 von 2
+ * Gewohnheiten" mit einer einzigen Zeile darunter ist eine Rechnung, die man
+ * nachprüft und die nicht stimmt.
+ */
+const BREAKFAST: Habit = {
     ...FLASHCARDS,
     id: -3,
-    title: 'Spazieren gehen',
-    scheduleLabel: 'nach dem Aufstehen',
-    repeatLabel: 'nach dem Aufstehen',
-    behaviorType: 'movement',
-    templateKey: 'spazieren',
-    measureLabel: '20 Min',
-    completedAt: '07:20',
+    title: 'Frühstücken',
+    scheduleLabel: '08:00',
+    timeLabel: '08:00',
+    repeatLabel: 'täglich',
+    behaviorType: 'nutrition',
+    templateKey: 'fruehstuecken',
+    measureLabel: '30 Min',
+    completedAt: '08:30',
 };
 
 /** Dieselbe Gewohnheit, am Donnerstag zu zweit. */
@@ -504,7 +707,7 @@ export const INTRO_SCENES: IntroScene[] = [
                 Ruhe zu kochen.
             </>
         ),
-        chapter: 'Essen',
+        chapter: 'Ernährung',
         duration: 7000,
         visual: (
             <IntroClip
@@ -517,14 +720,15 @@ export const INTRO_SCENES: IntroScene[] = [
         id: 'freunde',
         headline: (
             <>
-                Deine Lerngruppe siehst du täglich. Deine Freunde{' '}
+                Deine Dozenten siehst du fast täglich. Deine Freunde{' '}
                 <Mark>seit zwei Wochen nicht</Mark>.
             </>
         ),
         aside: (
             <>
-                <Strong>Das hat nichts mit Faulheit zu tun.</Strong> In einem
-                vollen Semester hat nichts davon einen festen Platz im Tag.
+                <Strong>Es liegt nicht am Wollen.</Strong> Die Uni füllt den
+                Tag, und was keinen festen Platz darin hat, fällt als Erstes
+                weg.
             </>
         ),
         chapter: 'Freunde',
@@ -650,22 +854,16 @@ export const INTRO_SCENES: IntroScene[] = [
         duration: 6000,
         visual: (
             <IntroPhone title="Übersicht">
-                {/* Feste Schriftgrade statt `type-display`: Die Stufe rechnet
-                    in `vw` und meint damit das Fenster, nicht dieses Telefon.
-                    Im Gerät stünde sonst eine Begrüßung in Plakatgröße. Die
-                    Werte hier sind die, die die Stufe auf einem Telefon
-                    ohnehin ergibt. */}
-                <div className="flex flex-col gap-6">
-                    <div>
-                        <p className="text-[28px] leading-[1.05] font-bold tracking-[-0.025em] text-primary">
-                            Guten Morgen, Berkay.
-                        </p>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                            Mittwoch, 9. September
-                        </p>
-                    </div>
+                {/* Die Übersicht, ein Stück gescrollt. Das ist kein Kniff,
+                    sondern der Zustand, in dem man diesen Bildschirm meistens
+                    sieht — und er stellt das Feature in die Mitte statt ans
+                    untere Ende. Vom Fortschritt bleibt der Balken mit seinen
+                    beiden Zeilen; Begrüßung und Prozentzahl liegen darüber,
+                    außerhalb des Bildes.
 
-                    {/* Die einzige gehobene Fläche der Seite. */}
+                    Feste Schriftgrade statt `type-display`: Die Stufe rechnet
+                    in `vw` und meint damit das Fenster, nicht dieses Telefon. */}
+                <div className="-mt-20 flex flex-col gap-6">
                     <div className="rounded-2xl bg-card px-6 py-7 shadow-[var(--shadow-lift)]">
                         <p className="type-eyebrow text-muted-foreground">
                             Heute
@@ -694,27 +892,54 @@ export const INTRO_SCENES: IntroScene[] = [
                     </div>
 
                     <div>
-                        <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                                <h2 className="type-subheading">
-                                    Heutige Gewohnheiten
-                                </h2>
-                                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                                    Was heute ansteht, von früh nach spät.
-                                </p>
-                            </div>
-                            <span className={cn(OUTLINE_BUTTON, 'shrink-0')}>
-                                <Plus className="size-4" />
-                                Neu
-                            </span>
-                        </div>
+                        <h2 className="type-subheading">
+                            Heutige Gewohnheiten
+                        </h2>
+                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                            Was heute ansteht, von früh nach spät.
+                        </p>
 
                         <div className="mt-3 rounded-2xl bg-card px-5 py-5">
                             <ul className="flex flex-col gap-6">
+                                <DemoHabitRow habit={BREAKFAST} />
                                 <DemoHabitRow habit={FLASHCARDS_TOGETHER} />
-                                <DemoHabitRow habit={MORNING_WALK} />
                             </ul>
                         </div>
+                    </div>
+
+                    {/* Der Rahmen des Tages, wie {@see SleepCard} ihn zeigt.
+                        Er steht am Fuß der Übersicht und wird von der Bildkante
+                        angeschnitten — er gehört zur Seite, aber nicht zu dem
+                        Satz, der daneben steht. */}
+                    <div className="flex items-center gap-3 rounded-2xl border border-border bg-card px-5 py-4">
+                        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-sand text-primary">
+                            <Moon className="size-5" strokeWidth={1.5} />
+                        </span>
+
+                        <span className="min-w-0 flex-1">
+                            <span className="type-eyebrow text-muted-foreground">
+                                Dein Rahmen
+                            </span>
+                            <span className="mt-0.5 block text-[15px] leading-snug">
+                                <span className="font-semibold">23:00</span>{' '}
+                                <span className="text-muted-foreground">
+                                    Schlafen ·
+                                </span>{' '}
+                                <span className="font-semibold">07:00</span>{' '}
+                                <span className="text-muted-foreground">
+                                    Aufstehen
+                                </span>
+                            </span>
+                            <span className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                                <AlarmClock
+                                    className="size-3.5"
+                                    strokeWidth={1.5}
+                                />
+                                Wecker für morgen früh an
+                            </span>
+                        </span>
+
+                        <ChevronRight className="size-5 shrink-0 text-muted-foreground" />
                     </div>
                 </div>
             </IntroPhone>

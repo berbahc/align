@@ -1022,7 +1022,7 @@
      * dass man die Schrift darin sucht.
      */
     .intro-phone {
-        --intro-phone-scale: 0.62;
+        --intro-phone-scale: 0.58;
 
         flex-shrink: 0;
         transform: scale(var(--intro-phone-scale));
@@ -1031,7 +1031,7 @@
 
     @media (width >= 64rem) {
         .intro-phone {
-            --intro-phone-scale: 0.66;
+            --intro-phone-scale: 0.72;
         }
     }
 
