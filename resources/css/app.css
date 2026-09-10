@@ -926,19 +926,22 @@
     }
 
     /*
-     * Der Grund, auf dem ein Bild aus der App liegt.
+     * Der Grund, in dem das Gerät steht.
      *
-     * Eine glatte Fläche in Seitenfarbe hat wie ein vergessener Kasten
-     * ausgesehen. Ein sehr flacher Verlauf von der oberen Kante nach unten
-     * gibt ihr Tiefe, ohne eine Linie zu ziehen — genau die Art Atmosphäre,
-     * die die Designsprache meint, wenn sie Fläche statt Kontur verlangt.
+     * Ein Foto und kein Verlauf: Blattschatten von links, eine Fläche unten,
+     * sonst nichts. Ein Gerät auf einer glatten Farbfläche sieht aus wie
+     * ausgeschnitten; erst echtes Licht dahinter stellt es in einen Raum.
+     *
+     * Der Filter zieht es in die Palette, wie bei den Clips — und im Dunkeln
+     * dazu die Helligkeit herunter, sonst leuchtete ein beiger Raum hinter
+     * einer dunklen Oberfläche.
      */
-    .intro-ground {
-        background: radial-gradient(
-            120% 90% at 50% 0%,
-            var(--track) 0%,
-            var(--canvas) 72%
-        );
+    .intro-ground-photo {
+        filter: saturate(0.85);
+    }
+
+    .dark .intro-ground-photo {
+        filter: saturate(0.5) brightness(0.3);
     }
 
     .dark .intro-figure {
@@ -1001,5 +1004,91 @@
 
     .dark .intro-clip {
         filter: saturate(0.7) brightness(0.55);
+    }
+
+    /*
+     * Das Gerät, in dem die App steht.
+     *
+     * Alles darin ist in **echten Gerätepixeln** gemaßt — Körper 414,
+     * Bildschirm 390 — und das Ganze wird als ein Stück skaliert. Nur so
+     * bleiben die Bausteine der App die, die sie sind: Sie sind für diese
+     * Breite gezeichnet, und ein Formular, das man in 200 Pixel presst,
+     * bricht um und ist dann keine echte Oberfläche mehr, sondern ein
+     * Nachbau.
+     *
+     * `transform-origin: top center` ist der zweite Teil desselben Griffs:
+     * Das Gerät ist höher als die Bühne, hängt oben fest und läuft unten aus
+     * dem Bild. Ein ganzes Telefon in einer 19rem hohen Fläche wäre so klein,
+     * dass man die Schrift darin sucht.
+     */
+    .intro-phone {
+        --intro-phone-scale: 0.62;
+
+        flex-shrink: 0;
+        transform: scale(var(--intro-phone-scale));
+        transform-origin: top center;
+    }
+
+    @media (width >= 64rem) {
+        .intro-phone {
+            --intro-phone-scale: 0.66;
+        }
+    }
+
+    /*
+     * Der Körper. In beiden Themen dasselbe warme Schwarz: Ein Telefon
+     * wechselt seine Farbe nicht, wenn die App es tut. Der helle Saum innen
+     * ist die Glaskante, die zweite Lage außen der Auflageschatten — das
+     * Gerät soll auf der Fläche stehen und nicht darauf kleben.
+     */
+    .intro-phone-body {
+        position: relative;
+        width: 414px;
+        padding: 12px;
+        border-radius: 54px;
+        background: linear-gradient(
+            160deg,
+            #2a231a 0%,
+            #14100b 55%,
+            #241d15 100%
+        );
+        box-shadow:
+            inset 0 0 0 1.5px rgba(255, 255, 255, 0.14),
+            0 2px 6px rgba(61, 47, 20, 0.18),
+            0 40px 70px -30px rgba(61, 47, 20, 0.55);
+    }
+
+    .dark .intro-phone-body {
+        box-shadow:
+            inset 0 0 0 1.5px rgba(255, 255, 255, 0.1),
+            0 2px 6px rgba(0, 0, 0, 0.6),
+            0 40px 70px -30px rgba(0, 0, 0, 0.9);
+    }
+
+    /*
+     * Der Bildschirm. 390 Pixel breit, also genau die Breite, für die die
+     * App gebaut ist, und mindestens so hoch wie ein Telefon — was unten
+     * übersteht, schneidet die Bühne ab.
+     */
+    .intro-phone-screen {
+        overflow: hidden;
+        width: 390px;
+        min-height: 844px;
+        border-radius: 42px;
+    }
+
+    /* Die Insel liegt über dem Bildschirm: Sie gehört zum Gerät, nicht zur
+       App. Deshalb auch hier das Schwarz des Körpers und nicht das der
+       Oberfläche. */
+    .intro-phone-island {
+        position: absolute;
+        z-index: 1;
+        top: 22px;
+        left: 50%;
+        width: 118px;
+        height: 32px;
+        transform: translateX(-50%);
+        border-radius: 999px;
+        background: #0b0906;
     }
 }

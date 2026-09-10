@@ -95,6 +95,11 @@ test('a habit needs a quarter hour of air after the lecture', function () {
 });
 
 test('one colliding weekday out of five is enough to refuse', function () {
+    // Die Uhr steht fest auf einem Montag: Fällt der Kurstag auf heute, nennt
+    // die App ihn „Heute" statt beim Namen — richtig, aber nicht das, was
+    // dieser Test prüft. Ohne den festen Tag fällt er jeden Donnerstag um.
+    Carbon::setTestNow(Carbon::parse('2026-09-07 09:00'));
+
     $user = studentWithCourse(weekday: 4);
 
     $this->actingAs($user)
