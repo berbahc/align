@@ -28,5 +28,8 @@ yarn-error.log
 /.vscode
 /.zed
 
-# Aus der Git-Historie erzeugt — siehe app/Console/Commands/GenerateDokumentation.php
-/Dokumentation.md
+# Die persönlichen Rechte-Einstellungen des Claude-Werkzeugs — sie gehören auf
+# den jeweiligen Rechner, nicht ins Repository.
+/.claude/settings.local.json
+.env.local
+.env.*.local

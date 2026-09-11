@@ -1,13 +1,13 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/react-starter-kit",
+    "name": "align/align",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
+    "description": "Align — eine Web-App, die Studierenden hilft, Gewohnheiten im Uni-Alltag aufzubauen.",
     "keywords": [
         "laravel",
         "framework"
     ],
-    "license": "MIT",
+    "license": "proprietary",
     "require": {
         "php": "^8.3",
         "inertiajs/inertia-laravel": "^3.0",
@@ -48,7 +48,7 @@
             "composer install",
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
             "@php artisan key:generate",
-            "@php artisan migrate --force",
+            "@php artisan migrate --force --seed",
             "npm install",
             "npm run build"
         ],

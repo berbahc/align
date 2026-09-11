@@ -2,10 +2,15 @@
 
 namespace Database\Seeders;
 
+use App\Enums\CourseKind;
 use App\Enums\HabitTemplate;
 use App\Enums\MeasureUnit;
 use App\Enums\ScheduleType;
+use App\Models\Appointment;
+use App\Models\Course;
+use App\Models\Friendship;
 use App\Models\Habit;
+use App\Models\Semester;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -61,6 +66,22 @@ class DatabaseSeeder extends Seeder
         ],
     ];
 
+    /**
+     * Ein Stundenplan, wie ihn ein Semester hergibt.
+     *
+     * Vier Termine über die Woche, vormittags — damit „nach der Vorlesung"
+     * einen Anker hat, an dem es hängen kann, und der Kalender nicht als
+     * leeres Raster aufgeht.
+     *
+     * @var list<array{title: string, kind: CourseKind, weekday: int, from: string, to: string, location: string}>
+     */
+    private const array DemoCourses = [
+        ['title' => 'Analysis I', 'kind' => CourseKind::Vorlesung, 'weekday' => 1, 'from' => '08:15', 'to' => '09:45', 'location' => 'H2'],
+        ['title' => 'Statistik', 'kind' => CourseKind::Vorlesung, 'weekday' => 2, 'from' => '10:00', 'to' => '11:30', 'location' => 'H4'],
+        ['title' => 'Analysis I', 'kind' => CourseKind::Uebung, 'weekday' => 3, 'from' => '10:00', 'to' => '11:30', 'location' => 'S12'],
+        ['title' => 'Englisch', 'kind' => CourseKind::Seminar, 'weekday' => 4, 'from' => '10:00', 'to' => '11:30', 'location' => 'S3'],
+    ];
+
     public function run(): void
     {
         $user = User::factory()->create([
@@ -70,7 +91,82 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $this->seedSleepScheduleFor($user);
-        $this->seedHabitsFor($user);
+        $this->seedSemesterFor($user);
+        $habits = $this->seedHabitsFor($user);
+        $this->seedCommunityFor($user, $habits);
+
+        // Ein zweites, leeres Konto: Wer sehen will, wie die App jemanden
+        // empfängt, kann sich nicht mit einem eingerichteten anmelden. Es
+        // landet im Onboarding und bekommt den Auftakt zu sehen.
+        User::factory()->notOnboarded()->create([
+            'name' => 'Neu Hier',
+            'email' => 'neu@example.com',
+        ]);
+    }
+
+    /**
+     * Das laufende Semester mit seinem Stundenplan.
+     *
+     * Ohne ihn ist die Hälfte des Kalenders leer, und der Anker „nach der
+     * Vorlesung" hängt an nichts — die Gewohnheit läge dann irgendwo im Tag
+     * statt hinter einem Block.
+     */
+    private function seedSemesterFor(User $user): void
+    {
+        $semester = Semester::factory()->for($user)->create();
+
+        foreach (self::DemoCourses as $course) {
+            Course::factory()
+                ->for($semester)
+                ->onWeekday($course['weekday'])
+                ->at($course['from'], $course['to'])
+                ->create([
+                    'title' => $course['title'],
+                    'kind' => $course['kind'],
+                    'location' => $course['location'],
+                ]);
+        }
+    }
+
+    /**
+     * Zwei Bekannte, eine offene Anfrage und eine Verabredung.
+     *
+     * Der Community-Bereich hat sonst nichts zu zeigen, obwohl er ein Drittel
+     * der App ausmacht. Beide Zustände sind vertreten: bestätigt und wartend —
+     * sie sehen verschieden aus, und das ist der Punkt (§7.3).
+     *
+     * @param  list<Habit>  $habits
+     */
+    private function seedCommunityFor(User $user, array $habits): void
+    {
+        $lea = User::factory()->create(['name' => 'Lea Hofmann', 'email' => 'lea@example.com', 'onboarded_at' => now()]);
+        $jonas = User::factory()->create(['name' => 'Jonas Winkler', 'email' => 'jonas@example.com', 'onboarded_at' => now()]);
+        $mia = User::factory()->create(['name' => 'Mia Berger', 'email' => 'mia@example.com', 'onboarded_at' => now()]);
+
+        Friendship::factory()->accepted()->create([
+            'requester_id' => $user->id,
+            'addressee_id' => $lea->id,
+        ]);
+
+        Friendship::factory()->accepted()->create([
+            'requester_id' => $jonas->id,
+            'addressee_id' => $user->id,
+        ]);
+
+        // Wartet auf Antwort: So sieht die Anfrage aus, die oben auf der
+        // Übersicht liegt.
+        Friendship::factory()->create([
+            'requester_id' => $mia->id,
+            'addressee_id' => $user->id,
+        ]);
+
+        // Eine Zusage für übermorgen, damit „Verabredungen" nicht leer ist.
+        Appointment::factory()->accepted()->create([
+            'habit_id' => $habits[1]->id,
+            'requester_id' => $user->id,
+            'invitee_id' => $lea->id,
+            'scheduled_for' => Carbon::today()->addDays(2),
+        ]);
     }
 
     /**
@@ -92,9 +188,13 @@ class DatabaseSeeder extends Seeder
         }
     }
 
-    private function seedHabitsFor(User $user): void
+    /**
+     * @return list<Habit>
+     */
+    private function seedHabitsFor(User $user): array
     {
         $today = Carbon::today();
+        $habits = [];
 
         foreach (self::DemoHabits as $position => $demo) {
             $template = $demo['template'];
@@ -120,7 +220,11 @@ class DatabaseSeeder extends Seeder
             // Die erste Gewohnheit ist heute erledigt, die übrigen stehen noch
             // offen — beide Zustände sind so sichtbar.
             $this->seedCompletionsFor($habit, $demo['consistency'], $today, $position === 0);
+
+            $habits[] = $habit;
         }
+
+        return $habits;
     }
 
     private function seedCompletionsFor(Habit $habit, float $consistency, Carbon $today, bool $completedToday): void
