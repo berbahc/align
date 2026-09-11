@@ -55,7 +55,7 @@ export default function Register({ passwordRules }: Props) {
                                     autoCapitalize="none"
                                     spellCheck={false}
                                     name="username"
-                                    placeholder="berkay"
+                                    placeholder="max_23"
                                 />
                                 <p className="text-xs text-muted-foreground">
                                     So finden dich Freunde. Kleinbuchstaben,

@@ -48,7 +48,7 @@ export default function Profile() {
                                     name="name"
                                     required
                                     autoComplete="name"
-                                    placeholder="Full name"
+                                    placeholder="Vor- und Nachname"
                                 />
 
                                 <InputError
@@ -69,7 +69,7 @@ export default function Profile() {
                                     autoComplete="off"
                                     autoCapitalize="none"
                                     spellCheck={false}
-                                    placeholder="berkay"
+                                    placeholder="max_23"
                                 />
 
                                 <p className="text-xs text-muted-foreground">
@@ -94,7 +94,7 @@ export default function Profile() {
                                     name="email"
                                     required
                                     autoComplete="email"
-                                    placeholder="Email address"
+                                    placeholder="email@example.com"
                                 />
 
                                 <InputError
