@@ -6,17 +6,61 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 > nächsten Commit verloren. Sie entsteht neu mit `php artisan dokumentation:generate`
 > und läuft nach jedem Commit sowie nach jedem Pull von selbst.
 
-**Stand:** 11.09.2026 13:59 · **146 Commits** · erster Eintrag 02.08.2026
+**Stand:** 11.09.2026 14:07 · **148 Commits** · erster Eintrag 02.08.2026
+
+> **1 Commit ist noch nicht gepusht** — nur auf diesem Rechner sichtbar.
 
 ## Beteiligte
 
-- **berbahc** — 108 Commits, zuletzt am 11.09.2026
+- **berbahc** — 110 Commits, zuletzt am 11.09.2026
 - **Silas2505** — 36 Commits, zuletzt am 07.09.2026
 - **berbahc** — 2 Commits, zuletzt am 04.08.2026
 
 ---
 
 ## 11.09.2026
+
+### fix: die Platzhalter zeigen die Regel, nicht eine Person
+
+`0a8be14` · **berbahc** · 14:07 Uhr · ⚠️ nur lokal
+
+> Im Registrierungsformular stand „berkay" als Beispiel für den Username —
+> derselbe Name auch in den Profileinstellungen. Ein Platzhalter soll zeigen,
+> was erlaubt ist: Kleinbuchstaben, Ziffern, Unterstrich. „max_23" tut das,
+> ein Vorname tut es nicht.
+>
+> Dabei sind die letzten englischen Platzhalter mitgegangen. Sie standen in den
+> Einstellungen („Full name", „Current password") und im Passkey-Feld, während
+> alles daneben deutsch ist. Der Passkey-Baustein war ohnehin noch ganz
+> englisch — er kam so aus dem Starter-Kit und ist nie übersetzt worden.
+>
+> Claude-Session: https://claude.ai/code/session_01TpmLvQkYiNDdkKKpUpHPKi
+
+<details><summary>5 Dateien · +15/−15</summary>
+
+- `resources/js/components/delete-user.tsx` +1/−1
+- `resources/js/components/passkey-register.tsx` +7/−7
+- `resources/js/pages/auth/register.tsx` +1/−1
+- `resources/js/pages/settings/profile.tsx` +3/−3
+- `resources/js/pages/settings/security.tsx` +3/−3
+
+</details>
+
+### docs: Dokumentation.md auf den Stand der Abgabe
+
+`b332c1f` · **berbahc** · 13:59 Uhr
+
+> Der Hook schreibt die Datei nach jedem Commit neu. Seit sie in der
+> Versionsverwaltung liegt, hinterlässt er damit eine Änderung, die mit
+> committet werden will — dieser Stand enthält alle 146 Commits.
+>
+> Claude-Session: https://claude.ai/code/session_01TpmLvQkYiNDdkKKpUpHPKi
+
+<details><summary>1 Datei · +52/−5</summary>
+
+- `Dokumentation.md` +52/−5
+
+</details>
 
 ### docs: das Repository als Abgabe
 
