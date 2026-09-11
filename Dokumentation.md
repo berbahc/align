@@ -6,13 +6,11 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 > nächsten Commit verloren. Sie entsteht neu mit `php artisan dokumentation:generate`
 > und läuft nach jedem Commit sowie nach jedem Pull von selbst.
 
-**Stand:** 11.09.2026 13:49 · **145 Commits** · erster Eintrag 02.08.2026
-
-> **1 Commit ist noch nicht gepusht** — nur auf diesem Rechner sichtbar.
+**Stand:** 11.09.2026 13:59 · **146 Commits** · erster Eintrag 02.08.2026
 
 ## Beteiligte
 
-- **berbahc** — 107 Commits, zuletzt am 11.09.2026
+- **berbahc** — 108 Commits, zuletzt am 11.09.2026
 - **Silas2505** — 36 Commits, zuletzt am 07.09.2026
 - **berbahc** — 2 Commits, zuletzt am 04.08.2026
 
@@ -20,9 +18,58 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ## 11.09.2026
 
+### docs: das Repository als Abgabe
+
+`5748212` · **berbahc** · 13:56 Uhr
+
+> Die README war für das Team geschrieben — sie erklärt das Einrichten und die
+> Stolpersteine, aber nicht, was dieses Projekt ist. Für jemanden, der den Link
+> zum ersten Mal öffnet, fehlte genau das. Jetzt steht vorn die Leitfrage, das
+> beobachtete Problem mit den Zahlen aus der eigenen Umfrage, und eine Zeile je
+> Funktion.
+>
+> Dazu drei Dinge, die beim Nachbauen von außen aufgefallen sind:
+>
+> - Die Anleitung setzte Laravel Herd voraus und nannte keinen anderen Weg.
+>   Dabei steht `.env.example` längst auf `localhost:8000` — es fehlte nur der
+>   Hinweis auf `php artisan serve`.
+> - `touch database/database.sqlite` ist überflüssig: `migrate --force` legt die
+>   Datei selbst an.
+> - `APP_NAME` stand auf `Laravel`. Ein frischer Klon nannte sich im Browsertab
+>   also nach dem Framework statt nach der App.
+>
+> Der Seeder füllte bisher nur die Hälfte der App. `/community` und der
+> Semesterteil des Kalenders gingen leer auf, obwohl es für beide Factories und
+> gut 150 Tests gibt — wer durchklickte, musste sie für unfertig halten. Jetzt
+> kommen ein Semester mit Stundenplan, zwei Bekannte, eine offene Anfrage und
+> eine Verabredung dazu. Und ein zweites, leeres Konto: Wer sehen will, wie die
+> App jemanden empfängt, kann sich nicht mit einem eingerichteten anmelden.
+>
+> `Dokumentation.md` liegt nicht mehr außerhalb der Versionsverwaltung. Sie
+> erzählt 145 Commits auf Deutsch und war bisher nur auf einem Rechner sichtbar.
+> Der Hook, der sie nach jedem Commit neu schreibt, hinterlässt damit eine
+> Änderung im Arbeitsbaum — vorher war das egal, weil die Datei ignoriert war.
+>
+> Die Lizenzangabe stand auf MIT, ohne dass es eine Lizenzdatei gab. Für eine
+> Studienarbeit ist `proprietary` die ehrlichere Angabe.
+>
+> Claude-Session: https://claude.ai/code/session_01TpmLvQkYiNDdkKKpUpHPKi
+
+<details><summary>7 Dateien · +6304/−74</summary>
+
+- `.env.example` +4/−1
+- `.gitignore` +5/−2
+- `Dokumentation.md` +6036/−0
+- `README.md` +145/−65
+- `composer.json` +4/−4
+- `database/seeders/DatabaseSeeder.php` +106/−2
+- `package.json` +4/−0
+
+</details>
+
 ### fix: die statische Analyse hat nichts mehr zu melden
 
-`4911755` · **berbahc** · 13:46 Uhr · ⚠️ nur lokal
+`4911755` · **berbahc** · 13:46 Uhr
 
 > `composer ci:check` scheiterte an 21 PHPStan-Fehlern, und die CI war deshalb
 > rot — auf der Startseite des Repositorys stand neben dem letzten Commit ein
