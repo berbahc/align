@@ -312,7 +312,7 @@ class Appointment extends Model
         $habits = $user->habits()->active()->get();
         $habits->each(fn (Habit $habit) => $habit->setRelation('user', $user));
 
-        return $pending
+        return array_values($pending
             ->map(fn (self $appointment): array => [
                 'id' => $appointment->id,
                 // Wer fragt — als Kennung und nicht nur als Name: Fragt
@@ -340,7 +340,7 @@ class Appointment extends Model
                 // hinterher in den Kalender.
                 'replaces' => self::replacedRow($appointment->replaces($user, $habits)),
             ])
-            ->all();
+            ->all());
     }
 
     /**
@@ -604,14 +604,17 @@ class Appointment extends Model
      */
     public static function acceptedDaysBetween(User $user, Carbon $from, Carbon $to): array
     {
-        return self::query()
-            ->involving($user)
-            ->accepted()
-            ->whereDate('scheduled_for', '>=', $from)
-            ->whereDate('scheduled_for', '<=', $to)
-            ->pluck('scheduled_for')
-            ->mapWithKeys(fn (CarbonInterface $day): array => [$day->toDateString() => true])
-            ->all();
+        return array_fill_keys(
+            array_values(self::query()
+                ->involving($user)
+                ->accepted()
+                ->whereDate('scheduled_for', '>=', $from)
+                ->whereDate('scheduled_for', '<=', $to)
+                ->pluck('scheduled_for')
+                ->map(fn (CarbonInterface $day): string => $day->toDateString())
+                ->all()),
+            true,
+        );
     }
 
     /**

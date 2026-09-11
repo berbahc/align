@@ -105,7 +105,7 @@ class HandleInertiaRequests extends Middleware
 
         $today = Carbon::today();
 
-        return $user->habits()
+        return array_values($user->habits()
             ->active()
             ->where('reminder_enabled', true)
             ->where('schedule_type', ScheduleType::Fixed->value)
@@ -135,6 +135,6 @@ class HandleInertiaRequests extends Middleware
                 'scheduledDays' => $habit->scheduled_days ?? [],
                 'completedToday' => (bool) $habit->completed_today,
             ])
-            ->all();
+            ->all());
     }
 }

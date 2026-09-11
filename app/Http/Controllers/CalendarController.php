@@ -514,7 +514,7 @@ class CalendarController extends Controller
      */
     private function appointmentBlocks(Collection $appointments, User $user): array
     {
-        return $appointments
+        return array_values($appointments
             ->filter(fn (Appointment $appointment): bool => $appointment->requester_id !== $user->id)
             ->map(function (Appointment $appointment) use ($user): array {
                 $habit = $appointment->habit;
@@ -558,7 +558,7 @@ class CalendarController extends Controller
                 ];
             })
             ->values()
-            ->all();
+            ->all());
     }
 
     /**

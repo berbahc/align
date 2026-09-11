@@ -38,6 +38,8 @@ class ProposeAppointmentRequest extends FormRequest
 
     /**
      * Die Bedingungen, unter denen eine Verabredung überhaupt entstehen kann.
+     *
+     * @return list<\Closure>
      */
     public function after(): array
     {

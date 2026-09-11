@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\CarbonImmutable;
 use Database\Factories\FriendshipFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -21,7 +22,7 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property int $requester_id
  * @property int $addressee_id
- * @property Carbon|null $accepted_at
+ * @property CarbonImmutable|null $accepted_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -101,13 +102,13 @@ class Friendship extends Model
      */
     public static function pendingFor(User $user): array
     {
-        return self::query()
+        return array_values(self::query()
             ->pending()
             ->where('addressee_id', $user->id)
             ->with('requester')
             ->get()
             ->map(fn (self $friendship): array => $friendship->present($friendship->requester))
-            ->all();
+            ->all());
     }
 
     /**

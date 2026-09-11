@@ -15,6 +15,8 @@ use Illuminate\Support\Str;
  * Damit kann sie nicht von der Wahrheit abweichen — und sie enthält
  * automatisch auch die Commits, die andere gepusht haben, sobald sie durch
  * einen Pull im lokalen Verlauf liegen.
+ *
+ * @phpstan-type Commit array{hash: string, short: string, author: string, date: Carbon, subject: string, body: string, files: list<array{path: string, added: int, removed: int}>, pushed: bool}
  */
 class GenerateDokumentation extends Command
 {
@@ -76,7 +78,7 @@ class GenerateDokumentation extends Command
      * hundert Commits ist der Unterschied zwischen Sekundenbruchteil und
      * spürbarer Wartezeit, und der Hook läuft nach jedem Commit.
      *
-     * @return Collection<int, array{hash: string, short: string, author: string, date: Carbon, subject: string, body: string, files: list<array{path: string, added: int, removed: int}>, pushed: bool}>
+     * @return Collection<int, Commit>
      */
     private function commits(): Collection
     {
@@ -134,7 +136,7 @@ class GenerateDokumentation extends Command
      */
     private function files(string $numstat): array
     {
-        return collect(explode("\n", trim($numstat)))
+        return array_values(collect(explode("\n", trim($numstat)))
             ->filter()
             ->map(function (string $line): ?array {
                 $columns = preg_split('/\t/', trim($line));
@@ -152,11 +154,11 @@ class GenerateDokumentation extends Command
             })
             ->filter()
             ->values()
-            ->all();
+            ->all());
     }
 
     /**
-     * @param  Collection<int, array{hash: string, short: string, author: string, date: Carbon, subject: string, body: string, files: list<array{path: string, added: int, removed: int}>, pushed: bool}>  $commits
+     * @param  Collection<int, Commit>  $commits
      */
     private function render(Collection $commits): string
     {
@@ -190,7 +192,7 @@ class GenerateDokumentation extends Command
     }
 
     /**
-     * @param  Collection<int, array{date: Carbon, pushed: bool, ...}>  $commits
+     * @param  Collection<int, Commit>  $commits
      */
     private function summary(Collection $commits): string
     {
@@ -215,7 +217,7 @@ class GenerateDokumentation extends Command
     }
 
     /**
-     * @param  Collection<int, array{author: string, date: Carbon, ...}>  $commits
+     * @param  Collection<int, Commit>  $commits
      */
     private function contributors(Collection $commits): string
     {

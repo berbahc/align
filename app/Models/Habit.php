@@ -10,6 +10,7 @@ use App\Enums\ScheduleType;
 use App\Http\Requests\Concerns\ChecksSituation;
 use App\Support\DayPlan;
 use App\Support\Timetable;
+use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Database\Factories\HabitFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -42,11 +43,15 @@ use Illuminate\Support\Collection;
  * @property MeasureUnit|null $target_unit
  * @property int $position
  * @property Carbon|null $committed_at
- * @property Carbon|null $graduated_at
+ * @property CarbonImmutable|null $graduated_at
  * @property Carbon|null $displaced_at
  * @property Carbon|null $streak_hidden_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ *
+ * Kein Feld der Tabelle, sondern das Ergebnis eines `withExists` — es steht
+ * nur da, wenn die Abfrage danach gefragt hat, und sonst gar nicht.
+ * @property-read bool|null $completed_today
  */
 #[Fillable(['title', 'template_key', 'schedule_type', 'trigger_situation', 'scheduled_time', 'scheduled_days', 'scheduled_times', 'chained_to_habit_id', 'reminder_enabled', 'motivation', 'smallest_step', 'behavior_type', 'target_amount', 'target_unit', 'position', 'committed_at'])]
 class Habit extends Model
@@ -940,11 +945,14 @@ class Habit extends Model
             return null;
         }
 
+        // Die App-Locale ist nicht deutsch, die Oberfläche schon.
+        $weekday = $from->copy()->addDays($days);
+        $weekday->locale('de');
+
         return match ($days) {
             0 => 'heute',
             1 => 'morgen',
-            // Die App-Locale ist nicht deutsch, die Oberfläche schon.
-            default => 'am '.$from->copy()->addDays($days)->locale('de')->isoFormat('dddd'),
+            default => 'am '.$weekday->isoFormat('dddd'),
         };
     }
 

@@ -46,7 +46,12 @@ class DashboardController extends Controller
             // und die Karte sagt nichts, was die Zeile nicht schon sagt. Nur
             // eigene Gewohnheiten werden hier geladen, die Anfrage ist also
             // immer die eigene; was andere fragen, steht weiter oben.
-            ->with(['appointments' => fn (Relation $query) => $query->onDate($today)->with('invitee')])
+            // Ausgeschrieben statt über {@see Appointment::onDate()}: In einer
+            // Eager-Load-Closure ist die Beziehung untypisiert, und der Scope
+            // wäre dort nicht mehr als ein Name.
+            ->with(['appointments' => fn (Relation $query) => $query
+                ->whereDate('scheduled_for', $today)
+                ->with('invitee')])
             // Die Serie braucht die ganze Historie, `completions` ist oben aber
             // auf heute eingegrenzt — deshalb die zweite, schmale Relation.
             ->with('completionDates')
@@ -117,7 +122,7 @@ class DashboardController extends Controller
             'upcomingAppointments' => $this->upcomingAppointments(
                 $request->user(),
                 $today,
-                $todaysHabits->pluck('id')->all(),
+                array_values($todaysHabits->map(fn (Habit $habit): int => $habit->id)->all()),
             ),
             'friends' => $request->user()->friends()->map(fn (User $friend): array => [
                 'id' => $friend->id,
@@ -201,7 +206,7 @@ class DashboardController extends Controller
      */
     private function upcomingAppointments(User $user, Carbon $today, array $shownHabitIds): array
     {
-        return Appointment::upcomingFor($user, $today)
+        return array_values(Appointment::upcomingFor($user, $today)
             ->reject(fn (Appointment $appointment): bool => $appointment->awaitsAnswerFrom($user) || (
                 $appointment->scheduled_for->isToday()
                 && (
@@ -220,7 +225,7 @@ class DashboardController extends Controller
                 ...$this->repeat($appointment, $user),
             ])
             ->values()
-            ->all();
+            ->all());
     }
 
     /**
@@ -401,7 +406,7 @@ class DashboardController extends Controller
      */
     private function streaks(Collection $habits, Carbon $today): array
     {
-        return $habits
+        return array_values($habits
             // Was jemand weggeklickt hat, kommt nicht von selbst zurück — der
             // Weg zurück steht im ⋯-Menü der Gewohnheit.
             ->filter(fn (Habit $habit): bool => $habit->streak_hidden_at === null)
@@ -414,7 +419,7 @@ class DashboardController extends Controller
             ->filter(fn (array $streak): bool => $streak['count'] >= Habit::StreakMinimum)
             ->take(self::StreaksShown)
             ->values()
-            ->all();
+            ->all());
     }
 
     /**

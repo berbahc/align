@@ -53,6 +53,8 @@ class AddFriendRequest extends FormRequest
      * Bewusst als `after`-Prüfung: Die Meldungen sollen benennen, was ist, ohne
      * jemanden zu belehren — dieselbe Haltung, die designsprache.md §8 für die
      * ganze Oberfläche festlegt.
+     *
+     * @return list<\Closure>
      */
     public function after(): array
     {

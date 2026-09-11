@@ -567,11 +567,14 @@ class HabitController extends Controller
 
         $time = $habit->scheduled_time?->format('H:i') ?? '';
 
+        // Die App-Locale ist nicht deutsch, die Oberfläche schon.
+        $weekday = $next->copy();
+        $weekday->locale('de');
+
         $day = match (true) {
             $next->isToday() => 'heute',
             $next->isTomorrow() => 'morgen',
-            // Die App-Locale ist nicht deutsch, die Oberfläche schon.
-            default => 'am '.$next->copy()->locale('de')->isoFormat('dddd'),
+            default => 'am '.$weekday->isoFormat('dddd'),
         };
 
         return trim($day.' um '.$time);
