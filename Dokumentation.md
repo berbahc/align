@@ -6,23 +6,70 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 > nächsten Commit verloren. Sie entsteht neu mit `php artisan dokumentation:generate`
 > und läuft nach jedem Commit sowie nach jedem Pull von selbst.
 
-**Stand:** 11.09.2026 14:07 · **148 Commits** · erster Eintrag 02.08.2026
-
-> **1 Commit ist noch nicht gepusht** — nur auf diesem Rechner sichtbar.
+**Stand:** 12.09.2026 11:32 · **150 Commits** · erster Eintrag 02.08.2026
 
 ## Beteiligte
 
-- **berbahc** — 110 Commits, zuletzt am 11.09.2026
-- **Silas2505** — 36 Commits, zuletzt am 07.09.2026
-- **berbahc** — 2 Commits, zuletzt am 04.08.2026
+- **berbahc** — 111 Commits, zuletzt am 11.09.2026
+- **Silas2505** — 37 Commits, zuletzt am 12.09.2026
 
 ---
 
+## 12.09.2026
+
+### docs: der Bericht zieht in das Repository
+
+`0fdb05d` · **Silas2505** · 10:17 Uhr
+
+> Kapitel 1 bis 8 als Markdown, eine Datei pro Kapitel, dazu zehn Screenshots
+> der laufenden App für Kapitel 8. Der Bericht folgt den vier Entwicklungsphasen;
+> die sechs Iterationen sind darin eingeordnet.
+>
+> Offen sind Reflexion, Ausblick und Anhang. Die Konventionen — Wir-Perspektive,
+> keine personenbezogene Zuschreibung im Fließtext — stehen in bericht/README.md.
+
+<details><summary>20 Dateien · +1644/−0</summary>
+
+- `bericht/00-gliederung.md` +95/−0
+- `bericht/01-einleitung.md` +142/−0
+- `bericht/02-problemraum-markt.md` +172/−0
+- `bericht/03-vorgehen.md` +89/−0
+- `bericht/04-phase1-analyse.md` +99/−0
+- `bericht/05-phase2-nutzerforschung.md` +329/−0
+- `bericht/06-phase3-konzeption-design.md` +186/−0
+- `bericht/07-phase4-technische-umsetzung.md` +300/−0
+- `bericht/08-die-fertige-app.md` +185/−0
+- `bericht/README.md` +47/−0
+- `bericht/screenshots/abb01-uebersicht.png` +0/−0
+- `bericht/screenshots/abb02-gewohnheiten.png` +0/−0
+- `bericht/screenshots/abb03-katalog-bereiche.png` +0/−0
+- `bericht/screenshots/abb04-katalog-auswahl.png` +0/−0
+- `bericht/screenshots/abb05-anker.png` +0/−0
+- `bericht/screenshots/abb06-kalender-monat.png` +0/−0
+- `bericht/screenshots/abb07-tagesansicht.png` +0/−0
+- `bericht/screenshots/abb08-schlafplan.png` +0/−0
+- `bericht/screenshots/abb09-community.png` +0/−0
+- `bericht/screenshots/abb10-darkmode.png` +0/−0
+
+</details>
+
 ## 11.09.2026
+
+### docs: Dokumentation.md nachgezogen
+
+`5e7421b` · **berbahc** · 14:07 Uhr
+
+> Claude-Session: https://claude.ai/code/session_01TpmLvQkYiNDdkKKpUpHPKi
+
+<details><summary>1 Datei · +46/−2</summary>
+
+- `Dokumentation.md` +46/−2
+
+</details>
 
 ### fix: die Platzhalter zeigen die Regel, nicht eine Person
 
-`0a8be14` · **berbahc** · 14:07 Uhr · ⚠️ nur lokal
+`0a8be14` · **berbahc** · 14:07 Uhr
 
 > Im Registrierungsformular stand „berkay" als Beispiel für den Username —
 > derselbe Name auch in den Profileinstellungen. Ein Platzhalter soll zeigen,

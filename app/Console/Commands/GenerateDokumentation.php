@@ -20,6 +20,17 @@ use Illuminate\Support\Str;
  */
 class GenerateDokumentation extends Command
 {
+    /**
+     * Wer zur Projektgruppe gehört.
+     *
+     * Die Liste „Beteiligte" nennt die Gruppe und nicht jeden, der je einen
+     * Commit gesetzt hat. In einer Abgabe steht daneben, wer das Projekt
+     * gemacht hat.
+     *
+     * @var list<string>
+     */
+    private const array Gruppe = ['berbahc', 'Silas2505'];
+
     protected $signature = 'dokumentation:generate {--path=Dokumentation.md : Zieldatei, relativ zum Projektstamm}';
 
     protected $description = 'Erzeugt Dokumentation.md aus der Git-Historie';
@@ -58,7 +69,7 @@ class GenerateDokumentation extends Command
             '%s geschrieben — %d Commits von %d Beteiligten.',
             basename($path),
             $commits->count(),
-            $commits->pluck('author')->unique()->count(),
+            $commits->pluck('author')->unique()->intersect(self::Gruppe)->count(),
         ));
 
         return self::SUCCESS;
@@ -223,13 +234,28 @@ class GenerateDokumentation extends Command
     {
         $lines = ['## Beteiligte', ''];
 
-        foreach ($commits->groupBy('author')->sortByDesc(fn (Collection $own): int => $own->count()) as $author => $own) {
+        $group = $commits->filter(
+            fn (array $commit): bool => in_array($commit['author'], self::Gruppe, true),
+        );
+
+        foreach ($group->groupBy('author')->sortByDesc(fn (Collection $own): int => $own->count()) as $author => $own) {
             $lines[] = sprintf(
                 '- **%s** — %d %s, zuletzt am %s',
                 $author,
                 $own->count(),
                 $own->count() === 1 ? 'Commit' : 'Commits',
                 Carbon::parse($own->max(fn (array $commit): string => $commit['date']->format('Y-m-d')))->format('d.m.Y'),
+            );
+        }
+
+        $outside = $commits->count() - $group->count();
+
+        if ($outside > 0) {
+            $lines[] = '';
+            $lines[] = sprintf(
+                '> %d %s stammen von außerhalb der Gruppe — sie stehen im Verlauf mit Namen.',
+                $outside,
+                $outside === 1 ? 'Commit stammt' : 'Commits',
             );
         }
 
