@@ -28,7 +28,7 @@ herum. Eine kontextsensitive KI-Assistenz unterstützt dort, wo Menschen erfahru
 scheitern, nämlich beim ersten Schritt. Und sie hilft, einen neuen Platz zu finden, wenn sich
 der Tag verändert, etwa weil ein neuer Stundenplan eine Gewohnheit verdrängt.
 
-Umgesetzt wurde Align als lauffähige **MVP-Version** in Form einer mobil-first Web-Anwendung.
+Umgesetzt wurde Align als lauffähige **MVP-Version** in Form einer Mobile-First-Web-App.
 Die Gründe für diese Form sind in Kapitel 7 dargestellt.
 
 ## 1.2 Ausgangssituation und Motivation
@@ -1125,40 +1125,42 @@ danach daraus eine Anwendung gemacht, die sich benutzen lässt.
 
 ## 7.1 Die Entscheidung für den Tech-Stack
 
-Geplant hatten wir eine native mobile App. Gebaut haben wir eine **mobil-first Web-App mit
-Laravel**.
+Wir haben Align als Mobile-First-Web-App mit Laravel gebaut. Warum wir diese
+Entwicklungsentscheidung getroffen haben, erklären wir im Folgenden.
 
-Das ist eine **Entwicklungsentscheidung** und keine Produktstrategie. Align ist ein MVP aus
-einem Studienprojekt und kein marktfähiges Produkt, unsere langfristige Produktidee bleibt
-die mobile App. Für die Entwicklung sprachen drei Gründe.
+**Web-App statt nativer App.** In der Konzeptphase sind wir von einer nativen App ausgegangen.
+Eine Web-App läuft dagegen im Browser, auf dem Smartphone genauso wie am Laptop. Sie muss
+nicht getrennt für iOS und Android gebaut und nicht über einen App-Store veröffentlicht werden.
+Dadurch war jede Änderung sofort sichtbar, und wir konnten jeden Zwischenstand direkt
+ausprobieren.
 
-**Eine Codebase, kein Freigabeprozess.** Die Anwendung läuft im Browser. Zwischen einer
-Änderung und dem Nutzer steht kein Store-Review, es gibt keine getrennten Builds für zwei
-Plattformen und keine laufenden Betriebskosten. Für ein Projekt mit mehreren Iterationen
-passte das gut, weil wir jeden Stand sofort ansehen konnten.
+**Mobile First.** Align ist für das Smartphone gedacht. Deshalb haben wir jede Ansicht zuerst
+für die Breite eines Smartphones gestaltet und erst danach für größere Bildschirme angepasst.
+Entwickelt haben wir am Laptop. Im Browser lässt sich die Bildschirmbreite umstellen, sodass
+wir die Mobilansicht laufend prüfen konnten, ohne Simulator und ohne eigenes Testgerät.
 
-**Responsivität bleibt überprüfbar.** Align ist mobil-first gedacht, entwickelt haben wir
-aber am Laptop. Weil die App im Browser läuft, lässt sich die Mobilansicht direkt in den
-Entwicklerwerkzeugen prüfen. Wir haben die Änderung gespeichert, die Gerätebreite
-umgeschaltet und das Ergebnis gesehen, ohne Simulator und ohne einen eigenen Build für ein
-zweites Gerät. Damit blieb unser Mobile-First-Anspruch während der ganzen Entwicklung
-prüfbar und wurde nicht erst am Ende kontrolliert.
+**Laravel.** Laravel ist ein PHP-Framework, in dem viele Grundfunktionen einer Webanwendung
+schon enthalten sind, zum Beispiel die Anmeldung, der Zugriff auf die Datenbank und die
+Prüfung von Eingaben. Diese Teile mussten wir nicht selbst programmieren. So kamen wir
+schneller zu einer lauffähigen Anwendung und konnten uns auf die eigentlichen Funktionen von
+Align konzentrieren. Die Oberfläche haben wir mit React gebaut, weil sich die Bildschirme damit
+aus wiederverwendbaren Bausteinen zusammensetzen lassen. Welche weiteren Werkzeuge wir
+verwendet haben und wofür, zeigt Abschnitt 7.2.
 
-**Ein Framework, das viel mitbringt.** Laravel liefert Routing, Validierung,
-Authentifizierung und ein ORM aus einer Hand, dazu ein Testgerüst. Die lokale Umgebung über
-Laravel Herd lief ohne Konfigurationsaufwand.
+Die Web-App ist eine Entscheidung für die Entwicklung und keine für das spätere Produkt. Align
+ist ein MVP aus einem Studienprojekt und kein marktfähiges Produkt. Unsere langfristige
+Produktidee bleibt eine native App (Abschnitt 9.10).
 
-Bei der Implementierung haben wir KI-gestützte Entwicklungswerkzeuge eingesetzt. Ohne sie
-wäre der Funktionsumfang in der verfügbaren Zeit nicht zustande gekommen. Die fachlichen
-Entscheidungen über Datenmodell, Regeln und Interaktionslogik haben wir selbst getroffen und
-begründen sie in den folgenden Abschnitten.
+Beim Programmieren haben wir KI-gestützte Werkzeuge eingesetzt. Was die App können soll,
+welche Daten sie speichert und wie sie sich in welcher Situation verhält, haben wir selbst
+entschieden. Unsere Gründe dafür beschreiben wir in den folgenden Abschnitten.
 
 ## 7.2 Der Stack im Überblick
 
 | Schicht | Technologie | Begründung |
 |---|---|---|
 | Sprache / Runtime | PHP 8.4, Node 25 | kommen beide von Herd, keine separate Einrichtung |
-| Backend | **Laravel 13** | Routing, Validierung, Auth und ORM aus einer Hand |
+| Backend | **Laravel 13** | Routing, Validierung, Anmeldung und Datenbankzugriff sind bereits enthalten |
 | Bridge | **Inertia.js 3** | verbindet Controller direkt mit React-Seiten, SPA-Gefühl ohne eigene API-Schicht |
 | Frontend | **React 19** + TypeScript 5.7 | Komponenten mit Typprüfung über die gesamte Oberfläche |
 | UI | **shadcn/ui** (Radix), **Tailwind CSS 4** | Komponenten liegen als Quelltext im Projekt und sind frei an die Designsprache anpassbar |
@@ -1220,32 +1222,27 @@ Befehl führt alles in einem Durchlauf aus.
 
 # Iteration 5 — Aufbau der Anwendung
 
-**2. bis 10. August 2026 · 28 Commits**
-
 Unser Ziel war ein lauffähiger Stand, der die drei Kernfeatures erkennbar abbildet. Er
 musste nicht vollständig sein, aber weit genug, um ihn vorführen zu können.
 
 ## 7.6 Was entstand
 
-Der erste Commit fiel am **2. August**.
+**Grundgerüst und Designsprache.** Am Anfang stand ein Dashboard, das noch mit Beispieldaten
+arbeitete. Den Rest prägte der nächste Schritt: Wir haben die Designsprache aus Phase 3 in die
+Anwendung übernommen, und das Platzhalter-Widget wich echten Gewohnheitsdaten. Danach kamen
+Onboarding, das Abhaken von Gewohnheiten und die drei Feature-Bereiche dazu.
 
-**Grundgerüst und Designsprache (2. bis 4. August).** Zunächst ein Dashboard, das noch mit
-Beispieldaten arbeitete. Am 3. August kam der Schritt, der den Rest prägte. Die Designsprache
-aus Phase 3 wurde auf die Anwendung angewendet, und das Platzhalter-Widget wich echten
-Gewohnheitsdaten. Noch am selben Abend kamen Onboarding, das Abhaken von Gewohnheiten und die
-drei Feature-Bereiche dazu.
+**Kernfunktionen.** Darauf aufbauend entstanden feste Uhrzeiten und Erinnerungen zehn Minuten
+vor dem Termin, die KI-Anbindung mit dem Vorschlag des kleinsten nächsten Schritts und der
+Tageskalender, in dem die KI einen Block verschieben kann. Dazu kamen der Freundschafts-Layer
+mit gemeinsam übernommenen Gewohnheiten, die Umschaltung zwischen Light und Dark Mode und eine
+Serienzählung, die ein Wochenende und einen verpassten Tag übersteht. Außerdem entstand eine
+Ansicht, die zeigt, was mit wem verabredet ist, und die Möglichkeit, eine Verabredung
+abzusagen, ohne dass eine Lücke zurückbleibt.
 
-**Kernfunktionen (8. bis 10. August).** In drei Tagen entstanden feste Uhrzeiten und
-Erinnerungen zehn Minuten vor dem Termin, die KI-Anbindung mit dem Vorschlag des kleinsten
-nächsten Schritts und der Tageskalender, in dem die KI einen Block verschieben kann. Dazu
-kamen der Freundschafts-Layer mit gemeinsam übernommenen Gewohnheiten, die Umschaltung
-zwischen Light und Dark Mode und eine Serienzählung, die ein Wochenende und einen verpassten
-Tag übersteht. Zuletzt kam die Ansicht dazu, die zeigt, was mit wem verabredet ist, und die
-Möglichkeit, eine Verabredung abzusagen, ohne dass eine Lücke zurückbleibt.
-
-**Die Fünf-Gewohnheiten-Grenze.** Am 9. August wurde aus der in Phase 3 belegten Regel eine
-Funktion. Gewohnheiten lassen sich beenden, statt bei fünf festzustecken, und die Grenze wird
-dort erklärt, wo sie tatsächlich greift, nicht als abstrakte Regel im Onboarding.
+**Die Fünf-Gewohnheiten-Grenze.** Aus der in Phase 3 belegten Regel wurde eine Funktion.
+Gewohnheiten lassen sich beenden, statt bei fünf festzustecken, und die Grenze wird dort
+erklärt, wo sie tatsächlich greift, nicht als abstrakte Regel im Onboarding.
 
 Parallel ist ein eigenes Logo entstanden, das wir in einer hellen und einer dunklen Variante
 eingebunden haben.
@@ -1254,11 +1251,12 @@ Für diesen Bericht haben wir den Code-Stand vom 10. August noch einmal gestarte
 Bildschirme nachträglich aufgenommen. Datum und Beispieldaten stammen deshalb aus der Aufnahme,
 Aufbau und Funktionen aus dem damaligen Stand.
 
-![Übersicht am 10. August](screenshots/verlauf/v01-1008-uebersicht.png) ![Kalender am 10. August](screenshots/verlauf/v02-1008-kalender.png)
+![Übersicht im Code-Stand vom 10. August](screenshots/verlauf/v01-1008-uebersicht.png) ![Kalender im Code-Stand vom 10. August](screenshots/verlauf/v02-1008-kalender.png)
 
-*Abb. 7.1 und 7.2: Die Anwendung zum Betreuungsgespräch am 10. August. Links die Übersicht mit
+*Abb. 7.1 und 7.2: Die Anwendung im Code-Stand vom 10. August. Links die Übersicht mit
 Prozentwert und großer Serien-Karte, „Ich komm nicht rein" war der damalige Name der
-Starthilfe. Rechts der Kalender, der den Tag noch als Liste nach Situationen ordnete.*
+Starthilfe. Rechts der Kalender, der den Tag noch als Liste nach Situationen ordnete, darunter
+„nach dem Mittagessen" und „wenn ich nach Hause komme".*
 
 ## 7.7 Feedback von Anne
 
@@ -1269,12 +1267,14 @@ und dabei priorisieren, die technische Umsetzung weitertreiben.
 
 # Iteration 6 — Ausbau und Härtung
 
-**11. August bis 7. September 2026 · 100 Commits**
-
-Unsere Zielsetzung haben wir im Protokoll knapp festgehalten. Die App sollte intuitiver werden,
-damit sie nicht selbst zum Hindernis wird, und das Bestehende sollte so robust werden, dass es
-in unterschiedlichen Kontexten zuverlässig funktioniert. Daneben steht die ehrliche
-Randbemerkung: *„Schwierigkeit war, diese beiden Ziele zu vereinbaren."*
+Für diese Iteration hatten wir uns zwei Ziele gesetzt. Die App sollte intuitiver werden, damit
+sie nicht selbst zum Hindernis wird, und das Bestehende sollte so robust werden, dass es in
+unterschiedlichen Kontexten zuverlässig funktioniert. Diese beiden Ziele zu vereinbaren, fiel
+uns schwer. Damit sich die App intuitiv bedienen lässt, muss sie in jeder Situation
+verlässlich reagieren. Jede Gewohnheit muss dabei aber anders behandelt werden, je nachdem, ob
+sie zum Beispiel am Aufstehen, an einer Vorlesung oder an einer festen Uhrzeit hängt. Außerdem
+ist der Kontext oft ein anderer, etwa an einem Tag mit Vorlesungen oder am Wochenende. Alles so
+umzusetzen, dass es trotzdem immer zuverlässig funktioniert, war deshalb nicht einfach.
 
 Der Stand aus Iteration 5 hatte viele Funktionen, aber sie griffen noch nicht ineinander.
 Abbildung 7.2 zeigt das deutlich. Der Kalender ordnete den Tag nach Situationen, weil die
@@ -1288,15 +1288,15 @@ was wir geändert haben.
 |---|---|---|
 | **7.8 Katalog** | freie Eingabe, Gewohnheiten ohne Dauer | fester Katalog, jede Gewohnheit mit Dauer |
 | **7.9 Schlafplan** | der Tag hatte keinen Anfang und kein Ende | Aufstehen und Schlafengehen spannen den Tag auf |
-| **7.10 Zeitraster** | der Tag als Liste nach Situationen | der Tag als Zeitraster mit verschiebbaren Blöcken |
-| **7.11 Stundenplan** | Semesterplan als eigener Bereich | Kurse liegen direkt im Kalender |
+| **7.10 Zeitraster** | der Tag als Liste nach Situationen | der Tag als Zeitraster mit verschiebbaren Blöcken, nur noch Situationen mit berechenbarer Uhrzeit |
+| **7.11 Stundenplan** | Semesterplan als eigener Bereich | Kurse liegen direkt im Kalender und haben Vorrang vor Gewohnheiten |
 | **7.12 Navigation** | Seitenleiste mit sechs Einträgen | fünf Tabs am unteren Rand |
 | **7.13 Gewohnheiten** | Karten mit Schaltern, Fortschritt in Prozent | Wochenblatt, Tage statt Prozent |
 
 ## 7.8 Gewohnheiten bekommen eine Dauer: der Katalog
 
-**Vorher.** Bis Ende August wählte man im zweiten Schritt des Assistenten aus Vorschlägen oder
-trug über „Etwas anderes" eine eigene Gewohnheit ein. Unter den Vorschlägen standen auch
+**Vorher.** Anfangs wählte man im zweiten Schritt des Assistenten aus Vorschlägen oder tippte
+über „Etwas anderes" eine eigene Gewohnheit in ein Textfeld. Unter den Vorschlägen standen auch
 Gewohnheiten wie „Treppe statt Aufzug" oder „Eine Station früher aussteigen", die keine Dauer
 haben und keinen Platz im Tag belegen (Abb. 7.3).
 
@@ -1305,22 +1305,25 @@ einplanen. Man weiß nicht, wie viel Platz sie braucht, und eine angehängte Gew
 nicht, wann die vorige fertig ist. Solange der Kalender eine Liste war, fiel das kaum auf.
 Sobald wir den Tag als Zeitraster zeigen wollten, wurde es zum Hindernis.
 
-**Nachher.** Gewohnheiten kommen aus einem festen Katalog. Aufgenommen wird nur, was drei
+**Nachher.** Wir haben uns entschieden, zunächst nur mit fest vorgegebenen Gewohnheiten zu
+arbeiten, damit die Anwendung jede Gewohnheit zuverlässig planen kann. Das Textfeld ist
+entfallen, und Gewohnheiten kommen aus einem festen Katalog. Aufgenommen wird nur, was drei
 Bedingungen erfüllt: planbar sein, eine Dauer haben, am Stück stattfinden. Der Katalog ist in
 vier Bereiche des Studienalltags sortiert, und jeder Eintrag zeigt seine Dauer, die sich beim
 Anlegen anpassen lässt (Abb. 7.4).
 
-![Schritt 2 am 31. August](screenshots/verlauf/v04-3108-anlegen-schritt2.png) ![Schritt 2 heute](screenshots/abb04-katalog-auswahl.png)
+![Schritt 2 im Code-Stand vom 31. August](screenshots/verlauf/v04-3108-anlegen-schritt2.png) ![Schritt 2 heute](screenshots/abb04-katalog-auswahl.png)
 
-*Abb. 7.3 und 7.4: Derselbe Schritt im selben Bereich vorher und nachher. Links der Stand vom
-31. August mit Vorschlägen ohne Dauer und einem freien Feld, rechts der Katalog, in dem jeder
-Eintrag seine Dauer trägt.*
+*Abb. 7.3 und 7.4: Derselbe Schritt im selben Bereich vorher und nachher. Links der Code-Stand
+vom 31. August mit Vorschlägen, von denen zwei keine Dauer haben, und dem Feld
+„Etwas anderes" für eine eigene Gewohnheit. Rechts der Katalog, in dem jeder Eintrag seine
+Dauer trägt.*
 
 **Warum das die wichtigste Änderung war.** Aus einem Tracker wurde damit ein
 Planungswerkzeug. Erst die Dauer macht aus einer Gewohnheit einen Block, der eine echte Spanne
 im Tag belegt, und auf ihr bauen alle folgenden Abschnitte auf. Zugleich ist der Katalog unsere
 größte bewusste Einschränkung, denn eigene Gewohnheiten lassen sich derzeit nicht eintragen.
-Wie sich das ändern ließe, beschreibt Abschnitt 9.7.
+Wie sich die Anwendung an dieser Stelle erweitern ließe, beschreibt Abschnitt 9.7.
 
 ## 7.9 Der Tag bekommt einen Rahmen: der Schlafplan
 
@@ -1333,11 +1336,27 @@ Tag überhaupt bietet, noch Gewohnheiten an seinen Rändern sinnvoll einordnen. 
 Vorschlag für einen neuen Platz hätte in der Nacht landen können.
 
 **Nachher.** Aufsteh- und Schlafenszeit spannen den Tag auf, in dem alles andere stattfindet.
-Der Rahmen ist bewusst **keine Gewohnheit**. Er wird nicht abgehakt und hat weder Serie noch
-Quote, sondern beantwortet die Frage, die vor jeder Planung steht, nämlich wie lang der Tag
-überhaupt ist. Er lässt sich für jeden Wochentag einzeln einstellen, weil ein Samstag anders
-aussieht als ein Dienstag (Abb. 8.17). Verschiebt sich der Rahmen, verschieben sich die
-Gewohnheiten an seinen Rändern mit.
+Beide legt man im Schlafplan fest, und zwar für jeden Wochentag einzeln, weil ein Samstag
+anders aussieht als ein Dienstag (Abb. 7.5). Damit kennt die Anwendung die Uhrzeit von
+„nach dem Aufstehen" und „vor dem Schlafengehen". Verschiebt sich der Rahmen, verschieben sich
+die Gewohnheiten an seinen Rändern mit. Wie der Kalender den Rahmen darstellt, zeigt
+Abschnitt 7.10.
+
+![Schlafplan](screenshots/kapitel7/k7-01-schlafplan.png)
+
+*Abb. 7.5: Der Schlafplan mit einem Balken je Wochentag. Darunter lassen sich Schlafens- und
+Aufstehzeit des gewählten Tages einstellen, dazu der Wecker und die Erinnerung vor der
+Schlafenszeit.*
+
+**Zwei Aufgaben auf einmal.** In der Anwendung ist der Rahmen bewusst **keine Gewohnheit**. Er
+wird nicht abgehakt, hat weder Serie noch Quote und belegt keinen der fünf Plätze. Er
+beantwortet die Frage, die vor jeder Planung steht, nämlich wie lang der Tag überhaupt ist. Ein
+regelmäßiger Schlafrhythmus ist aber selbst eine gute Gewohnheit. Wer im Schlafplan feste
+Zeiten einträgt, nimmt sich damit schon vor, zu diesen Zeiten schlafen zu gehen und
+aufzustehen. Damit das im Alltag klappt, erinnert die Anwendung auf Wunsch 20 Minuten vor der
+Schlafenszeit daran, und zur Aufstehzeit kann ein Wecker klingeln, beides, solange die
+Anwendung geöffnet ist. Der Schlafplan gibt der Planung also einen Rahmen und hilft zugleich,
+einen festen Schlafrhythmus als Gewohnheit aufzubauen.
 
 ## 7.10 Aus der Liste wird ein Zeitraster
 
@@ -1346,23 +1365,63 @@ die Gewohnheiten hingen (Abb. 7.2). Man sah, was nach dem Aufstehen oder nach de
 anstand, aber nicht, wann genau, wie lange es dauert und ob zwei Dinge zeitlich zusammenpassen.
 
 **Nachher.** Mit Dauer und Rahmen ließ sich der Tag als Zeitraster zeigen, das beim Aufstehen
-beginnt und beim Schlafengehen endet. Jede Gewohnheit ist ein Block mit Anfang und Ende. Über
-der Tagesansicht liegt eine Monatsansicht, aus der man in jeden Tag springt. Blöcke lassen sich
-per Langdruck greifen und verschieben. Hängt eine Gewohnheit an einer anderen, rückt sie mit,
-und bevor die Änderung gilt, fragt die Anwendung, ob sie nur heute oder dauerhaft gelten soll.
-Wie das in der fertigen Anwendung aussieht, zeigt Abschnitt 8.4.
+beginnt und beim Schlafengehen endet (Abb. 7.6 und 7.7). Jede Gewohnheit ist ein Block mit
+Anfang und Ende. Über der Tagesansicht liegt eine Monatsansicht, aus der man in jeden Tag
+springt. Blöcke lassen sich per Langdruck greifen und verschieben. Hängt eine Gewohnheit an
+einer anderen, rückt sie mit, und bevor die Änderung gilt, fragt die Anwendung, ob sie nur an
+diesem Tag oder immer gelten soll. Wie das in der fertigen Anwendung aussieht, zeigt
+Abschnitt 8.4.
 
-**Eine Regel, die dabei entstand.** Zwischen zwei Blöcken hält Align Luft, nämlich eine
+![Tagesbeginn](screenshots/kapitel7/k7-02-tagesbeginn.png) ![Tagesende](screenshots/kapitel7/k7-03-tagesende.png)
+
+*Abb. 7.6 und 7.7: Derselbe Tag am Anfang und am Ende. Er beginnt mit der Aufstehzeit um 07:00
+und endet mit der Schlafenszeit um 23:00. „Frühstücken" hängt an „nach dem Aufstehen" und liegt
+deshalb am Anfang des Tages, „Meditieren" hängt an „vor dem Schlafengehen" und liegt an seinem
+Ende.*
+
+**Nur Situationen, deren Uhrzeit sich berechnen lässt.** Im Zeitraster braucht jede Gewohnheit
+eine Uhrzeit, auch wenn sie an einer Situation hängt. Anfangs gab es neben „nach dem Aufstehen",
+„nach der Vorlesung" und „vor dem Schlafengehen" noch „nach dem Frühstück", „nach dem Mittagessen"
+und „wenn ich nach Hause komme" (Abb. 7.2). Für diese drei Momente kannte die Anwendung keine
+Uhrzeit und musste sie schätzen, zum Beispiel das Mittagessen um 13 Uhr. Das passt aber für kaum
+jemanden, weil jede Person zu anderen Zeiten frühstückt, zu Mittag isst oder nach Hause kommt.
+Noch weniger ließ sich mit einer selbst eingetippten Situation anfangen.
+„Wenn ich aus der Bib komme" konnte die Anwendung nirgends einordnen, also landete die
+Gewohnheit bei allen mittags. Im Kalender hätte eine Gewohnheit damit zu einer Uhrzeit
+gestanden, die nicht stimmt. Wir haben diese Situationen und das Feld für eigene Situationen
+deshalb herausgenommen. Angeboten werden nur noch die drei Situationen, deren Uhrzeit die Anwendung und
+die KI aus den eigenen Angaben berechnen können: „nach dem Aufstehen" und
+„vor dem Schlafengehen" aus dem Schlafplan und „nach der Vorlesung" aus dem Stundenplan, sofern
+einer eingetragen ist (Abschnitt 7.11). Wer eine Gewohnheit nach dem Frühstück machen möchte,
+hängt sie stattdessen an die Gewohnheit „Frühstücken", deren Platz im Tag feststeht. Wie sich
+weitere Situationen zurückholen ließen, beschreibt Abschnitt 9.7.
+
+**Luft zwischen zwei Blöcken.** Zwischen zwei Blöcken hält Align Luft, nämlich eine
 Viertelstunde zwischen zwei Gewohnheiten und vor und nach einer Vorlesung, zum Hinkommen und
 Umschalten, und fünf Minuten innerhalb einer Kette. Ohne diese Regel hätte das Raster Tage
 erlaubt, die auf dem Bildschirm aufgehen, im Alltag aber nicht.
 
+**„Immer" nur, wenn an allen Tagen Platz ist.** Beim Verschieben entscheidet man, ob der neue
+Platz nur an diesem Tag oder immer gelten soll. „Immer" legt die Gewohnheit an jedem Wochentag,
+an dem sie vorgesehen ist, auf die neue Uhrzeit. Deshalb prüft die Anwendung vorher jeden
+dieser Wochentage, und zwar jeweils den nächsten Termin und, falls ein Semester bevorsteht,
+auch den ersten Termin im Semester. Liegt an einem dieser Tage schon eine andere Gewohnheit auf
+dem neuen Platz, lehnt die Anwendung „Immer" ab. Sie nennt die Gewohnheit, die im Weg liegt,
+und die freien Zeiten davor und danach. Außerdem schlägt sie vor, die Gewohnheit als „danach"
+an die andere zu hängen, und bietet an, direkt zu dem betroffenen Tag zu springen (Abb. 7.8).
+Nur für den gewählten Tag lässt sich die Gewohnheit trotzdem verschieben, wenn dort Platz ist.
+
+![Immer abgelehnt](screenshots/kapitel7/k7-04-immer-abgelehnt.png)
+
+*Abb. 7.8: „Frühstücken" soll an einem Dienstag auf 07:30 rücken. An diesem Tag ist dort Platz,
+für „Immer" aber nicht, weil montags um 07:30 schon „Joggen gehen" liegt.*
+
 ## 7.11 Der Stundenplan zieht in den Kalender
 
 **Vorher.** Aus der Competitor-Analyse stammte der Befund, dass keine der untersuchten
-Anwendungen in Semestern und Vorlesungsrhythmus denkt (Abschnitt 4.2). Anfang September haben
-wir dafür den Semesterplan gebaut. Zunächst bekam er einen eigenen Bereich in der Navigation,
-in dem sich ein Semester und seine Kurse als Karten je Wochentag eintragen ließen (Abb. 7.5).
+Anwendungen in Semestern und Vorlesungsrhythmus denkt (Abschnitt 4.2). Dafür haben wir den
+Semesterplan gebaut. Zunächst bekam er einen eigenen Bereich in der Navigation, in dem sich ein
+Semester und seine Kurse als Karten je Wochentag eintragen ließen (Abb. 7.9).
 
 **Was beim Benutzen auffiel.** Ein eigener Bereich trennt, was zusammengehört. Ein Stundenplan
 ist keine eigene Aufgabe, sondern gibt vor, wo im Tag überhaupt Platz für Gewohnheiten ist. Wer
@@ -1373,19 +1432,44 @@ Tag und blockieren ihn, damit weder man selbst noch die KI eine Gewohnheit in ei
 legt (Abb. 8.15). Ein Kurs in einem kommenden Semester beansprucht seinen Platz erst ab
 Semesterbeginn, und die Monatsansicht kündigt Konflikte an, bevor sie eintreten (Abb. 8.14).
 
-![Semesterplan am 3. September](screenshots/verlauf/v06-0309-semesterplan.png)
+![Semesterplan im Code-Stand vom 3. September](screenshots/verlauf/v06-0309-semesterplan.png)
 
-*Abb. 7.5: Der Semesterplan am 3. September, noch als eigener Bereich mit einer Liste von Kursen.*
+*Abb. 7.9: Der Semesterplan im Code-Stand vom 3. September, noch als eigener Bereich mit einer
+Liste von Kursen.*
 
-**Eine Verfeinerung.** Zunächst lehnte ein Kurs eine kollidierende Gewohnheit einfach ab. Das
-war korrekt, aber nicht hilfreich, denn es forderte indirekt dazu auf, eine Vorlesung zu
-verschieben, die sich nicht verschieben lässt. Jetzt parkt ein Kurs die Gewohnheit unter sich
-und bietet an, einen neuen Platz für sie zu finden.
+**Vorlesungen haben Vorrang.** Eine Vorlesung gibt die Hochschule vor, sie lässt sich nicht
+verschieben. Eine Gewohnheit dagegen schon. Treffen beide aufeinander, gibt deshalb immer die
+Gewohnheit nach. Zieht man eine Gewohnheit in eine Vorlesung, lässt die Anwendung das nicht zu,
+erklärt den Grund und nennt die freien Zeiten davor und danach (Abb. 7.10). Hängt eine
+Gewohnheit an einer Situation, weicht sie innerhalb eines Zeitfensters von selbst auf die
+nächste freie Stelle aus.
+
+![Kurs hat Vorrang](screenshots/kapitel7/k7-05-kurs-vorrang.png)
+
+*Abb. 7.10: „Frühstücken" soll an einem Mittwoch im Semester auf 10:30 rücken, mitten in
+„Statistik I". Die Anwendung lässt das nicht zu, weil der Kurs nicht rückt, und nennt die
+freien Zeiten bis 09:45 und ab 11:45.*
+
+**Eine Verfeinerung.** Zunächst wurde ein Kurs abgewiesen, wenn an seiner Stelle schon eine
+Gewohnheit lag. Das war im Einzelfall korrekt, aber nicht hilfreich. Wer zu Beginn eines
+Semesters seinen Stundenplan einträgt, hätte vorher jede Gewohnheit, die im Weg liegt, von Hand
+wegräumen müssen, obwohl sich nur die Gewohnheit verschieben lässt und nicht die Vorlesung.
+Jetzt wird der Kurs eingetragen, und die Gewohnheit an seiner Stelle wird geparkt. Sie wird
+nicht gelöscht, verliert aber ab Semesterbeginn ihren Platz im Tag. Im Kalender steht sie dann
+unter dem Tag im Bereich „Ohne festen Platz", zusammen mit der Uhrzeit, zu der sie bisher lief
+(Abb. 7.11). Von dort lässt sie sich ins Raster ziehen. Tippt man sie an, kann man sich über
+„Anderer Zeitpunkt?" von der KI einen neuen Platz vorschlagen lassen (Abb. 7.12).
+
+![Ohne festen Platz](screenshots/kapitel7/k7-06-ohne-festen-platz.png) ![Anderer Zeitpunkt](screenshots/kapitel7/k7-07-anderer-zeitpunkt.png)
+
+*Abb. 7.11 und 7.12: Ab Semesterbeginn liegt montags „Analysis I" auf der Zeit von
+„Joggen gehen". Die Gewohnheit steht deshalb unter dem Tag im Bereich „Ohne festen Platz".
+Tippt man sie an, kann die KI einen anderen Zeitpunkt vorschlagen.*
 
 ## 7.12 Die Navigation wandert nach unten
 
 **Vorher.** Auf dem Handy lag die Navigation in einer Seitenleiste mit sechs Einträgen, darunter
-Semester und Schlaf als eigene Bereiche (Abb. 7.6). Um den Bereich zu wechseln, musste man die
+Semester und Schlaf als eigene Bereiche (Abb. 7.13). Um den Bereich zu wechseln, musste man die
 Seitenleiste erst öffnen.
 
 **Nachher.** Die Navigation steht als Leiste mit fünf Tabs am unteren Bildschirmrand, in
@@ -1394,17 +1478,17 @@ Schlafplan und Community. Der Semesterplan braucht keinen eigenen Tab mehr, weil
 liegt, und die Mobilansicht bekam eine eigene Kopfzeile. Für eine Anwendung, die mehrmals am Tag
 kurz geöffnet wird, ist das der direkteste Weg zu jedem Bereich.
 
-![Seitenleiste am 3. September](screenshots/verlauf/v07-0309-seitenleiste.png)
+![Seitenleiste im Code-Stand vom 3. September](screenshots/verlauf/v07-0309-seitenleiste.png)
 
-*Abb. 7.6: Die Navigation am 3. September als Seitenleiste mit sechs Einträgen. In der fertigen
-Anwendung steht sie als Tab-Leiste am unteren Rand, zu sehen etwa in Abb. 8.2.*
+*Abb. 7.13: Die Navigation im Code-Stand vom 3. September als Seitenleiste mit sechs Einträgen.
+In der fertigen Anwendung steht sie als Tab-Leiste am unteren Rand, zu sehen etwa in Abb. 8.2.*
 
 ## 7.13 Gewohnheiten im Wochenblick: Tage statt Prozent
 
-**Vorher.** Die Gewohnheiten-Seite hat drei Stufen durchlaufen. Im August bestand sie aus
-Karten mit einem Schalter je Gewohnheit, und auf dem Handy wurden Titel und Auslöser
-abgeschnitten (Abb. 7.7). Mitte August haben wir die Karten nach dem nächsten Termin sortiert
-und in „Steht heute an" und „Steht später an" geteilt (Abb. 7.8). Der Fortschritt stand als
+**Vorher.** Die Gewohnheiten-Seite hat drei Stufen durchlaufen. Zuerst bestand sie aus Karten
+mit einem Schalter je Gewohnheit, und auf dem Handy wurden Titel und Auslöser abgeschnitten
+(Abb. 7.14). Danach haben wir die Karten nach dem nächsten Termin sortiert und in
+„Steht heute an" und „Steht später an" geteilt (Abb. 7.15). Der Fortschritt stand als
 Prozentwert auf der Übersicht, daneben eine große Karte mit der längsten Serie (Abb. 7.1).
 
 **Was beim Benutzen auffiel.** Die Seite zeigte, welche Gewohnheiten es gibt, aber nicht, wie
@@ -1420,10 +1504,11 @@ Prozente** und nur die Tage, an denen die Gewohnheit tatsächlich anstand, etwa 
 Konsistenz steht als ruhige Kennzahl im Vordergrund, Serien haben einen eigenen, kleineren
 Platz, und ein verpasster Tag ist kein rotes Kreuz.
 
-![Gewohnheiten am 10. August](screenshots/verlauf/v03-1008-gewohnheiten.png) ![Gewohnheiten am 3. September](screenshots/verlauf/v05-0309-gewohnheiten.png)
+![Gewohnheiten im Code-Stand vom 10. August](screenshots/verlauf/v03-1008-gewohnheiten.png) ![Gewohnheiten im Code-Stand vom 3. September](screenshots/verlauf/v05-0309-gewohnheiten.png)
 
-*Abb. 7.7 und 7.8: Die Gewohnheiten-Seite am 10. August mit Schaltern und abgeschnittenen Titeln
-und am 3. September mit der Einteilung nach heute und später. Den heutigen Stand zeigt Abb. 8.16.*
+*Abb. 7.14 und 7.15: Die Gewohnheiten-Seite im Code-Stand vom 10. August mit Schaltern und
+abgeschnittenen Titeln und im Code-Stand vom 3. September mit der Einteilung nach heute und
+später. Den heutigen Stand zeigt Abb. 8.16.*
 
 ## 7.14 Verabredungen zu Ende gedacht
 
@@ -1441,15 +1526,15 @@ Die Reihenfolge unserer Datenbank-Migrationen zeichnet den Weg der Anwendung gen
 zeigt, dass wir nicht nach einem fertigen Modell gebaut, sondern schrittweise erweitert
 haben. Jede Tabelle entstand, als die zugehörige Frage auftrat.
 
-| Zeitraum | Was hinzukam | Wofür |
+| Schritt | Was hinzukam | Wofür |
 |---|---|---|
-| 3. August | `habits`, `habit_completions`, Onboarding-Marker, Motivation | Grundgerüst für Gewohnheiten und ihr Abhaken |
-| 8. bis 9. August | feste Zeitpläne, Erinnerungen, kleinster Schritt | Time Blocking und KI-Assistenz |
-| 9. bis 10. August | `friendships`, `appointments`, `appointment_notices` | Community und Verabredungen |
-| 15. bis 17. August | `ai_suggestions`, Zielgröße, Ketten | KI-Gedächtnis und Habit Chains |
-| 31. August | `template_key`, Entfernung punktueller Gewohnheiten, `sleep_schedules` | Katalog und Tagesrahmen |
-| 3. bis 4. September | `semesters`, `courses`, `course_exceptions` | Semesterplan |
-| 7. September | `sleep_day_overrides`, Zeitpläne je Wochentag | tageweise Anpassung des Rahmens |
+| 1 | `habits`, `habit_completions`, Onboarding-Marker, Motivation | Grundgerüst für Gewohnheiten und ihr Abhaken |
+| 2 | feste Zeitpläne, Erinnerungen, kleinster Schritt | Time Blocking und KI-Assistenz |
+| 3 | `friendships`, `appointments`, `appointment_notices` | Community und Verabredungen |
+| 4 | `ai_suggestions`, Zielgröße, Ketten | KI-Gedächtnis und Habit Chains |
+| 5 | `template_key`, Entfernung punktueller Gewohnheiten, `sleep_schedules` | Katalog und Tagesrahmen |
+| 6 | `semesters`, `courses`, `course_exceptions` | Semesterplan |
+| 7 | `sleep_day_overrides`, Zeitpläne je Wochentag | tageweise Anpassung des Rahmens |
 
 Auffällig sind die Migrationen, die etwas **entfernen**: punktuelle Gewohnheiten, geratene
 Situationen, eine Kursart, die sich als überflüssig erwies. Sie belegen, dass wir Konzepte
@@ -1457,10 +1542,9 @@ auch wieder zurückgenommen haben, wenn der tatsächliche Gebrauch dagegen sprac
 
 ## 7.16 Das Abschlussgespräch
 
-Im Abschlussgespräch am 7. September haben wir Anne die fertige Anwendung vorgeführt. Dabei sind
-wir beim Verschieben von Gewohnheiten noch auf kleinere Fehler gestoßen, die wir in den Tagen
-nach dem Gespräch behoben haben. In diesen Tagen bekam die Anwendung außerdem einen Auftakt, der
-vor der ersten Frage erklärt, worum es geht (Abschnitt 8.1).
+Im Abschlussgespräch haben wir Anne die fertige Anwendung vorgeführt. Dabei sind wir beim
+Verschieben von Gewohnheiten noch auf kleinere Fehler gestoßen, die wir anschließend behoben
+haben.
 
 ---
 
@@ -1486,8 +1570,7 @@ Erklärung bedienen lassen und so wenige Schritte wie möglich verlangen.
 
 Vor dem Onboarding steht ein kurzer Auftakt über sechs Bildschirme. Er benennt eine typische
 Situation aus dem Studienalltag, statt Funktionen aufzuzählen, und stellt erst danach die
-erste Frage. Diese Ergänzung ist in den Tagen nach dem Abschlussgespräch entstanden
-(Abschnitt 7.16).
+erste Frage.
 
 ## 8.2 Die Übersicht
 
@@ -1630,8 +1713,9 @@ darin das Zusammenspiel von Stundenplan und Gewohnheiten:
 - **„Nach der Vorlesung · Vorlesung nachbereiten"** hängt unmittelbar daran. Der gestrichelte
   Rand kennzeichnet einen situativen Anker, die Gewohnheit hat also keine feste Uhrzeit, sondern
   folgt einem Ereignis.
-- Die Gewohnheit, die zuvor um 07:30 lag, erscheint an diesem Tag nicht mehr, weil die Vorlesung
-  sie verdrängt hat. Genau darauf hatte die Monatsansicht hingewiesen.
+- Die Gewohnheit, die zuvor um 07:30 lag, erscheint an diesem Tag nicht mehr im Raster, weil die
+  Vorlesung sie verdrängt hat. Sie steht unter dem Tag im Bereich „Ohne festen Platz"
+  (Abb. 7.11). Genau darauf hatte die Monatsansicht hingewiesen.
 
 ## 8.6 Gewohnheiten im Wochenblick
 
@@ -1661,7 +1745,8 @@ Gewohnheit**, er wird nicht abgehakt und hat weder Serie noch Quote.
 Die Wochenansicht zeigt für jeden Tag einen Balken. Werktags liegen acht Stunden Schlaf von
 23:00 bis 07:00, am Wochenende verschiebt sich das Fenster nach hinten, in der App steht dazu
 „8 Stunden bis 9,5 Stunden Schlaf, je nach Tag". Darunter lässt sich jeder Tag einzeln anpassen.
-Der Wecker ist werktags aktiv, am Wochenende nicht.
+Der Wecker ist werktags aktiv, am Wochenende nicht. Auf Wunsch erinnert die Anwendung außerdem
+20 Minuten vor der Schlafenszeit daran, schlafen zu gehen (Abschnitt 7.9).
 
 Bewegt sich dieser Rahmen, bewegen sich die Gewohnheiten an seinen Rändern mit.
 
@@ -1706,7 +1791,7 @@ Monatsansicht behalten ihre Struktur, nur die Flächen kehren sich um.*
 | **Gewohnheiten** | Anlegen in fünf Schritten aus dem Katalog (vier Bereiche) · Anker über Situation, feste Uhrzeit oder Kette · Wochentage und Uhrzeiten je Tag · Bearbeiten und Beenden · Grenze von fünf aktiven Gewohnheiten |
 | **Tracking** | Abhaken per Tippen oder Wischen · Sieben-Tage-Raster mit Nachtragen · Konsistenz über 30 Tage, die nur vorgesehene Tage zählt · Serien ohne Bestrafung bei Unterbrechung |
 | **Kalender** | Monatsansicht mit Tagespunkten · Tagesansicht als Zeitraster · Verschieben per Ziehen, nur heute oder immer · verkettete Gewohnheiten rücken mit · Semesterplan mit Kursen, Kollisionsprüfung und Parken verdrängter Gewohnheiten |
-| **Tagesrahmen** | Schlaf- und Aufstehzeit je Wochentag · tageweise Ausnahmen · Wecker innerhalb der Anwendung |
+| **Tagesrahmen** | Schlaf- und Aufstehzeit je Wochentag · tageweise Ausnahmen · Wecker und Erinnerung vor der Schlafenszeit innerhalb der Anwendung |
 | **KI-Assistenz** | kleinster erster Schritt · neue Zeiten vorschlagen · Tag neu ordnen · Kontextwissen über Gewohnheiten, Rahmen und Stundenplan |
 | **Community** | Kontakte über exakten Namen · Verabredungen zu zweit für einen einzelnen Tag · Absagen mit Weiterführung · Übernehmen fremder Gewohnheiten |
 | **Sonstiges** | Auftakt vor dem Onboarding · Light und Dark Mode · Registrierung mit Passkeys und Zwei-Faktor-Authentifizierung |
@@ -1719,11 +1804,11 @@ Abschnitte 9.7 bis 9.10.
 # 9. Reflexion und Ausblick
 
 > **Notiz für Berkay, vor der Abgabe entfernen.** Deine Kapitel 9 und 10 sind jetzt ein Kapitel
-> „Reflexion und Ausblick", der Ausblick läuft als Abschnitte 9.7 bis 9.10 weiter. Bitte drei
+> „Reflexion und Ausblick", der Ausblick läuft als Abschnitte 9.7 bis 9.10 weiter. Bitte vier
 > Stellen gegenlesen:
 >
 > 1. **Abschnitt 7.13 „Was bewusst weggelassen wurde" gibt es nicht mehr.** Sein Inhalt steht
->    jetzt nur noch in 9.7. Dort ist ergänzt, dass wir die vier Funktionen früh und bewusst
+>    jetzt nur noch in 9.7. Dort ist ergänzt, dass wir die vier Funktionen bewusst
 >    weggelassen haben, damit der Umfang beherrschbar bleibt, und dass beim Blocker die Zeit
 >    der Grund war und nicht das Planungsmodell. Passt die Formulierung für dich?
 > 2. **Die Idee einer KI, die selbst Muster erkennt und sich meldet, ist herausgenommen**, auch
@@ -1732,6 +1817,9 @@ Abschnitte 9.7 bis 9.10.
 >    vorkommen, auch nicht als verworfen.
 > 3. **Querverweise auf Kapitel 7** sind an dessen neue Gliederung angepasst, der Katalog steht
 >    jetzt in 7.8 und das Datenmodell in 7.15.
+> 4. **In 9.2 bis 9.4, 9.7 und 9.9 sind Zeitangaben zur Entwicklung entfernt** und einige
+>    Formulierungen vereinfacht. In 9.7 verweisen eigene Gewohnheiten und situative Anker jetzt
+>    auf 7.8 und 7.10, und es ist ergänzt, dass die KI eigene Einträge auswerten könnte.
 
 Dieses Kapitel blickt auf vier Monate Projektarbeit zurück. Es beschreibt, welche
 Entscheidungen getragen haben, an welchen Stellen wir umgekehrt sind, welche Rolle
@@ -1786,7 +1874,7 @@ entscheiden, haben wir die Spannung auseinandergenommen. Der Streak motiviert, a
 Bruch darf nicht bestrafen (Abschnitt 5.10). Beide Ansichten sind in der fertigen Anwendung
 vorhanden.
 
-**Die freie Eingabe von Gewohnheiten mussten wir zurücknehmen.** Bis Ende August konnte jede
+**Die freie Eingabe von Gewohnheiten mussten wir zurücknehmen.** Anfangs konnte jede
 Gewohnheit frei formuliert werden. Beim wirklichen Benutzen zeigte sich, dass das nicht
 trägt. Einer frei formulierten Gewohnheit fehlt die Dauer, und ohne Dauer lässt sich nichts
 zuverlässig in einen Tag einplanen. Wir haben daraufhin auf einen Katalog mit festen
@@ -1799,30 +1887,31 @@ Migrationen zeichnet den Weg der Anwendung nach; bemerkenswert sind dabei jene, 
 entfernen. Punktuelle Gewohnheiten, geratene Situationen und eine überflüssige Kursart sind
 nach dem tatsächlichen Gebrauch wieder verschwunden (Abschnitt 7.15).
 
-Die letzte Iteration hat uns die Grenzen dieses Vorgehens gezeigt. Im Protokoll steht die
-knappe Notiz, die Schwierigkeit habe darin bestanden, zwei Ziele zu vereinbaren, nämlich die
-Anwendung intuitiver zu machen und gleichzeitig das Bestehende zu härten. Nach Iteration 5
-hatten wir viele Funktionen, aber sie griffen noch nicht ineinander. Wer in kurzen Zyklen
+Die letzte Iteration hat uns die Grenzen dieses Vorgehens gezeigt. Wir wollten die Anwendung
+intuitiver machen und gleichzeitig das Bestehende härten. Beides zu vereinbaren war schwierig,
+weil jede Gewohnheit anders behandelt werden muss und der Kontext oft ein anderer ist. Nach
+Iteration 5 hatten wir viele Funktionen, aber sie griffen noch nicht ineinander. Wer in kurzen Zyklen
 Funktionen ergänzt, erzeugt Verbindungsarbeit, die selbst Zeit kostet.
 
 ## 9.3 Der Wechsel der Plattform
 
-Geplant hatten wir eine native mobile Anwendung. Gebaut haben wir eine mobil-first Web-App
-mit Laravel. Die Gründe stehen in Abschnitt 7.1. Es gab eine Codebase statt zweier Builds,
-keinen Freigabeprozess zwischen Änderung und Nutzer und ein Framework, das Routing,
-Validierung, Authentifizierung und ein Testgerüst mitbringt.
+Geplant hatten wir eine native App, gebaut haben wir eine Mobile-First-Web-App mit Laravel. Die
+Gründe stehen in Abschnitt 7.1. Eine Web-App muss nicht getrennt für iOS und Android gebaut und
+über einen App-Store veröffentlicht werden, und in Laravel sind viele Grundfunktionen einer
+Webanwendung bereits enthalten.
 
 Rückblickend war das für ein Projekt mit sechs dreiwöchigen Iterationen die richtige
-Entscheidung, und sie war weniger radikal, als sie klingt. Unsere eigene Marktanalyse hatte
-als zweite Lücke notiert, dass Planen am Laptop stattfindet und fast alle spezialisierten
-Anwendungen das ignorieren (Abschnitt 2.3). In der Vergleichsmatrix stand Align von Anfang an
+Entscheidung. Sie passt auch zu unserer eigenen Marktanalyse, die als zweite Lücke notiert
+hatte, dass Planen am Laptop stattfindet und fast alle spezialisierten Anwendungen das
+ignorieren (Abschnitt 2.3). In der Vergleichsmatrix stand Align von Anfang an
 mit voller Bewertung in der Spalte Web.
 
 Offen bleiben muss allerdings, dass unsere Leitfrage weiterhin von „einer mobilen
 Applikation" spricht. Der Wechsel ist eine Entwicklungsentscheidung, keine
 Produktentscheidung; die langfristige Produktidee bleibt die mobile Anwendung, und Abschnitt 9.10
-kommt darauf zurück. Die Konsequenzen sind an einer Stelle spürbar. Erinnerungen bleiben in
-der Anwendung gefangen, wo das Konzept eine Benachrichtigung vor dem Auslöser vorsah.
+kommt darauf zurück. Die Folgen zeigen sich vor allem an einer Stelle. Erinnerungen erscheinen
+nur, solange die Anwendung geöffnet ist, während das Konzept eine Benachrichtigung vor dem
+Auslöser vorsah.
 
 ## 9.4 KI als Werkzeug, und wo sie aufhört
 
@@ -1840,15 +1929,12 @@ Konzept in Phase 3 von der Claude API ausging, während die Umsetzung über `lar
 OpenRouter-API spricht; Anbieter und Modell stehen in der Umgebungskonfiguration und lassen
 sich ohne Codeänderung austauschen.
 
-**Bei der Entwicklung** haben wir KI-gestützte Entwicklungswerkzeuge eingesetzt. Sie haben
-den in der verfügbaren Zeit erreichten Funktionsumfang wesentlich ermöglicht. Zwischen dem
-ersten Commit am 2. August und dem Abschlussgespräch am 7. September lagen gut fünf Wochen,
-in denen eine Anwendung mit fünf Bereichen, einer Testsuite und statischer Analyse entstanden
-ist. Die Konfiguration dieser
+**Bei der Entwicklung** haben wir KI-gestützte Entwicklungswerkzeuge eingesetzt. Sie haben uns
+geholfen, den Funktionsumfang in der verfügbaren Zeit umzusetzen. Die Konfiguration dieser
 Werkzeuge liegt offen im Repository und ist als Teil des Arbeitsprozesses gekennzeichnet.
 
-Die Grenze verlief bei den fachlichen Entscheidungen, und das ist keine Behauptung, sondern
-im Projektverlauf belegbar. Die Umstellung auf den Katalog kam daher, dass wir die Anwendung
+Die Grenze verlief bei den Entscheidungen darüber, was die Anwendung tun soll und wie, und das
+lässt sich im Projektverlauf belegen. Die Umstellung auf den Katalog kam daher, dass wir die Anwendung
 selbst benutzt und dabei gemerkt haben, dass eine Gewohnheit ohne Dauer nicht planbar ist.
 Die Grenze von fünf aktiven Gewohnheiten geht auf Annes Frage nach einer Höchstzahl zurück
 und wurde mit Umfragedaten begründet. Der Verzicht auf einen simulierten KI-Fallback ist eine
@@ -1935,23 +2021,26 @@ benennen, was als Nächstes käme.
 
 ## 9.7 Was wir bewusst weggelassen haben, und der Weg zurück
 
-Vier Funktionen haben wir in Phase 4 ausdrücklich nicht gebaut. Wir haben uns früh dafür
-entschieden, damit der Umfang beherrschbar bleibt und die übrigen Funktionen zuverlässig
-laufen. Drei davon scheiterten an einer Eigenschaft, die unser Planungsmodell voraussetzt,
-für die vierte reichte die Zeit der Umsetzung nicht mehr.
+Vier Funktionen fehlen in der fertigen Anwendung bewusst. Wir haben sie weggelassen, damit der
+Umfang beherrschbar bleibt und die übrigen Funktionen zuverlässig laufen. Drei davon passen
+nicht zu dem, was unser Planungsmodell voraussetzt, nämlich eine bekannte Dauer oder Uhrzeit.
+Für die vierte reichte die Zeit der Umsetzung nicht mehr.
 
 | Weggelassen | Warum | Was es bräuchte |
 |---|---|---|
 | **Punktuelle Gewohnheiten** wie „Treppe statt Aufzug" | haben keine Dauer und belegen kein Zeitfenster | ein zweiter Gewohnheitstyp, der ohne Platz im Tag auskommt und nur gezählt wird |
-| **Situative Anker ohne planbare Uhrzeit** wie „nach dem Frühstück" | zu individuell, um daraus eine verlässliche Planung abzuleiten | eine Möglichkeit, die Uhrzeit eines solchen Moments je Wochentag einmal selbst festzulegen |
-| **Eigene Gewohnheiten eintragen** | frei formulierte Gewohnheiten tragen keine Dauer (Abschnitt 7.8) | ein eigener Eintrag mit Dauer und Bereich als Pflichtangaben |
+| **Situative Anker ohne planbare Uhrzeit** wie „nach dem Frühstück" | jede Person frühstückt oder isst zu einer anderen Zeit, die Anwendung müsste die Uhrzeit raten (Abschnitt 7.10) | eine Möglichkeit, die Uhrzeit eines solchen Moments je Wochentag einmal selbst festzulegen |
+| **Eigene Gewohnheiten eintragen** | frei formulierte Gewohnheiten tragen keine Dauer, deshalb haben wir zunächst mit einem festen Katalog gearbeitet (Abschnitt 7.8) | ein eigener Eintrag, den die KI auswertet und dem sie Dauer, Bereich und eine passende Tageszeit zuordnet |
 | **Blocker** als eigene Kategorie für feste Termine | im Rahmen dieser Umsetzung nicht mehr erreicht | ein dritter Blocktyp neben Kurs und Gewohnheit, der den Tag belegt, ohne abgehakt zu werden |
 
 Der dritte Punkt ist der wichtigste, weil er die spürbarste Einschränkung der fertigen
 Anwendung ist. Wer eine Gewohnheit vorhat, die im Katalog fehlt, kann sie derzeit nicht
-anlegen. Die Umkehrung wäre dabei kein Rückschritt zum alten Zustand. Was die freie Eingabe
-unbrauchbar machte, war nicht die Freiheit, sondern die fehlende Angabe. Ein eigener Eintrag,
-der nach Bereich und Dauer fragt, behält den Katalog als Vorschlag und öffnet ihn zugleich.
+anlegen. Mit dem festen Katalog haben wir bewusst begonnen, damit die Planung zuverlässig
+funktioniert. Darauf lässt sich aufbauen. Nutzer könnten wieder eigene Gewohnheiten eintragen,
+und die KI könnte einen solchen Eintrag auswerten und ihm eine Dauer, einen Bereich und eine
+passende Tageszeit zuordnen. Die Anwendung könnte die Gewohnheit dann genauso planen wie einen
+Eintrag aus dem Katalog. Das wäre kein Rückschritt zum alten Zustand, denn die freie Eingabe
+scheiterte nicht an der Freiheit, sondern an den fehlenden Angaben.
 
 ## 9.8 Verworfenes, das wiederkommen könnte
 
@@ -2002,8 +2091,8 @@ zurück. Reduzieren statt pausieren, als Funktion statt als Vorsatz. Von allen o
 hat dieser die beste Datengrundlage.
 
 **Erinnerungen, die die Anwendung verlassen.** Unser Konzept sah eine Erinnerung vor dem
-Auslöser vor, nicht danach. Umgesetzt ist ein Wecker innerhalb der Anwendung, der nur wirkt,
-solange sie geöffnet ist. Das ist eine direkte Folge der Plattformentscheidung aus Abschnitt
+Auslöser vor, nicht danach. Umgesetzt sind Erinnerungen und ein Wecker innerhalb der
+Anwendung, die nur wirken, solange sie geöffnet ist. Das ist eine direkte Folge der Plattformentscheidung aus Abschnitt
 7.1 und einer der Punkte, an denen sich ihr Preis zeigt.
 
 **Eine Erprobung mit Nutzern.** Nach Abschnitt 9.5 ist dies die deutlichste Lücke unseres
