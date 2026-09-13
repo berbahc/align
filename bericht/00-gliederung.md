@@ -1,6 +1,6 @@
 # Bericht Align — Gliederung und Arbeitsplan
 
-**Stand:** 10. September 2026 · **Abgabe:** 16.09.2026
+**Stand:** 13. September 2026 · **Abgabe:** 16.09.2026
 **Vorgabe:** ab 30 Seiten mit Screenshots.
 
 ---
@@ -44,11 +44,11 @@ für das Ergebnis relevant ist — bei der Implementierung —, nicht als durchg
 | # | Kapitel | Inhalt | Status |
 |---|---|---|---|
 | 8 | **Die fertige App** | Screenshot-Walkthrough durch alle fünf Bereiche, 10 Abbildungen, plus Funktionsumfang im Überblick | ✅ |
-| 9 | **Reflexion** | Was gut lief · Schwierigkeiten · KI als Werkzeug und ihre Grenzen · methodische Grenzen · Learnings fachlich und im Team | offen |
-| 10 | **Ausblick** | Die bewusst weggelassenen Funktionen (Abschnitt 7.13) · verworfene Konzeptideen · was als Nächstes käme · langfristige Vision | offen |
+| 9 | **Reflexion** | Was gut lief · Schwierigkeiten · KI als Werkzeug und ihre Grenzen · methodische Grenzen · Learnings fachlich und im Team | ✅ |
+| 10 | **Ausblick** | Die bewusst weggelassenen Funktionen (Abschnitt 7.13) · verworfene Konzeptideen · was als Nächstes käme · langfristige Vision | ✅ |
 | — | **Anhang** | Quellenverzeichnis · Interviewleitfaden · Umfragefragen · Persona-Sheets · Iterationsfeedback im Original | offen |
 
-**Stand:** Kapitel 1–8 fertig — rund 11.400 Wörter plus 10 Abbildungen, etwa 40 Seiten.
+**Stand:** Kapitel 1–10 fertig — rund 14.400 Wörter plus 10 Abbildungen, etwa 50 Seiten.
 
 ---
 
@@ -62,7 +62,7 @@ für das Ergebnis relevant ist — bei der Implementierung —, nicht als durchg
 ### Phase 1 — Schreiben
 1. ✅ Kapitel 1 bis 7 — Rahmen und alle vier Entwicklungsphasen
 2. ✅ Kapitel 8 — die fertige App, mit Screenshots
-3. Kapitel 9 und 10 — Reflexion und Ausblick
+3. ✅ Kapitel 9 und 10 — Reflexion und Ausblick
 4. Anhang
 
 ### Screenshots

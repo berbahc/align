@@ -3,7 +3,7 @@
 Der Bericht entsteht zuerst als Markdown, später wird er in LaTeX in unserer Designsprache
 gesetzt. Eine Datei pro Kapitel, fortlaufend nummeriert.
 
-**Stand:** 12.09.2026 · Kapitel 1–8 fertig · rund 11.500 Wörter, etwa 40 Seiten
+**Stand:** 13.09.2026 · Kapitel 1–10 fertig · rund 14.400 Wörter, etwa 50 Seiten
 
 ## Aufbau
 
@@ -20,8 +20,8 @@ Der Bericht folgt den vier Entwicklungsphasen; die sechs Iterationen sind darin 
 | `06-phase3-konzeption-design.md` | Phase 3 — Konzeption und Design (Iteration 4) | ✅ |
 | `07-phase4-technische-umsetzung.md` | Phase 4 — Technische Umsetzung (Iterationen 5–6) | ✅ |
 | `08-die-fertige-app.md` | Die fertige App, mit Screenshots | ✅ |
-| — | Kapitel 9 Reflexion | offen |
-| — | Kapitel 10 Ausblick | offen |
+| `09-reflexion.md` | Reflexion | ✅ |
+| `10-ausblick.md` | Ausblick | ✅ |
 | — | Anhang | offen |
 
 ## Screenshots
@@ -41,7 +41,7 @@ dreifache Pixeldichte), hell und dunkel.
 
 ## Offene Punkte
 
-- Kapitel 9, 10 und Anhang schreiben
+- Anhang schreiben
 - Design-Screenshots aus Figma für Kapitel 6 ergänzen
 - Quelle „Birgmeier" prüfen — wird im alten Entwurf zitiert, liegt aber nicht in
   `quellenrecherche/`

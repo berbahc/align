@@ -76,9 +76,9 @@ Iterationen eine feste Form und macht unseren Fortschritt im Nachhinein nachvoll
 | Design und Prototyping | Figma |
 | Online-Umfrage | LimeSurvey |
 | Literaturrecherche | THWS-Bibliothek, Springer, Wiley |
-| Entwicklung | Laravel Herd, VS Code, GitHub |
+| Entwicklung | Laravel Herd, VS Code, GitHub, KI-gestützte Entwicklungswerkzeuge |
 
-Zwei Werkzeugentscheidungen sind für unseren Projektverlauf relevant.
+Drei Werkzeugentscheidungen sind für unseren Projektverlauf relevant.
 
 **LimeSurvey statt Google Forms.** Anne wies in Iteration 1 auf Datenschutz und Anonymität
 bei der Umfrage hin und riet von Google Forms ab. Wir haben die Umfrage deshalb in LimeSurvey
@@ -88,3 +88,10 @@ umgesetzt (Kapitel 5).
 Figma-Datei gearbeitet, in der wir Farben, Typografie und Komponenten festgelegt haben. Sie
 blieb bis zum Projektende unsere maßgebliche Referenz für alle Gestaltungsfragen, auch
 gegenüber den später daraus abgeleiteten Prototypen.
+
+**KI-gestützte Entwicklungswerkzeuge.** In Phase 4 haben wir bei der Implementierung mit
+einem KI-gestützten Entwicklungswerkzeug gearbeitet. Wir benennen es hier, weil es den in der
+verfügbaren Zeit erreichten Funktionsumfang wesentlich ermöglicht hat. Seine Konfiguration
+liegt offen im Quellcode-Repository. Abschnitt 7.1 ordnet den Einsatz in die technische
+Umsetzung ein, Abschnitt 9.4 reflektiert ihn und zieht die Grenze zu den fachlichen
+Entscheidungen.
