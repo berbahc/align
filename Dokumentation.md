@@ -6,16 +6,124 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 > nächsten Commit verloren. Sie entsteht neu mit `php artisan dokumentation:generate`
 > und läuft nach jedem Commit sowie nach jedem Pull von selbst.
 
-**Stand:** 12.09.2026 11:32 · **150 Commits** · erster Eintrag 02.08.2026
+**Stand:** 13.09.2026 13:52 · **154 Commits** · erster Eintrag 02.08.2026
 
 ## Beteiligte
 
-- **berbahc** — 111 Commits, zuletzt am 11.09.2026
-- **Silas2505** — 37 Commits, zuletzt am 12.09.2026
+- **berbahc** — 114 Commits, zuletzt am 13.09.2026
+- **Silas2505** — 38 Commits, zuletzt am 12.09.2026
 
 ---
 
+## 13.09.2026
+
+### docs: Kapitel 9 und 10 sprechen wie der Rest des Berichts
+
+`d334b3f` · **berbahc** · 13:52 Uhr
+
+> Die beiden Schlusskapitel waren vor der sprachlichen Überarbeitung
+> geschrieben. Jetzt folgen sie denselben Regeln: keine Gedankenstriche im
+> Fliesstext, Doppelpunkte nur vor Aufzaehlungen und Zitaten, zugespitzte
+> Merksaetze nuechtern gesagt.
+>
+> Zwei inhaltliche Angleichungen kommen dazu. Abschnitt 9.3 nennt den
+> urspruenglich geplanten Tech-Stack nicht mehr beim Namen, weil er auch aus
+> 7.1 verschwunden ist. Und die offene Frage in 10.3, ob sich eine Verabredung
+> ohne feste Uhrzeit koordinieren laesst, ist keine mehr: Laut 7.15 hat eine
+> Verabredung inzwischen eine Uhrzeit. An ihre Stelle tritt die Frage, die
+> offen geblieben ist, naemlich ob der Koordinationsaufwand im Alltag traegt.
+>
+> Claude-Session: https://claude.ai/code/session_01YDPKGL7he93DXyGacG7drN
+
+<details><summary>2 Dateien · +55/−55</summary>
+
+- `bericht/09-reflexion.md` +22/−23
+- `bericht/10-ausblick.md` +33/−32
+
+</details>
+
+### docs: der Bericht bekommt seinen Schluss
+
+`faaa64a` · **berbahc** · 13:49 Uhr
+
+> Kapitel 9 und 10 waren die letzten offenen Stellen. Beide standen im Bericht
+> schon als Versprechen: Abschnitt 7.13 endet mit "Diese Liste ist die Grundlage
+> des Ausblicks in Kapitel 10", und Abschnitt 8.8 wiederholt den Verweis.
+>
+> Kapitel 9 blickt zurück auf das, was getragen hat, auf die drei Stellen, an
+> denen wir umgekehrt sind, auf den Plattformwechsel und auf die Grenzen unserer
+> Methode. Dazu gehoert die Luecke, die bisher nur durch ihre Abwesenheit
+> sichtbar war: Die fertige Anwendung ist nie mit Nutzern getestet worden.
+>
+> Kapitel 10 fuehrt die vier bewussten Weglassungen weiter, ordnet die
+> verworfenen Konzeptideen ein und benennt, was als Naechstes kaeme. Ganz oben
+> steht der Modus fuer die Pruefungsphase: der staerkste Befund der
+> Nutzerforschung, den die fertige App nicht bedient.
+>
+> Abschnitt 3.4 nennt jetzt auch die KI-gestuetzten Entwicklungswerkzeuge. Im
+> Repository stehen sie offen, im Bericht fehlten sie in der Werkzeugtabelle;
+> Abschnitt 9.4 reflektiert den Einsatz und zieht die Grenze zu den fachlichen
+> Entscheidungen.
+>
+> Claude-Session: https://claude.ai/code/session_01YDPKGL7he93DXyGacG7drN
+
+<details><summary>5 Dateien · +334/−11</summary>
+
+- `bericht/00-gliederung.md` +5/−5
+- `bericht/03-vorgehen.md` +9/−2
+- `bericht/09-reflexion.md` +186/−0
+- `bericht/10-ausblick.md` +130/−0
+- `bericht/README.md` +4/−4
+
+</details>
+
 ## 12.09.2026
+
+### docs: der Bericht liest sich weniger nach Maschine
+
+`e82452f` · **Silas2505** · 15:31 Uhr
+
+> Alle acht Kapitel sprachlich überarbeitet. Gedankenstriche im Fließtext
+> ersetzt, verschachtelte Sätze aufgeteilt, Doppelpunkte auf Aufzählungen
+> und Zitate beschränkt, zugespitzte Merksätze durch nüchterne Aussagen
+> ersetzt.
+>
+> Inhaltlich unverändert bis auf zwei Stellen: der ursprünglich geplante
+> Tech-Stack ist aus 7.1 raus, und ein grammatisch gebrochener Satz am
+> Ende von Kapitel 2 ist repariert.
+
+<details><summary>8 Dateien · +490/−480</summary>
+
+- `bericht/01-einleitung.md` +64/−63
+- `bericht/02-problemraum-markt.md` +53/−51
+- `bericht/03-vorgehen.md` +24/−23
+- `bericht/04-phase1-analyse.md` +31/−30
+- `bericht/05-phase2-nutzerforschung.md` +75/−74
+- `bericht/06-phase3-konzeption-design.md` +66/−62
+- `bericht/07-phase4-technische-umsetzung.md` +137/−138
+- `bericht/08-die-fertige-app.md` +40/−39
+
+</details>
+
+### fix: die Beteiligtenliste nennt die Gruppe, nicht jeden Commit-Autor
+
+`fdf2d5e` · **berbahc** · 11:33 Uhr
+
+> Der Generator zählte bisher jeden Autor, der je einen Commit gesetzt hat.
+> In einer Abgabe soll daneben stehen, wer das Projekt gemacht hat, deshalb
+> zählt die Liste jetzt nur noch die Projektgruppe. Sie steht als Konstante
+> im Befehl.
+>
+> Gemeldet von Silas.
+>
+> Claude-Session: https://claude.ai/code/session_01MFVXELMFVbmLAtY3FauFgr
+
+<details><summary>2 Dateien · +88/−9</summary>
+
+- `Dokumentation.md` +56/−7
+- `app/Console/Commands/GenerateDokumentation.php` +32/−2
+
+</details>
 
 ### docs: der Bericht zieht in das Repository
 
