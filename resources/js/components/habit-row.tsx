@@ -1,4 +1,4 @@
-import { Check, Undo2 } from 'lucide-react';
+import { Check, Undo2, Users } from 'lucide-react';
 import { AiMascot } from '@/components/ai-mascot';
 import { HabitGlyph } from '@/components/habit-glyph';
 import { PersonCircle } from '@/components/person-circle';
@@ -371,16 +371,30 @@ export function HabitRow({
                         beides sind Angebote für denselben Moment, in dem eine
                         Gewohnheit noch offen ist. Er verschwindet, sobald
                         jemand mitmacht — eine zweite Person pro Verabredung
-                        ist die Obergrenze (§4). */}
-                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                        ist die Obergrenze (§4).
+
+                        Beide stehen in einer Zeile. „Mit jemandem zusammen?"
+                        brauchte allein 164 der 264 Pixel neben dem Einzug:
+                        Die Reihe brach um, und die Angebote klebten vier Pixel
+                        übereinander. „Zu zweit?" mit dem Zeichen des
+                        Community-Tabs sagt dasselbe kürzer und genauer, denn
+                        mehr als eine zweite Person hat eine Verabredung nicht.
+                        Bricht die Reihe auf einem sehr schmalen Gerät doch um,
+                        hält `gap-y-2` die Zeilen auseinander. */}
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                                 {onAskCompany !== null &&
                                     companion === null && (
                                         <button
                                             type="button"
                                             onClick={() => onAskCompany(habit)}
-                                            className={`${QUIET_LINK} text-xs`}
+                                            aria-label="Zu zweit mit jemandem?"
+                                            className={`inline-flex items-center gap-1.5 ${QUIET_LINK} text-xs`}
                                         >
-                                            Mit jemandem zusammen?
+                                            <Users
+                                                className="size-4 shrink-0"
+                                                aria-hidden="true"
+                                            />
+                                            Zu zweit?
                                         </button>
                                     )}
                                 {/* Der Rückweg steht an der Stelle, an der
