@@ -104,10 +104,14 @@ Personen, und Prüfungsphasen verändern Routinen massiv.
 
 ## 5.5 Personas
 
-Aus den sechs Interviews haben wir zwei Verhaltenstypen verdichtet. Beide sind vollständig
-als Persona-Sheets ausgearbeitet und liegen diesem Bericht als Anhang bei.
+Aus den sechs Interviews haben wir zwei Verhaltenstypen verdichtet. Beide haben wir vollständig
+als Persona-Sheets ausgearbeitet.
 
 ### „Die Selbstregulierten", intrinsisch und selbstreguliert
+
+![Persona „Die Selbstregulierten"](screenshots/personas/persona-1.png)
+
+*Abb. 5.1: Das Persona-Sheet „Die Selbstregulierten", verdichtet aus vier Interviews.*
 
 *Verdichtet aus Alissa, Hannah, Aylin und Felix. Höhere Semester, flexible Tage, bereits
 funktionierende kontextbasierte Routinen.*
@@ -125,6 +129,10 @@ innen und nicht aus dem Vergleich, Streak-Apps wurden getestet und abgelegt.
 | **Align-Hebel** | Wenn-Dann-Ketten an Kontexte · Habit-Buddies über konkrete Termine · Konsistenzrate statt Streak · Fehltage neutral |
 
 ### „Die Einsteiger", überfordert und inkonsistent
+
+![Persona „Die Einsteiger"](screenshots/personas/persona-2.png)
+
+*Abb. 5.2: Das Persona-Sheet „Die Einsteiger", verdichtet aus zwei Interviews.*
 
 *Verdichtet aus Danial und Ngoc Anh. Mittlere Semester, keine feste Routine, brauchen einen
 klaren ersten Schritt.*

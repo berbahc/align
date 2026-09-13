@@ -9,9 +9,9 @@ entstanden in Phase 1 (Kapitel 4).
 
 Primäre Stakeholder sind **Studierende zwischen 18 und 35 Jahren**, die Schwierigkeiten haben,
 Routinen aufzubauen, oder sich von ihrem Alltag überfordert fühlen. Als sekundäre Gruppe haben
-wir Fachleute aus Psychologie und Verhaltensforschung identifiziert, etwa die psychologische
-Beratungsstelle der Hochschule. Ihre Perspektive ist für die Gestaltung relevant, auch wenn
-sie die Anwendung nicht selbst nutzen.
+wir Fachleute aus Psychologie und Verhaltensforschung identifiziert. Ihre Perspektive ist für
+die Gestaltung relevant, auch wenn sie die Anwendung nicht selbst nutzen. In unser Projekt ist
+sie über die wissenschaftliche Literatur eingeflossen (Kapitel 4).
 
 Daraus haben wir abgeleitet, welche Informationen unsere Nutzerforschung erheben muss. Fünf
 Bereiche waren zu klären:
@@ -61,8 +61,9 @@ Mechaniken, die unterstützen statt zu dominieren.
 
 **Fabulous** kombiniert Habit Stacking mit Audio-Coaching und geführten Programmen und ist
 wissenschaftlich fundiert. Es wirkt jedoch sehr breit angelegt und eher wie eine
-Content-Bibliothek als wie eine adaptive Begleitung. *Implikation:* Wissenschaftliche
-Fundierung hilft wirklich, Personalisierung sollte aber tatsächlich adaptiv sein.
+Content-Bibliothek als wie eine persönliche Begleitung. *Implikation:* Wissenschaftliche
+Fundierung hilft wirklich, Personalisierung sollte sich aber am tatsächlichen Alltag orientieren
+statt an vorgefertigten Programmen.
 
 **Finch** setzt auf einen virtuellen Begleiter, der mit den eigenen Fortschritten wächst, und
 verzichtet bewusst auf harte Serien. Die Tonalität ist warm und trifft die Zielgruppe genau,
@@ -123,8 +124,8 @@ mobile-first. Studierende sitzen aber am Rechner, wenn sie planen und lernen. No
 dass Gewohnheitstracking im Browser funktioniert.
 
 **3 · KI als echter Begleiter statt als Content-Bibliothek.** Im Habit-Markt ist KI
-unterentwickelt. Wo sie vorkommt, liefert sie vorgefertigte Inhalte statt adaptiver
-Vorschläge. → *Align kann kontextbewusste Vorschläge machen, die den tatsächlichen Tag
+unterentwickelt. Wo sie vorkommt, liefert sie vorgefertigte Inhalte statt Vorschläge,
+die sich auf den eigenen Tag beziehen. → *Align kann kontextbewusste Vorschläge machen, die den tatsächlichen Tag
 kennen.*
 
 **4 · Subtile statt aggressiver Gamifizierung.** Habitica überfordert, reine Serien machen
@@ -163,7 +164,7 @@ Die **Stundenplan-Integration** war zu diesem Zeitpunkt eine Annahme aus der Mar
 ohne empirischen Beleg. Unsere Nutzerforschung stützte sie später indirekt. Stress und
 Prüfungsphasen erwiesen sich als größter Grund dafür, eine Gewohnheit aufzugeben (17 von 25),
 und 20 von 25 Befragten planen ohnehin mit Kalender oder Planer. Umgesetzt haben wir sie in
-Phase 4 als Semesterplan (Abschnitt 7.10). Damit ist sie der Gedanke, der unseren gesamten
+Phase 4 als Semesterplan (Abschnitt 7.11). Damit ist sie der Gedanke, der unseren gesamten
 Projektverlauf von der ersten Analyse bis in die fertige Anwendung überdauert hat.
 
 Die Entscheidung gegen **verlustaversive Mechanismen** war ebenfalls zunächst eine Haltung.

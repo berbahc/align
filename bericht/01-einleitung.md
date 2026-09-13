@@ -10,7 +10,8 @@ Der Ansatz setzt bewusst nicht bei einer Ursachenanalyse an, sondern bei der pra
 Umsetzung. Gewohnheiten werden nicht nur benannt, sondern als konkrete Blöcke in einen
 konkreten Tag eingeplant, innerhalb des eigenen Schlafrhythmus und um den eigenen Stundenplan
 herum. Eine kontextsensitive KI-Assistenz unterstützt dort, wo Menschen erfahrungsgemäß
-scheitern, nämlich beim ersten Schritt und beim Wiedereinstieg nach einer Unterbrechung.
+scheitern, nämlich beim ersten Schritt. Und sie hilft, einen neuen Platz zu finden, wenn sich
+der Tag verändert, etwa weil ein neuer Stundenplan eine Gewohnheit verdrängt.
 
 Umgesetzt wurde Align als lauffähige **MVP-Version** in Form einer mobil-first Web-Anwendung.
 Die Gründe für diese Form sind in Kapitel 7 dargestellt.
@@ -53,17 +54,17 @@ Der eigentliche Knackpunkt liegt nicht beim Vorsatz, sondern beim Übergang vom 
 täglichen Routine. Bestehende Habit-Tracker wirken entweder zu komplex, zu stark gamifiziert
 oder zu generisch, um langfristig zu motivieren.
 
-Hinzu kommt ein struktureller Mangel. Diese Anwendungen sind statisch. Wird eine Gewohnheit an
-einem Tag nicht eingehalten, hat das keinerlei Einfluss auf die Planung des nächsten. Der Plan
-bleibt derselbe, obwohl die Realität sich geändert hat. Je weiter beides auseinanderdriftet,
-desto eher wird die Anwendung ganz beiseitegelegt.
+Hinzu kommt ein struktureller Mangel. Diese Anwendungen sind statisch. Sie behandeln
+Gewohnheiten unabhängig davon, wie ein Tag tatsächlich aussieht, und ändert sich der Tag, etwa
+durch einen neuen Stundenplan, bleibt der Plan derselbe. Je weiter Plan und Alltag
+auseinanderdriften, desto eher wird die Anwendung ganz beiseitegelegt.
 
 ### 1.3.3 Keine Anwendung, die sich dem eigenen Alltag anpasst
 
 Was bestehenden Lösungen fehlt, ist die Fähigkeit, sich dem Alltag anzupassen statt umgekehrt.
 Wir suchten eine Anwendung, die auf den persönlichen Kontext eingeht. Wie viel Zeit ist gerade
-verfügbar? In welcher Phase des Semesters befindet sich die Person? Was hilft ihr persönlich,
-dranzubleiben? Genau hier sehen wir das Potenzial einer gezielten KI-Unterstützung und den
+verfügbar? In welcher Phase des Semesters befindet sich die Person? Welche Termine stehen ohnehin fest?
+Genau hier sehen wir das Potenzial einer gezielten KI-Unterstützung und den
 Kern dessen, was Align von bestehenden Anwendungen unterscheiden sollte.
 
 ## 1.4 Zielsetzung und Leitfrage
@@ -117,7 +118,12 @@ die als Personas unsere weitere Konzeption geleitet haben (Abschnitt 5.5):
 ## 1.6 Anspruch an das Endprodukt
 
 Für die Gestaltung haben wir zu Beginn sechs Ansprüche formuliert, an denen sich alle späteren
-Entscheidungen messen lassen mussten:
+Entscheidungen messen lassen mussten. Über allen stand der erste. Jede Funktion sollte so
+einfach und intuitiv zu bedienen sein, dass sie ohne Erklärung verständlich ist und beim
+Benutzen möglichst keine Hürden entstehen. Eine Anwendung, deren Bedienung selbst Überwindung
+kostet, verstärkt genau das Problem, das sie lösen soll. Deshalb haben wir bei jeder
+Entscheidung auch gefragt, ob sie einen zusätzlichen Schritt, eine zusätzliche Frage oder eine
+zusätzliche Erklärung erfordert, und diese Schritte so weit wie möglich vermieden.
 
 - intuitive und einfache Bedienung, denn die Anwendung darf nicht selbst zum Hindernis werden
 - Fokus auf langfristige Motivation statt Druck, ohne Bestrafungsmechanismus
@@ -139,5 +145,5 @@ Vorgehen und die Zusammenarbeit im Team (Kapitel 3).
 technischen Umsetzung (Kapitel 7). Jede Phase enthält ihren Verlauf einschließlich des
 Feedbacks aus den Betreuungsgesprächen und ihre inhaltlichen Ergebnisse.
 
-**Teil III** stellt das Ergebnis vor (Kapitel 8) und schließt mit Reflexion (Kapitel 9) und
-Ausblick (Kapitel 10).
+**Teil III** stellt das Ergebnis vor (Kapitel 8) und schließt mit Reflexion und Ausblick
+(Kapitel 9).

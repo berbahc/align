@@ -35,20 +35,19 @@ für das Ergebnis relevant ist — bei der Implementierung —, nicht als durchg
 | # | Kapitel | Enthält | Status |
 |---|---|---|---|
 | 4 | **Phase 1 — Analyse und Grundlagen** | Iteration 1 · Literaturrecherche mit Wirkungszuordnung · Competitor-Analyse · erste Visualisierungen · Feedback | ✅ |
-| 5 | **Phase 2 — Nutzerforschung** | Iterationen 2–3 · Interviewleitfaden, Erkenntnisse, Zitate · Personas · Umfrage n=25 mit allen Ergebnissen · LimeSurvey-Zwischenfall · methodische Einordnung · abgeleitete Produktentscheidungen | ✅ |
-| 6 | **Phase 3 — Konzeption und Design** | Iteration 4 · die vier Features mit wissenschaftlicher Herleitung · Designsprache und Farbentscheidung · Werkzeugwege · Prototypen | ✅ |
-| 7 | **Phase 4 — Technische Umsetzung** | Iterationen 5–6 · Tech-Stack mit Begründung · Architektur · KI-Anbindung · Qualitätssicherung · schrittweiser Ausbau · Entwicklung des Datenmodells · bewusste Weglassungen | ✅ |
+| 5 | **Phase 2 — Nutzerforschung** | Iterationen 2–3 · Interviewleitfaden, Erkenntnisse, Zitate · Personas mit Persona-Sheets · Umfrage n=25 mit allen Ergebnissen · methodische Einordnung · abgeleitete Produktentscheidungen | ✅ |
+| 6 | **Phase 3 — Konzeption und Design** | Iteration 4 · die vier Features mit wissenschaftlicher Herleitung · Entwürfe aus Figma · Designsprache und Farbentscheidung · interaktive Prototypen | ✅ |
+| 7 | **Phase 4 — Technische Umsetzung** | Iterationen 5–6 · Tech-Stack mit Begründung · Architektur · KI-Anbindung · Qualitätssicherung · Ausbau als Folge von Vorher-Nachher-Schritten mit Aufnahmen früherer Stände · Entwicklung des Datenmodells | ✅ |
 
 ## Teil III — Ergebnis und Rückblick (≈ 10 Seiten)
 
 | # | Kapitel | Inhalt | Status |
 |---|---|---|---|
-| 8 | **Die fertige App** | Screenshot-Walkthrough durch alle fünf Bereiche, 10 Abbildungen, plus Funktionsumfang im Überblick | ✅ |
-| 9 | **Reflexion** | Was gut lief · Schwierigkeiten · KI als Werkzeug und ihre Grenzen · methodische Grenzen · Learnings fachlich und im Team | ✅ |
-| 10 | **Ausblick** | Die bewusst weggelassenen Funktionen (Abschnitt 7.13) · verworfene Konzeptideen · was als Nächstes käme · langfristige Vision | ✅ |
+| 8 | **Die fertige App** | Auftakt · Übersicht · Anlegen einer Gewohnheit in fünf Schritten · Verschieben mit mitrutschender Kette · Stundenplan · Gewohnheiten · Schlafplan · Community · Dark Mode · Funktionsumfang | ✅ |
+| 9 | **Reflexion und Ausblick** | 9.1–9.6 Reflexion: was getragen hat, wo wir umgekehrt sind, Plattform, KI als Werkzeug, Grenzen, Learnings · 9.7–9.10 Ausblick: bewusst weggelassene Funktionen und der Weg zurück, verworfene Ideen, nächste Schritte, langfristige Richtung | ✅ |
 | — | **Anhang** | Quellenverzeichnis · Interviewleitfaden · Umfragefragen · Persona-Sheets · Iterationsfeedback im Original | offen |
 
-**Stand:** Kapitel 1–10 fertig — rund 14.400 Wörter plus 10 Abbildungen, etwa 50 Seiten.
+**Stand:** Kapitel 1–9 fertig, rund 16.200 Wörter und 41 Abbildungen.
 
 ---
 
@@ -62,14 +61,14 @@ für das Ergebnis relevant ist — bei der Implementierung —, nicht als durchg
 ### Phase 1 — Schreiben
 1. ✅ Kapitel 1 bis 7 — Rahmen und alle vier Entwicklungsphasen
 2. ✅ Kapitel 8 — die fertige App, mit Screenshots
-3. ✅ Kapitel 9 und 10 — Reflexion und Ausblick
+3. ✅ Kapitel 9 — Reflexion und Ausblick, zusammengelegt aus den früheren Kapiteln 9 und 10
 4. Anhang
 
 ### Screenshots
-Aufgenommen am 12.09.2026 gegen `https://align.test`, Mobilansicht 390 px, dreifache
-Pixeldichte, hell und dunkel. Das Demokonto wurde dafür aufbereitet: sprechender Anzeigename,
-eine erledigte Gewohnheit am aktuellen Tag, eine Verbindung im Community-Kreis. Die Rohdaten
-der Anwendung (Gewohnheiten, Kurse, Schlafplan) stammen unverändert aus dem Seed.
+Aufnahmen der App in der Mobilansicht (390 px, dreifache Pixeldichte), hell und dunkel. Für
+Kapitel 7 haben wir frühere Code-Stände (10.08., 31.08., 03.09.) noch einmal gebaut und
+nachträglich aufgenommen. Das Demokonto trägt den Namen unserer ersten Persona. Ordner und
+Verwendung stehen in `README.md`.
 
 ### Phase 2 — LaTeX
 Erst wenn der Inhalt steht. Setzung in der eigenen Designsprache (Sora, `#775A19`);
@@ -92,4 +91,4 @@ verbindlich ist die Figma-Datei, nicht `designsprache.md`.
 
 1. **Quelle Birgmeier** — in Noggis Entwurf zitiert, liegt nicht in `quellenrecherche/`.
    Belegen oder streichen.
-2. **Design-Screenshots aus Figma** — für Kapitel 6 und 8 angekündigt.
+2. **Notiz für Berkay** am Anfang von Kapitel 9 — lesen und vor der Abgabe entfernen.

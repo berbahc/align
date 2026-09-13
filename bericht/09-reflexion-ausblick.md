@@ -1,10 +1,27 @@
-# 9. Reflexion
+# 9. Reflexion und Ausblick
+
+> **Notiz für Berkay, vor der Abgabe entfernen.** Deine Kapitel 9 und 10 sind jetzt ein Kapitel
+> „Reflexion und Ausblick", der Ausblick läuft als Abschnitte 9.7 bis 9.10 weiter. Bitte drei
+> Stellen gegenlesen:
+>
+> 1. **Abschnitt 7.13 „Was bewusst weggelassen wurde" gibt es nicht mehr.** Sein Inhalt steht
+>    jetzt nur noch in 9.7. Dort ist ergänzt, dass wir die vier Funktionen früh und bewusst
+>    weggelassen haben, damit der Umfang beherrschbar bleibt, und dass beim Blocker die Zeit
+>    der Grund war und nicht das Planungsmodell. Passt die Formulierung für dich?
+> 2. **Die Idee einer KI, die selbst Muster erkennt und sich meldet, ist herausgenommen**, auch
+>    aus dem Ausblick. Betroffen waren „Eine KI, die sich von selbst meldet" im früheren 10.3
+>    sowie je eine Tabellenzeile im früheren 10.1 und 10.4. Das Konzept soll im Bericht nicht
+>    vorkommen, auch nicht als verworfen.
+> 3. **Querverweise auf Kapitel 7** sind an dessen neue Gliederung angepasst, der Katalog steht
+>    jetzt in 7.8 und das Datenmodell in 7.15.
 
 Dieses Kapitel blickt auf vier Monate Projektarbeit zurück. Es beschreibt, welche
 Entscheidungen getragen haben, an welchen Stellen wir umgekehrt sind, welche Rolle
 KI-Werkzeuge dabei gespielt haben und wo die Grenzen unseres Vorgehens liegen. Wir halten
 uns dabei an dieselbe Regel wie im übrigen Bericht. Wir berichten, was entschieden wurde und
-warum, nicht, was wir uns im Nachhinein gewünscht hätten.
+warum, nicht, was wir uns im Nachhinein gewünscht hätten. Der zweite Teil des
+Kapitels blickt nach vorn, auf das, was wir bewusst weggelassen haben, und darauf, wie sich
+Align weiterentwickeln ließe.
 
 ---
 
@@ -57,12 +74,12 @@ trägt. Einer frei formulierten Gewohnheit fehlt die Dauer, und ohne Dauer läss
 zuverlässig in einen Tag einplanen. Wir haben daraufhin auf einen Katalog mit festen
 Dauerangaben umgestellt. Diese Änderung ist der Wendepunkt unserer Umsetzung, weil aus einem
 Tracker ein Planungswerkzeug wurde, und zugleich unsere größte bewusste Einschränkung des
-Funktionsumfangs (Abschnitt 7.9).
+Funktionsumfangs (Abschnitt 7.8).
 
 **Auch das Datenmodell ist gewachsen, nicht entworfen worden.** Die Reihenfolge unserer
 Migrationen zeichnet den Weg der Anwendung nach; bemerkenswert sind dabei jene, die etwas
 entfernen. Punktuelle Gewohnheiten, geratene Situationen und eine überflüssige Kursart sind
-nach dem tatsächlichen Gebrauch wieder verschwunden (Abschnitt 7.14).
+nach dem tatsächlichen Gebrauch wieder verschwunden (Abschnitt 7.15).
 
 Die letzte Iteration hat uns die Grenzen dieses Vorgehens gezeigt. Im Protokoll steht die
 knappe Notiz, die Schwierigkeit habe darin bestanden, zwei Ziele zu vereinbaren, nämlich die
@@ -85,7 +102,7 @@ mit voller Bewertung in der Spalte Web.
 
 Offen bleiben muss allerdings, dass unsere Leitfrage weiterhin von „einer mobilen
 Applikation" spricht. Der Wechsel ist eine Entwicklungsentscheidung, keine
-Produktentscheidung; die langfristige Produktidee bleibt die mobile Anwendung, und Kapitel 10
+Produktentscheidung; die langfristige Produktidee bleibt die mobile Anwendung, und Abschnitt 9.10
 kommt darauf zurück. Die Konsequenzen sind an einer Stelle spürbar. Erinnerungen bleiben in
 der Anwendung gefangen, wo das Konzept eine Benachrichtigung vor dem Auslöser vorsah.
 
@@ -149,7 +166,7 @@ im Juni war die einzige Rückkopplung von außen das Betreuungsgespräch. Geprü
 technisch, mit Tests, statischer Analyse und einer Pipeline, die bei jedem Push läuft. Ob die
 Anwendung ihren eigenen Anspruch erfüllt, nämlich nicht selbst zum Hindernis zu werden, ist
 damit begründet, aber nicht gemessen. Das ist die deutlichste Lücke unseres Vorgehens und der
-erste Punkt, den Kapitel 10 aufgreift.
+erste Punkt, den Abschnitt 9.9 aufgreift.
 
 ## 9.6 Was wir mitnehmen
 
@@ -183,3 +200,128 @@ eingetreten. Die Stundenplan-Integration war im Mai eine unbelegte Annahme aus d
 Marktanalyse und wirkte technisch am teuersten. Sie ist als Semesterplan der Gedanke, der
 unseren gesamten Projektverlauf überdauert hat, und zugleich das Merkmal, das Align von einem
 Gewohnheitstracker unterscheidet.
+
+---
+
+# Ausblick
+
+Ein Ausblick lässt sich als Wunschliste schreiben oder aus dem heraus, was bereits belegt
+ist. Wir wählen den zweiten Weg. Unsere Migrationen zeigen, dass wir Konzepte nicht nur
+ergänzt, sondern nach dem tatsächlichen Gebrauch auch zurückgenommen haben (Abschnitt 7.15).
+Jede dieser Rücknahmen trägt einen Grund, und jeder dieser Gründe beschreibt zugleich, was
+nötig wäre, um sie aufzuheben. Wir beginnen mit den Funktionen, die wir bei der
+Umsetzung bewusst weggelassen haben, ordnen danach die verworfenen Konzeptideen ein und
+benennen, was als Nächstes käme.
+
+---
+
+## 9.7 Was wir bewusst weggelassen haben, und der Weg zurück
+
+Vier Funktionen haben wir in Phase 4 ausdrücklich nicht gebaut. Wir haben uns früh dafür
+entschieden, damit der Umfang beherrschbar bleibt und die übrigen Funktionen zuverlässig
+laufen. Drei davon scheiterten an einer Eigenschaft, die unser Planungsmodell voraussetzt,
+für die vierte reichte die Zeit der Umsetzung nicht mehr.
+
+| Weggelassen | Warum | Was es bräuchte |
+|---|---|---|
+| **Punktuelle Gewohnheiten** wie „Treppe statt Aufzug" | haben keine Dauer und belegen kein Zeitfenster | ein zweiter Gewohnheitstyp, der ohne Platz im Tag auskommt und nur gezählt wird |
+| **Situative Anker ohne planbare Uhrzeit** wie „nach dem Frühstück" | zu individuell, um daraus eine verlässliche Planung abzuleiten | eine Möglichkeit, die Uhrzeit eines solchen Moments je Wochentag einmal selbst festzulegen |
+| **Eigene Gewohnheiten eintragen** | frei formulierte Gewohnheiten tragen keine Dauer (Abschnitt 7.8) | ein eigener Eintrag mit Dauer und Bereich als Pflichtangaben |
+| **Blocker** als eigene Kategorie für feste Termine | im Rahmen dieser Umsetzung nicht mehr erreicht | ein dritter Blocktyp neben Kurs und Gewohnheit, der den Tag belegt, ohne abgehakt zu werden |
+
+Der dritte Punkt ist der wichtigste, weil er die spürbarste Einschränkung der fertigen
+Anwendung ist. Wer eine Gewohnheit vorhat, die im Katalog fehlt, kann sie derzeit nicht
+anlegen. Die Umkehrung wäre dabei kein Rückschritt zum alten Zustand. Was die freie Eingabe
+unbrauchbar machte, war nicht die Freiheit, sondern die fehlende Angabe. Ein eigener Eintrag,
+der nach Bereich und Dauer fragt, behält den Katalog als Vorschlag und öffnet ihn zugleich.
+
+## 9.8 Verworfenes, das wiederkommen könnte
+
+**Die Habit Journey.** Wir haben sie nach der Umfrage gestrichen und die Streichung bewusst
+in die Zwischenpräsentation aufgenommen, statt sie stillschweigend verschwinden zu lassen
+(Abschnitt 5.13). Die methodische Einordnung in Abschnitt 5.11 zwingt uns hier zu einer
+Einschränkung. Der ausgelieferte Fragebogen enthielt keine eigene Skala zur Habit Journey.
+Wir haben also ein Konzept gestrichen, ohne es je erhoben zu haben. Das Konzept selbst liegt
+vollständig ausgearbeitet vor und beruht unmittelbar auf Lally et al. (2010). Vorgesehen
+waren eine Automatisierungskurve pro Gewohnheit mit gemessenem und geschätztem Verlauf, eine
+Phasenanzeige von Aufbau über Festigung bis Gewohnheit und Erfolgsmarken nach 30, 66 und 100
+Tagen. Die Zahl 66 ist dabei kein Spielelement, sondern der in der Studie gemessene
+Durchschnitt. Für eine Anwendung, die Gewohnheitsbildung als Prozess über Wochen versteht,
+schließt das eine Lücke, die unsere Fortschrittsanzeige heute offen lässt. Sie zeigt die
+letzten 30 Tage, aber nicht den Weg.
+
+**Das Freiwerden eines Platzes.** Eng damit verbunden ist ein Mechanismus, den wir konzipiert
+und nicht gebaut haben. Läuft eine Gewohnheit über Wochen zuverlässig, könnte die Anwendung
+anbieten, sie als gefestigt zu markieren und damit einen der fünf aktiven Plätze freizugeben.
+Heute gibt es nur „Beenden", und das liest sich wie ein Abbruch. Die Grenze von fünf
+Gewohnheiten ist unsere am besten begründete Produktregel; sie hat aber keinen vorgesehenen
+Ausgang nach oben.
+
+**Zurückhaltende Erweiterungen der Community.** Gebaut ist die Verabredung für einen
+einzelnen Tag. Ausgearbeitet, aber nicht umgesetzt sind drei kleinere Bausteine. Der erste
+ist ein Signal, dass jemand heute aktiv ist, ohne zu zeigen, woran. Der zweite ist eine
+einzelne Reaktion auf eine erledigte Gewohnheit. Der dritte ist eine gemeinsame Gewohnheit
+für eine kleine Gruppe, etwa eine WG oder eine Lerngruppe. Alle drei folgen derselben Regel
+wie der bestehende Bereich, nach der Aussetzer für andere unsichtbar bleiben.
+
+**Was verworfen bleibt.** Die Rangliste und das Community Dashboard nehmen wir nicht wieder
+auf. In den Interviews wurde Vergleich als Kontrolle beschrieben, in der Umfrage war eine
+Rangliste ausdrücklich nicht gewünscht, und beide Mechaniken widersprechen der Zusage, mit
+der der Community-Bereich beginnt. Ebenso bleiben der gemeinsame Kalender (ø 3,04) und
+Live-Bilder während einer Gewohnheit (ø 2,83) gestrichen. Sie waren die beiden schwächsten
+Bewertungen der gesamten Umfrage.
+
+## 9.9 Was als Nächstes käme
+
+**Ein Modus für die Prüfungsphase.** Das ist der stärkste Befund unserer Nutzerforschung, den
+die fertige Anwendung nicht bedient. Stress und Prüfungsphase sind mit 17 von 25 Nennungen
+der mit Abstand größte Grund, Gewohnheiten aufzugeben. Wichtiger noch ist die Reaktion
+darauf. 15 von 25 reduzieren in dieser Zeit, statt ganz aufzuhören (Abschnitt 5.9). Align kennt
+heute den Stundenplan, aber keine Prüfungsphase; es kann einen Tag umsortieren, aber nicht
+kleiner machen. Ein solcher Modus würde den Tag auf eine Kernroutine zusammenziehen und die
+übrigen Gewohnheiten sichtbar beiseitestellen, statt sie zu löschen, mit demselben Weg
+zurück. Reduzieren statt pausieren, als Funktion statt als Vorsatz. Von allen offenen Punkten
+hat dieser die beste Datengrundlage.
+
+**Erinnerungen, die die Anwendung verlassen.** Unser Konzept sah eine Erinnerung vor dem
+Auslöser vor, nicht danach. Umgesetzt ist ein Wecker innerhalb der Anwendung, der nur wirkt,
+solange sie geöffnet ist. Das ist eine direkte Folge der Plattformentscheidung aus Abschnitt
+7.1 und einer der Punkte, an denen sich ihr Preis zeigt.
+
+**Eine Erprobung mit Nutzern.** Nach Abschnitt 9.5 ist dies die deutlichste Lücke unseres
+Vorgehens. Sinnvoll wäre beides. Ein Usability-Test des Einrichtungsflows und der
+Tagesansicht mit Studierenden, die das Projekt nicht kennen, würde zeigen, ob die Anwendung
+ihren ersten Anspruch einlöst. Eine Folgebefragung mit mindestens 50 Teilnehmenden über die
+eigene Fachrichtung hinaus würde die Befunde absichern, die wir bisher als richtungsweisend
+bezeichnen müssen, und zugleich die beiden Skalen nachholen, die im ausgelieferten Fragebogen
+fehlten. Besonders offen ist dabei die Frage, ob der Koordinationsaufwand einer Verabredung
+im Alltag tragbar ist. Das lässt sich nur mit echten Paaren prüfen, nicht mit
+Einzelpersonen.
+
+## 9.10 Die langfristige Richtung
+
+Gemessen an den vier Marktlücken, die unsere Analyse im Mai gefunden hat, fällt die Bilanz
+gemischt aus, aber nachvollziehbar.
+
+| Marktlücke | Stand |
+|---|---|
+| **Lebensrealität Studierender als Produktlogik** | halb geschlossen, der Semesterplan kennt Kurse und Kollisionen, aber keine Prüfungsphasen |
+| **Planen findet am Laptop statt** | erfüllt, aber als Nebenwirkung der Entwicklungsentscheidung, nicht als Produktentscheidung |
+| **KI als Begleiter statt Content-Bibliothek** | geschlossen, die KI kennt Gewohnheiten, Schlafrahmen und Stundenplan und macht Vorschläge für den tatsächlichen Tag |
+| **Subtile statt aggressiver Gamifizierung** | geschlossen durch Konsistenzrate, neutrale Fehltage und fehlenden Verlustdruck |
+
+Von den sechs Ansprüchen aus Abschnitt 1.6 haben wir fünf erreicht und können sie belegen:
+klare Struktur, Verzicht auf Bestrafung, Konsistenz über Light und Dark Mode, kontextsensitive
+Personalisierung über Situations-Anker und eine Gestaltung, deren Entscheidungen auf Literatur
+zurückführbar sind. Beim ersten Anspruch, dass die Anwendung nicht selbst zum Hindernis werden
+darf, haben wir gute Gründe, aber keinen Beleg. Ihn zu erbringen, ist die eigentliche Aufgabe
+der nächsten Phase.
+
+Die langfristige Produktidee bleibt die native mobile Anwendung. Sie löst einen der offenen
+Punkte unmittelbar, denn Erinnerungen erreichen den Nutzer dann auch außerhalb der Anwendung. Die Positionierung aus Abschnitt 2.4
+bleibt dabei unverändert das Ziel, nämlich eine Anwendung zum Gewohnheitsaufbau, die die
+Lebensrealität Studierender versteht und ohne Druck zur Konsistenz führt. Align ist heute ein
+MVP aus einem Studienprojekt und kein marktfähiges Produkt. Es zeigt etwas anderes, das für
+den Zweck dieser Arbeit genauer passt. Eine solche Anwendung lässt sich aus Interviews, einer
+Umfrage und drei wissenschaftlichen Quellen begründen und in lauffähige Form bringen, ohne
+dass zwischen der Begründung und dem Gebauten eine Lücke entsteht.

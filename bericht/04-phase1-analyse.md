@@ -45,8 +45,8 @@ Ergebnisse waren für unseren weiteren Verlauf bestimmend:
 1. **Keine der untersuchten Anwendungen denkt in Semestern, Prüfungsphasen und
    Vorlesungsrhythmus.** Athenify kommt der Zielgruppe am nächsten, verengt sich aber auf
    das Lernen.
-2. **KI wird im Habit-Markt kaum als adaptiver Coach eingesetzt**, sondern allenfalls als
-   vorgefertigte Content-Bibliothek. Einzige Ausnahme ist Headspace mit „Ebb".
+2. **KI wird im Habit-Markt kaum als Begleiter eingesetzt, der den eigenen Alltag kennt**,
+   sondern allenfalls als vorgefertigte Content-Bibliothek. Einzige Ausnahme ist Headspace mit „Ebb".
 3. **Aggressive oder verlustaversive Gamification erzeugt Druck statt Motivation**, besonders
    bei jüngeren Zielgruppen. Habitica überfordert, reine Streak-Logiken machen anfällig für
    Aufgabe nach dem ersten Fehltag.

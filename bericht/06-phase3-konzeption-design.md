@@ -17,9 +17,15 @@ ergänzt um eine übergreifende KI-Assistenz:
 | **Time Blocking** | Wenn-Dann-Anker ø 3,88 · 20/25 planen ohnehin mit Kalender · in allen sechs Interviews bestätigt |
 | **Progress Tracking** | meistgewählte wichtigste Funktion (9/25) · Schuldwert 3,92 macht „vergebend" zur Pflicht |
 | **Community** | 21/25 teilen mit engen Freunden, aber nur 3/25 nennen Soziales als wichtigste Funktion |
-| **KI-Assistenz** | Starthilfe ø 4,16 (Bestwert) · dynamische Anpassung ø 4,04 |
+| **KI-Assistenz** | Starthilfe bei Überforderung ø 4,16, der Bestwert aller abgefragten Funktionen |
 
 Die **Habit Journey** haben wir an dieser Stelle gestrichen (Abschnitt 5.13).
+
+Für alle Features galt derselbe Maßstab. Sie sollten sich ohne Erklärung bedienen lassen und
+beim Benutzen so wenige Hürden wie möglich erzeugen. Eine Gewohnheit anzulegen, abzuhaken oder
+zu verschieben durfte nicht selbst zu einer Aufgabe werden, die man aufschiebt. Wir haben
+deshalb bei jedem Screen geprüft, welche Angabe wirklich nötig ist, und alles andere
+weggelassen oder mit einem sinnvollen Vorschlag vorbelegt.
 
 ## 6.2 Time Blocking
 
@@ -30,7 +36,7 @@ konkrete Zeitfenster ein.
 Der Einrichtungsflow läuft in zwei getrennten Schritten. Zuerst wird das Ziel definiert („Ich
 will regelmäßig laufen gehen"), danach eine konkrete Situation als Auslöser gewählt („Wenn
 ich von der Uni nach Hause komme, dann gehe ich laufen"). Das Format „Wenn X, dann Y" wird
-intern gespeichert und ist Grundlage für Erinnerungen und KI-Anpassungen.
+intern gespeichert und ist Grundlage für die Planung im Tag und für Erinnerungen.
 
 Drei Mechanismen gehören dazu:
 
@@ -38,9 +44,14 @@ Drei Mechanismen gehören dazu:
   wie „nach dem Aufstehen", „nach der Morgenvorlesung" oder „wenn ich nach Hause komme". Eine
   Situation löst Verhalten automatisch aus, während eine Uhrzeit aktiv im Kopf behalten
   werden muss.
-- **Domino-Prinzip / Habit Chains.** Eine Gewohnheit wird zum Auslöser der nächsten. Die KI
-  kann solche Ketten aus dem bestehenden Alltag ableiten und vorschlagen.
+- **Domino-Prinzip / Habit Chains.** Eine Gewohnheit wird zum Auslöser der nächsten.
+  Verschiebt sich die erste, rückt die zweite mit.
 - **Erinnerung vor dem Trigger**, nicht danach.
+
+![Anker wählen](screenshots/figma/fig04-anker-dynamisch.png) ![Warum-Satz](screenshots/figma/fig05-warum-satz.png)
+
+*Abb. 6.1 und 6.2: Der Einrichtungsflow im Entwurf. Links die Wahl des Ankers, rechts der
+Warum-Satz in eigenen Worten.*
 
 **Wissenschaftliche Grundlage.** Faude-Koivisto und Gollwitzer (2009) zeigen, dass das Format
 „Wenn X, dann Y" Verhaltenskontrolle an die Situation statt an die Selbstdisziplin überträgt
@@ -60,6 +71,11 @@ einzigen Grundsatz, nämlich ehrlicher Transparenz ohne Druck.
   bleiben neutral statt rot markiert.
 - Ein vergessener Tag löst keine Schuldnachricht, kein Kreuz und keinen Reset aus.
 - Ist eine Gewohnheit gefestigt, kann sie durch eine neue ersetzt werden.
+
+![Übersicht](screenshots/figma/fig08-progress-uebersicht.png) ![Insights](screenshots/figma/fig09-progress-insights.png)
+
+*Abb. 6.3 und 6.4: Progress Tracking im Entwurf. Die Übersicht zeigt den Stand des Tages, die
+Insights-Ansicht den Verlauf über mehrere Wochen.*
 
 **Wissenschaftliche Grundlage.** Becker (2024) beschreibt im „Tagebuch der Tugenden", dass
 sichtbarer Fortschritt die zukünftige Leistung um bis zu 20 % erhöht. Lally et al. (2010)
@@ -92,6 +108,11 @@ aufdringliche Mechaniken werden deutlich abgelehnt (gemeinsamer Kalender ø 3,04
 ø 2,83). Daraus haben wir die Positionierung als **dezente Opt-in-Ebene** abgeleitet und
 nicht als Headline unserer Anwendung.
 
+![Verabredung vorschlagen](screenshots/figma/fig10-verabredung-vorschlagen.png)
+
+*Abb. 6.5: Eine Verabredung vorschlagen. Der Entwurf zeigt eine einzelne Gewohnheit und eine
+einzelne Person, keine Gruppe und keine Liste.*
+
 ### Eine explizite Entscheidungsvorlage
 
 Für Community haben wir zwei Wirkmechanismen gegeneinander abgewogen und als eigene
@@ -101,6 +122,10 @@ Vergleichsfolie ausgearbeitet:
 |---|---|---|
 | Prinzip | Rangliste, Gruppenstatistiken, Feed | konkrete, terminbasierte Verbindlichkeit zwischen 1 bis 3 Personen |
 | Empirie | Rangliste explizit nicht gewünscht; Rankings verlieren laut Interviews langfristig ihre Wirkung | „Wenn du eine Verabredung hast, gehst du mit einem anderen Pflichtbewusstsein ran" |
+
+![Vergleichsfolie](screenshots/figma/fig11-vergleich-community.png)
+
+*Abb. 6.6: Die Vergleichsfolie, mit der wir die Entscheidung begründet haben.*
 
 Wir haben uns datenbasiert für den **Verabredungsmechanismus** entschieden. Damit hatten wir
 auch Annes Anregung aus Iteration 1 aufgenommen, den sozialen Aspekt im Sinne von „ich bin
@@ -114,12 +139,15 @@ jemandem zum Sport") zu den wirksamsten Starthilfen für neue Gewohnheiten gehö
 
 Ergänzend zu den drei Kernfeatures haben wir die über die Claude API angebundene KI als
 übergreifende Ebene konzipiert. Sie formuliert bei Überforderung den kleinsten nächsten
-Schritt, schlägt Habit Chains auf Basis bestehender Alltagsroutinen vor und passt Zeitfenster
-an, wenn ein Slot wiederholt verpasst wurde.
+Schritt und schlägt einen neuen Platz im Tag vor, wenn eine Gewohnheit mit einem anderen
+Termin zusammenfällt.
+
+![Starthilfe-Sheet](screenshots/figma/fig06-starthilfe-sheet.png)
+
+*Abb. 6.7: Der kleinste nächste Schritt im Entwurf.*
 
 Diese Rolle ist empirisch am besten abgesichert. „Starthilfe bei Überforderung" erzielte mit
-ø 4,16 die höchste Nützlichkeitsbewertung aller abgefragten Funktionen, dynamische Anpassung
-ø 4,04.
+ø 4,16 die höchste Nützlichkeitsbewertung aller abgefragten Funktionen.
 
 Für die acht Screens dieses Bereichs haben wir ein eigenes Begründungsdokument angelegt, das
 für jeden Screen festhält, was zu sehen ist, warum wir es so entschieden haben und worauf es
@@ -141,8 +169,14 @@ Sprache entschieden, mit **Gold als durchgängiger Akzentfarbe**, kombiniert mit
 Dark Mode und Weiß im Light Mode. Beide Modi folgen derselben Designsprache. Diese Palette
 hielt bis zum Projektende.
 
-Als Schrift haben wir **Sora** festgelegt. Die Navigation gliedert die Anwendung in vier
-Hauptbereiche.
+![Iteration 1](screenshots/figma/fig01-startseite-iteration1.png) ![Iteration 2](screenshots/figma/fig02-startseite-iteration2.png) ![Iteration 3](screenshots/figma/fig03-startseite-iteration3.png)
+
+*Abb. 6.8 bis 6.10: Dieselbe Startseite über drei Iterationen. Links die erste, dunkelblaue
+Fassung mit Cyan-Akzent, in der Mitte der Zwischenstand, rechts die warme Fassung mit Gold
+und Sora, die bis zum Projektende hielt.*
+
+Als Schrift haben wir **Sora** festgelegt. Die Navigation gliedert die Anwendung im Entwurf in
+vier Hauptbereiche; in der gebauten Anwendung sind daraus fünf geworden (Kapitel 8).
 
 ## 6.7 Von statischen Entwürfen zu interaktiven Prototypen
 
