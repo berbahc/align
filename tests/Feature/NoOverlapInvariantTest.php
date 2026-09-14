@@ -94,9 +94,20 @@ function overlapOn(User $user, Carbon $date): ?string
     return null;
 }
 
-/** Ein Montag innerhalb des Semesters aus der Factory. */
+/**
+ * Ein Montag innerhalb des Semesters aus der Factory.
+ *
+ * Die Uhr steht dafür fest auf einem Mittwoch. Fällt heute selbst auf einen
+ * Montag, springt `next(MONDAY)` eine ganze Woche weit — und damit einen Tag
+ * über den Horizont hinaus, innerhalb dessen eine Verabredung überhaupt liegen
+ * darf ({@see Appointment::DayHorizon}). Die Zusage belegt den Tag dann nicht
+ * mehr, und der Weg „eine Gewohnheit auf eine Zusage legen" fällt jeden Montag
+ * um, ohne dass am Code etwas falsch wäre.
+ */
 function invariantMonday(): Carbon
 {
+    Carbon::setTestNow(Carbon::parse('2026-09-09 09:00'));
+
     return Carbon::today()->next(Carbon::MONDAY);
 }
 
