@@ -1752,7 +1752,7 @@ Bewegt sich dieser Rahmen, bewegen sich die Gewohnheiten an seinen Rändern mit.
 
 ## 8.8 Community
 
-![Community](screenshots/abb09-community.png)
+![Der Kreis](screenshots/kapitel8/k14-community-kreis.png)
 
 *Abb. 8.18: Der Community-Bereich beginnt mit der Zusage, was nicht geteilt wird.*
 
@@ -1765,15 +1765,48 @@ Die Seite beginnt mit dem, was **nicht** geteilt wird. Das ist die direkte Antwo
 Interviewbefund, dass Vergleich als Kontrolle empfunden wird, und auf die Umfrage, in der eine
 Rangliste explizit nicht gewünscht war.
 
-Verbindungen entstehen nur über einen exakt eingegebenen Namen, die Anwendung schlägt keine
-Personen vor und sucht nicht nach Ähnlichem. Verabredungen lassen sich vollständig abschalten,
-ohne den bestehenden Kreis zu verlieren.
+Verbindungen entstehen nur über einen exakt eingegebenen Namen. Die Anwendung schlägt keine
+Personen vor und sucht nicht nach Ähnlichem. Wer gar keine Anfragen mehr möchte, schaltet
+Verabredungen in den Einstellungen ab und behält seinen Kreis trotzdem.
+
+![Zu zweit](screenshots/kapitel8/k15-zu-zweit-sheet.png)
+
+*Abb. 8.19: Eine Gewohnheit zu zweit angehen. Person und Tag stehen fest, bevor gefragt wird.*
+
+Der Weg dorthin beginnt nicht in diesem Bereich, sondern auf der Übersicht. Unter jeder
+offenen Gewohnheit steht „Zu zweit?" neben der Starthilfe (Abschnitt 8.1). Das Blatt fragt
+zwei Dinge und sonst nichts, nämlich wen und wann. Zur Auswahl stehen nur die Tage, an denen
+die Gewohnheit ohnehin ansteht, im Beispiel Mittwoch und Freitag.
+
+Der Satz unter dem Knopf nimmt die Sorge vorweg, die aus den Interviews stammt:
+
+> „Jonas Winkler bekommt eine Anfrage. Bei einer Absage siehst du nur das, ohne Grund und
+> ohne Zähler."
+
+Eine Verabredung gilt für einen einzigen Tag. Sie verlängert sich nicht, sie wird nicht
+gezählt, und sie taucht in keiner Statistik auf.
+
+![Die Anfrage bei Jonas](screenshots/kapitel8/k16-anfrage-empfangen.png) ![Die Absage](screenshots/kapitel8/k17-absage.png)
+
+*Abb. 8.20 und 8.21: Dieselbe Verabredung von beiden Seiten. Links, was Jonas bekommt. Rechts,
+was zurückkommt, wenn er ablehnt.*
+
+Bei Jonas liegt die Anfrage oben auf der Übersicht, und sie bietet drei Antworten statt zwei.
+Neben „Passt mir" und „Lieber nicht" steht „Selbst übernehmen". Wer nicht mitkommen kann, die
+Gewohnheit aber gut findet, nimmt sie in den eigenen Tag auf. Aus einer Absage wird dann eine
+Übernahme.
+
+Die Absage ist die Stelle, an der sich entscheidet, ob die Anwendung ihr Versprechen hält. Sie
+nennt keinen Grund und führt keine Liste. Sie sagt „Passt Jonas Winkler diesmal nicht" und
+stellt daneben die einzige Frage, die dann noch zählt, nämlich ob du es trotzdem machst. „Mach
+ich trotzdem" trägt die Gewohnheit zurück in den Tag, „Alles gut" schließt die Notiz. Ein
+rotes Kreuz gibt es auch hier nicht.
 
 ## 8.9 Dark Mode
 
 ![Dark Mode](screenshots/kapitel8/k13-uebersicht-dunkel.png)
 
-*Abb. 8.19: Die Übersicht im Dark Mode.*
+*Abb. 8.22: Die Übersicht im Dark Mode.*
 
 Alle Bereiche liegen in einem hellen und einem dunklen Modus vor, die derselben Designsprache
 folgen. Gold bleibt in beiden Modi die Akzentfarbe, im Dark Mode trägt es zusätzlich die
@@ -1781,7 +1814,7 @@ folgen. Gold bleibt in beiden Modi die Akzentfarbe, im Dark Mode trägt es zusä
 
 ![Gewohnheiten im Dark Mode](screenshots/app/app11-habits-dark.png) ![Kalender im Dark Mode](screenshots/app/app12-calendar-dark.png)
 
-*Abb. 8.20 und 8.21: Gewohnheiten und Kalender im Dark Mode. Das Sieben-Tage-Raster und die
+*Abb. 8.23 und 8.24: Gewohnheiten und Kalender im Dark Mode. Das Sieben-Tage-Raster und die
 Monatsansicht behalten ihre Struktur, nur die Flächen kehren sich um.*
 
 ## 8.10 Funktionsumfang im Überblick
