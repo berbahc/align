@@ -29,7 +29,6 @@ Wer was geändert hat, zeigt die Git-Historie der Datei.
 ## Offene Punkte
 
 - Anhang schreiben
-- **Berkay:** Notiz am Anfang von Kapitel 9 lesen und vor der Abgabe entfernen
 - Quelle „Birgmeier" prüfen, wird im alten Entwurf zitiert, liegt aber nicht in
   `quellenrecherche/`
 - In der App nennt Schritt 3 des Assistenten „eine Viertelstunde" Abstand zur vorherigen

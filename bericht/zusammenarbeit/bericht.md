@@ -1803,24 +1803,6 @@ Abschnitte 9.7 bis 9.10.
 
 # 9. Reflexion und Ausblick
 
-> **Notiz für Berkay, vor der Abgabe entfernen.** Deine Kapitel 9 und 10 sind jetzt ein Kapitel
-> „Reflexion und Ausblick", der Ausblick läuft als Abschnitte 9.7 bis 9.10 weiter. Bitte vier
-> Stellen gegenlesen:
->
-> 1. **Abschnitt 7.13 „Was bewusst weggelassen wurde" gibt es nicht mehr.** Sein Inhalt steht
->    jetzt nur noch in 9.7. Dort ist ergänzt, dass wir die vier Funktionen bewusst
->    weggelassen haben, damit der Umfang beherrschbar bleibt, und dass beim Blocker die Zeit
->    der Grund war und nicht das Planungsmodell. Passt die Formulierung für dich?
-> 2. **Die Idee einer KI, die selbst Muster erkennt und sich meldet, ist herausgenommen**, auch
->    aus dem Ausblick. Betroffen waren „Eine KI, die sich von selbst meldet" im früheren 10.3
->    sowie je eine Tabellenzeile im früheren 10.1 und 10.4. Das Konzept soll im Bericht nicht
->    vorkommen, auch nicht als verworfen.
-> 3. **Querverweise auf Kapitel 7** sind an dessen neue Gliederung angepasst, der Katalog steht
->    jetzt in 7.8 und das Datenmodell in 7.15.
-> 4. **In 9.2 bis 9.4, 9.7 und 9.9 sind Zeitangaben zur Entwicklung entfernt** und einige
->    Formulierungen vereinfacht. In 9.7 verweisen eigene Gewohnheiten und situative Anker jetzt
->    auf 7.8 und 7.10, und es ist ergänzt, dass die KI eigene Einträge auswerten könnte.
-
 Dieses Kapitel blickt auf vier Monate Projektarbeit zurück. Es beschreibt, welche
 Entscheidungen getragen haben, an welchen Stellen wir umgekehrt sind, welche Rolle
 KI-Werkzeuge dabei gespielt haben und wo die Grenzen unseres Vorgehens liegen. Wir halten
