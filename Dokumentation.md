@@ -6,20 +6,281 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 > nächsten Commit verloren. Sie entsteht neu mit `php artisan dokumentation:generate`
 > und läuft nach jedem Commit sowie nach jedem Pull von selbst.
 
-**Stand:** 13.09.2026 13:52 · **154 Commits** · erster Eintrag 02.08.2026
+**Stand:** 14.09.2026 16:02 · **161 Commits** · erster Eintrag 02.08.2026
 
 ## Beteiligte
 
-- **berbahc** — 114 Commits, zuletzt am 13.09.2026
-- **Silas2505** — 38 Commits, zuletzt am 12.09.2026
+- **berbahc** — 118 Commits, zuletzt am 14.09.2026
+- **Silas2505** — 43 Commits, zuletzt am 13.09.2026
 
 ---
 
+## 14.09.2026
+
+### docs: die Notiz in Kapitel 9 ist erledigt
+
+`c531bdf` · **berbahc** · 15:12 Uhr
+
+> Alle vier Punkte aus Silas' Notiz sind angenommen, wie sie stehen: 7.13 geht
+> in 9.7 auf, die Verweise auf Kapitel 7 folgen dessen neuer Gliederung, die
+> Zeitangaben zur Entwicklung bleiben draussen, und die Idee einer KI, die von
+> selbst Muster erkennt, kommt im Bericht nicht vor.
+>
+> Damit ist die Notiz aus dem Dokument raus und der offene Punkt in der README
+> auch.
+>
+> Claude-Session: https://claude.ai/code/session_01YDPKGL7he93DXyGacG7drN
+
+<details><summary>2 Dateien · +0/−19</summary>
+
+- `bericht/README.md` +0/−1
+- `bericht/zusammenarbeit/bericht.md` +0/−18
+
+</details>
+
 ## 13.09.2026
+
+### docs: Kapitel 7 ohne Entwicklungszeitraum, mit Bildern zu Schlafplan, Verschieben und Stundenplan
+
+`723ec19` · **Silas2505** · 21:22 Uhr
+
+> Änderungen in bericht/zusammenarbeit/bericht.md:
+>
+> - 7.1 erklärt schlicht, warum Web-App, Mobile First und Laravel.
+> - Ab 7.6 stehen keine Zeiträume und Commit-Zahlen mehr. Bei alten
+>   Abbildungen steht nur noch der Code-Stand. Dasselbe gilt für 7.16, 8.1
+>   und Kapitel 9.
+> - Die Einleitung zu Iteration 6 begründet, warum sich die beiden Ziele
+>   schwer vereinbaren ließen, statt das Protokoll zu zitieren.
+> - Roter Faden zu Weggelassenem: Katalog statt Textfeld (7.8), nur noch
+>   berechenbare Situationen (7.10), Ausblick mit eigenen Gewohnheiten, die
+>   die KI auswertet (9.7).
+> - 7.9: Der Schlafrhythmus ist selbst eine Gewohnheit, unterstützt durch die
+>   Erinnerung 20 Minuten vor der Schlafenszeit (so steht es im Code).
+> - 7.10 und 7.11: Regeln beim Verschieben („Immer" nur bei freiem Platz an
+>   allen Tagen, Vorlesungen haben Vorrang, verdrängte Gewohnheiten werden
+>   geparkt), jeweils mit Abbildung.
+> - Abbildungen in Kapitel 7 neu nummeriert (7.1 bis 7.15).
+>
+> Neue Bilder liegen in screenshots/kapitel7. Das Bild für Abb. 7.13
+> (verlauf/v07-0309-seitenleiste.png) fehlte bisher im Ordner und ist jetzt
+> dabei.
+
+<details><summary>9 Dateien · +235/−146</summary>
+
+- `bericht/zusammenarbeit/bericht.md` +235/−146
+- `bericht/zusammenarbeit/screenshots/kapitel7/k7-01-schlafplan.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/kapitel7/k7-02-tagesbeginn.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/kapitel7/k7-03-tagesende.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/kapitel7/k7-04-immer-abgelehnt.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/kapitel7/k7-05-kurs-vorrang.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/kapitel7/k7-06-ohne-festen-platz.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/kapitel7/k7-07-anderer-zeitpunkt.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/verlauf/v07-0309-seitenleiste.png` +0/−0
+
+</details>
+
+### docs: die einzelnen Kapiteldateien entfallen, es gibt nur noch bericht.md
+
+`63fd9f9` · **Silas2505** · 17:51 Uhr
+
+> Die Kapitel 1 bis 9 und die Gliederung stehen vollständig in
+> bericht/zusammenarbeit/bericht.md. Die Einzeldateien bericht/0*.md sind
+> entfernt, damit niemand mehr in eine zweite Fassung schreibt. Die README
+> zeigt auf das gemeinsame Dokument und beschreibt Ablauf und Schreibregeln.
+
+<details><summary>11 Dateien · +24/−2145</summary>
+
+- `bericht/00-gliederung.md` +0/−94
+- `bericht/01-einleitung.md` +0/−149
+- `bericht/02-problemraum-markt.md` +0/−175
+- `bericht/03-vorgehen.md` +0/−97
+- `bericht/04-phase1-analyse.md` +0/−100
+- `bericht/05-phase2-nutzerforschung.md` +0/−338
+- `bericht/06-phase3-konzeption-design.md` +0/−224
+- `bericht/07-phase4-technische-umsetzung.md` +0/−347
+- `bericht/08-die-fertige-app.md` +0/−249
+- `bericht/09-reflexion-ausblick.md` +0/−327
+- `bericht/README.md` +24/−45
+
+</details>
+
+### docs: bericht/zusammenarbeit/bericht.md ist ab jetzt das gemeinsame Dokument
+
+`33d3869` · **Silas2505** · 17:47 Uhr
+
+> An den Bericht wird ab jetzt nur noch in einer Datei geschrieben:
+> bericht/zusammenarbeit/bericht.md. Sie enthält alle Kapitel 1 bis 9 am Stück,
+> die Bilder liegen daneben in bericht/zusammenarbeit/screenshots/.
+>
+> Für Claude-Sitzungen im Team: Änderungen am Berichtstext gehören in diese
+> Datei, nicht in die Kapiteldateien bericht/0*.md, nicht in Google Docs und
+> nicht in Notion. Vor dem Schreiben git pull, danach ein kurzer Commit, der
+> sagt, was geändert wurde, und sofort git push. Wer was geändert hat, zeigt
+> die Git-Historie dieser Datei. Die Schreibregeln stehen oben in der Datei.
+
+<details><summary>41 Dateien · +2045/−0</summary>
+
+- `bericht/zusammenarbeit/bericht.md` +2045/−0
+- `bericht/zusammenarbeit/screenshots/abb02-gewohnheiten.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/abb04-katalog-auswahl.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/abb06-kalender-monat.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/abb07-tagesansicht.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/abb08-schlafplan.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/abb09-community.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/app/app01-onboarding.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/app/app11-habits-dark.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/app/app12-calendar-dark.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/figma/fig01-startseite-iteration1.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/figma/fig02-startseite-iteration2.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/figma/fig03-startseite-iteration3.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/figma/fig04-anker-dynamisch.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/figma/fig05-warum-satz.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/figma/fig06-starthilfe-sheet.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/figma/fig08-progress-uebersicht.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/figma/fig09-progress-insights.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/figma/fig10-verabredung-vorschlagen.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/figma/fig11-vergleich-community.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/kapitel8/k01-uebersicht.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/kapitel8/k02-schritt1.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/kapitel8/k03-schritt2.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/kapitel8/k04-schritt3.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/kapitel8/k05-schritt4-ki.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/kapitel8/k06-schritt5.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/kapitel8/k07-fast-fertig.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/kapitel8/k08-tag-mit-kette.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/kapitel8/k09-beim-ziehen.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/kapitel8/k10-neuer-platz.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/kapitel8/k11-nach-dem-ziehen.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/kapitel8/k12-uebersicht-mit-kette.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/kapitel8/k13-uebersicht-dunkel.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/personas/persona-1.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/personas/persona-2.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/verlauf/v01-1008-uebersicht.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/verlauf/v02-1008-kalender.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/verlauf/v03-1008-gewohnheiten.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/verlauf/v04-3108-anlegen-schritt2.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/verlauf/v05-0309-gewohnheiten.png` +0/−0
+- `bericht/zusammenarbeit/screenshots/verlauf/v06-0309-semesterplan.png` +0/−0
+
+</details>
+
+### docs: der Bericht zeigt, wie die App wurde, und bekommt einen gemeinsamen Schluss
+
+`bbdcdfe` · **Silas2505** · 14:47 Uhr
+
+> Kapitel 8 führt jetzt in der Reihenfolge des ersten Benutzens durch die App:
+> Auftakt, Übersicht, das Anlegen einer Gewohnheit in allen fünf Schritten mit
+> einem echten KI-Vorschlag, und das Verschieben einer Gewohnheit, bei dem die
+> angehängte mitrutscht.
+>
+> Iteration 6 in Kapitel 7 ist als Folge einzelner Änderungen erzählt, jeweils
+> mit Vorher und Nachher. Für die Vorher-Bilder haben wir die Code-Stände vom
+> 10.08., 31.08. und 03.09. noch einmal gebaut und nachträglich aufgenommen.
+> Abschnitt 7.13 entfällt, sein Inhalt steht jetzt im Ausblick.
+>
+> Kapitel 9 und 10 sind zu „Reflexion und Ausblick" zusammengelegt, mit einer
+> Notiz für Berkay am Anfang. Aus dem ganzen Bericht entfernt sind die Idee einer
+> KI, die aus verpassten Tagen lernt und sich von selbst meldet, und die
+> Beratungsstelle der Hochschule, die wir nie einbezogen haben. Neu sind die
+> Persona-Sheets in Kapitel 5 und das Ziel einer möglichst hürdenfreien Bedienung
+> in Kapitel 1 und 6; die Figma-Entwürfe und App-Aufnahmen kommen mit.
+
+<details><summary>49 Dateien · +575/−395</summary>
+
+- `bericht/00-gliederung.md` +12/−13
+- `bericht/01-einleitung.md` +16/−10
+- `bericht/02-problemraum-markt.md` +9/−8
+- `bericht/04-phase1-analyse.md` +2/−2
+- `bericht/05-phase2-nutzerforschung.md` +10/−2
+- `bericht/06-phase3-konzeption-design.md` +44/−10
+- `bericht/07-phase4-technische-umsetzung.md` +155/−107
+- `bericht/08-die-fertige-app.md` +161/−98
+- `bericht/{09-reflexion.md => 09-reflexion-ausblick.md}` +148/−6
+- `bericht/10-ausblick.md` +0/−131
+- `bericht/README.md` +18/−8
+- `bericht/screenshots/abb01-uebersicht.png` +0/−0
+- `bericht/screenshots/abb05-anker.png` +0/−0
+- `bericht/screenshots/abb10-darkmode.png` +0/−0
+- `bericht/screenshots/app/app01-onboarding.png` +0/−0
+- `bericht/screenshots/app/app11-habits-dark.png` +0/−0
+- `bericht/screenshots/app/app12-calendar-dark.png` +0/−0
+- `bericht/screenshots/figma/fig01-startseite-iteration1.png` +0/−0
+- `bericht/screenshots/figma/fig02-startseite-iteration2.png` +0/−0
+- `bericht/screenshots/figma/fig03-startseite-iteration3.png` +0/−0
+- `bericht/screenshots/figma/fig04-anker-dynamisch.png` +0/−0
+- `bericht/screenshots/figma/fig05-warum-satz.png` +0/−0
+- `bericht/screenshots/figma/fig06-starthilfe-sheet.png` +0/−0
+- `bericht/screenshots/figma/fig08-progress-uebersicht.png` +0/−0
+- `bericht/screenshots/figma/fig09-progress-insights.png` +0/−0
+- `bericht/screenshots/figma/fig10-verabredung-vorschlagen.png` +0/−0
+- `bericht/screenshots/figma/fig11-vergleich-community.png` +0/−0
+- `bericht/screenshots/kapitel8/k01-uebersicht.png` +0/−0
+- `bericht/screenshots/{abb03-katalog-bereiche.png => kapitel8/k02-schritt1.png}` +0/−0
+- `bericht/screenshots/kapitel8/k03-schritt2.png` +0/−0
+- `bericht/screenshots/kapitel8/k04-schritt3.png` +0/−0
+- `bericht/screenshots/kapitel8/k05-schritt4-ki.png` +0/−0
+- `bericht/screenshots/kapitel8/k06-schritt5.png` +0/−0
+- `bericht/screenshots/kapitel8/k07-fast-fertig.png` +0/−0
+- `bericht/screenshots/kapitel8/k08-tag-mit-kette.png` +0/−0
+- `bericht/screenshots/kapitel8/k09-beim-ziehen.png` +0/−0
+- `bericht/screenshots/kapitel8/k10-neuer-platz.png` +0/−0
+- `bericht/screenshots/kapitel8/k11-nach-dem-ziehen.png` +0/−0
+- `bericht/screenshots/kapitel8/k12-uebersicht-mit-kette.png` +0/−0
+- `bericht/screenshots/kapitel8/k13-uebersicht-dunkel.png` +0/−0
+- `bericht/screenshots/personas/persona-1.png` +0/−0
+- `bericht/screenshots/personas/persona-2.png` +0/−0
+- `bericht/screenshots/verlauf/v01-1008-uebersicht.png` +0/−0
+- `bericht/screenshots/verlauf/v02-1008-kalender.png` +0/−0
+- `bericht/screenshots/verlauf/v03-1008-gewohnheiten.png` +0/−0
+- `bericht/screenshots/verlauf/v04-3108-anlegen-schritt2.png` +0/−0
+- `bericht/screenshots/verlauf/v05-0309-gewohnheiten.png` +0/−0
+- `bericht/screenshots/verlauf/v06-0309-semesterplan.png` +0/−0
+- `bericht/screenshots/verlauf/v07-0309-seitenleiste.png` +0/−0
+
+</details>
+
+### fix: die zwei Angebote unter einer Gewohnheit stehen nebeneinander
+
+`0013f23` · **Silas2505** · 14:21 Uhr
+
+> Auf dem Handy standen „Mit jemandem zusammen?" und „Kleinen ersten Schritt"
+> untereinander, vier Pixel auseinander. Die Reihe war schon als umbrechende
+> Zeile gebaut, bekam aber nie genug Platz: Neben dem Einzug auf Titelhöhe
+> bleiben bei 390 Pixeln Breite 264, und die beiden Knöpfe brauchten 336.
+>
+> „Kleinen ersten Schritt" bleibt, wie es ist — derselbe Wortlaut wie im
+> Kalender, damit es ein Angebot bleibt und nicht zwei. Der Weg zur Verabredung
+> heißt jetzt „Zu zweit?" und trägt das Zeichen des Community-Tabs. Das ist
+> kürzer und genauer, denn mehr als eine zweite Person hat eine Verabredung
+> nicht. Beide Knöpfe tragen damit ein Zeichen vorn und stehen in einer Zeile
+> (252 von 264 Pixeln). Auf einem 360 Pixel schmalen Gerät bricht die Reihe
+> weiterhin um, jetzt aber mit acht statt vier Pixeln zwischen den Zeilen.
+>
+> Der sichtbare Text ist Teil des zugänglichen Namens („Zu zweit mit
+> jemandem?"), damit Sprachsteuerung ihn findet.
+
+<details><summary>1 Datei · +19/−5</summary>
+
+- `resources/js/components/habit-row.tsx` +19/−5
+
+</details>
+
+### docs: Dokumentation.md auf den Stand der Schlusskapitel
+
+`b477f38` · **berbahc** · 13:52 Uhr
+
+> Claude-Session: https://claude.ai/code/session_01YDPKGL7he93DXyGacG7drN
+
+<details><summary>1 Datei · +111/−3</summary>
+
+- `Dokumentation.md` +111/−3
+
+</details>
 
 ### docs: Kapitel 9 und 10 sprechen wie der Rest des Berichts
 
-`d334b3f` · **berbahc** · 13:52 Uhr
+`0ddac38` · **berbahc** · 13:52 Uhr
 
 > Die beiden Schlusskapitel waren vor der sprachlichen Überarbeitung
 > geschrieben. Jetzt folgen sie denselben Regeln: keine Gedankenstriche im
@@ -44,7 +305,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### docs: der Bericht bekommt seinen Schluss
 
-`faaa64a` · **berbahc** · 13:49 Uhr
+`b60d050` · **berbahc** · 13:49 Uhr
 
 > Kapitel 9 und 10 waren die letzten offenen Stellen. Beide standen im Bericht
 > schon als Versprechen: Abschnitt 7.13 endet mit "Diese Liste ist die Grundlage
@@ -81,7 +342,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### docs: der Bericht liest sich weniger nach Maschine
 
-`e82452f` · **Silas2505** · 15:31 Uhr
+`14b904a` · **Silas2505** · 15:31 Uhr
 
 > Alle acht Kapitel sprachlich überarbeitet. Gedankenstriche im Fließtext
 > ersetzt, verschachtelte Sätze aufgeteilt, Doppelpunkte auf Aufzählungen
@@ -107,7 +368,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: die Beteiligtenliste nennt die Gruppe, nicht jeden Commit-Autor
 
-`fdf2d5e` · **berbahc** · 11:33 Uhr
+`acc468d` · **berbahc** · 11:33 Uhr
 
 > Der Generator zählte bisher jeden Autor, der je einen Commit gesetzt hat.
 > In einer Abgabe soll daneben stehen, wer das Projekt gemacht hat, deshalb
@@ -118,16 +379,16 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 >
 > Claude-Session: https://claude.ai/code/session_01MFVXELMFVbmLAtY3FauFgr
 
-<details><summary>2 Dateien · +88/−9</summary>
+<details><summary>2 Dateien · +82/−9</summary>
 
-- `Dokumentation.md` +56/−7
-- `app/Console/Commands/GenerateDokumentation.php` +32/−2
+- `Dokumentation.md` +54/−7
+- `app/Console/Commands/GenerateDokumentation.php` +28/−2
 
 </details>
 
 ### docs: der Bericht zieht in das Repository
 
-`0fdb05d` · **Silas2505** · 10:17 Uhr
+`e885f9f` · **Silas2505** · 10:17 Uhr
 
 > Kapitel 1 bis 8 als Markdown, eine Datei pro Kapitel, dazu zehn Screenshots
 > der laufenden App für Kapitel 8. Der Bericht folgt den vier Entwicklungsphasen;
@@ -165,7 +426,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### docs: Dokumentation.md nachgezogen
 
-`5e7421b` · **berbahc** · 14:07 Uhr
+`1e924d2` · **berbahc** · 14:07 Uhr
 
 > Claude-Session: https://claude.ai/code/session_01TpmLvQkYiNDdkKKpUpHPKi
 
@@ -177,7 +438,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: die Platzhalter zeigen die Regel, nicht eine Person
 
-`0a8be14` · **berbahc** · 14:07 Uhr
+`9bccf8a` · **berbahc** · 14:07 Uhr
 
 > Im Registrierungsformular stand „berkay" als Beispiel für den Username —
 > derselbe Name auch in den Profileinstellungen. Ein Platzhalter soll zeigen,
@@ -203,7 +464,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### docs: Dokumentation.md auf den Stand der Abgabe
 
-`b332c1f` · **berbahc** · 13:59 Uhr
+`e709513` · **berbahc** · 13:59 Uhr
 
 > Der Hook schreibt die Datei nach jedem Commit neu. Seit sie in der
 > Versionsverwaltung liegt, hinterlässt er damit eine Änderung, die mit
@@ -219,7 +480,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### docs: das Repository als Abgabe
 
-`5748212` · **berbahc** · 13:56 Uhr
+`d3b4b97` · **berbahc** · 13:56 Uhr
 
 > Die README war für das Team geschrieben — sie erklärt das Einrichten und die
 > Stolpersteine, aber nicht, was dieses Projekt ist. Für jemanden, der den Link
@@ -268,7 +529,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: die statische Analyse hat nichts mehr zu melden
 
-`4911755` · **berbahc** · 13:46 Uhr
+`e0e4b8e` · **berbahc** · 13:46 Uhr
 
 > `composer ci:check` scheiterte an 21 PHPStan-Fehlern, und die CI war deshalb
 > rot — auf der Startseite des Repositorys stand neben dem letzten Commit ein
@@ -333,7 +594,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: Bild 03 sitzt im Hörsaal
 
-`2de70a9` · **berbahc** · 12:04 Uhr
+`60e2251` · **berbahc** · 12:04 Uhr
 
 > Der alte Clip zeigte einen Schreibtisch am Fenster und dahinter einen
 > erleuchteten Raum. Er deutete an, dass jemand nicht dort ist, wo etwas los
@@ -366,7 +627,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: die drei Bildschirme zeigen die App so, wie sie wirklich aussieht
 
-`540983b` · **berbahc** · 11:44 Uhr
+`bcbbb3e` · **berbahc** · 11:44 Uhr
 
 > Der Kalendertag war ein Kartenausschnitt und keine Kalenderseite. Jetzt
 > steht dort, was dort steht: die Datumszeile mit ihren Pfeilen, der Weg
@@ -405,7 +666,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: die Antwort-Bilder des Auftakts zeigen die App im Gerät
 
-`045da6e` · **berbahc** · 11:09 Uhr
+`74c5ea3` · **berbahc** · 11:09 Uhr
 
 > Bild 04 bis 06 haben lose Kartenausschnitte auf einer Farbfläche gezeigt.
 > Das liest sich wie ein Ausschnitt aus einer Präsentation, nicht wie eine
@@ -453,7 +714,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: die Anrede auf der Übersicht liest die Uhr, nicht das Datum
 
-`1a880e4` · **berbahc** · 18:25 Uhr
+`375df97` · **berbahc** · 18:25 Uhr
 
 > Über der Seite stand rund um die Uhr „Guten Morgen". Die Ursache war ein
 > Wort: Die Anrede bekam `Carbon::today()` — Mitternacht, bei jedem Aufruf —
@@ -475,7 +736,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: jedes Bild trägt seine eigene Überschrift
 
-`5d70c3c` · **berbahc** · 18:18 Uhr
+`8a27aae` · **berbahc** · 18:18 Uhr
 
 > Dreimal „Dein Alltag", dreimal „Mit Align" — beim zweiten Mal sagt so eine
 > Zeile nichts mehr, und beim dritten steht sie nur noch da. Jetzt benennt
@@ -496,7 +757,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: Sport scheitert am ganzen Tag, nicht nur am Abend
 
-`92e2951` · **berbahc** · 18:16 Uhr
+`cee06f2` · **berbahc** · 18:16 Uhr
 
 > Bild 01 hat den Abend beschrieben und damit nur die Hälfte gesagt. Sport
 > fällt nicht aus, weil es abends spät wird, sondern weil er in einem vollen
@@ -513,7 +774,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: die Sätze des Films sagen, woran es wirklich liegt
 
-`6edbdb1` · **berbahc** · 18:14 Uhr
+`40a9696` · **berbahc** · 18:14 Uhr
 
 > „Weil vom Tag nichts mehr übrig ist" klang nach einem Bild und erklärte
 > nichts. Gemeint war etwas Einfacheres: Es fehlt nicht der Wille, es fehlt
@@ -538,7 +799,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: der Film wird über zwei Pfeile geblättert, nicht über das Bild
 
-`c0d4ac5` · **berbahc** · 18:08 Uhr
+`3f4e72f` · **berbahc** · 18:08 Uhr
 
 > Über dem Bild lagen zwei unsichtbare Flächen: links zurück, rechts weiter.
 > Das ist die Geste aus Stories, und genau deshalb war sie hier falsch — wer
@@ -566,7 +827,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: „Zurück" im Assistenten führt in den Film, nicht in den Rahmen
 
-`0a0bf65` · **berbahc** · 18:02 Uhr
+`6d2f9ec` · **berbahc** · 18:02 Uhr
 
 > Der Rückweg von „Fangen wir klein an" ging bisher eine Stufe zurück auf
 > die Frage nach dem Rahmen. Gemeint war der Auftakt: Wer noch einmal sehen
@@ -594,7 +855,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: der erste Schritt des Assistenten hat einen Rückweg
 
-`08a9525` · **berbahc** · 17:54 Uhr
+`a0d327d` · **berbahc** · 17:54 Uhr
 
 > „Fangen wir klein an" war eine Einbahnstraße: Der Rahmen stand gespeichert
 > auf dem Server, also zeigte die Seite ab da nur noch den Assistenten. Wer
@@ -624,7 +885,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: ein Auftakt, bevor die erste Frage kommt
 
-`d73a9f6` · **berbahc** · 16:58 Uhr
+`fda73df` · **berbahc** · 16:58 Uhr
 
 > Wer sich registriert, landete bisher ohne ein Wort Erklärung bei „Wann
 > beginnt dein Tag?". Davor stehen jetzt sechs Bilder: drei aus dem
@@ -675,7 +936,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: was ausgemacht ist, rückt nicht
 
-`acce3c4` · **berbahc** · 13:53 Uhr
+`b589c0b` · **berbahc** · 13:53 Uhr
 
 > Der Rest des Lochs, das mit dem Festnageln der Uhrzeit aufging. Die Zeit steht
 > fest, sobald gefragt wurde — damit beide Seiten dieselbe lesen. Wer danach
@@ -731,7 +992,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: eine Zusage belegt den Tag — in beide Richtungen
 
-`3c68b13` · **berbahc** · 13:33 Uhr
+`5970719` · **berbahc** · 13:33 Uhr
 
 > Die letzten zwei Löcher aus derselben Prüfung. Beide hatten dieselbe Ursache:
 > Eine zugesagte Verabredung hängt an einer **fremden** Gewohnheit, steht damit
@@ -783,7 +1044,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: jeder angebotene Tag trägt seine eigene Uhrzeit
 
-`4b54a42` · **berbahc** · 13:21 Uhr
+`b14c412` · **berbahc** · 13:21 Uhr
 
 > Das Sheet zeigte die Zeile von **heute** — und zwar auch dann, wenn der
 > gewählte Tag ein anderer war. Aylin drückte „Nochmal ausmachen?", wählte
@@ -821,7 +1082,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### test: „Nochmal ausmachen?" bringt die Zeit dessen mit, der drückt
 
-`e2efd29` · **berbahc** · 13:11 Uhr
+`dfb3c38` · **berbahc** · 13:11 Uhr
 
 > Die Wiederholung ist keine Kopie der alten Verabredung, sondern eine neue
 > Frage: Sie hängt an der Gewohnheit dessen, der fragt
@@ -850,7 +1111,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: eine Verabredung, eine Uhrzeit — und der Tag prüft sie ganz
 
-`8a08e72` · **berbahc** · 13:02 Uhr
+`6f1cf7d` · **berbahc** · 13:02 Uhr
 
 > Vier Löcher an derselben Stelle. `AppointmentFit` war eine zweite Rechnung
 > neben `SlotConflict` und sah nur die eigenen Gewohnheiten; alles andere im Tag
@@ -948,7 +1209,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### test: der Test sagt jetzt, worüber er spricht
 
-`19c4fec` · **Silas2505** · 20:28 Uhr
+`bfc3a6f` · **Silas2505** · 20:28 Uhr
 
 > Die Übersichtskarte ist wieder die alte (643c071) — die Rate steht als Fußnote
 > und die Karte nur an einem Tag, an dem etwas ansteht. Mein Test hieß aber
@@ -967,11 +1228,11 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### Merge branch 'main' of https://github.com/berbahc/align
 
-`64b999f` · **Silas2505** · 20:23 Uhr
+`c92b243` · **Silas2505** · 20:23 Uhr
 
 ### fix: ein Kurs blockt die Zeit — auch der, der erst im Oktober beginnt
 
-`41f2b7c` · **Silas2505** · 20:23 Uhr
+`a3f79f0` · **Silas2505** · 20:23 Uhr
 
 > Drei Dinge an derselben Stelle: Ein Kurs rückt nicht, also muss die App das
 > überall gleich behandeln.
@@ -1024,7 +1285,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### style: the sleep plan is called the sleep plan, everywhere
 
-`10889ea` · **berbahc** · 19:26 Uhr
+`b73560e` · **berbahc** · 19:26 Uhr
 
 > The page announced itself as "Schlaf & Rhythmus" while the sidebar, the
 > browser tab and the breadcrumb said "Schlaf", the save button said
@@ -1054,7 +1315,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: the frame is set in one place, and that place is the sleep plan
 
-`0127361` · **berbahc** · 19:26 Uhr
+`12bed07` · **berbahc** · 19:26 Uhr
 
 > The sun marker in the day grid was a button. It opened a sheet that moved
 > the frame for that one day, while the moon marker beside it had always
@@ -1088,7 +1349,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### revert: the overview goes back to the card it had
 
-`643c071` · **berbahc** · 19:01 Uhr
+`a20f1ed` · **berbahc** · 19:01 Uhr
 
 > Reverts the overview half of c29d698 and nothing else. The percentage is
 > the head number again, the bar sits under it, and the consistency rate
@@ -1117,7 +1378,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: a dot means a habit, and it means that on both pages
 
-`081bd99` · **berbahc** · 19:01 Uhr
+`a945da4` · **berbahc** · 19:01 Uhr
 
 > Two legends contradicted each other. In the calendar a dot is a habit —
 > pale while open, filled once done. On the habits page a dot was the
@@ -1148,7 +1409,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: a day can only be reordered while it is today
 
-`046f1ed` · **berbahc** · 19:01 Uhr
+`c1579cc` · **berbahc** · 19:01 Uhr
 
 > The button hung on `canComplete`, which is the backdating window and
 > reaches seven days back. So "Tag neu ordnen" stood above days that were
@@ -1182,7 +1443,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: give every block in the day its icon, not only the long ones
 
-`2f4ef94` · **berbahc** · 19:01 Uhr
+`bd781d8` · **berbahc** · 19:01 Uhr
 
 > The icon tile hung on the same height threshold as the third text line.
 > At 96 pixels per hour that meant 41 minutes: an hour of cycling had its
@@ -1205,7 +1466,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: der Wochentag entscheidet mit — bei der Kette und bei der Uhrzeit
 
-`a816076` · **Silas2505** · 16:45 Uhr
+`fb6ebe2` · **Silas2505** · 16:45 Uhr
 
 > Zwei Fragen, die dieselbe Stelle betreffen, und deshalb zusammen: Der Plan
 > einer Gewohnheit war bisher ein Wert für alle ihre Tage.
@@ -1271,7 +1532,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: der Weg zur Tagesordnung steht über dem Raster, nicht darunter
 
-`7965568` · **Silas2505** · 16:44 Uhr
+`fd24b7a` · **Silas2505** · 16:44 Uhr
 
 > Er betrifft den ganzen Tag und nicht eine Zeile — als leiser Link am Seitenende
 > war er der letzte Satz einer langen Spalte. Wer seinen Tag ordnen will, will
@@ -1289,7 +1550,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### test: die Fabrik würfelt ihre Vorlage nicht mehr
 
-`f1e23bf` · **Silas2505** · 15:53 Uhr
+`a0ca23e` · **Silas2505** · 15:53 Uhr
 
 > `fake()->randomElement(HabitTemplate::cases())` — die Vorlage einer Gewohnheit
 > war Zufall. Solange zwei Gewohnheiten dieselbe Vorlage haben durften, fiel das
@@ -1318,7 +1579,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### test: gib der Fixture eine echte Vorlage, nicht nur einen Titel
 
-`2f5a46f` · **Silas2505** · 15:49 Uhr
+`663f8f1` · **Silas2505** · 15:49 Uhr
 
 > Die Gewohnheit hieß „Essen vorkochen" und war innen „Lesen": Der Test
 > überschrieb den Titel, ließ aber die Vorlage stehen, die die Factory reihum
@@ -1336,7 +1597,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### Merge branch 'main' of https://github.com/berbahc/align
 
-`de47874` · **Silas2505** · 15:39 Uhr
+`0c8edbc` · **Silas2505** · 15:39 Uhr
 
 > # Conflicts:
 > #	resources/js/components/habit-board.tsx
@@ -1345,7 +1606,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: die Konsistenzrate zurück auf die Übersicht, plus A, B und C
 
-`c29d698` · **Silas2505** · 15:37 Uhr
+`37bc6a2` · **Silas2505** · 15:37 Uhr
 
 > **Übersicht.** Die Konsistenzrate war nicht weg, aber sie stand als
 > 11-px-Fußnote neben einer großen „0 %", und die ganze Karte verschwand an
@@ -1411,7 +1672,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: when the frame moves, the day moves with it
 
-`98aa0ae` · **berbahc** · 14:23 Uhr
+`0d3db4e` · **berbahc** · 14:23 Uhr
 
 > Situational habits have always followed the sleep frame. Fixed times never
 > did: they were checked against it once, when they were created, and never
@@ -1471,7 +1732,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: let the day's edges hold their habits, morning and night
 
-`30c191f` · **berbahc** · 14:23 Uhr
+`a2e69dd` · **berbahc** · 14:23 Uhr
 
 > „Vor dem Schlafengehen" was placed an hour before bedtime whenever that
 > hour happened to be free. The window it may slide inside was searched from
@@ -1497,7 +1758,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### test: nagle den Tag fest, an dem der Konflikt gemeldet wird
 
-`f72ffe5` · **berbahc** · 03:23 Uhr
+`76b0206` · **berbahc** · 03:23 Uhr
 
 > Zwei Tests fielen jeden Montag um und liefen an den anderen sechs Tagen
 > durch — nicht wegen der Logik, die sie prüfen, sondern wegen des echten
@@ -1528,7 +1789,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: give the explanation a material, and the streaks a place of their own
 
-`7be2250` · **berbahc** · 03:17 Uhr
+`bed7373` · **berbahc** · 03:17 Uhr
 
 > **Die Bilanzspalte sagt jetzt einen Satz, der hineinpasst.** Dort stand
 > „1 von 2 Tagen seit dem Start" — vier Wörter, die nicht umbrechen durften, in
@@ -1625,7 +1886,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### style: make the day a check, filled when done and hollow when open
 
-`0cffa5a` · **berbahc** · 22:20 Uhr
+`03b4363` · **berbahc** · 22:20 Uhr
 
 > Zwei verschieden helle Quadrate waren eine Legende weit von ihrer Bedeutung
 > entfernt: Man musste lernen, dass dunkel „erledigt" heißt. Der Haken sagt es
@@ -1673,7 +1934,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: count only the days that were opportunities, on both sides
 
-`f1b973f` · **berbahc** · 19:56 Uhr
+`84cc43e` · **berbahc** · 19:56 Uhr
 
 > Die Konsistenz rechnete ihre zwei Zahlen unterschiedlich. Der Nenner zählte
 > die Gelegenheiten nach dem **heutigen** Plan, der Zähler jeden Haken im
@@ -1731,7 +1992,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: lay the habits on one sheet instead of stacking five cards
 
-`1130f79` · **berbahc** · 19:56 Uhr
+`e80afde` · **berbahc** · 19:56 Uhr
 
 > Der Tab war ein Stapel. Jede Gewohnheit hatte ihre eigene weiße Karte, und
 > in jeder Karte stand derselbe Streifen mit eigenen Tagesbuchstaben darunter.
@@ -1821,7 +2082,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: neun Dinge, die beim wirklichen Benutzen im Weg standen
 
-`8642ce5` · **Silas2505** · 18:59 Uhr
+`e8eff6f` · **Silas2505** · 18:59 Uhr
 
 > Aus zwanzig durchgespielten Szenarien entlang eines Studienalltags —
 > registrieren, Stundenplan eintragen, abhaken, nachtragen, verschieben,
@@ -1883,7 +2144,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: give situations weekdays, and one weekday row for both anchors
 
-`44937de` · **Silas2505** · 18:59 Uhr
+`55c83a1` · **Silas2505** · 18:59 Uhr
 
 > Eine Situation lief zwangsläufig täglich: `isScheduledOn()` gab für sie
 > `true` zurück, und `scheduled_days` wurde nur bei einer festen Uhrzeit
@@ -1932,7 +2193,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### Füge Schlaf-Wochen-Komponente und Preview hinzu
 
-`ba2be2a` · **berbahc** · 14:12 Uhr
+`612ffc5` · **berbahc** · 14:12 Uhr
 
 <details><summary>6 Dateien · +736/−269</summary>
 
@@ -1947,7 +2208,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: put the way into today above the month, not under it
 
-`ed9f3b6` · **berbahc** · 13:24 Uhr
+`b7fdcff` · **berbahc** · 13:24 Uhr
 
 > „Heutigen Tag öffnen" und der Stundenplan standen unter dem Raster. Wer
 > den Kalender öffnet, will meistens in den heutigen Tag, und dieser Weg lag
@@ -1968,7 +2229,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: let the month carry the page, and mark the week you are in
 
-`575d378` · **berbahc** · 13:15 Uhr
+`b9a142b` · **berbahc** · 13:15 Uhr
 
 > Der Kalender war die Handy-Ansicht auf einem großen Bildschirm: eine
 > schmale Karte in der oberen Bildschirmhälfte, darunter nichts. Fünfunddreißig
@@ -2027,7 +2288,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: count days, not percent, and say which days count
 
-`db9cd94` · **berbahc** · 12:21 Uhr
+`5723bce` · **berbahc** · 12:21 Uhr
 
 > Die Konsistenz stand an zwei Stellen und rechnete an beiden anders. Auf
 > der Gewohnheiten-Seite je Gewohnheit, auf der Übersicht als Prozentzahl
@@ -2094,7 +2355,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### style: say it in short sentences, and drop the dashes
 
-`74344f7` · **berbahc** · 12:20 Uhr
+`8011d93` · **berbahc** · 12:20 Uhr
 
 > Berkay: „bitte schau dass du nicht so komisches deutsch verwendest. es soll
 > einfach sein", und kurz darauf „und auch bitte ohne gedankenstriche".
@@ -2153,7 +2414,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: let the habits tab show a week instead of five switches
 
-`19004d7` · **berbahc** · 10:34 Uhr
+`4c0043d` · **berbahc** · 10:34 Uhr
 
 > Der Tab war eine Einstellungsliste. Pro Karte nahm der Erinnerungs-
 > Schalter die halbe Höhe ein, darüber stand noch ein zweiter — das
@@ -2242,7 +2503,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: name the action, and let the day stand up straight
 
-`76f6a3d` · **berbahc** · 10:33 Uhr
+`ed5f5a1` · **berbahc** · 10:33 Uhr
 
 > Zwei Stellen, an denen die Oberfläche ihre eigenen Worte verschluckt hat.
 >
@@ -2279,7 +2540,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: pin the clock where the expected day depends on today's weekday
 
-`dbea239` · **berbahc** · 10:33 Uhr
+`cb6d20b` · **berbahc** · 10:33 Uhr
 
 > Der Test rechnete den ersten **Montag** des Semesters aus. `previewDate()`
 > nimmt aber den frühesten Wochentag der Gewohnheit — sie läuft montags und
@@ -2305,7 +2566,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### merge: let the appointment ride along with the timetable
 
-`0bbce9a` · **berbahc** · 17:44 Uhr
+`2390e47` · **berbahc** · 17:44 Uhr
 
 > Silas' vier Commits gegen unsere Verabredungen. Drei Textkonflikte, einer
 > davon inhaltlich, und ein Test, der still falsch wurde.
@@ -2344,7 +2605,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: a promise you can keep, a helper you can see, a day you can read
 
-`9bf3eab` · **berbahc** · 17:36 Uhr
+`aebc6be` · **berbahc** · 17:36 Uhr
 
 > Drei Stränge, die im Arbeitsverzeichnis übereinander gewachsen sind und
 > sich nicht mehr sauber trennen ließen — sie fassen dieselben Dateien an.
@@ -2449,7 +2710,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: only offer anchors the app can work out, and let habits hang on habits
 
-`0f0abf4` · **Silas2505** · 15:13 Uhr
+`54a4332` · **Silas2505** · 15:13 Uhr
 
 > Two changes with one question behind them: what may the app claim to know?
 >
@@ -2511,7 +2772,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: give the displaced habits a place of their own, and a way out of it
 
-`969da46` · **Silas2505** · 12:58 Uhr
+`5b146db` · **Silas2505** · 12:58 Uhr
 
 > They sat at the foot of the grid under a small heading, which read like a
 > remainder that had not fitted in. They now stand below the calendar in a
@@ -2550,7 +2811,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: one heading per page on the phone, and room for the umlaut
 
-`ba35f95` · **Silas2505** · 12:33 Uhr
+`2876f5d` · **Silas2505** · 12:33 Uhr
 
 > The header title and the page heading below it said the same word twice.
 > The lower one goes on the phone — but only where it really was an echo:
@@ -2577,7 +2838,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: give the phone a header of its own
 
-`e312489` · **Silas2505** · 12:25 Uhr
+`6d003c0` · **Silas2505** · 12:25 Uhr
 
 > The breadcrumbs answered a question the phone does not ask. There is no
 > sidebar to go back to and the path is never more than two links long, so
@@ -2609,7 +2870,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: a chain only needs a breath, not the full quarter hour
 
-`6259154` · **berbahc** · 10:18 Uhr
+`750687d` · **berbahc** · 10:18 Uhr
 
 > Die Viertelstunde zwischen zwei Blöcken ist Weg und Wechsel: hinkommen,
 > umschalten, ankommen. Innerhalb einer Kette gibt es beides nicht — wer
@@ -2639,7 +2900,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: every situation hangs on its own occasion
 
-`072552c` · **berbahc** · 10:11 Uhr
+`f512eb9` · **berbahc** · 10:11 Uhr
 
 > Die sechs Situationen lagen auf festen Uhrzeiten, und die stimmten für
 > niemanden, dessen Tag anders läuft. „Nach dem Frühstück" war 08:00 —
@@ -2675,7 +2936,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: after the lecture means after the lecture
 
-`e5b25a9` · **berbahc** · 09:51 Uhr
+`8d2eaf5` · **berbahc** · 09:51 Uhr
 
 > „Nach der Vorlesung" lag auf einem festen Fenster zwischen 11:00 und
 > 15:00 — und damit irgendwo, nur nicht dort, wo die Vorlesung tatsächlich
@@ -2707,7 +2968,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: say what a friend request asks, and answer it with yes
 
-`1bbcb31` · **berbahc** · 09:38 Uhr
+`6a5ba32` · **berbahc** · 09:38 Uhr
 
 > Die Karte sagte nur „Silas fragt dich" — worum, stand nirgends. Und die
 > Antwort war „Passt mir" oder „Lieber nicht": die Wörter der
@@ -2726,7 +2987,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: a situation gives way instead of colliding
 
-`f3daa57` · **berbahc** · 09:36 Uhr
+`43fe33e` · **berbahc** · 09:36 Uhr
 
 > Eine Situation ist keine Uhrzeit. „Nach dem Frühstück" heißt irgendwann
 > am Vormittag — der Kalender legte sie trotzdem stur auf eine Stunde und
@@ -2766,7 +3027,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: check the situation's slot, because the day already reserves it
 
-`0d07cc9` · **berbahc** · 09:23 Uhr
+`9abc0f0` · **berbahc** · 09:23 Uhr
 
 > Eine Gewohnheit an einer Situation hat keine Uhrzeit — der Kalender legt
 > sie trotzdem auf eine geschätzte Stelle und rechnet sie dort als belegt.
@@ -2803,7 +3064,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### merge: bring the semester plan into the calendar (#1)
 
-`3218ae4` · **berbahc** · 08:48 Uhr
+`43f113b` · **berbahc** · 08:48 Uhr
 
 > Kurse aus dem Stundenplan liegen im Kalender, Gewohnheiten planen sich
 > darum herum. Eine Regel fuer den ganzen Tag, mit einer Viertelstunde Luft
@@ -2812,7 +3073,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### merge: fold the day's minute-accurate edges into the semester plan
 
-`a5a68e9` · **berbahc** · 08:37 Uhr
+`7ab2415` · **berbahc** · 08:37 Uhr
 
 > Silas hat die Tagesränder minutengenau gemacht, das Raster wachsen
 > lassen, wo ein Block außerhalb des Rahmens liegt, und `Carbon::today()`
@@ -2845,7 +3106,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: a cancelled course gives the day back
 
-`d2e7877` · **berbahc** · 08:17 Uhr
+`09b46b3` · **berbahc** · 08:17 Uhr
 
 > Fällt eine Vorlesung an einem Datum aus, ist ihre Zeit an diesem Tag
 > frei — die verdrängte Gewohnheit stand trotzdem weiter unter „braucht
@@ -2872,7 +3133,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: a habit without a clock time finds its way back
 
-`6ec65bc` · **berbahc** · 08:13 Uhr
+`9bb2ae4` · **berbahc** · 08:13 Uhr
 
 > Eine Gewohnheit an einer Situation belegt im Tag die Stunde ihres
 > Ankers und wird darüber verdrängt wie jede andere. Beide Rückwege
@@ -2899,7 +3160,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: a parked habit is not a missed one
 
-`557533e` · **berbahc** · 08:08 Uhr
+`3e1dc1f` · **berbahc** · 08:08 Uhr
 
 > Der Stundenplan nimmt den Platz — und die App rechnete den Verlust dem
 > Studenten an: Die Serie brach ab, der Wochenstreifen zeigte offene
@@ -2927,7 +3188,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: close the three ways past the one rule
 
-`e5adef7` · **berbahc** · 08:06 Uhr
+`815cc2e` · **berbahc** · 08:06 Uhr
 
 > Drei Wege setzten eine Uhrzeit, ohne die Regel zu halten, die überall
 > sonst gilt.
@@ -2967,7 +3228,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: the end of a course follows its start
 
-`d9ef1fc` · **berbahc** · 01:45 Uhr
+`41b0d44` · **berbahc** · 01:45 Uhr
 
 > Wer einen Kurs von 8 auf 11 Uhr schiebt, hat ihn verschoben und nicht
 > verkürzt — das Ende sprang aber stehen und musste hinterhergetippt
@@ -2985,7 +3246,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### refactor: one shell for every sheet, and drop what nothing calls
 
-`783f810` · **berbahc** · 01:33 Uhr
+`e418550` · **berbahc** · 01:33 Uhr
 
 > Zehn Sheets trugen dieselbe Klassenzeile — Höhe, Breite, Rundung, Rand.
 > Einmal geschrieben heißt: Ein Sheet sitzt nie anders als das davor.
@@ -3016,7 +3277,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: say up front when all five places are taken
 
-`acbe2d0` · **berbahc** · 20:11 Uhr
+`d94ca0b` · **berbahc** · 20:11 Uhr
 
 > Die Grenze von fünf stand nur in der Absage des Servers — auf einem
 > Feld des zweiten Schritts, während der Wizard auf dem fünften wartete.
@@ -3035,7 +3296,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: the wizard shows a refusal where the field is, not behind it
 
-`cba2dd0` · **berbahc** · 20:08 Uhr
+`dfe6fb2` · **berbahc** · 20:08 Uhr
 
 > Der Wizard steht beim Abschicken auf dem letzten Schritt, die Uhrzeit
 > aber auf dem dritten. Kam die Absage des Servers dort an, sah es aus,
@@ -3053,7 +3314,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: look at a suggested place in the day before taking it
 
-`e862ec5` · **berbahc** · 20:01 Uhr
+`ea361b2` · **berbahc** · 20:01 Uhr
 
 > Ein Vorschlag im Sheet ist eine Zeile — „11:45 · Mo, Mi" sagt nicht,
 > was daneben liegt. Jetzt führt „Im Tag ansehen" auf den ersten
@@ -3078,7 +3339,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: see every course at once behind the timetable button
 
-`185766c` · **berbahc** · 19:50 Uhr
+`970d495` · **berbahc** · 19:50 Uhr
 
 > Der Tag zeigt, was an ihm liegt; wer sechs Kurse hat, will sie
 > trotzdem einmal alle sehen und geradewegs ändern oder löschen, ohne
@@ -3107,7 +3368,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: explain the air, and give it to chains too
 
-`57df6e9` · **berbahc** · 19:47 Uhr
+`98fba6b` · **berbahc** · 19:47 Uhr
 
 > Die Viertelstunde stand in der Meldung, aber nicht ihr Grund und nicht
 > ihre Kante. Jetzt sagt jeder Satz — auf dem Server, im Formular, im
@@ -3142,7 +3403,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: two new places may share a weekday
 
-`c7f9f91` · **berbahc** · 19:39 Uhr
+`acd13ff` · **berbahc** · 19:39 Uhr
 
 > `distinct` auf `places.*.days.*` verglich über alle Plätze hinweg — zwei
 > Gewohnheiten am Mittwoch galten als doppelter Wert, und die Übernahme
@@ -3160,7 +3421,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: a course parks every habit beneath it, not the first one twice
 
-`225cb42` · **berbahc** · 19:13 Uhr
+`9d7b150` · **berbahc** · 19:13 Uhr
 
 > Ein Vermerk gilt erst ab Semesterbeginn — bis dahin belegt die
 > Gewohnheit ihren alten Platz weiter. Die Verdrängung fand sie darum
@@ -3179,7 +3440,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: air for every hand, and the semester announces itself
 
-`460f5c1` · **berbahc** · 19:12 Uhr
+`e7e5942` · **berbahc** · 19:12 Uhr
 
 > Vier Entscheidungen aus der Rückschau:
 >
@@ -3233,7 +3494,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### refactor: drop what nothing calls
 
-`ac19394` · **berbahc** · 18:58 Uhr
+`1cfd1f1` · **berbahc** · 18:58 Uhr
 
 > Eine Zeile im Stundenplan, die niemand fragte (`isEmpty`), und eine, die
 > nur er selbst fragte (`hasLecturesOn`, jetzt an Ort und Stelle); ein
@@ -3260,7 +3521,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: a course takes the place only once the semester starts
 
-`20aa0a5` · **berbahc** · 18:47 Uhr
+`8151b37` · **berbahc** · 18:47 Uhr
 
 > Ein Kurs im Oktober nahm im September schon den Platz weg: Die
 > Gewohnheit war sofort geparkt, das Band stand im Monat, die KI wollte
@@ -3286,7 +3547,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: the navigation moves to the bottom on the phone
 
-`da999f6` · **berbahc** · 18:44 Uhr
+`f373c00` · **berbahc** · 18:44 Uhr
 
 > Unter dem Tablet-Breakpoint steckte die Seitenleiste hinter einem Knopf,
 > und jede Ecke der App war zwei Tipps entfernt. Jetzt liegt sie dort, wo
@@ -3308,7 +3569,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: a course in a future semester already claims its slot
 
-`e00cc8c` · **berbahc** · 18:44 Uhr
+`3486e53` · **berbahc** · 18:44 Uhr
 
 > Die Kollisionsprüfung rechnete nur gegen den nächsten Termin eines
 > Wochentags. Beginnt das Semester erst nächsten Monat, gab es dort noch
@@ -3347,7 +3608,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: a carried block passes a course at full width
 
-`6e33b21` · **berbahc** · 18:25 Uhr
+`cc63e65` · **berbahc** · 18:25 Uhr
 
 > Sobald der gezogene Block einen Kurs streifte, teilte ihn die
 > Spaltenrechnung mit dem Kurs auf — er sprang auf halbe Breite nach
@@ -3372,7 +3633,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: retire the internship as a course kind
 
-`0266314` · **berbahc** · 18:19 Uhr
+`7603028` · **berbahc** · 18:19 Uhr
 
 > Ein Praktikum ist kein Kurs neben anderen: Es nimmt ein halbes Jahr am
 > Stück, und dann fällt der Stundenplan als Ganzes weg, nicht eine Zeile
@@ -3393,7 +3654,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### refactor: month and day only — courses live where they lie
 
-`9b14b21` · **berbahc** · 18:18 Uhr
+`be650d7` · **berbahc** · 18:18 Uhr
 
 > Zwei Kalender in einem Tab zeigten dasselbe zweimal. Jetzt gibt es nur
 > noch den Monat als Ankunft und den Tag als Ebene darunter. Der Stundenplan
@@ -3427,7 +3688,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### refactor: one calendar — month, week, day — instead of two side by side
 
-`96e06ea` · **berbahc** · 18:00 Uhr
+`9a1fba3` · **berbahc** · 18:00 Uhr
 
 > Unter „Kalender" standen zwei Kalender: der Tag mit Gewohnheiten und
 > Kursen, daneben eine Semesterseite mit den Kursen allein. Dieselben Dinge,
@@ -3478,7 +3739,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### test: walk the invariant over the new paths too
 
-`4fb37af` · **berbahc** · 17:54 Uhr
+`bee16a6` · **berbahc** · 17:54 Uhr
 
 > Drei Fälle mehr für „auf einer Minute liegt höchstens eine Sache": das
 > Übernehmen neuer Plätze auf einen inzwischen vergebenen, das Auflösen einer
@@ -3495,7 +3756,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: let the AI bring the routine back after a semester change
 
-`611e5e7` · **berbahc** · 17:52 Uhr
+`a8ec9f2` · **berbahc** · 17:52 Uhr
 
 > Was ein Kurs verdrängt hat, bekommt einen neuen Platz vorgeschlagen — nah
 > an der alten Zeit, im Rahmen dessen, was die Gewohnheit überhaupt zulässt,
@@ -3560,7 +3821,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### refactor: show the semester as a week, not as a list of cards
 
-`b45dd5e` · **berbahc** · 17:44 Uhr
+`ccd8b57` · **berbahc** · 17:44 Uhr
 
 > Zwölf Kurse waren zwölf Karten untereinander, jede mit drei Knöpfen und
 > einer Liste von Ausnahmen — die Seite wurde lang, und die Woche war darauf
@@ -3596,7 +3857,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: let a course park the habit beneath it instead of being refused
 
-`223cec4` · **berbahc** · 17:37 Uhr
+`1204b30` · **berbahc** · 17:37 Uhr
 
 > Alle sechs Monate kommt ein neuer Stundenplan, und seine Kurse landen dort,
 > wo längst Gewohnheiten laufen. Bis hierher wehrte sich die App dagegen:
@@ -3685,7 +3946,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: show the logo that stands out, not the one that matches
 
-`e88e639` · **berbahc** · 17:01 Uhr
+`9c96d84` · **berbahc** · 17:01 Uhr
 
 > Im hellen Modus lief die helle Kachel, im dunklen die dunkle — die Marke hatte
 > also überall dieselbe Farbe wie ihr Untergrund und verschwand darin. Dasselbe
@@ -3733,7 +3994,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: close the six ways two things could still land on one minute
 
-`2d1627f` · **berbahc** · 16:57 Uhr
+`515a913` · **berbahc** · 16:57 Uhr
 
 > Die Frage war „passt das soweit?" — und die Antwort auf den letzten Satz war
 > nein. Die Prüfung hing an den Formularen, nicht am Tag. Wer sie umging, kam
@@ -3818,7 +4079,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: stop telling people to move a lecture they cannot move
 
-`7d12692` · **berbahc** · 16:27 Uhr
+`0c36e48` · **berbahc** · 16:27 Uhr
 
 > Beim Ziehen einer Gewohnheit auf einen Kurs stand „Verschiebe die zuerst,
 > dann ist hier Platz." Das ist ein Ausweg, den es nicht gibt: Ein Kurs kommt
@@ -3863,7 +4124,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: refuse a habit that would land in a lecture, on every path that sets a time
 
-`462f418` · **berbahc** · 16:18 Uhr
+`590575a` · **berbahc** · 16:18 Uhr
 
 > Time-Blocking heißt, dass jede Sache eine Spanne hat und zwei Spannen sich
 > nicht überschneiden. Beim Ziehen im Raster galt das schon: Wer einen Block
@@ -3925,7 +4186,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### style: give the day a ladder of surfaces, in both modes
 
-`8e0b94c` · **berbahc** · 16:04 Uhr
+`c2f2245` · **berbahc** · 16:04 Uhr
 
 > Alle Flächen lagen fast aufeinander. Eine Karte hob sich vom Seitengrund um
 > ΔL* 1.8 ab, ein Gewohnheitsblock von der Karte um 4.0 — unter der Schwelle,
@@ -3984,7 +4245,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: give the course block its kind, so the day view stops rendering nothing
 
-`b4d1641` · **berbahc** · 15:54 Uhr
+`5ff2bba` · **berbahc** · 15:54 Uhr
 
 > Die Tagesansicht blieb weiß, sobald an dem Tag ein Kurs lag. Im Browser
 > stand React-Fehler #130: eine Komponente war beim Rendern `undefined`.
@@ -4021,7 +4282,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### refactor: fold the semester into the calendar instead of giving it a tab
 
-`6f9c59d` · **berbahc** · 15:45 Uhr
+`30d4654` · **berbahc** · 15:45 Uhr
 
 > Der Semesterplan hatte einen eigenen Eintrag in der Navigation, als wäre er
 > eine sechste Ecke der App. Er ist aber keine: Er sagt, wann im Tag nichts
@@ -4083,7 +4344,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: let the timetable block the day, so the AI stops planning into lectures
 
-`2adcf07` · **berbahc** · 20:22 Uhr
+`5aba05e` · **berbahc** · 20:22 Uhr
 
 > Etappe 1 legte den Semesterplan an, las ihn aber nirgends. Hier wirkt er.
 >
@@ -4179,7 +4440,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: give the semester its own plan, so the day knows when nothing goes
 
-`1c4ec02` · **berbahc** · 20:11 Uhr
+`c23756a` · **berbahc** · 20:11 Uhr
 
 > Der Schlafplan sagt, wann der Tag anfängt und aufhört. Für wen studiert,
 > fehlte darin ein zweiter Rahmen: Zwischen 10:00 und 11:30 liegt dienstags
@@ -4281,7 +4542,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### docs: write down what a fresh checkout still needs
 
-`4dcd7ca` · **Silas2505** · 14:44 Uhr
+`814d39a` · **Silas2505** · 14:44 Uhr
 
 > The setup steps lived in CLAUDE.md, which sits in the concept folder
 > outside this repository — so nobody who cloned it ever saw them, and
@@ -4307,7 +4568,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: anchor the day's edges to the day being shown, and to the minute
 
-`29f629c` · **Silas2505** · 14:34 Uhr
+`878883a` · **Silas2505** · 14:34 Uhr
 
 > Three things the calendar got wrong, all visible in one screenshot: a
 > habit at 23:30 drawn over the footer, on a day whose bedtime is 23:00.
@@ -4347,7 +4608,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### merge: fold the drag onto the day shift the appointment feature brought
 
-`bffbaa1` · **Silas2505** · 14:07 Uhr
+`563063e` · **Silas2505** · 14:07 Uhr
 
 > Both sides invented the same thing at the same time: a per-day exception
 > to a habit's time, called `HabitDayShift`, on a table called
@@ -4381,7 +4642,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: give the calendar two levels and let blocks be dragged
 
-`ff05ee6` · **Silas2505** · 13:59 Uhr
+`42140d7` · **Silas2505** · 13:59 Uhr
 
 > Three pieces that build on each other.
 >
@@ -4454,7 +4715,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: make room for one day instead of promising twice
 
-`24d7861` · **berbahc** · 21:07 Uhr
+`0f59784` · **berbahc** · 21:07 Uhr
 
 > Adopting a habit now runs through the same wizard as creating one, and
 > answers the request it came from as a yes. Accepting checks whether the
@@ -4500,7 +4761,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: order the whole day, and split the two things the AI can do
 
-`71b52cb` · **Silas2505** · 22:59 Uhr
+`3ff2fd5` · **Silas2505** · 22:59 Uhr
 
 > **Ein Knopf, zwei Fragen.** „Passt der Zeitpunkt?" stand allein an jedem
 > Block und war damit die Antwort auf beides — wohin die Gewohnheit gehört
@@ -4567,7 +4828,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: give each moment one habit, and say less about it
 
-`c18b149` · **Silas2505** · 22:22 Uhr
+`66a29a0` · **Silas2505** · 22:22 Uhr
 
 > Vier Dinge, die beim Durchsehen aufgefallen sind.
 >
@@ -4644,7 +4905,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### style: give every screen the same motion and type vocabulary
 
-`492b906` · **Silas2505** · 00:12 Uhr
+`e9c7332` · **Silas2505** · 00:12 Uhr
 
 > Der Apple-Pass hatte bisher drei Bildschirme erreicht — Übersicht,
 > Habit-Zeile, Streak-Karte. Alles andere lief auf einem generischen
@@ -4695,7 +4956,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: plan habits from a fixed catalog inside a real day
 
-`cbf5f31` · **Silas2505** · 00:12 Uhr
+`b18efd8` · **Silas2505** · 00:12 Uhr
 
 > Die freie Eingabe von Gewohnheiten fällt weg. Sie hat die App unscharf
 > gemacht: „Treppe statt Aufzug" hat keine Uhrzeit, „Wasser trinken" keine
@@ -4802,7 +5063,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: let a habit be swiped done and give the day its own weight
 
-`037d2c8` · **berbahc** · 11:03 Uhr
+`2787268` · **berbahc** · 11:03 Uhr
 
 > Swiping a row right completes it, left takes it back: 1:1 tracking,
 > rubber-banding, momentum projection and velocity handoff into a spring
@@ -4832,7 +5093,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: give the habits without a day their own block
 
-`8e6c3fc` · **berbahc** · 22:54 Uhr
+`cc5a432` · **berbahc** · 22:54 Uhr
 
 
 
@@ -4848,7 +5109,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: offer the days the habit actually runs on
 
-`11c9670` · **berbahc** · 00:07 Uhr
+`06acf4e` · **berbahc** · 00:07 Uhr
 
 > Der letzte Schritt beim Anlegen fragt "wen" und "wann" - und bot beim
 > "wann" immer dieselben drei Tage an: heute, morgen, uebermorgen, stur
@@ -4907,7 +5168,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: hang one habit on another and say when the day is busy
 
-`53b83af` · **Silas2505** · 10:40 Uhr
+`427cfd4` · **Silas2505** · 10:40 Uhr
 
 > Das Domino-Prinzip steht seit der Konzeptphase in time-blocking.md und
 > war als dritte Ankerart gezeichnet - gebaut war davon nichts. Die KI
@@ -4957,7 +5218,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: give a home to the habits that have no place in the day
 
-`fc01157` · **Silas2505** · 10:24 Uhr
+`64bd8d1` · **Silas2505** · 10:24 Uhr
 
 > "Treppe statt Aufzug" und "eine Station frueher aussteigen" haengen an
 > einer Gelegenheit, die auftaucht, wann sie will. Bis hierher bekamen sie
@@ -5010,7 +5271,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: show in the calendar how long a block occupies the day
 
-`6347cfb` · **Silas2505** · 21:21 Uhr
+`80b381d` · **Silas2505** · 21:21 Uhr
 
 > Der Umfang steht seit der letzten Iteration als Zahl da, der Kalender hat
 > ihn nicht benutzt: Ein 20-Minuten-Spaziergang und ein Glas Wasser sahen
@@ -5038,7 +5299,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: let a habit be changed and give its measure a field of its own
 
-`5889fc9` · **Silas2505** · 20:46 Uhr
+`1e43526` · **Silas2505** · 20:46 Uhr
 
 > Der Wizard versprach auf dem letzten Schritt "Du kannst das jederzeit
 > ändern", und es stimmte nicht: Es gab keinen Weg zurück ins Formular.
@@ -5089,7 +5350,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: let a habit outlive the appointment that was cancelled
 
-`b9f15fe` · **berbahc** · 21:34 Uhr
+`4a15a36` · **berbahc** · 21:34 Uhr
 
 <details><summary>20 Dateien · +1039/−110</summary>
 
@@ -5118,7 +5379,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### KI-Gedächtnis: die Agenten wissen, mit wem sie sprechen
 
-`73fe43a` · **Silas2505** · 20:51 Uhr
+`12e2c35` · **Silas2505** · 20:51 Uhr
 
 > Beide Agenten starteten bei jedem Aufruf kalt. Kein Vorschlag wurde
 > gespeichert, „Lass so" verpuffte, und der Warum-Satz stand in keinem
@@ -5163,7 +5424,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: sort the habit lists by when each habit is next due
 
-`40c8a53` · **berbahc** · 20:41 Uhr
+`52627a9` · **berbahc** · 20:41 Uhr
 
 <details><summary>10 Dateien · +438/−109</summary>
 
@@ -5184,7 +5445,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: let a cancellation arrive instead of leaving a gap
 
-`af6e9cb` · **berbahc** · 00:18 Uhr
+`1368a29` · **berbahc** · 00:18 Uhr
 
 > §5 asks for "Passt Silas diesmal nicht" to appear at the person who asked,
 > and §9 forbids storing cancellations. Both hold only for a line that
@@ -5215,7 +5476,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: show in the community tab what is arranged with whom
 
-`f8c71f1` · **berbahc** · 00:17 Uhr
+`4f04b97` · **berbahc** · 00:17 Uhr
 
 > The tab promised to be about the people you meet up with, but appointments
 > lived only on the overview — it was an address book with a switch. It now
@@ -5242,7 +5503,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: count a streak that survives the weekend and one missed day
 
-`8383f53` · **Silas2505** · 23:19 Uhr
+`8062f65` · **Silas2505** · 23:19 Uhr
 
 > Three docblocks argued against a streak, citing progress-tracking.md. That
 > position comes from the interviews and the survey disproved it: 9 of 25
@@ -5293,7 +5554,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: put the real Align mark in place, light and dark
 
-`fab983c` · **Silas2505** · 23:19 Uhr
+`a45a10e` · **Silas2505** · 23:19 Uhr
 
 > The app icon comes from the design sheet in the concept repo, which turned
 > out to be a raster PNG wrapped in an SVG rather than a vector. Both tiles
@@ -5334,7 +5595,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: let two people take a habit on together for one day
 
-`9bd221a` · **berbahc** · 20:28 Uhr
+`707136d` · **berbahc** · 20:28 Uhr
 
 
 
@@ -5366,7 +5627,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: build the friendship layer behind the appointment
 
-`d5a2ecc` · **berbahc** · 18:51 Uhr
+`434c1fb` · **berbahc** · 18:51 Uhr
 
 
 
@@ -5404,7 +5665,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: pin the anchor so the adjustment test stops flaking
 
-`08215d2` · **berbahc** · 18:50 Uhr
+`32de437` · **berbahc** · 18:50 Uhr
 
 
 
@@ -5416,7 +5677,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: let the user pick light or dark from the header
 
-`114c714` · **berbahc** · 16:34 Uhr
+`0b6be77` · **berbahc** · 16:34 Uhr
 
 > The dark mode existed but was two navigations deep, in the appearance
 > settings. Everyone who never went looking saw the light theme and assumed
@@ -5445,7 +5706,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### style: give eight test files their missing trailing newline
 
-`a1f620d` · **Silas2505** · 15:21 Uhr
+`d1353bd` · **Silas2505** · 15:21 Uhr
 
 > Vorbestehende Pint-Verstöße, die `composer lint:check` und damit
 > `composer test` scheitern ließen. Nur der Zeilenumbruch am Dateiende,
@@ -5466,7 +5727,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: add the day calendar and let Claude move a block
 
-`4044f12` · **Silas2505** · 15:20 Uhr
+`459d64b` · **Silas2505** · 15:20 Uhr
 
 > Die dynamische Anpassung ist mit ø 4,04 die zweitbestbewertete Funktion
 > der Umfrage und bei der Einzelwahl auf Platz 2 — und sie braucht eine
@@ -5521,7 +5782,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: drop unsupported minItems/maxItems from the step schema
 
-`8c626b8` · **Silas2505** · 14:34 Uhr
+`f8ebceb` · **Silas2505** · 14:34 Uhr
 
 > Claude's native structured-output format rejects minItems/maxItems on
 > array types ("property 'maxItems' is not supported"), so every real
@@ -5540,7 +5801,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: route the Claude calls through OpenRouter
 
-`6e932bf` · **Silas2505** · 14:27 Uhr
+`9638430` · **Silas2505** · 14:27 Uhr
 
 > Anbieter und Modell standen als Attribute im Agenten und legten Anthropic
 > direkt fest. Beides steht jetzt in config/ai.php und kommt aus der
@@ -5560,7 +5821,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: let Claude propose the smallest next step
 
-`a8a1b64` · **Silas2505** · 14:19 Uhr
+`9f0a024` · **Silas2505** · 14:19 Uhr
 
 > Die Starthilfe ist mit ø 4,16 die bestbewertete Funktion der Umfrage und
 > war bislang gar nicht gebaut — die App hatte überhaupt keine KI.
@@ -5605,7 +5866,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: show the reminder in the app and roll the day over locally
 
-`258783f` · **berbahc** · 02:45 Uhr
+`1948a27` · **berbahc** · 02:45 Uhr
 
 > Der Hinweis ist jetzt ein Zustand statt eines Ereignisses: er gilt von zehn
 > Minuten vorher bis eine Stunde danach und lässt sich nicht mehr verpassen.
@@ -5632,7 +5893,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### chore: reword the habit limit note
 
-`ef39d81` · **berbahc** · 01:25 Uhr
+`b186044` · **berbahc** · 01:25 Uhr
 
 
 
@@ -5644,7 +5905,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: explain the limit of five where it starts to bite
 
-`440eddd` · **berbahc** · 01:15 Uhr
+`61ae7d4` · **berbahc** · 01:15 Uhr
 
 > Reaching five habits made the "Neu hinzufügen" button disappear without a
 > word. Same silence as the habit that vanished after being created: the
@@ -5684,7 +5945,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### fix: say where a new habit went instead of hiding it
 
-`ba7ef48` · **berbahc** · 01:13 Uhr
+`bbdcc82` · **berbahc** · 01:13 Uhr
 
 > Creating a habit with a fixed time looked like it had not been saved. The
 > wizard defaults to Mo–Fr, store() redirects to the dashboard, and the
@@ -5726,7 +5987,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: generate Dokumentation.md from the git history
 
-`9fa48e9` · **berbahc** · 01:12 Uhr
+`0851db7` · **berbahc** · 01:12 Uhr
 
 > Berkay wanted a document that makes the project history readable — his own
 > commits and the ones others push — without having to read git log.
@@ -5757,7 +6018,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: end habits instead of being stuck at five
 
-`37a2cd0` · **berbahc** · 01:12 Uhr
+`eab18c5` · **berbahc** · 01:12 Uhr
 
 > The limit of five active habits had no exit. Once five existed there was
 > no way to free a slot — StoreHabitRequest rejected the sixth and nothing
@@ -5802,7 +6063,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: add fixed-time scheduling and 10-minute reminders
 
-`a4eb9f2` · **Silas2505** · 22:52 Uhr
+`0be79b4` · **Silas2505** · 22:52 Uhr
 
 > Habits could only be anchored to a situation ("nach dem Aufstehen").
 > That stays the default — time-blocking.md argues a situation triggers
@@ -5859,7 +6120,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### test: expect homepage redirect to login
 
-`a5608cf` · **berbahc** · 18:16 Uhr
+`d6953c0` · **berbahc** · 18:16 Uhr
 
 > Die Startseite rendert seit 5a9ac1e nicht mehr die welcome-Seite,
 > sondern leitet auf /login um. Der Test prüft jetzt den Redirect
@@ -5875,7 +6136,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### feat: adjust app logo
 
-`374445b` · **berbahc** · 23:36 Uhr
+`f63598b` · **berbahc** · 23:36 Uhr
 
 <details><summary>2 Dateien · +70/−7</summary>
 
@@ -5886,7 +6147,7 @@ Verlauf des Projekts, erzeugt aus der Git-Historie.
 
 ### chore: redirect homepage to login
 
-`5a9ac1e` · **berbahc** · 23:27 Uhr
+`8924ca5` · **berbahc** · 23:27 Uhr
 
 <details><summary>1 Datei · +1/−1</summary>
 
