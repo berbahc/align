@@ -780,7 +780,7 @@ die an mehreren Stellen unterstützt:
 | **Community** | 21/25 teilen mit engen Freunden, aber nur 3/25 nennen Soziales als wichtigste Funktion |
 | **KI-Assistenz** | Starthilfe bei Überforderung ø 4,16, der Bestwert aller abgefragten Funktionen |
 
-Die ursprünglich geplante **Habit Journey**, eine Fortschrittskurve für den langfristigen Gewohnheitsaufbau, haben wir nach der Umfrage nicht weiterverfolgt. Für
+Für
 alle Features galt derselbe Maßstab: Eine Gewohnheit anzulegen, abzuhaken oder zu verschieben
 durfte nicht selbst zu einer Aufgabe werden, die man aufschiebt. Deshalb haben wir bei jedem Screen
 geprüft, welche Angabe wirklich nötig ist, und alles andere weggelassen oder sinnvoll vorbelegt.
