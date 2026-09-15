@@ -438,8 +438,8 @@ Der Hinweis zur Reihenfolge der Nutzerforschung war die folgenreichste Rückmeld
 gesamten Projekts. Wir haben die nächste Phase deshalb in qualitative Interviews und eine darauf
 aufbauende Umfrage aufgeteilt, deren Ergebnisse zur Grundlage unserer Funktionsauswahl wurden. Den
 sozialen Aspekt haben wir direkt als eigene Funktion vorgesehen, daraus entstand das
-Community-Feature (Kapitel 6). Außerdem begann mit diesem Gespräch unsere projektbegleitende
-Dokumentation in Notion (Abschnitt 3.3).
+Community-Feature (Kapitel 6). Das Feedback und die nächsten Schritte haben wir, wie von Beginn
+an, in unserer projektbegleitenden Dokumentation in Notion festgehalten (Abschnitt 3.3).
 
 ---
 
