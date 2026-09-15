@@ -1443,6 +1443,8 @@ Gewohnheit, die zuvor um 07:30 lag, steht jetzt im Bereich „Ohne festen Platz"
 *Abb. 8.14 und 8.15: Die Monatsansicht kündigt einen Konflikt mit dem Stundenplan an, die
 Tagesansicht zeigt den ersten Vorlesungstag.*
 
+<!-- neue Seite -->
+
 ## 8.6 Gewohnheiten im Wochenblick
 
 Die Gewohnheiten-Seite zeigt für jede aktive Gewohnheit die letzten sieben Tage als **erledigt**
@@ -1455,6 +1457,8 @@ nicht dafür abgewertet, dass sie dienstags nicht vorgesehen war.
 
 *Abb. 8.16: Alle Gewohnheiten mit den letzten sieben Tagen.*
 
+<!-- neue Seite -->
+
 ## 8.7 Schlafplan
 
 Der Schlafplan zeigt für jeden Wochentag einen Balken und lässt sich tageweise anpassen, im Beispiel
@@ -1465,6 +1469,8 @@ bewegen sich die Gewohnheiten an seinen Rändern mit.
 ![Schlafplan](screenshots/abb08-schlafplan.png)
 
 *Abb. 8.17: Der Tagesrahmen, für jeden Wochentag einzeln einstellbar.*
+
+<!-- neue Seite -->
 
 ## 8.8 Community
 
@@ -1500,6 +1506,8 @@ trotzdem macht. Ein rotes Kreuz gibt es auch hier nicht.
 *Abb. 8.19 bis 8.21: Eine Gewohnheit zu zweit angehen, dieselbe Verabredung von beiden Seiten.
 Links stehen Person und Tag fest, bevor gefragt wird. In der Mitte, was Jonas bekommt. Rechts, was
 zurückkommt, wenn er ablehnt.*
+
+<!-- neue Seite -->
 
 ## 8.9 Dark Mode
 
