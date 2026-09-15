@@ -17,82 +17,90 @@
 
 ## 1.1 Was entwickelt wurde
 
-**Align** ist eine Anwendung, die Studierende dabei unterstützt, im Alltag tragfähige
-Gewohnheiten aufzubauen. Sie soll mehr Struktur, Fokus und Balance in eine Lebensphase
-bringen, die von sich aus wenig vorgibt.
+**Align** ist eine Anwendung, die Studierende dabei unterstützt, gute Gewohnheiten in ihren
+Alltag einzubauen. Sie soll mehr Struktur, Fokus und Balance in den Studienalltag bringen, der
+oft weniger feste Abläufe vorgibt als zum Beispiel die Schulzeit.
 
-Der Ansatz setzt bewusst nicht bei einer Ursachenanalyse an, sondern bei der praktischen
-Umsetzung. Gewohnheiten werden nicht nur benannt, sondern als konkrete Blöcke in einen
-konkreten Tag eingeplant, innerhalb des eigenen Schlafrhythmus und um den eigenen Stundenplan
-herum. Eine kontextsensitive KI-Assistenz unterstützt dort, wo Menschen erfahrungsgemäß
-scheitern, nämlich beim ersten Schritt. Und sie hilft, einen neuen Platz zu finden, wenn sich
-der Tag verändert, etwa weil ein neuer Stundenplan eine Gewohnheit verdrängt.
+Bei Align geht es vor allem um die praktische Umsetzung. Gewohnheiten werden nicht nur
+festgelegt, sondern direkt als konkrete Zeitblöcke in den Tag eingeplant. Dabei berücksichtigt
+die Anwendung den eigenen Schlafrhythmus und den Stundenplan. Zusätzlich gibt es eine
+KI-Unterstützung, die vor allem dann hilft, wenn der Einstieg schwerfällt. Außerdem schlägt sie
+einen neuen Platz im Tag vor, wenn sich der Alltag verändert, etwa weil ein neuer Stundenplan
+eine Gewohnheit verdrängt.
 
-Umgesetzt wurde Align als lauffähige **MVP-Version** in Form einer Mobile-First-Web-App.
-Die Gründe für diese Form sind in Kapitel 7 dargestellt.
+Umgesetzt haben wir Align als funktionsfähige **MVP-Version** in Form einer
+Mobile-First-Web-App. Warum wir uns für diese Form entschieden haben, erklären wir in
+Kapitel 7.
 
 ## 1.2 Ausgangssituation und Motivation
 
-Die Idee zu Align entstand aus unserer eigenen Erfahrung als Studierende. Wir kennen das
-Gefühl, morgens ohne klare Struktur in den Tag zu starten, wichtige Vorhaben immer wieder
-aufzuschieben und abends festzustellen, dass der Tag irgendwie an einem vorbeigezogen ist.
-Ob regelmäßiger Sport, ausreichend Schlaf oder eine bewusste Pause zwischen zwei Vorlesungen,
-vielen Studierenden ist klar, was ihnen guttun würde. An der konsequenten Umsetzung im Alltag
-scheitert es trotzdem.
+Die Idee zu Align entstand aus unseren eigenen Erfahrungen im Studium. Im Studienalltag ist man
+für die Planung seiner Zeit größtenteils selbst verantwortlich. Dadurch kommt es immer wieder
+vor, dass man ohne richtigen Plan in den Tag startet oder Vorhaben auf einen anderen Tag
+verschiebt. Am Abend merkt man dann, dass man weniger geschafft hat, als man eigentlich wollte.
 
-In unserem Umfeld und bei uns selbst haben wir beobachtet, dass das meist nicht an mangelndem
-Willen liegt. Gute Vorsätze gehen im Alltagsstress unter. Kleine, regelmäßige Gewohnheiten
-helfen dabei, Struktur zurückzugewinnen. Das Schwierige daran ist nicht das Wissen, sondern
-die konsequente Umsetzung.
+Dabei geht es nicht nur um Aufgaben für das Studium. Auch Sport, ausreichend Schlaf oder
+regelmäßige Pausen möchte man in den Alltag einbauen. Meistens weiß man, was einem guttut.
+Trotzdem ist es nicht einfach, solche Vorhaben über einen längeren Zeitraum beizubehalten.
 
-Bestehende Anwendungen haben uns dabei wenig überzeugt. Viele wirken überladen, setzen auf
-aggressive Erinnerungen oder fühlen sich wie ein weiterer Punkt auf der To-do-Liste an. Wir
-wollten deshalb von Beginn an etwas entwickeln, das sich in den Alltag einfügt, ohne
-zusätzlichen Druck aufzubauen, aber mit genug Struktur, um dranzubleiben.
+Bei anderen Studierenden in unserem Umfeld haben wir ähnliche Erfahrungen mitbekommen. Oft fehlt
+nicht die Motivation. Das größere Problem ist, dass gute Vorsätze im Alltag schnell vergessen
+oder aufgeschoben werden, besonders wenn sich der Tagesablauf häufig ändert.
+
+Bestehende Anwendungen haben uns dabei nicht wirklich überzeugt. Einige bieten sehr viele
+Funktionen und wirken dadurch unübersichtlich. Andere arbeiten stark mit Erinnerungen oder fühlen
+sich nach einiger Zeit wie eine weitere Aufgabe an, die man erledigen muss. Mit Align wollten wir
+deshalb eine Anwendung entwickeln, die sich einfach in den Alltag einbauen lässt, keinen
+zusätzlichen Druck erzeugt und trotzdem genug Struktur gibt, um dranzubleiben.
 
 ## 1.3 Problemstellung
 
-Aus dieser Ausgangslage haben wir drei Probleme abgeleitet, die den Anstoß für das Projekt
-gaben. Alle drei haben wir in der späteren Nutzerforschung geprüft und bestätigt gefunden
-(Kapitel 5).
+Aus dieser Ausgangssituation haben wir drei Probleme abgeleitet, die den Anstoß für unser Projekt
+gegeben haben. Alle drei haben wir später in unserer Nutzerforschung untersucht und bestätigt
+gefunden (Kapitel 5).
 
 ### 1.3.1 Fehlende Alltagsstruktur im Studium
 
-Im Studium gibt es keine feste Tagesstruktur mehr wie in der Schule. Vorlesungszeiten wechseln
-von Semester zu Semester, Freistunden häufen sich, und das Selbststudium bleibt liegen, weil
-niemand es einfordert. Ohne eine bewusst gewählte Struktur läuft der Tag ins Leere, besonders
-in vorlesungs- und prüfungsfreien Phasen.
+Im Studium gibt es oft keine feste Tagesstruktur mehr, wie man sie aus der Schule kennt.
+Vorlesungszeiten ändern sich von Semester zu Semester, es gibt Freistunden, und für das
+Selbststudium ist man selbst verantwortlich. Dadurch werden Aufgaben schnell aufgeschoben, oder
+der Tag vergeht ohne richtigen Plan. Besonders in vorlesungs- und prüfungsfreien Phasen ist es
+schwierig, eine feste Struktur beizubehalten.
 
 ### 1.3.2 Gute Vorsätze werden selten zu Routinen
 
-Der eigentliche Knackpunkt liegt nicht beim Vorsatz, sondern beim Übergang vom Vorsatz zur
-täglichen Routine. Bestehende Habit-Tracker wirken entweder zu komplex, zu stark gamifiziert
-oder zu generisch, um langfristig zu motivieren.
+Das Problem liegt oft nicht darin, sich etwas vorzunehmen, sondern darin, daraus eine feste
+Routine zu machen. Bestehende Habit-Tracker sind teilweise sehr komplex, stark auf spielerische
+Elemente ausgelegt oder zu allgemein gehalten. Dadurch helfen sie nicht jedem, langfristig
+dranzubleiben.
 
-Hinzu kommt ein struktureller Mangel. Diese Anwendungen sind statisch. Sie behandeln
-Gewohnheiten unabhängig davon, wie ein Tag tatsächlich aussieht, und ändert sich der Tag, etwa
-durch einen neuen Stundenplan, bleibt der Plan derselbe. Je weiter Plan und Alltag
-auseinanderdriften, desto eher wird die Anwendung ganz beiseitegelegt.
+Dazu kommt, dass diese Anwendungen kaum auf den tatsächlichen Alltag eingehen. Sie behandeln
+Gewohnheiten unabhängig davon, wie ein Tag aussieht. Ändert sich der Tag, etwa durch einen neuen
+Stundenplan, bleibt der Plan trotzdem derselbe. Je weiter Plan und Alltag auseinandergehen, desto
+eher legt man die Anwendung irgendwann ganz beiseite.
 
 ### 1.3.3 Keine Anwendung, die sich dem eigenen Alltag anpasst
 
-Was bestehenden Lösungen fehlt, ist die Fähigkeit, sich dem Alltag anzupassen statt umgekehrt.
-Wir suchten eine Anwendung, die auf den persönlichen Kontext eingeht. Wie viel Zeit ist gerade
-verfügbar? In welcher Phase des Semesters befindet sich die Person? Welche Termine stehen ohnehin fest?
-Genau hier sehen wir das Potenzial einer gezielten KI-Unterstützung und den
-Kern dessen, was Align von bestehenden Anwendungen unterscheiden sollte.
+Bei bestehenden Lösungen fehlt uns vor allem, dass sich die Planung an den eigenen Alltag
+anpasst. Nicht nur der Nutzer sollte sich nach der Anwendung richten, sondern auch die Anwendung
+nach dem Alltag der Person. Wichtig ist zum Beispiel, wie viel Zeit an einem Tag zur Verfügung
+steht, in welcher Phase des Semesters man sich befindet und welche Termine ohnehin feststehen.
+
+Genau hier sehen wir den sinnvollen Einsatz von KI. Sie soll helfen, die Planung an die jeweilige
+Situation anzupassen, und unterstützen, wenn es einmal nicht nach Plan läuft. Das ist zugleich
+der Punkt, durch den sich Align von bestehenden Anwendungen unterscheiden soll.
 
 ## 1.4 Zielsetzung und Leitfrage
 
-Daraus ergibt sich die leitende Gestaltungsfrage des Projekts:
+Aus den beschriebenen Problemen ergibt sich die Leitfrage unseres Projekts:
 
 > **„Wie kann eine mobile Applikation Studierende durch minimalistisches Design,
 > kontextsensitive KI und verhaltenspsychologisch fundierte Mechanismen dabei unterstützen,
 > nachhaltige Alltagsgewohnheiten zu etablieren?"**
 
-Zur Beantwortung dieser Frage haben wir eine lauffähige MVP-Version der Anwendung entwickelt,
-nutzerzentriert evaluiert und iterativ verbessert. Die drei Begriffe der Leitfrage haben wir
-dabei als Gestaltungsauftrag gelesen.
+Um diese Frage zu beantworten, haben wir auf Grundlage unserer Nutzerforschung eine
+funktionsfähige MVP-Version entwickelt und Schritt für Schritt verbessert. Die drei Bereiche der
+Leitfrage dienten uns dabei als Auftrag für Gestaltung und Entwicklung.
 
 | Begriff | Was daraus folgte |
 |---|---|
@@ -100,65 +108,65 @@ dabei als Gestaltungsauftrag gelesen.
 | **Kontextsensitive KI** | Vorschläge, die den tatsächlichen Tag kennen, also Schlafrhythmus, Stundenplan und bestehende Gewohnheiten (Kapitel 7) |
 | **Verhaltenspsychologisch fundierte Mechanismen** | Wenn-Dann-Pläne, Trigger- und Kontextbindung, Konsistenz statt Serie; jede Funktion auf eine Quelle zurückführbar (Kapitel 4 und 6) |
 
-Der dritte Punkt braucht eine Erläuterung, weil er unser Vorgehen am stärksten geprägt hat.
-Wir wollten Gewohnheitsbildung nicht über Spielmechaniken erzwingen, sondern verstehen,
-**warum** Gewohnheiten entstehen und **woran** sie scheitern. Deshalb stand am Anfang des
-Projekts die Auseinandersetzung mit der Verhaltens- und Motivationspsychologie. Wir haben uns
-mit Implementation Intentions beschäftigt und mit der Frage, wie sich Verhaltenskontrolle von
-der Selbstdisziplin auf die Situation verlagern lässt. Dazu kamen Trigger- und
-Kontextbindung, das Domino-Prinzip und die empirischen Befunde zur Dauer und zur Konsistenz
-von Gewohnheitsbildung.
+Der dritte Bereich hat unser Vorgehen am stärksten geprägt. Uns war wichtig, dass Nutzer ihre
+Gewohnheiten nicht wegen Punkten, Belohnungen oder anderen Spielelementen einhalten. Wir wollten
+verstehen, **warum** Gewohnheiten entstehen und **woran** sie scheitern.
 
-Aus diesen Grundlagen leiten sich die zentralen Funktionen von Align ab, nicht aus
-Belohnungslogiken. Dazu gehören Situations-Anker statt fester Uhrzeiten, Gewohnheitsketten,
-eine Konsistenzrate statt einer Serie und der bewusste Verzicht auf jeden
-Bestrafungsmechanismus. Die Quellen und ihre jeweilige Wirkung im Produkt sind in Kapitel 4
-dargestellt.
+Deshalb haben wir uns zu Beginn des Projekts mit Verhaltens- und Motivationspsychologie
+beschäftigt. Dazu gehörten Implementation Intentions, bei denen ein Verhalten mit einer
+konkreten Situation verbunden wird. Außerdem haben wir uns angesehen, wie Auslöser und Kontext
+helfen, eine Gewohnheit regelmäßig auszuführen. Weitere Themen waren das Domino-Prinzip und
+Befunde dazu, wie lange der Aufbau einer Gewohnheit dauert und welche Rolle regelmäßige
+Wiederholung dabei spielt.
+
+Aus diesen Grundlagen sind die wichtigsten Funktionen von Align entstanden, nicht aus
+Belohnungslogiken. Dazu gehören Situations-Anker statt fester Uhrzeiten, Gewohnheitsketten, eine
+Konsistenzrate statt einer Serie und der bewusste Verzicht auf Bestrafung, wenn eine Gewohnheit
+einmal nicht klappt. Die Quellen und wie wir sie umgesetzt haben, beschreibt Kapitel 4.
 
 ## 1.5 Zielgruppe
 
-Zielgruppe von Align sind Studierende im deutschsprachigen Raum, unabhängig vom Semester. Mit
-Interviews und Umfrage haben wir bewusst unterschiedliche Studienphasen abgedeckt, vom ersten
-bis über das siebte Semester hinaus.
+Die Zielgruppe von Align sind Studierende im deutschsprachigen Raum, unabhängig vom Semester. In
+unserer Nutzerforschung haben wir deshalb bewusst Studierende aus verschiedenen Studienphasen
+einbezogen, vom ersten bis über das siebte Semester hinaus.
 
-Aus der Nutzerforschung haben sich zwei charakteristische Verhaltenstypen herauskristallisiert,
-die als Personas unsere weitere Konzeption geleitet haben (Abschnitt 5.5):
+Aus der Nutzerforschung haben sich zwei typische Gruppen ergeben, die wir als Personas für die
+weitere Entwicklung genutzt haben (Abschnitt 5.5):
 
-- **„Die Selbstregulierten"**, also höhere Semester mit flexiblen Tagen und bereits
-  funktionierenden kontextbasierten Routinen. Ihr Hauptblocker ist Streak-Druck und
-  Vergleich.
-- **„Die Einsteiger"**, also mittlere Semester ohne feste Routine. Ihr Hauptblocker ist die
-  Überforderung beim Einstieg.
+- **„Die Selbstregulierten"** sind Studierende aus höheren Semestern, die ihren Alltag bereits
+  selbstständig organisieren und funktionierende Routinen haben. Belastend ist für sie vor allem
+  der Druck durch Streaks und der Vergleich mit anderen.
+- **„Die Einsteiger"** sind Studierende aus mittleren Semestern ohne feste Routinen. Ihre größte
+  Schwierigkeit ist, überhaupt einen Einstieg zu finden, ohne sich zu überfordern.
 
 ## 1.6 Anspruch an das Endprodukt
 
-Für die Gestaltung haben wir zu Beginn sechs Ansprüche formuliert, an denen sich alle späteren
-Entscheidungen messen lassen mussten. Über allen stand der erste. Jede Funktion sollte so
-einfach und intuitiv zu bedienen sein, dass sie ohne Erklärung verständlich ist und beim
-Benutzen möglichst keine Hürden entstehen. Eine Anwendung, deren Bedienung selbst Überwindung
-kostet, verstärkt genau das Problem, das sie lösen soll. Deshalb haben wir bei jeder
-Entscheidung auch gefragt, ob sie einen zusätzlichen Schritt, eine zusätzliche Frage oder eine
-zusätzliche Erklärung erfordert, und diese Schritte so weit wie möglich vermieden.
+Zu Beginn haben wir sechs Ansprüche festgelegt, an denen sich alle späteren Entscheidungen messen
+lassen mussten. Über allen stand der erste: Jede Funktion sollte so einfach zu bedienen sein,
+dass sie ohne Erklärung verständlich ist. Eine Anwendung, deren Bedienung selbst Überwindung
+kostet, verstärkt genau das Problem, das sie lösen soll. Deshalb haben wir bei jeder Entscheidung
+gefragt, ob sie einen zusätzlichen Schritt, eine zusätzliche Frage oder eine zusätzliche
+Erklärung verlangt, und solche Schritte so weit wie möglich vermieden.
 
-- intuitive und einfache Bedienung, denn die Anwendung darf nicht selbst zum Hindernis werden
-- Fokus auf langfristige Motivation statt Druck, ohne Bestrafungsmechanismus
-- klare Struktur und geringe visuelle Ablenkung
-- konsistentes Nutzererlebnis über alle Bereiche hinweg, in Light und Dark Mode
-- kontextsensitive Personalisierung statt starrer Uhrzeiten
-- wissenschaftlich fundierte Gestaltung auf Basis der Verhaltens- und Motivationspsychologie
+- einfache und verständliche Bedienung, damit die Anwendung nicht selbst zum Hindernis wird
+- langfristige Motivation statt Druck, ohne Bestrafung
+- klare Struktur und wenig visuelle Ablenkung
+- einheitlicher Aufbau aller Bereiche, in Light und Dark Mode
+- Anpassung an den eigenen Alltag statt starrer Uhrzeiten
+- Gestaltung auf Grundlage der Verhaltens- und Motivationspsychologie
 
 ## 1.7 Aufbau dieses Berichts
 
-Dieser Bericht folgt den vier Entwicklungsphasen unseres Projekts, die sechs Iterationen sind
-darin eingeordnet.
+Der Bericht folgt dem Ablauf unseres Projekts und ist in drei Teile gegliedert. Die sechs
+Iterationen sind den jeweiligen Entwicklungsphasen zugeordnet.
 
-**Teil I** beschreibt den Rahmen, also Problemraum und Marktumfeld (Kapitel 2) sowie das
-Vorgehen und die Zusammenarbeit im Team (Kapitel 3).
+**Teil I** beschreibt den Rahmen des Projekts, also Problemraum und Marktumfeld (Kapitel 2) sowie
+unser Vorgehen und die Zusammenarbeit im Team (Kapitel 3).
 
-**Teil II** bildet den Hauptteil und folgt dem Projektverlauf mit Analyse und Grundlagen
-(Kapitel 4), Nutzerforschung (Kapitel 5), Konzeption und Design (Kapitel 6) sowie der
-technischen Umsetzung (Kapitel 7). Jede Phase enthält ihren Verlauf einschließlich des
-Feedbacks aus den Betreuungsgesprächen und ihre inhaltlichen Ergebnisse.
+**Teil II** bildet den Hauptteil und folgt dem Projektverlauf: Analyse und Grundlagen
+(Kapitel 4), Nutzerforschung (Kapitel 5), Konzeption und Design (Kapitel 6) und technische
+Umsetzung (Kapitel 7). Zu jeder Phase gehören ihre Ergebnisse und das Feedback aus den
+Betreuungsgesprächen.
 
 **Teil III** stellt das Ergebnis vor (Kapitel 8) und schließt mit Reflexion und Ausblick
 (Kapitel 9).
@@ -167,21 +175,23 @@ Feedbacks aus den Betreuungsgesprächen und ihre inhaltlichen Ergebnisse.
 
 # 2. Problemraum und Markt
 
-Bevor wir Features definierten, mussten wir klären, wen die Anwendung adressiert, welche
-Informationen wir dafür erheben müssen und was der Markt bereits abdeckt. Dieses Kapitel fasst
-beide Vorarbeiten zusammen, die Anforderungsanalyse und die Competitor-Analyse. Beide
-entstanden in Phase 1 (Kapitel 4).
+Bevor wir einzelne Funktionen geplant haben, mussten wir grundlegende Fragen klären: Für wen
+entwickeln wir die Anwendung, welche Informationen brauchen wir über unsere Zielgruppe, und
+welche ähnlichen Anwendungen gibt es bereits? Dieses Kapitel fasst deshalb die
+Anforderungsanalyse und die Competitor-Analyse zusammen. Beide sind in Phase 1 entstanden
+(Kapitel 4).
 
 ## 2.1 Stakeholder und Informationsbedarf
 
-Primäre Stakeholder sind **Studierende zwischen 18 und 35 Jahren**, die Schwierigkeiten haben,
-Routinen aufzubauen, oder sich von ihrem Alltag überfordert fühlen. Als sekundäre Gruppe haben
-wir Fachleute aus Psychologie und Verhaltensforschung identifiziert. Ihre Perspektive ist für
-die Gestaltung relevant, auch wenn sie die Anwendung nicht selbst nutzen. In unser Projekt ist
-sie über die wissenschaftliche Literatur eingeflossen (Kapitel 4).
+Primäre Stakeholder von Align sind **Studierende zwischen 18 und 35 Jahren**, denen es
+schwerfällt, Routinen aufzubauen, oder die sich in ihrem Alltag überfordert fühlen.
 
-Daraus haben wir abgeleitet, welche Informationen unsere Nutzerforschung erheben muss. Fünf
-Bereiche waren zu klären:
+Als sekundäre Gruppe haben wir Fachleute aus Psychologie und Verhaltensforschung betrachtet. Auch
+wenn sie die Anwendung nicht selbst nutzen, ist ihre fachliche Sicht für die Gestaltung wichtig.
+In unser Projekt ist sie über die wissenschaftliche Literatur eingeflossen (Kapitel 4).
+
+Auf dieser Grundlage haben wir festgelegt, was unsere Nutzerforschung herausfinden sollte. Dabei
+haben sich fünf Bereiche ergeben:
 
 | Bereich | Leitfragen |
 |---|---|
@@ -191,27 +201,27 @@ Bereiche waren zu klären:
 | **Technologie** | Welche Anwendungen wurden ausprobiert? Was funktionierte, was hat gestört? Wie lange darf ein Check-in höchstens dauern? |
 | **Zeit** | Wie viele neue Gewohnheiten sind gleichzeitig realistisch? |
 
-Diese Fragen haben wir in Phase 2 über zwei Erhebungsmethoden beantwortet, über qualitative
-Leitfadeninterviews und eine quantitative Online-Umfrage (Kapitel 5). Der letzte Punkt hat
-dabei eine eigene Geschichte, denn aus ihm wurde später eine konkrete Produktregel
-(Abschnitt 6.3).
+Diese Fragen haben wir in Phase 2 mit zwei Methoden untersucht, mit qualitativen
+Leitfadeninterviews und einer quantitativen Online-Umfrage (Kapitel 5). Aus dem letzten Punkt
+entstand später eine konkrete Regel für unser Produkt (Abschnitt 6.3).
 
 ## 2.2 Competitor-Analyse
 
 ### Ziel und Methodik
 
-Die Competitor-Analyse beantwortet drei Fragen. Wer ist im Markt aktiv? Wo ist die Marktlücke?
-Und was lässt sich für das eigene MVP lernen, welche Mechaniken funktionieren und welche
-sollten vermieden werden?
+Mit der Competitor-Analyse wollten wir herausfinden, welche ähnlichen Anwendungen es bereits gibt
+und wo noch Platz für Align ist. Außerdem wollten wir sehen, welche Funktionen und Ansätze bei
+bestehenden Anwendungen gut funktionieren und was wir bei unserem MVP besser vermeiden.
 
-Zum Stichtag 19. Mai 2026 haben wir **acht Anwendungen** entlang von vier Dimensionen
-untersucht, nämlich Zielgruppe und Positionierung, Features, Gamification und UX sowie
-KI-Integration. Grundlage waren App-Store-Einträge, unabhängige Rezensionen und
-Marktanalysen, ergänzend flossen unsere eigenen Nutzungserfahrungen ein. Bewertet haben wir
-qualitativ mit Belegen und nicht als reinen Feature-Vergleich.
+Zum Stand vom 19. Mai 2026 haben wir **acht Anwendungen** untersucht. Dabei haben wir uns vier
+Bereiche genauer angesehen: Zielgruppe und Positionierung, Funktionen, Gamification und UX sowie
+den Einsatz von KI. Grundlage waren App-Store-Einträge, unabhängige Rezensionen und
+Marktanalysen, dazu unsere eigenen Erfahrungen mit den Anwendungen. Uns ging es nicht nur um
+einen Vergleich der Funktionen, sondern auch darum zu verstehen, welche Ansätze für Align
+interessant sind.
 
-Die Auswahl umfasst bewusst auch Anwendungen aus angrenzenden Kategorien, die Studierende
-ohnehin im Alltag nutzen:
+Bei der Auswahl haben wir bewusst nicht nur direkte Konkurrenten betrachtet, sondern auch
+Anwendungen aus angrenzenden Bereichen, die Studierende im Alltag ohnehin nutzen:
 
 | Kategorie | Anwendungen | Warum ausgewählt |
 |---|---|---|
@@ -220,47 +230,46 @@ ohnehin im Alltag nutzen:
 
 ### Die untersuchten Anwendungen
 
-**Habitica** übersetzt Gewohnheiten in eine Rollenspiel-Mechanik mit Avatar,
-Erfahrungspunkten und Gruppenspiel. Die Mechanik ist einzigartig und die Community stark,
-aber die Lernkurve ist steil und der Spielfokus lenkt von der eigentlichen Gewohnheit ab.
-*Implikation:* Gamifizierung funktioniert, ist hier aber überdosiert. Align setzt auf subtile
-Mechaniken, die unterstützen statt zu dominieren.
+**Habitica** verbindet den Aufbau von Gewohnheiten mit einer Rollenspiel-Mechanik, mit eigenem
+Avatar, Erfahrungspunkten und gemeinsamem Spielen. Das kann motivieren, der starke Fokus auf das
+Spiel lenkt aber auch von der eigentlichen Gewohnheit ab. Für Align haben wir daraus
+mitgenommen, spielerische Elemente nur dezent einzusetzen.
 
-**Fabulous** kombiniert Habit Stacking mit Audio-Coaching und geführten Programmen und ist
-wissenschaftlich fundiert. Es wirkt jedoch sehr breit angelegt und eher wie eine
-Content-Bibliothek als wie eine persönliche Begleitung. *Implikation:* Wissenschaftliche
-Fundierung hilft wirklich, Personalisierung sollte sich aber am tatsächlichen Alltag orientieren
-statt an vorgefertigten Programmen.
+**Fabulous** kombiniert Habit Stacking mit Audio-Coaching und geführten Programmen und beruht auf
+wissenschaftlichen Ansätzen. Die Anwendung bietet aber sehr viele Inhalte und wirkt eher wie eine
+Bibliothek als wie eine persönliche Begleitung. Für Align haben wir mitgenommen, dass
+wissenschaftliche Grundlagen helfen, die Unterstützung sich aber am tatsächlichen Alltag
+orientieren sollte und nicht an vorgefertigten Programmen.
 
-**Finch** setzt auf einen virtuellen Begleiter, der mit den eigenen Fortschritten wächst, und
-verzichtet bewusst auf harte Serien. Die Tonalität ist warm und trifft die Zielgruppe genau,
-der wissenschaftliche Anspruch und die Tracking-Tiefe bleiben gering. *Implikation:* Tonalität
-zählt mehr als Feature-Breite, allerdings mit ernsterer Methodik dahinter.
+**Finch** arbeitet mit einem virtuellen Begleiter, der mit den eigenen Fortschritten wächst, und
+verzichtet bewusst auf Druck durch Serien. Die freundliche, warme Ansprache trifft die Zielgruppe
+gut, der wissenschaftliche Anspruch bleibt aber gering. Auch Align soll unterstützen, ohne Druck
+aufzubauen, allerdings mit einer fundierteren Grundlage.
 
-**Streaks** ist der minimalistische Gegenpol mit schönem Design und ohne Abo-Pflicht, aber
-auch ohne Personalisierung und ohne Begleitung. *Implikation:* Minimalismus ist ein Trumpf,
-ein reiner Tracker ist aber zu wenig.
+**Streaks** ist sehr einfach und minimalistisch aufgebaut und konzentriert sich auf das Tracken
+von Gewohnheiten. Dadurch bleibt die Anwendung übersichtlich, bietet aber kaum persönliche
+Unterstützung. Für Align heißt das: Ein einfacher Aufbau ist sinnvoll, ein reiner Tracker reicht
+aber nicht aus.
 
-**Forest** verknüpft Fokuszeit mit einer wachsenden virtuellen Pflanze und hat einen sehr
-starken Studierendenbezug, bleibt aber ein reines Fokus-Werkzeug ohne breitere
-Gewohnheitslogik. *Implikation:* Hier ist kein Wettbewerb nötig, die Bindung an etwas Größeres
-wirkt jedoch nachweislich motivierend.
+**Forest** verbindet Fokuszeiten mit einer virtuellen Pflanze, die beim konzentrierten Arbeiten
+wächst. Das einfache Motivationsprinzip kommt bei Studierenden gut an. Die Anwendung beschränkt
+sich aber auf Fokuszeiten und hilft nicht beim Aufbau verschiedener Gewohnheiten.
 
-**Headspace** ist der Wellness-Anbieter mit der bislang ernsthaftesten KI-Integration, einem
-konversationellen Begleiter mit adaptiven Empfehlungen. Eine echte Gewohnheitslogik fehlt.
-*Implikation:* die direkte Referenz für unsere eigene KI-Assistenz, mit der Lehre, dass KI
-empathisch wirken muss und nicht klinisch.
+**Headspace** konzentriert sich auf mentale Gesundheit und hat mit dem Begleiter „Ebb" die
+ausgereifteste KI-Integration unter den untersuchten Anwendungen. Die Planung von Gewohnheiten
+steht dort aber nicht im Mittelpunkt. Für unsere eigene KI-Assistenz war Headspace die wichtigste
+Referenz, vor allem dafür, dass KI persönlich und einfühlsam wirken muss und nicht klinisch.
 
-**Notion** ist kein Wettbewerber im engeren Sinn, aber das Werkzeug, mit dem viele Studierende
-ihre Routinen heute tatsächlich abbilden. Der Preis dafür ist ein hoher Einrichtungsaufwand
-ohne jede Begleitung. *Implikation:* Die meisten dieser selbstgebauten Tracker scheitern an
-der Konsistenz, und genau dort setzt Align an.
+**Notion** ist kein direkter Konkurrent, wird aber von vielen Studierenden genutzt, um ihren
+Alltag zu organisieren. Eigene Routinen und Tracker lassen sich flexibel erstellen, brauchen aber
+viel Einrichtung und müssen selbst gepflegt werden. Die meisten dieser selbstgebauten Tracker
+scheitern daran, dass man sie nicht regelmäßig nutzt. Align soll diesen Aufwand verringern und
+mehr Unterstützung bei der Planung bieten.
 
-**Athenify** ist die einzige Lösung im deutschsprachigen Raum mit explizitem
-Studierendenfokus, inklusive datenschutzkonformer Infrastruktur und analytischer
-Lernzeit-Prognose. Sie verengt sich allerdings stark auf das Lernen. *Implikation:* der
-nächste regionale Wettbewerber, aber zu schmal. Align kann Lernen, Schlaf, Bewegung und
-Balance zusammen denken.
+**Athenify** richtet sich gezielt an Studierende im deutschsprachigen Raum und unterstützt vor
+allem bei der Organisation von Lernzeiten, mit datenschutzkonformer Infrastruktur. Der
+Schwerpunkt liegt dadurch stark auf dem Lernen. Align verfolgt einen breiteren Ansatz und bezieht
+neben dem Studium auch Schlaf, Bewegung und Balance ein.
 
 ### Vergleichsmatrix
 
@@ -278,27 +287,27 @@ Balance zusammen denken.
 
 ## 2.3 Vier Marktlücken
 
-Aus der Analyse haben sich vier Bereiche ergeben, in denen keine der untersuchten Anwendungen
-überzeugt:
+Aus der Analyse haben sich vier Bereiche ergeben, die keine der untersuchten Anwendungen
+vollständig abdeckt:
 
-**1 · Die Lebensrealität Studierender als Produktlogik.** Keine der acht Anwendungen denkt in
-Semestern, Prüfungsphasen und Vorlesungsrhythmus. Athenify kommt am nächsten, fokussiert aber
-zu eng auf das Lernen. → *Align kann den Stundenplan und den Semesterzyklus zur zentralen
-Achse machen.*
+**1 · Die Lebensrealität Studierender als Produktlogik.** Keine der acht Anwendungen
+berücksichtigt den Studienalltag mit Semestern, Prüfungsphasen und wechselnden Vorlesungszeiten.
+Athenify kommt diesem Ansatz am nächsten, konzentriert sich aber auf das Lernen. → *Align kann
+den Stundenplan und den Ablauf eines Semesters zur Grundlage der Planung machen.*
 
-**2 · Planen findet am Laptop statt.** Fast alle spezialisierten Anwendungen sind
-mobile-first. Studierende sitzen aber am Rechner, wenn sie planen und lernen. Notion zeigt,
-dass Gewohnheitstracking im Browser funktioniert.
+**2 · Planen findet am Laptop statt.** Fast alle spezialisierten Anwendungen sind vor allem für
+das Smartphone gebaut. Studierende verbringen aber viel Zeit am Laptop, besonders beim Lernen und
+Planen. Notion zeigt, dass das Planen und Tracken von Gewohnheiten auch im Browser funktioniert.
 
-**3 · KI als echter Begleiter statt als Content-Bibliothek.** Im Habit-Markt ist KI
-unterentwickelt. Wo sie vorkommt, liefert sie vorgefertigte Inhalte statt Vorschläge,
-die sich auf den eigenen Tag beziehen. → *Align kann kontextbewusste Vorschläge machen, die den tatsächlichen Tag
+**3 · KI als echter Begleiter statt als Content-Bibliothek.** Bei Habit-Trackern wird KI bisher
+kaum eingesetzt. Wo es sie gibt, liefert sie meist vorgefertigte Inhalte, statt auf die
+Situation der Person einzugehen. → *Align kann Vorschläge machen, die den tatsächlichen Tag
 kennen.*
 
-**4 · Subtile statt aggressiver Gamifizierung.** Habitica überfordert, reine Serien machen
-anfällig für den Abbruch nach dem ersten Fehltag. Finch zeigt, dass sanfte, nicht bestrafende
-Mechaniken bei jüngeren Zielgruppen besser wirken. → *Align setzt auf milde
-Fortschrittsindikatoren ohne Verlustdruck.*
+**4 · Subtile statt aggressiver Gamifizierung.** Starke Gamifizierung wie bei Habitica wird
+schnell zu viel, und reine Serien erzeugen Druck, weil schon ein ausgelassener Tag den
+Fortschritt unterbricht. Finch zeigt, dass ein nicht bestrafender Ansatz bei jüngeren
+Zielgruppen besser ankommt. → *Align setzt auf einfache Fortschrittsanzeigen ohne Verlustdruck.*
 
 ## 2.4 Positionierung
 
@@ -309,14 +318,15 @@ Daraus haben wir folgende Positionierung abgeleitet:
 > kontextsensitiven KI-Begleiter und verhaltenspsychologisch fundierten Mechanismen, die
 > ohne Druck zur Konsistenz führen.
 
-Im Vergleich ist Habitica zu spielerisch, Fabulous zu generisch, Notion verlangt zu viel
-Einrichtung und Athenify ist zu schmal. Align liefert das Passende in einer einfachen
-Oberfläche, mit der wissenschaftlichen Fundierung, die den regionalen Alternativen fehlt.
+Im Vergleich dazu ist Habitica sehr stark auf Spielelemente ausgerichtet, Fabulous eher allgemein
+gehalten, Notion verlangt viel eigene Einrichtung, und Athenify konzentriert sich auf das Lernen.
+Align soll diese Bereiche in einer einfachen, übersichtlichen Anwendung verbinden und dabei auf
+wissenschaftlichen Grundlagen aufbauen, die den regionalen Alternativen fehlen.
 
 ## 2.5 Was daraus für das MVP folgte
 
-Die Analyse endete mit einer Priorisierung, in der wir zwischen gesetzten Bestandteilen,
-späteren Erweiterungen und bewussten Ausschlüssen unterschieden haben:
+Die Analyse endete mit einer Priorisierung. Dabei haben wir festgelegt, welche Bestandteile für
+Align gesetzt sind, welche später dazukommen können und worauf wir bewusst verzichten:
 
 | | |
 |---|---|
@@ -324,22 +334,20 @@ späteren Erweiterungen und bewussten Ausschlüssen unterschieden haben:
 | **Später** | soziale Funktionen, erst wenn der Einzelnutzen klar ist · wenige, gezielte Erfolgsmarken · ein einfacher Fokusmodus |
 | **Bewusst nicht** | eigene Meditationen oder Workouts produzieren · komplexe Rollenspielmechanik · verlustaversive Mechanismen, die dem eigenen Tonalitätsziel widersprechen |
 
-Zwei dieser frühen Festlegungen sind besonders erwähnenswert, weil sie unseren weiteren
-Projektverlauf getragen haben.
+Zwei dieser frühen Entscheidungen waren für den weiteren Projektverlauf besonders wichtig.
 
-Die **Stundenplan-Integration** war zu diesem Zeitpunkt eine Annahme aus der Marktanalyse,
-ohne empirischen Beleg. Unsere Nutzerforschung stützte sie später indirekt. Stress und
-Prüfungsphasen erwiesen sich als größter Grund dafür, eine Gewohnheit aufzugeben (17 von 25),
-und 20 von 25 Befragten planen ohnehin mit Kalender oder Planer. Umgesetzt haben wir sie in
-Phase 4 als Semesterplan (Abschnitt 7.11). Damit ist sie der Gedanke, der unseren gesamten
-Projektverlauf von der ersten Analyse bis in die fertige Anwendung überdauert hat.
+Die **Stundenplan-Integration** entstand aus der Marktanalyse und war zu diesem Zeitpunkt nur eine
+Annahme. Unsere Nutzerforschung hat sie später indirekt gestützt. 17 von 25 Befragten nannten
+Stress und Prüfungsphasen als größten Grund, eine Gewohnheit aufzugeben, und 20 von 25 planen
+ohnehin mit einem Kalender oder Planer. In Phase 4 haben wir sie als Semesterplan umgesetzt
+(Abschnitt 7.11). Damit hat dieser Gedanke unser Projekt von der ersten Analyse bis in die
+fertige Anwendung begleitet.
 
-Die Entscheidung gegen **verlustaversive Mechanismen** war ebenfalls zunächst eine Haltung.
-Wir sahen sie in Phase 2 doppelt bestätigt, durch die Interviews und durch einen hohen
-Schuldwert in der Umfrage. Heute ist sie an mehreren Stellen der Anwendung sichtbar, an
-neutral dargestellten Fehltagen, an einer Serie, die bei einem verpassten Tag nicht
-zusammenbricht, und an einer Konsistenzrate, die nur Tage zählt, an denen die Gewohnheit
-tatsächlich anstand.
+Auch auf **verlustaversive Mechanismen** wollten wir von Anfang an verzichten. Die
+Nutzerforschung hat diese Entscheidung doppelt bestätigt, durch die Interviews und durch den
+hohen Schuldwert in der Umfrage. In der Anwendung zeigt sie sich an neutral dargestellten
+Fehltagen, an einer Serie, die bei einem verpassten Tag nicht zusammenbricht, und an einer
+Konsistenzrate, die nur die Tage zählt, an denen eine Gewohnheit tatsächlich geplant war.
 
 ---
 
@@ -347,16 +355,15 @@ tatsächlich anstand.
 
 ## 3.1 Das Team
 
-Align haben wir zu dritt entwickelt, **Berkay**, **Silas** und **Ngoc Ha**, alle im
-Studiengang E-Commerce an der Technischen Hochschule Würzburg-Schweinfurt. Ein vierter
-Kommilitone, Prabjot, war zu Projektbeginn eingeplant, konnte wegen eines parallel
-beginnenden Praktikums jedoch nicht mitarbeiten. Betreut wurde unser Projekt von
-**Anne Heß**.
+Align haben wir zu dritt entwickelt, **Berkay**, **Silas** und **Ngoc Ha**. Wir studieren alle
+E-Commerce an der Technischen Hochschule Würzburg-Schweinfurt. Ein vierter Kommilitone, Prabjot,
+war zu Projektbeginn eingeplant, konnte wegen eines parallel beginnenden Praktikums aber nicht
+mitarbeiten. Betreut wurde das Projekt von **Anne Heß**.
 
-Recherche, Interviews und alle zentralen Konzeptentscheidungen haben wir gemeinsam
-erarbeitet. Daneben haben sich Schwerpunkte entlang von Interessen und Vorkenntnissen
-herausgebildet, ohne dass daraus strikte Zuständigkeiten wurden. Jede und jeder von uns hat
-konzeptionell, gestalterisch und technisch beigetragen.
+Die Recherche, die Interviews und alle wichtigen Konzeptentscheidungen haben wir gemeinsam
+erarbeitet. Im Laufe des Projekts haben sich nach Interessen und Vorkenntnissen unterschiedliche
+Schwerpunkte entwickelt, eine strikte Aufgabenverteilung gab es aber nicht. Alle drei waren an
+Konzeption, Gestaltung und technischer Umsetzung beteiligt.
 
 | | Schwerpunkt |
 |---|---|
@@ -366,11 +373,12 @@ konzeptionell, gestalterisch und technisch beigetragen.
 
 ## 3.2 Phasen und Iterationen
 
-Unser Projekt lief vom 17. Mai bis zum 7. September 2026 und durchlief vier
-Entwicklungsphasen. Innerhalb dieser Phasen haben **sechs Iterationen** die Arbeit
-strukturiert. Jede endete mit einem Betreuungsgespräch, in dem wir unseren Stand präsentiert
-und Feedback für das weitere Vorgehen eingeholt haben. Zwischen zwei Gesprächen lagen in der
-Regel drei Wochen.
+An Align haben wir vom 17. Mai bis zum 7. September 2026 gearbeitet. Das Projekt war in vier
+Entwicklungsphasen und **sechs Iterationen** gegliedert. In jeder Iteration haben wir uns
+bestimmte Aufgaben und Ziele vorgenommen, an denen wir bis zum nächsten Betreuungsgespräch
+gearbeitet haben. Dort haben wir unseren Stand vorgestellt, offene Fragen besprochen und Feedback
+bekommen. Danach haben wir gemeinsam entschieden, was wir anpassen und worauf wir uns in der
+nächsten Iteration konzentrieren. Zwischen zwei Gesprächen lagen meist etwa drei Wochen.
 
 | Phase | Iterationen | Gespräche | Schwerpunkt |
 |---|---|---|---|
@@ -379,37 +387,38 @@ Regel drei Wochen.
 | **3 · Konzeption und Design** | Iteration 4 | 20.07. | Feature-Ausarbeitung, Designsprache, Prototypen |
 | **4 · Technische Umsetzung** | Iterationen 5 und 6 | 10.08. · 07.09. | Aufbau der Anwendung, Ausbau, Härtung |
 
-Wir sind bewusst schrittweise vorgegangen. Statt den gesamten Projektverlauf im Voraus
-festzulegen, haben wir jeweils den nächsten sinnvollen Schritt aus dem Stand unserer
-Erkenntnis abgeleitet. Ob eine Phase eine oder zwei Iterationen brauchte, ergab sich daraus,
-wie tragfähig ihre Ergebnisse waren. Die Nutzerforschung beanspruchte zwei Iterationen, weil
-wir sie zweistufig angelegt haben, mit qualitativen Interviews zur Hypothesenbildung und
-einer quantitativen Umfrage zur Validierung. Die technische Umsetzung brauchte ebenfalls
-zwei, weil eine lauffähige Grundlage und ihr Ausbau zu benutzbarer Software zwei
-verschiedene Aufgaben sind.
+Wir sind bewusst Schritt für Schritt vorgegangen. Statt den gesamten Projektverlauf von Anfang an
+festzulegen, haben wir nach jeder Iteration geschaut, welche Ergebnisse vorliegen und was als
+Nächstes sinnvoll ist. Deshalb brauchten manche Phasen eine Iteration und andere zwei.
 
-Das Iterationsformat wirkte über die Terminstruktur hinaus. Weil wir alle drei Wochen ein
-vorzeigbares Ergebnis brauchten, blieben Konzeptdiskussionen nie lange abstrakt. Mehrere
-Annahmen haben wir dadurch früh korrigiert, etwa die Ausgestaltung der Fortschrittsanzeige
-oder den Wechsel der Farbwelt.
+Die Nutzerforschung haben wir auf zwei Iterationen verteilt. Zuerst haben wir qualitative
+Interviews geführt, um Annahmen zu bilden und neue Erkenntnisse zu sammeln. Danach folgte eine
+quantitative Umfrage, mit der wir diese Ergebnisse in einer größeren Gruppe überprüft haben. Auch
+die technische Umsetzung lief über zwei Iterationen. Zuerst ging es um eine funktionierende
+Grundlage, danach haben wir darauf aufgebaut und die Anwendung weiter ausgearbeitet.
+
+Durch die Betreuungsgespräche hatten wir etwa alle drei Wochen einen festen Termin, zu dem wir
+einen Stand zeigen mussten. Dadurch haben wir Ideen nicht lange nur diskutiert, sondern umgesetzt
+und überprüft. So haben wir einige Entscheidungen früh angepasst, zum Beispiel die
+Fortschrittsanzeige und die Farbwelt.
 
 ## 3.3 Zusammenarbeit und Dokumentation
 
-Für die laufende Abstimmung haben wir einen gemeinsamen Gruppenchat genutzt, ergänzt um
-regelmäßige interne Videocalls, die Betreuungsgespräche liefen über Zoom. Ein
-niedrigschwelliger Kanal für den Alltag und feste Termine für inhaltliche Abstimmungen haben
-ausgereicht, ein eigenes Projektmanagement-Werkzeug brauchten wir nicht.
+Für die Abstimmung im Team haben wir einen gemeinsamen Gruppenchat und regelmäßige Videocalls
+genutzt, die Betreuungsgespräche fanden über Zoom statt. Das hat gut funktioniert, ein
+zusätzliches Projektmanagement-Werkzeug brauchten wir nicht.
 
-Als gemeinsame Arbeitsumgebung diente uns **Notion**. Dort haben wir pro Iteration das
-Feedback aus dem Betreuungsgespräch, die daraus abgeleiteten Aufgaben und die
-Zwischenergebnisse abgelegt. Der Gedanke dahinter war, die Dokumentation projektbegleitend zu
-führen statt sie am Ende rekonstruieren zu müssen. Diese Entscheidung hat sich bewährt, ohne
-sie wäre dieser Bericht deutlich lückenhafter ausgefallen. Mit dem Beginn der technischen
-Umsetzung ist die Dokumentation in Markdown-Dateien in das Projektverzeichnis gewandert, wo
-sie neben dem Code versioniert wird.
+Als gemeinsame Arbeitsumgebung haben wir **Notion** verwendet. Dort haben wir für jede Iteration
+das Feedback aus dem Betreuungsgespräch, die nächsten Aufgaben und wichtige Zwischenergebnisse
+festgehalten. Uns war wichtig, die Dokumentation während des Projekts zu führen, statt am Ende
+alles nachträglich zusammenzutragen. Dadurch konnten wir später viele Entscheidungen und
+Entwicklungsschritte nachvollziehen. Mit Beginn der technischen Umsetzung haben wir die
+Dokumentation in Markdown-Dateien im Projektverzeichnis weitergeführt, wo sie gemeinsam mit dem
+Code versioniert wird.
 
-Zu jedem Betreuungsgespräch haben wir eine kurze Präsentation erstellt. Das gab den
-Iterationen eine feste Form und macht unseren Fortschritt im Nachhinein nachvollziehbar.
+Zu jedem Betreuungsgespräch haben wir eine kurze Präsentation vorbereitet, die unseren Stand und
+die Ergebnisse der Iteration zusammenfasst. So hatte jede Iteration einen klaren Abschluss, und
+der Fortschritt über das gesamte Projekt blieb nachvollziehbar.
 
 ## 3.4 Eingesetzte Werkzeuge
 
@@ -423,23 +432,21 @@ Iterationen eine feste Form und macht unseren Fortschritt im Nachhinein nachvoll
 | Literaturrecherche | THWS-Bibliothek, Springer, Wiley |
 | Entwicklung | Laravel Herd, VS Code, GitHub, KI-gestützte Entwicklungswerkzeuge |
 
-Drei Werkzeugentscheidungen sind für unseren Projektverlauf relevant.
+Drei Entscheidungen zu Werkzeugen waren für unsere Arbeit besonders wichtig.
 
-**LimeSurvey statt Google Forms.** Anne wies in Iteration 1 auf Datenschutz und Anonymität
-bei der Umfrage hin und riet von Google Forms ab. Wir haben die Umfrage deshalb in LimeSurvey
-umgesetzt (Kapitel 5).
+**LimeSurvey statt Google Forms.** Für unsere Umfrage wollten wir zuerst Google Forms verwenden.
+Im ersten Betreuungsgespräch wies uns Anne jedoch darauf hin, besonders auf Datenschutz und
+Anonymität zu achten. Deshalb haben wir die Umfrage in LimeSurvey erstellt (Kapitel 5).
 
 **Figma als verbindliche Designquelle.** Ab Iteration 2 haben wir in einer gemeinsamen
-Figma-Datei gearbeitet, in der wir Farben, Typografie und Komponenten festgelegt haben. Sie
-blieb bis zum Projektende unsere maßgebliche Referenz für alle Gestaltungsfragen, auch
-gegenüber den später daraus abgeleiteten Prototypen.
+Figma-Datei gearbeitet und dort Farben, Typografie und Komponenten festgelegt. Sie blieb bis zum
+Projektende unsere Grundlage für alle Gestaltungsfragen, auch gegenüber den später daraus
+abgeleiteten Prototypen.
 
-**KI-gestützte Entwicklungswerkzeuge.** In Phase 4 haben wir bei der Implementierung mit
-einem KI-gestützten Entwicklungswerkzeug gearbeitet. Wir benennen es hier, weil es den in der
-verfügbaren Zeit erreichten Funktionsumfang wesentlich ermöglicht hat. Seine Konfiguration
-liegt offen im Quellcode-Repository. Abschnitt 7.1 ordnet den Einsatz in die technische
-Umsetzung ein, Abschnitt 9.4 reflektiert ihn und zieht die Grenze zu den fachlichen
-Entscheidungen.
+**KI-gestützte Entwicklungswerkzeuge.** In Phase 4 haben wir beim Programmieren mit einem
+KI-gestützten Entwicklungswerkzeug gearbeitet. Es hat uns geholfen, den Funktionsumfang in der
+verfügbaren Zeit umzusetzen. Seine Konfiguration liegt offen im Quellcode-Repository. Abschnitt
+7.1 ordnet den Einsatz in die technische Umsetzung ein, Abschnitt 9.4 reflektiert ihn.
 
 ---
 
@@ -447,19 +454,20 @@ Entscheidungen.
 
 **Zeitraum:** 17. bis 20. Mai 2026 · **Iteration 1**, Betreuungsgespräch am 20. Mai
 
-In der ersten Phase ging es uns darum, unsere Projektidee wissenschaftlich und marktseitig
-einzuordnen. Zwischen der Gründung der Arbeitsgruppe und dem ersten Betreuungsgespräch lagen
-nur drei Tage, entsprechend bescheiden war unser Anspruch. Wir wollten eine tragfähige Idee
-vorstellen und zeigen, dass wir eine Richtung haben.
+In der ersten Phase ging es uns vor allem darum, unsere Projektidee einzuordnen und eine erste
+Grundlage für die weitere Entwicklung zu schaffen. Zwischen der Bildung unserer Arbeitsgruppe und
+dem ersten Betreuungsgespräch lagen nur drei Tage. In dieser kurzen Zeit wollten wir noch kein
+fertiges Konzept entwickeln, sondern eine sinnvolle Projektidee vorstellen und eine erste
+Richtung für Align festlegen.
 
 ## 4.1 Literaturrecherche
 
-Für die konzeptionelle Fundierung haben wir gezielt nach Quellen aus der Verhaltens- und
-Motivationspsychologie gesucht. Populärwissenschaftliche Titel zum Thema haben wir dabei
-bewusst ausgeschlossen, denn wir haben uns früh darauf festgelegt, Produktentscheidungen nur
-auf peer-reviewte Literatur zu stützen.
+Für die inhaltliche Grundlage haben wir gezielt nach wissenschaftlichen Quellen aus der
+Verhaltens- und Motivationspsychologie gesucht. Populärwissenschaftliche Literatur haben wir
+dabei bewusst ausgeschlossen. Uns war wichtig, spätere Entscheidungen für Align auf
+wissenschaftlich fundierte Quellen stützen zu können.
 
-Drei Quellen bildeten von hier an unsere wissenschaftliche Grundlage:
+Aus der Recherche haben sich drei Quellen ergeben, die für Align besonders wichtig waren:
 
 | Quelle | Kernbefund | Wirkung im Produkt |
 |---|---|---|
@@ -467,82 +475,85 @@ Drei Quellen bildeten von hier an unsere wissenschaftliche Grundlage:
 | **Faude-Koivisto & Gollwitzer (2009)** | Wenn-Dann-Pläne (*Implementation Intentions*) verlagern die Verhaltenskontrolle von der Selbstdisziplin auf die Situation. Ein einziger bewusster Willensakt kann automatische Auslösung anstoßen. | Time Blocking · Situations-Anker statt fester Uhrzeiten |
 | **Becker (2024)** | Trigger- und Kontextbindung, Domino-Prinzip (eine Gewohnheit wird zum Auslöser der nächsten), Wirkung sozialer Unterstützung, Effekt sichtbaren Fortschritts | Habit Chains · Community · Progress Tracking |
 
-Diese Zuordnung ist kein nachträglicher Beleg, sie hat unsere Feature-Auswahl tatsächlich
-gesteuert. Der Verzicht auf Streaks als primäre Kennzahl geht direkt auf Lally et al. zurück,
-die Entscheidung für Situations-Anker auf Faude-Koivisto und Gollwitzer.
+Diese Erkenntnisse haben wir nicht erst im Nachhinein unseren Funktionen zugeordnet. Sie haben
+schon während der Konzeption mitentschieden, welche Ansätze wir übernehmen. Auf Grundlage von
+Lally et al. haben wir uns zum Beispiel gegen Streaks als wichtigste Kennzahl entschieden, und
+Faude-Koivisto und Gollwitzer waren die Grundlage für unsere Situations-Anker.
 
 ## 4.2 Competitor-Analyse
 
-Wir haben acht Anwendungen entlang von vier Dimensionen untersucht, nämlich Zielgruppe und
-Positionierung, Features, Gamification und UX sowie KI-Integration. Vier davon sind direkte
-Wettbewerber aus dem Habit-Segment, vier indirekte aus angrenzenden Kategorien, die
-Studierende ohnehin nutzen. Ergänzend sind unsere eigenen Nutzungserfahrungen mit Finch,
-Habit Tracker und HabitShare eingeflossen.
+Für die Competitor-Analyse haben wir acht Anwendungen untersucht und uns dabei Zielgruppe und
+Positionierung, Funktionen, Gamification und UX sowie den Einsatz von KI angesehen. Vier davon
+sind direkte Wettbewerber aus dem Bereich Habit Tracking. Die anderen vier stammen aus
+angrenzenden Bereichen und wurden ausgewählt, weil Studierende sie im Alltag ohnehin nutzen.
+Zusätzlich sind unsere eigenen Erfahrungen mit Finch, Habit Tracker und HabitShare eingeflossen.
 
 | Kategorie | Anwendungen |
 |---|---|
 | Direkte Wettbewerber | Habitica · Fabulous · Finch · Streaks |
 | Indirekte Wettbewerber | Forest · Headspace · Notion · Athenify |
 
-Die vollständige Analyse mit Einzelprofilen und Vergleichsmatrix steht in Kapitel 2. Vier
-Ergebnisse waren für unseren weiteren Verlauf bestimmend:
+Die vollständige Analyse mit den einzelnen Anwendungen und der Vergleichsmatrix steht in
+Kapitel 2. Für die weitere Entwicklung von Align waren vor allem vier Erkenntnisse wichtig:
 
-1. **Keine der untersuchten Anwendungen denkt in Semestern, Prüfungsphasen und
-   Vorlesungsrhythmus.** Athenify kommt der Zielgruppe am nächsten, verengt sich aber auf
-   das Lernen.
-2. **KI wird im Habit-Markt kaum als Begleiter eingesetzt, der den eigenen Alltag kennt**,
-   sondern allenfalls als vorgefertigte Content-Bibliothek. Einzige Ausnahme ist Headspace mit „Ebb".
-3. **Aggressive oder verlustaversive Gamification erzeugt Druck statt Motivation**, besonders
-   bei jüngeren Zielgruppen. Habitica überfordert, reine Streak-Logiken machen anfällig für
-   Aufgabe nach dem ersten Fehltag.
-4. **Studierende planen am Laptop.** Notion zeigt, dass Habit-Tracking im Browser
-   funktioniert, obwohl fast alle spezialisierten Anwendungen mobile-first sind.
+1. **Keine der untersuchten Anwendungen berücksichtigt den Ablauf eines Studiums.** Semester,
+   Prüfungsphasen und wechselnde Vorlesungszeiten spielen kaum eine Rolle. Athenify kommt unserer
+   Zielgruppe am nächsten, konzentriert sich aber auf das Lernen.
+2. **KI wird im Habit Tracking kaum als persönliche Unterstützung eingesetzt.** Meist werden
+   vorgefertigte Inhalte angeboten. Eine Ausnahme ist Headspace mit dem KI-Begleiter „Ebb".
+3. **Zu starke Gamification erzeugt Druck statt Motivation.** Habitica setzt sehr stark auf
+   Spielelemente, und bei reinen Streaks wird ein verpasster Tag schnell als Misserfolg
+   empfunden. Für Align wollten wir deshalb einen zurückhaltenden Ansatz.
+4. **Studierende planen nicht nur am Smartphone.** Zum Planen und Lernen nutzen sie häufig den
+   Laptop. Notion zeigt, dass das Tracken von Gewohnheiten auch im Browser funktioniert, während
+   fast alle spezialisierten Anwendungen vor allem für das Smartphone gebaut sind.
 
-Der erste dieser Punkte wurde später zum wichtigsten Alleinstellungsmerkmal unserer Anwendung
-und ist als Semesterplan umgesetzt (Kapitel 7).
+Besonders der erste Punkt wurde im Projektverlauf immer wichtiger. Daraus entstand später der
+Semesterplan, das wichtigste Alleinstellungsmerkmal von Align (Kapitel 7).
 
 ## 4.3 Erste Visualisierungen und Arbeitsorganisation
 
-Parallel zur Analyse sind erste Wireframes und ein klickbarer Entwurf entstanden, noch ohne
-Bezug zu konkreten Features. Sie sollten uns eine gemeinsame Vorstellung davon geben, worüber
-wir sprechen. Aus ihnen stammt bereits die Farbrichtung, die uns bis zum Ende begleitet hat,
-also Beige, Schwarz und Gold, mit der Idee eines Dark- und Light-Modes.
+Parallel zur Analyse haben wir erste Wireframes und einen klickbaren Entwurf erstellt. Konkrete
+Funktionen standen dabei noch nicht im Mittelpunkt. Die Entwürfe sollten uns vor allem eine
+gemeinsame Vorstellung davon geben, wie Align aussehen und aufgebaut sein könnte. Dabei entstand
+schon die Farbrichtung, die uns bis zum Ende begleitet hat, also Beige, Schwarz und Gold, und
+auch Light und Dark Mode waren von Anfang an vorgesehen.
 
-Für die Zusammenarbeit haben wir in dieser Phase zwei Festlegungen getroffen, die unseren
-weiteren Verlauf strukturiert haben. Aufgaben verteilen wir vor jeder Iteration explizit, und
-zu jedem Betreuungsgespräch erstellen wir eine kurze Präsentation.
+Für die Zusammenarbeit haben wir in dieser Phase zwei Dinge festgelegt: Aufgaben verteilen wir
+vor jeder Iteration gemeinsam, und zu jedem Betreuungsgespräch erstellen wir eine kurze
+Präsentation.
 
 ## 4.4 Feedback von Anne
 
-Das Gespräch lieferte uns deutlich mehr Steuerung, als wir erwartet hatten:
+Im ersten Betreuungsgespräch haben wir mehr Feedback bekommen, als wir erwartet hatten, und es
+hat unser weiteres Vorgehen stark beeinflusst:
 
-- **Reihenfolge der Nutzerforschung.** Erst Interviews führen und die Online-Umfrage daraus
-  ableiten, nicht beides parallel entwickeln.
-- **Datenschutz und Anonymität** bei der Umfrage beachten, dazu der Hinweis auf das
-  Umfragewerkzeug der Hochschule.
-- **Bias vermeiden.** In der Umfrage zuerst allgemeine Features abfragen, eigene erst am
-  Schluss.
+- **Reihenfolge der Nutzerforschung.** Zuerst Interviews führen und die Umfrage danach auf
+  Grundlage der Ergebnisse erstellen, statt beides parallel zu entwickeln.
+- **Datenschutz und Anonymität** bei der Umfrage beachten und dafür das Umfragewerkzeug der
+  Hochschule nutzen.
+- **Bias vermeiden.** In der Umfrage zuerst allgemeine Funktionen abfragen und unsere eigenen
+  Ideen erst am Schluss.
 - **Persona erarbeiten** und daran einen Vorher-Nachher-Vergleich durchspielen.
-- **Sozialer Aspekt** als Anregung, im Sinne von „ich bin nicht allein", gegenseitiger
-  Motivation und Community.
-- **Dokumentation.** Die gesamte Arbeit festhalten, einschließlich des Vorgehens bei den
-  einzelnen Arbeitspaketen.
-- **Nicht zu früh einschränken.** Gute Konzepte nicht aufgeben, nur weil ihre technische
-  Umsetzung aufwendig wäre.
+- **Sozialer Aspekt.** Nutzern das Gefühl geben, mit ihren Schwierigkeiten nicht allein zu sein,
+  und gegenseitige Motivation ermöglichen.
+- **Dokumentation.** Nicht nur Ergebnisse festhalten, sondern auch das Vorgehen bei den einzelnen
+  Arbeitsschritten.
+- **Nicht zu früh einschränken.** Gute Ideen nicht verwerfen, nur weil die technische Umsetzung
+  zunächst schwierig erscheint.
 
 ## 4.5 Was daraus folgte
 
 Der Hinweis zur Reihenfolge der Nutzerforschung war die folgenreichste Rückmeldung unseres
-gesamten Projekts. Er begründete das zweistufige Vorgehen der folgenden Phase mit
-qualitativen Interviews zur Hypothesenbildung und einer quantitativen Umfrage zur
-Validierung. Damit begründete er auch die empirische Grundlage, auf der später jede unserer
-Feature-Entscheidungen ruht.
+gesamten Projekts. Wir haben die nächste Phase deshalb in zwei Schritte aufgeteilt: zuerst
+qualitative Interviews, danach eine quantitative Umfrage, die auf den Erkenntnissen der
+Interviews aufbaut. Die Ergebnisse wurden zur Grundlage für die Auswahl unserer Funktionen.
 
-Die Anregung zum sozialen Aspekt haben wir unmittelbar aufgegriffen und noch am selben Abend
-als eigenes Feature vorgesehen. Aus ihr entstand unser Community-Feature (Kapitel 6).
+Die Idee eines sozialen Bereichs haben wir direkt aufgegriffen und als eigene Funktion
+vorgesehen. Daraus entstand unser Community-Feature (Kapitel 6).
 
-Direkt nach dem Gespräch entstand die erste Notion-Seite mit Feedback und weiterem Vorgehen,
-der Beginn unserer projektbegleitenden Dokumentation (Abschnitt 3.3).
+Außerdem haben wir nach dem Gespräch begonnen, Feedback und nächste Schritte in Notion
+festzuhalten. Damit startete unsere projektbegleitende Dokumentation (Abschnitt 3.3).
 
 ---
 
@@ -553,19 +564,21 @@ der Beginn unserer projektbegleitenden Dokumentation (Abschnitt 3.3).
 
 ## 5.1 Der zweistufige Forschungsansatz
 
-Auf Annes Anregung hin haben wir die Nutzerforschung zweistufig angelegt. Zuerst kamen
-qualitative Leitfadeninterviews, um den Problemraum zu erschließen und Hypothesen zu bilden,
-anschließend eine quantitative Online-Umfrage, um diese Hypothesen in der Breite zu prüfen
-und unsere Features zu priorisieren.
+Auf Annes Hinweis aus dem ersten Betreuungsgespräch haben wir unsere Nutzerforschung in zwei
+Schritte aufgeteilt. Zuerst haben wir qualitative Leitfadeninterviews geführt, um mehr über die
+Probleme und Erfahrungen von Studierenden zu erfahren und erste Annahmen zu bilden. Auf dieser
+Grundlage haben wir anschließend eine quantitative Online-Umfrage erstellt. Mit ihr wollten wir
+prüfen, ob sich die Erkenntnisse aus den Interviews auch in einer größeren Gruppe zeigen, und
+herausfinden, welche Funktionen für unsere Zielgruppe am wichtigsten sind.
 
 | Stufe | Methode | Umfang | Ziel |
 |---|---|---|---|
 | **1** | Leitfadeninterviews | n = 6 Studierende | Hypothesen zu Problemen und Bedürfnissen bilden, Grundlage für den Fragebogen |
 | **2** | Online-Umfrage (LimeSurvey) | n = 25 abgeschlossene Antworten | Validierung der Hypothesen, Feature-Priorisierung |
 
-Diese Reihenfolge war wichtig. Hätten wir die Umfrage zuerst entworfen, wären die Fragen aus
-unseren eigenen Annahmen entstanden. So testete jede Frage etwas, das vorher jemand
-tatsächlich gesagt hatte.
+Diese Reihenfolge war wichtig. Hätten wir die Umfrage zuerst erstellt, wären die Fragen vor allem
+aus unseren eigenen Annahmen entstanden. So konnten wir uns an den tatsächlichen Erfahrungen der
+Befragten orientieren, und jede Frage prüfte etwas, das vorher jemand wirklich gesagt hatte.
 
 ---
 
@@ -573,87 +586,104 @@ tatsächlich gesagt hatte.
 
 ## 5.2 Der Interview-Leitfaden
 
-Der Leitfaden umfasste dreizehn Fragen in fünf Phasen und war auf 20 bis 30 Minuten ausgelegt:
+Vor den Interviews haben wir gemeinsam einen Leitfaden mit dreizehn Fragen vorbereitet. Ein
+Gespräch sollte etwa 20 bis 30 Minuten dauern. Die Fragen haben wir in fünf Phasen aufgeteilt:
 
-1. **Intro und Warm-up.** Einstieg über einen konkreten Tagesablauf mit der Frage „Wie sieht
-   aktuell ein ganz normaler Dienstag bei dir im Semester aus?"
-2. **Status quo und bisherige Lösungsversuche.** Aktuell verfolgte Gewohnheiten und der
-   letzte konkrete Versuch, eine Gewohnheit durchzuziehen.
-3. **Schmerzpunkt-Check.** Konkrete Situationen des Scheiterns und der Wiedereinstieg nach
-   einer Unterbrechung.
-4. **Community und soziale Verbindlichkeit.** Erfahrungen mit gemeinsamen Gewohnheiten und
-   mit Apps, die den Fortschritt von Freunden zeigen.
-5. **Cool-down.** Offene Frage nach Erwartungen an eine Habit-App für den Studienalltag.
+1. **Intro und Warm-up.** Wir haben mit einer einfachen, konkreten Frage begonnen: „Wie sieht
+   aktuell ein ganz normaler Dienstag bei dir im Semester aus?" So wollten wir zuerst verstehen,
+   wie der Alltag der Person wirklich aussieht.
+2. **Status quo und bisherige Lösungsversuche.** Welche Gewohnheiten verfolgt die Person gerade,
+   und wie ist ihr letzter Versuch verlaufen, eine Gewohnheit regelmäßig durchzuziehen?
+3. **Schmerzpunkte.** In welchen Situationen scheitert eine Gewohnheit, und wie geht es nach
+   einer Unterbrechung weiter?
+4. **Community und soziale Verbindlichkeit.** Helfen gemeinsame Gewohnheiten, und wie findet die
+   Person Apps, die den Fortschritt von Freunden zeigen?
+5. **Cool-down.** Zum Schluss eine offene Frage, was sie sich von einer Habit-App für den
+   Studienalltag wünschen würde.
 
-Wir sind bewusst vom Konkreten ins Allgemeine gegangen. Wenn jemand zuerst seinen
-tatsächlichen Dienstag beschreibt, fallen die Antworten auf die späteren Fragen weniger
-idealisiert aus.
+Wir sind bewusst vom Konkreten zum Allgemeinen gegangen. Wer zuerst seinen tatsächlichen Dienstag
+beschreibt, antwortet auf die späteren Fragen weniger idealisiert. Außerdem konnten wir bei
+interessanten Antworten gezielt nachfragen.
 
 ## 5.3 Durchführung und Auswertung
 
-Zwischen dem 1. und 7. Juni haben wir sechs Interviews mit Studierenden unterschiedlicher
-Studiengänge und Semester geführt, je zwei pro Person, mit **Alissa, Hannah, Aylin, Danial,
-Felix und Ngoc Anh**.
+Zwischen dem 1. und 7. Juni haben wir sechs Interviews mit Studierenden aus verschiedenen
+Studiengängen und Semestern geführt. Jede und jeder von uns hat zwei Interviews übernommen.
+Gesprochen haben wir mit **Alissa, Hannah, Aylin, Danial, Felix und Ngoc Anh**.
 
-Für die Auswertung haben wir uns auf ein einheitliches Vorgehen geeinigt. Die Gespräche haben
-wir aufgezeichnet, transkribiert und anschließend nach einem gemeinsamen Raster ausgewertet.
-Die Leitfragen waren für alle gleich. Stützen die Aussagen die bereits angedachten Features,
-tauchen neue Ideen auf, und welche Zitate belegen das? Die Einzelauswertungen haben wir zu
-einem Dokument zusammengeführt, das die Befunde nach Themen ordnet.
+Für die Auswertung haben wir uns auf ein gemeinsames Vorgehen geeinigt. Wir haben die Gespräche
+aufgezeichnet, transkribiert und alle nach demselben Raster ausgewertet. Dabei haben wir vor allem
+darauf geachtet, ob sich unsere bisherigen Ideen in den Gesprächen wiederfinden, ob neue Themen
+auftauchen und welche Zitate das belegen. Zum Schluss haben wir die einzelnen Auswertungen in
+einem gemeinsamen Dokument zusammengeführt und nach Themen sortiert. So konnten wir erkennen,
+welche Punkte häufiger vorkamen.
 
 ## 5.4 Zentrale Erkenntnisse aus den Interviews
 
-**Kontext steuert Verhalten stärker als Uhrzeiten.**
+Aus den sechs Interviews haben sich mehrere Themen ergeben, die immer wieder vorkamen.
 
-> „Wenn ich dann im Bett bin, kann ich es direkt machen."
+**Kontext beeinflusst Gewohnheiten stärker als feste Uhrzeiten.**
 
-Alissa knüpft das Lesen an die Schlafenszeit, Felix bewegt sich an der Uni automatisch mehr,
-würde aber nicht extra für ein Schrittziel spazieren gehen. Das Muster war über alle
-Interviews hinweg konsistent. Verhalten wurde durch konkrete Situationen ausgelöst und nicht
-durch abstrakte Vorsätze.
+> „Wenn ich dann im Bett bin, kann ich es direkt machen." *(Alissa)*
 
-**Der Domino-Effekt und ganze Gewohnheitsketten.**
+Alissa verbindet das Lesen mit dem Moment, in dem sie ins Bett geht. Bei Felix zeigte sich etwas
+Ähnliches: An Tagen, an denen er an der Uni ist, bewegt er sich automatisch mehr, für ein
+Schrittziel würde er aber nicht extra spazieren gehen. Auch in den anderen Interviews waren
+Gewohnheiten häufig an bestimmte Situationen gebunden und nicht an eine genaue Uhrzeit.
 
-> „Dein Körper ist wie ein Auto, und wenn du diesem Auto dreckiges Benzin gibst, dann
-> performt es schlecht." *(Danial)*
+**Gewohnheiten hängen oft miteinander zusammen.**
 
-Aylin beschrieb eine vollständige Kette rund um Meal Prep: abends vorbereiten → morgens
-mitnehmen → Bibliothek → arbeiten. Fällt der erste Auslöser weg, bricht die gesamte Kette.
-Daraus haben wir die Anforderung abgeleitet, Situations-Anker statt Uhrzeiten zu verwenden
-und bei unterbrochener Kette einen Fallback anzubieten.
+> „Ich konnte alle anderen Sachen, diesen Domino-Effekt nicht beibehalten, weil einfach schon
+> der Schlaf, das erste, schon schlecht angefangen hat." *(Danial)*
 
-**Überforderung beim Einstieg.**
+Besonders deutlich wurde das bei Aylin. Sie beschrieb eine ganze Kette rund um ihr Meal Prep:
+abends vorbereiten → morgens mitnehmen → Bibliothek → arbeiten. Fällt der erste Teil weg, wirkt
+sich das auf den ganzen restlichen Ablauf aus. Daraus haben wir die Anforderung abgeleitet, mit
+Situations-Ankern statt Uhrzeiten zu arbeiten und bei einer unterbrochenen Kette eine Alternative
+anzubieten.
+
+**Der Einstieg fällt oft schwer.**
 
 > „Ich weiß oft nicht, wo ich anfangen soll, dann werde ich überfordert und fange erst gar
-> nicht an." *(Felix)*
+> nicht an." *(Ngoc Anh)*
 
 > „Du brauchst so ein bisschen diesen leichten Dopaminschub von: ey, ich habe eine Sache
 > abgehakt." *(Danial)*
 
-**Kein Strafmechanismus, aber der Wunsch nach Selbstanalyse.**
+In den Gesprächen wurde deutlich, dass nicht immer die Motivation das Problem ist. Oft fehlt ein
+klarer erster Schritt, und kleine Erfolge helfen dabei, überhaupt anzufangen und weiterzumachen.
+
+**Kein Druck, aber der Wunsch nach Selbstanalyse.**
 
 > „Dann war das halt ein Ausrutscher. Und morgen machst du es halt dann wieder besser."
 > *(Aylin)*
 
-**Community ja, Vergleich nein.**
+Ein verpasster Tag wurde nicht als Scheitern gesehen. Gleichzeitig wünschte sich Aylin, die
+eigenen Gewohnheiten besser zu verstehen, wenn man sie „mal so vor Augen gehalten bekommt". Für
+uns hieß das: Align soll ausgelassene Gewohnheiten nicht bestrafen, den eigenen Verlauf aber
+sichtbar machen.
+
+**Community ja, direkter Vergleich nein.**
 
 > „Wenn du eine Verabredung hast, dann gehst du da natürlich auch mit einem anderen
 > Pflichtbewusstsein ran, als wenn du das einfach nur für dich selber machen würdest."
 > *(Aylin)*
 
-Dem stand die klare Ablehnung von Vergleich gegenüber:
+Gemeinsame Gewohnheiten mit vertrauten Personen wurden positiv gesehen, ein direkter Vergleich mit
+anderen dagegen kritisch:
 
-> „Das löst dann kein positives Gefühl aus, dass ich mich für die Person freue, sondern eher
-> so 'ne Kontrolle, bin ich auch soweit, muss ich noch was mehr tun."
+> „Das löst dann kein positives Gefühl aus, dass ich mich für die Person freue, sondern eher so
+> 'ne Kontrolle, bin ich auch soweit, muss ich noch was mehr tun." *(Hannah)*
 
-Zusammenfassend bestätigten alle sechs Interviews unabhängig voneinander drei Muster.
-Rankings verlieren langfristig ihre Wirkung, Community funktioniert nur mit vertrauten
-Personen, und Prüfungsphasen verändern Routinen massiv.
+Zusammengefasst haben sich über alle sechs Interviews drei Muster wiederholt. Rankings und
+Vergleiche motivieren nicht langfristig, Community funktioniert vor allem mit Personen, die man
+kennt, und Prüfungsphasen verändern bestehende Routinen stark.
 
 ## 5.5 Personas
 
-Aus den sechs Interviews haben wir zwei Verhaltenstypen verdichtet. Beide haben wir vollständig
-als Persona-Sheets ausgearbeitet.
+Aus den sechs Interviews haben wir zwei unterschiedliche Verhaltenstypen abgeleitet und beide als
+Persona-Sheets ausgearbeitet. Sie haben uns im weiteren Projektverlauf immer wieder als
+Orientierung gedient.
 
 ### „Die Selbstregulierten", intrinsisch und selbstreguliert
 
@@ -662,13 +692,14 @@ als Persona-Sheets ausgearbeitet.
 *Abb. 5.1: Das Persona-Sheet „Die Selbstregulierten", verdichtet aus vier Interviews.*
 
 *Verdichtet aus Alissa, Hannah, Aylin und Felix. Höhere Semester, flexible Tage, bereits
-funktionierende kontextbasierte Routinen.*
+funktionierende Routinen, die an Situationen hängen.*
 
-> „Dann war das halt ein Ausrutscher. Morgen machst du es halt wieder besser."
+> „Dann war das halt ein Ausrutscher. Morgen machst du es halt wieder besser." *(Aylin)*
 
-Dieser Typ hat keine vorgegebene Tagesform, aber funktionierende Wege zur Selbststeuerung.
-Struktur entsteht über selbst gesetzte Anker oder über den Kontext. Die Motivation kommt von
-innen und nicht aus dem Vergleich, Streak-Apps wurden getestet und abgelegt.
+Die Selbstregulierten haben keinen festen Tagesablauf, kommen mit dieser Flexibilität aber gut
+zurecht. Ihre Gewohnheiten verbinden sie mit bestimmten Situationen oder Abläufen. Die Motivation
+kommt von ihnen selbst und nicht aus dem Vergleich mit anderen. Apps mit Streaks haben sie
+teilweise ausprobiert, aber nicht dauerhaft genutzt.
 
 | | |
 |---|---|
@@ -686,10 +717,12 @@ innen und nicht aus dem Vergleich, Streak-Apps wurden getestet und abgelegt.
 klaren ersten Schritt.*
 
 > „Ich weiß oft nicht, wo ich anfangen soll, dann werde ich überfordert und fange erst gar
-> nicht an."
+> nicht an." *(Ngoc Anh)*
 
-Dieser Typ weiß rational, was guttun würde, setzt es aber inkonsistent um. Der Tag steht und
-fällt mit dem ersten Anker. Geht der Start schief, kippt der ganze Domino.
+Den Einsteigern fehlt weniger das Wissen darüber, was ihnen guttun würde. Schwierig ist es,
+tatsächlich anzufangen und dranzubleiben. Besonders der Start in den Tag spielt eine große Rolle.
+Läuft er nicht wie geplant, werden auch die nächsten Vorhaben aufgeschoben, und der ganze Domino
+kippt.
 
 | | |
 |---|---|
@@ -697,29 +730,32 @@ fällt mit dem ersten Anker. Geht der Start schief, kippt der ganze Domino.
 | **Frustrationen** | ein schlechter Start zerlegt den Tag · Überforderung führt zum Aufschieben · Ranking motiviert kurz, bricht langfristig weg |
 | **Align-Hebel** | KI-Assistent formuliert den nächsten Mikroschritt · Prüfungsmodus mit reduzierter Kernroutine · Meilensteine statt Ranking |
 
-Anne hatte in Iteration 1 nach einem Vorher-Nachher-Vergleich anhand der Personas gefragt.
-Die Spalte „Align-Hebel" ist unsere Antwort darauf. Sie stellt jeder Frustration die konkrete
+Anne hatte uns in Iteration 1 vorgeschlagen, anhand der Personas einen Vorher-Nachher-Vergleich
+zu erstellen. Die Zeile „Align-Hebel" ist unsere Antwort darauf. Sie stellt jeder Frustration die
 Funktion gegenüber, die sie auffangen soll.
 
 ## 5.6 Feedback von Anne
 
-Das Gespräch verlief ausgesprochen positiv, unsere Notiz im Iterationsprotokoll hält fest,
-dass Anne überzeugt war. Inhaltlich kamen vier Punkte:
+Das Betreuungsgespräch verlief sehr positiv, Anne war von unserem Stand überzeugt. Inhaltlich
+kamen vier Punkte:
 
-- **Eine offene Fachfrage.** Gibt es eine Höchstzahl an Gewohnheiten, auf die sich ein Mensch
-  gleichzeitig konzentrieren kann, ohne überfordert zu werden? In den Quellen prüfen.
-- **Persona-Fokus.** Auf welchen der beiden Typen zielen die Features?
-- **Nicht zu früh einschränken.** Bei Mockups und Features größer denken und sich erst bei
-  der technischen Umsetzung auf das Machbare beschränken. „Es muss nicht alles perfekt sein."
-- **Design-System.** Farben, Typografie und Formen in einer gemeinsamen Figma-Datei
-  festlegen.
+- **Eine offene Fachfrage.** Gibt es eine Höchstzahl an Gewohnheiten, auf die man sich
+  gleichzeitig konzentrieren kann, ohne überfordert zu sein? Das sollten wir in unseren Quellen
+  prüfen.
+- **Persona-Fokus.** Für welche der beiden Personas entwickeln wir Align eigentlich?
+- **Nicht zu früh einschränken.** Wir hatten teilweise schon früh überlegt, ob bestimmte
+  Funktionen technisch machbar sind. Anne riet uns, bei Ideen und Mockups zunächst größer zu
+  denken und erst bei der Umsetzung zu entscheiden, was wir tatsächlich bauen. „Es muss nicht
+  alles perfekt sein."
+- **Design-System.** Farben, Typografie und Formen in einer gemeinsamen Figma-Datei festlegen,
+  damit alle in dieselbe Richtung gestalten.
 
-Die Frage nach der Höchstzahl hat sich als der langlebigste Impuls unseres Projekts erwiesen.
-Sie führte zur festen **Grenze von fünf aktiven Gewohnheiten**, deren Entwicklung in
-Kapitel 7 nachgezeichnet ist. Die Frage nach dem Persona-Fokus haben wir nicht exklusiv
-beantwortet, sondern über die Feature-Zuordnung. Die Einsteiger brauchen die KI-gestützte
-Starthilfe, die Selbstregulierten die Situations-Anker und eine nicht bestrafende
-Fortschrittsanzeige.
+Die Frage nach der Höchstzahl hat uns am längsten begleitet. Aus ihr entstand die **Grenze von
+fünf aktiven Gewohnheiten**, deren Umsetzung Kapitel 7 beschreibt. Beim Persona-Fokus wollten wir
+uns nicht auf eine Gruppe festlegen, weil wir bei beiden Probleme gesehen haben, bei denen Align
+helfen kann. Beantwortet haben wir die Frage deshalb über die Funktionen. Die Einsteiger brauchen
+vor allem Hilfe beim Anfangen, also die KI-gestützte Starthilfe. Für die Selbstregulierten stehen
+Situations-Anker und eine Fortschrittsanzeige ohne Druck im Vordergrund.
 
 ---
 
@@ -727,34 +763,39 @@ Fortschrittsanzeige.
 
 ## 5.7 Konzeption des Fragebogens
 
-Zunächst haben wir zwei Varianten entworfen, eine lange Fassung mit zwanzig Fragen, die auch
-das aktuelle Verhalten erhob, und eine Kurzfassung mit zwölf Fragen, die ausschließlich
-validierte, was die Interviews offen gelassen hatten. Für die kurze Variante sprach ein
-reales Risiko, denn längere Umfragen werden häufiger abgebrochen.
+Nach den Interviews wollten wir die wichtigsten Erkenntnisse in einer größeren Gruppe überprüfen.
+Dafür haben wir zuerst zwei Versionen der Umfrage erstellt: eine längere mit zwanzig Fragen, die
+auch das aktuelle Verhalten erfasste, und eine kürzere mit zwölf Fragen, die sich auf die Punkte
+konzentrierte, die nach den Interviews noch offen waren. Für die kurze Version sprach, dass
+längere Umfragen häufiger abgebrochen werden.
 
-In einem gemeinsamen Call sind wir beide Entwürfe durchgegangen, haben schwache Fragen
-markiert und überarbeitet. Jede Frage musste eine konkrete Design-Entscheidung testen, etwa
-ob die Mehrheit Streaks oder Konsistenzraten bevorzugt, ob sozialer Druck motiviert und wie
-lang ein Check-in sein darf. Annes Hinweis, fremde Features vor eigenen abzufragen, um Bias
-zu vermeiden, haben wir in der Reihenfolge der Fragen umgesetzt.
+In einem gemeinsamen Call haben wir beide Entwürfe durchgesprochen und schwache Fragen gestrichen
+oder neu formuliert. Jede Frage sollte eine konkrete Entscheidung für Align prüfen, zum Beispiel
+ob Streaks oder eine Konsistenzrate besser ankommen, ob soziale Funktionen gewünscht sind und wie
+lang ein Check-in sein darf. Annes Hinweis, zuerst allgemeine Funktionen und erst danach unsere
+eigenen Ideen abzufragen, haben wir in der Reihenfolge der Fragen umgesetzt. So wollten wir
+vermeiden, die Antworten durch unsere eigenen Vorschläge zu beeinflussen.
 
 ## 5.8 Werkzeugwahl und Durchführung
 
-Google Forms schied aus, weil Anne aus Datenschutzgründen davon abgeraten hatte. Wir haben
-die Umfrage in **LimeSurvey** aufgesetzt und vor der Veröffentlichung mehrfach überarbeitet.
-Wir haben sie auch für Nicht-Studierende geöffnet, die das zu Beginn angeben mussten, und um
-Alter und Geschlecht ergänzt, um Muster in der Stichprobe erkennen zu können.
+Da Anne aus Datenschutzgründen von Google Forms abgeraten hatte, haben wir die Umfrage in
+**LimeSurvey** erstellt und vor der Veröffentlichung mehrfach überarbeitet. Die Umfrage konnten
+auch Personen ausfüllen, die nicht studieren. Das haben wir gleich zu Beginn abgefragt. Außerdem
+haben wir Alter und Geschlecht erfasst, damit wir die Zusammensetzung der Teilnehmenden
+einschätzen können.
 
-Verteilt haben wir sie am 14. Juni über zwei Kanäle innerhalb der Hochschule, über die
-E-Commerce-Kohorte und die Erstsemester. Der Rücklauf war schnell, innerhalb von rund zwei
-Stunden lagen **25 vollständige Antworten** vor. Damit war die Kapazität des eingesetzten
-Umfragewerkzeugs erreicht und die Erhebung endete (siehe Abschnitt 5.11).
+Am 14. Juni haben wir die Umfrage verteilt. Innerhalb der Hochschule haben wir sie in unserer
+E-Commerce-Kohorte und bei den Erstsemestern geteilt, außerdem in anderen Hochschulgruppen und in
+Gruppen von Studentenwohnheimen. So wollten wir möglichst unterschiedliche Teilnehmende
+erreichen. Die Antworten kamen schneller als erwartet. Nach rund zwei Stunden hatten
+**25 Personen** den Fragebogen vollständig ausgefüllt. Damit war die Kapazität des eingesetzten
+Umfragewerkzeugs erreicht, und die Erhebung endete (Abschnitt 5.11).
 
 ## 5.9 Ergebnisse
 
-**Stichprobe.** N = 25 abgeschlossene Antworten, davon 24 eingeschrieben. 16 weiblich,
-9 männlich, 19 im Alter von 21 bis 25 Jahren. Der Schwerpunkt lag im 5. bis 6. Semester (12),
-gefolgt vom 1. bis 2. Semester (5).
+**Stichprobe.** An der Umfrage haben 25 Personen vollständig teilgenommen, davon 24 Studierende.
+16 waren weiblich und 9 männlich, 19 zwischen 21 und 25 Jahre alt. Bei den Semestern lag der
+Schwerpunkt im 5. bis 6. Semester (12), gefolgt vom 1. bis 2. Semester (5).
 
 **Wie organisieren sich Studierende heute?**
 
@@ -766,17 +807,18 @@ gefolgt vom 1. bis 2. Semester (5).
 | Nichts Bestimmtes | 7 |
 | **Habit-App** | **2** |
 
-Nur zwei von 25 nutzen aktuell eine dedizierte Habit-App, während 20 von 25 ohnehin mit
-Kalender oder Planer arbeiten. Das ist ein doppelter Befund. Bestehende Lösungen haben eine
-geringe Marktdurchdringung, und eine Kalender- und Time-Blocking-Logik knüpft an vorhandenes
-Verhalten an, statt neues zu verlangen.
+Nur 2 von 25 nutzen aktuell eine Habit-App, aber 20 von 25 arbeiten ohnehin mit einem Kalender
+oder Planer. Für uns hieß das zweierlei. Bestehende Habit-Apps sind wenig verbreitet, und eine
+Planung mit Zeitblöcken knüpft an etwas an, das Studierende bereits tun, statt ein neues
+Verhalten zu verlangen.
 
-Inhaltlich führen „Lernen und Uni" (20), „Bewegung und Sport" (18) und „Schlaf und Erholung"
-(16) die Bereiche an, in denen Gewohnheiten aufgebaut werden.
+Bei den Gewohnheiten selbst standen **Lernen und Uni** (20), **Bewegung und Sport** (18) sowie
+**Schlaf und Erholung** (16) im Vordergrund.
 
-**Was hält Studierende auf?** Stress und Prüfungsphase sind der mit Abstand größte
-Habit-Killer (17/25). Auffällig ist die Reaktion darauf, denn 15 von 25 **reduzieren** dann,
-statt ganz aufzugeben. Das spricht für einen Minimal- oder Prüfungsphasen-Modus statt einer
+**Was macht es schwierig, Gewohnheiten beizubehalten?** Mit 17 von 25 Nennungen waren Stress und
+Prüfungsphasen der mit Abstand häufigste Grund, eine Gewohnheit aufzugeben. Auffällig war, wie
+die Befragten damit umgehen: 15 von 25 **reduzieren** ihre Gewohnheiten in solchen Phasen, statt
+sie ganz aufzugeben. Das spricht für einen Modus mit reduzierter Routine statt einer
 Pausenfunktion.
 
 | Aussage (1 bis 5) | Ø |
@@ -785,9 +827,9 @@ Pausenfunktion.
 | „Ich weiß, was ich ändern will, aber es wird selten zur Routine." | 3,80 |
 | „Wenn ich aus einer Routine rausgefallen bin, fällt mir der Wiedereinstieg schwer." | 3,68 |
 
-Der hohe Schuldwert zusammen mit dem schweren Wiedereinstieg stützt die
-Anti-Bestrafungs-Philosophie direkt. Eine bestrafende Mechanik würde genau die wundeste
-Stelle treffen.
+Vor allem der hohe Wert beim Schuldgefühl war auffällig. Zusammen mit dem schwierigen
+Wiedereinstieg hat er uns darin bestätigt, auf jede Form von Bestrafung zu verzichten. Eine
+bestrafende Mechanik würde genau die empfindlichste Stelle treffen.
 
 **Welche Funktionen werden gewünscht?**
 
@@ -800,19 +842,20 @@ Stelle treffen.
 | Gemeinsamer Kalender mit Freunden | 3,04 |
 | Bilder/Nachrichten *während* der Gewohnheit | **2,83** |
 
-Bei der Frage nach der wichtigsten Einzelfunktion lag Fortschrittstracking vorn (9/25), vor
-dynamischer Anpassung (7/25) und Starthilfe (6/25). Soziales nannten nur 3 von 25.
+Die Starthilfe wurde mit ø 4,16 am besten bewertet. Bei der Frage nach der wichtigsten einzelnen
+Funktion lag dagegen das Fortschrittstracking vorn (9 von 25), vor der dynamischen Anpassung (7)
+und der Starthilfe (6). Soziale Funktionen nannten nur 3 von 25 als wichtigste Funktion.
 
-**Soziales, differenziert betrachtet.** Der schwache erste Eindruck täuscht. Die Bereitschaft
-zum Teilen ist vorhanden, aber leise. 21 von 25 würden Gewohnheiten mit **engen Freunden**
-teilen, mit deutlichem Abstand vor Partner:in (12) und Familie (11). Anonyme Personen nannten
-nur 2. Gewünscht wird also leichtes, passives Opt-in-Teilen mit ein bis drei Vertrauten und
-weder erzwungene Synchronisation noch Live-Kommunikation während der Ausführung.
+**Soziales, genauer betrachtet.** Beim Thema Community war das Ergebnis trotzdem nicht negativ.
+21 von 25 würden ihre Gewohnheiten mit **engen Freunden** teilen, deutlich weniger mit Partner
+oder Partnerin (12) und Familie (11), mit anonymen Personen nur 2. Soziale Funktionen sind also
+gefragt, aber im kleinen, vertrauten Kreis, mit freiwilligem Teilen und ohne erzwungenen
+Austausch während der Gewohnheit.
 
 ## 5.10 Ein Befund, der die Interviews korrigierte
 
-Aus den Interviews stammte die Annahme, dass Streaks schlecht sind und demotivieren. In der
-Breite hielt das nicht.
+Aus den Interviews stammte die Annahme, dass Streaks demotivieren. In der Umfrage hat sich das so
+nicht bestätigt.
 
 | Präferenz | Stimmen |
 |---|---|
@@ -820,37 +863,37 @@ Breite hielt das nicht.
 | Konsistenzrate | 5 |
 | offen für beides | 11 |
 
-Nur 5 von 25 bevorzugen klar die Konsistenzrate, 9 tendieren zum Streak, 11 sind offen. Das
-ist der einzige Punkt, an dem die quantitative Erhebung einer qualitativen Hypothese
-widersprochen hat, und genau dafür war sie da.
+Nur 5 von 25 bevorzugten eindeutig die Konsistenzrate, 9 entschieden sich für den Streak und 11
+waren für beides offen. Das ist der einzige Punkt, an dem die Umfrage einer Annahme aus den
+Interviews widersprochen hat, und genau dafür war sie gedacht.
 
-Wir haben uns nicht für eine Seite entschieden, sondern die Spannung auseinandergenommen. Der
-Streak wirkt motivierend, aber sein **Bruch** darf nicht bestrafen. In unserer fertigen
-Anwendung sind deshalb beide Ansichten vorhanden, die Konsistenzrate als ruhige Kennzahl auf
-der Übersicht, Serien an eigener Stelle und verpasste Tage neutral dargestellt.
+Wir wollten uns deshalb nicht für eine Seite entscheiden. Der Streak kann motivieren, aber sein
+**Bruch** darf nicht bestrafen. In der fertigen Anwendung gibt es deshalb beides: die
+Konsistenzrate als ruhige Kennzahl auf der Übersicht, Serien an einer eigenen Stelle und verpasste
+Tage, die neutral dargestellt werden.
 
 ## 5.11 Methodische Einordnung
 
-Die Ergebnisse sind **richtungsweisend, nicht repräsentativ**. Drei Einschränkungen sind zu
-nennen.
+Die Ergebnisse unserer Umfrage geben eine **Richtung vor, sind aber nicht repräsentativ**. Drei
+Einschränkungen müssen dabei berücksichtigt werden.
 
-**Kleine und schiefe Stichprobe.** Angestrebt waren über 50 Antworten, erreicht wurden 25.
-Die Stichprobe ist stark E-Commerce- und 5.-bis-6.-Semester-lastig, das
-Geschlechterverhältnis mit 16 zu 9 unausgewogen. Als Priorisierungshilfe ist sie belastbar,
-als Beweis nicht. Dass 25 Antworten in zwei Stunden eingingen, zeigt außerdem, dass wir eine
-größere Stichprobe hätten erreichen können. Die Begrenzung lag an der Kapazität des
-eingesetzten Werkzeugs und nicht an der Bereitschaft der Zielgruppe. Bei einer erneuten
-Erhebung würden wir das Umfragewerkzeug deshalb früher und sorgfältiger auswählen.
+**Kleine und ungleich verteilte Stichprobe.** Angestrebt waren mehr als 50 Antworten, erreicht
+haben wir 25. Viele Teilnehmende kamen aus dem Studiengang E-Commerce und aus dem 5. bis 6.
+Semester, und das Verhältnis von 16 Frauen zu 9 Männern war nicht ausgeglichen. Als Hilfe zur
+Priorisierung ist die Umfrage belastbar, als Beweis nicht. Dass die 25 Antworten in rund zwei
+Stunden eingingen, zeigt aber auch, dass mehr Teilnehmende möglich gewesen wären. Die Grenze lag
+beim Umfragewerkzeug, nicht bei der Bereitschaft der Zielgruppe. Bei einer erneuten Umfrage
+würden wir das Werkzeug deshalb vorher genauer prüfen.
 
-**Abweichung zwischen Leitfaden und ausgelieferter Umfrage.** Unser finaler Fragebogen
-enthielt neun Funktions-Skalen, darunter „gemeinsamer Kalender" und „Bilder während der
-Gewohnheit schicken". Die ursprünglich geplanten Skalen zu „Habit Journey /
-Fortschrittskurve" und zum Konsistenzrate-Tracking fehlen als eigene Bewertung. Vergleiche
-mit unserem ursprünglichen Plan sind entsprechend einzuordnen.
+**Unterschiede zwischen Planung und fertiger Umfrage.** Der finale Fragebogen enthielt neun
+Bewertungen zu Funktionen, darunter „gemeinsamer Kalender" und „Bilder während der Gewohnheit
+schicken". Die ursprünglich geplanten Skalen zur Habit Journey und zur Konsistenzrate fehlen
+dagegen als eigene Bewertung. Das muss man beim Vergleich mit unserem ursprünglichen Plan
+berücksichtigen.
 
-**Segmentierung nicht belastbar.** Eine Auswertung nach „Anfängern" und „Fortgeschrittenen",
-die unseren beiden Personas entsprochen hätte, ist bei dieser Stichprobengröße nicht
-aussagekräftig.
+**Keine belastbare Auswertung nach Personas.** Interessant wäre gewesen, die Ergebnisse getrennt
+nach Einsteigern und Selbstregulierten auszuwerten. Bei nur 25 Antworten wären die Gruppen dafür
+aber zu klein gewesen.
 
 ## 5.12 Abgeleitete Produktentscheidungen
 
@@ -867,23 +910,23 @@ aussagekräftig.
 
 ## 5.13 Eine Entscheidung gegen ein eigenes Feature
 
-Aus der Auswertung haben wir gefolgert, die **Habit Journey** nicht weiterzuverfolgen, also
-die Langzeitperspektive auf der Automatisierungskurve. Wir haben sie bewusst in die
-Präsentation aufgenommen, um die Streichung anhand der Umfragedaten begründen zu können,
-statt sie stillschweigend verschwinden zu lassen.
+Ein Ergebnis der Auswertung war, dass wir unsere geplante **Habit Journey** nicht weiterverfolgt
+haben. Die Idee war, den langfristigen Aufbau einer Gewohnheit als Fortschrittskurve darzustellen.
+Nach der Umfrage waren uns andere Funktionen wichtiger. Wir wollten die Idee aber nicht einfach
+verschwinden lassen. Deshalb haben wir sie bewusst in unserer Präsentation gezeigt und anhand der
+Umfragedaten erklärt, warum wir uns dagegen entschieden haben.
 
 ## 5.14 Feedback von Anne
 
-Das Feedback war knapp und bestätigend. Die wichtigsten Features hätten wir aus der Umfrage
-herausgearbeitet, jetzt gehe es darum, sie umzusetzen und die Erkenntnisse zu visualisieren.
-Vor allem sollten wir **dem roten Faden folgen** und das Design auf der Auswertung der
+Das Feedback war dieses Mal kurz und bestätigend. Die wichtigsten Funktionen hätten wir aus der
+Umfrage herausgearbeitet. Jetzt gehe es darum, sie umzusetzen und die Erkenntnisse auch visuell zu
+zeigen. Vor allem sollten wir **dem roten Faden folgen** und das Design auf den Ergebnissen der
 Umfrage aufbauen.
 
-Dieser Hinweis bestimmte unsere gesamte folgende Phase. Jeden Screen, der ab Juli entstand,
-haben wir mit einem Bezug zu Interview-, Umfrage- oder Literaturbefund versehen,
-niedergelegt in einem eigenen Begründungsdokument, das für jeden Screen festhält, worauf er
-abzielt. Es war unser bewusster Versuch, nachweisen zu können, dass keine
-Design-Entscheidung aus dem Bauch kam.
+Diesen Hinweis haben wir durch die gesamte nächste Phase mitgenommen. Unsere Designs sollten nicht
+aus Ideen entstehen, die wir persönlich gut finden, sondern auf Interviews, Umfrage oder Literatur
+zurückgehen. Für die Screens, die ab Juli entstanden sind, haben wir deshalb in einem eigenen
+Begründungsdokument festgehalten, auf welcher Erkenntnis die jeweilige Entscheidung beruht.
 
 ---
 
@@ -891,15 +934,16 @@ Design-Entscheidung aus dem Bauch kam.
 
 **Zeitraum:** 30. Juni bis 20. Juli 2026 · **Iteration 4**, Betreuungsgespräch am 20. Juli
 
-Nach Annes Aufforderung, dem roten Faden zu folgen, ging es uns in dieser Phase darum, aus
-den priorisierten Erkenntnissen ausgearbeitete Features und gestaltete Screens zu machen, und
-zwar so, dass sich jede Entscheidung auf einen Befund zurückführen lässt. Parallel haben wir
-eine verbindliche Designsprache erarbeitet, damit unsere Entwürfe zusammenpassen.
+Nach Annes Hinweis wollten wir in dieser Phase den roten Faden aus der Nutzerforschung
+beibehalten. Aus den Ergebnissen sollten konkrete Funktionen und ausgearbeitete Screens entstehen,
+und jede Entscheidung sollte sich mit einem Befund aus Interviews, Umfrage oder Recherche
+begründen lassen. Gleichzeitig haben wir eine gemeinsame Designsprache festgelegt, damit die
+verschiedenen Screens nicht wie einzelne Entwürfe wirken, sondern zusammenpassen.
 
 ## 6.1 Von der Priorisierung zu drei Kernfeatures
 
-Aus der Umfrage ergab sich eine klare Rangfolge. Drei Features haben wir als Kern gesetzt,
-ergänzt um eine übergreifende KI-Assistenz:
+Auf Grundlage der Umfrage haben wir drei Kernfeatures festgelegt, auf die wir uns konzentrieren
+wollten. Ergänzt werden sie durch eine KI-Assistenz, die an mehreren Stellen unterstützt:
 
 | Feature | Empirischer Anker |
 |---|---|
@@ -908,34 +952,35 @@ ergänzt um eine übergreifende KI-Assistenz:
 | **Community** | 21/25 teilen mit engen Freunden, aber nur 3/25 nennen Soziales als wichtigste Funktion |
 | **KI-Assistenz** | Starthilfe bei Überforderung ø 4,16, der Bestwert aller abgefragten Funktionen |
 
-Die **Habit Journey** haben wir an dieser Stelle gestrichen (Abschnitt 5.13).
+Die ursprünglich geplante **Habit Journey** haben wir nicht weiterverfolgt (Abschnitt 5.13).
 
-Für alle Features galt derselbe Maßstab. Sie sollten sich ohne Erklärung bedienen lassen und
-beim Benutzen so wenige Hürden wie möglich erzeugen. Eine Gewohnheit anzulegen, abzuhaken oder
-zu verschieben durfte nicht selbst zu einer Aufgabe werden, die man aufschiebt. Wir haben
-deshalb bei jedem Screen geprüft, welche Angabe wirklich nötig ist, und alles andere
-weggelassen oder mit einem sinnvollen Vorschlag vorbelegt.
+Für alle Features galt derselbe Maßstab. Sie sollten sich ohne Erklärung bedienen lassen und so
+wenige Hürden wie möglich erzeugen. Eine Gewohnheit anzulegen, abzuhaken oder zu verschieben
+durfte nicht selbst zu einer Aufgabe werden, die man aufschiebt. Wir haben deshalb bei jedem
+Screen geprüft, welche Angabe wirklich nötig ist, und alles andere weggelassen oder mit einem
+sinnvollen Vorschlag vorbelegt.
 
 ## 6.2 Time Blocking
 
-Time Blocking ist das zentrale Strukturierungsprinzip unserer Anwendung. Statt abstrakte
-Gewohnheitsziele zu setzen, betten wir Gewohnheiten nach dem Prinzip der Wenn-Dann-Planung in
-konkrete Zeitfenster ein.
+Time Blocking ist die Grundlage für die Planung in Align. Statt nur ein allgemeines Ziel wie
+„Ich möchte regelmäßig laufen gehen" festzulegen, wird eine Gewohnheit nach dem Prinzip der
+Wenn-Dann-Planung mit einer konkreten Situation und einem Zeitfenster im Alltag verbunden.
 
-Der Einrichtungsflow läuft in zwei getrennten Schritten. Zuerst wird das Ziel definiert („Ich
-will regelmäßig laufen gehen"), danach eine konkrete Situation als Auslöser gewählt („Wenn
-ich von der Uni nach Hause komme, dann gehe ich laufen"). Das Format „Wenn X, dann Y" wird
-intern gespeichert und ist Grundlage für die Planung im Tag und für Erinnerungen.
+Die Einrichtung haben wir in zwei Schritte aufgeteilt. Zuerst legt man fest, welche Gewohnheit man
+aufbauen möchte. Danach wählt man eine passende Situation als Auslöser, zum Beispiel
+„Wenn ich von der Uni nach Hause komme, dann gehe ich laufen". Dieses Wenn-Dann-Format wird
+gespeichert und ist Grundlage für die Planung im Tag und für Erinnerungen.
 
-Drei Mechanismen gehören dazu:
+Dazu gehören drei Mechanismen:
 
-- **Situations-Picker statt Zeitpicker.** Angeboten werden vorgefertigte Alltagssituationen
-  wie „nach dem Aufstehen", „nach der Morgenvorlesung" oder „wenn ich nach Hause komme". Eine
-  Situation löst Verhalten automatisch aus, während eine Uhrzeit aktiv im Kopf behalten
-  werden muss.
-- **Domino-Prinzip / Habit Chains.** Eine Gewohnheit wird zum Auslöser der nächsten.
+- **Situations-Picker statt Zeitpicker.** Man wählt eine Situation wie „nach dem Aufstehen",
+  „nach der Morgenvorlesung" oder „wenn ich nach Hause komme". So hängt die Gewohnheit an einem
+  Moment, der ohnehin im Alltag vorkommt. Eine Situation löst das Verhalten aus, während man sich
+  eine Uhrzeit aktiv merken muss.
+- **Domino-Prinzip und Habit Chains.** Eine Gewohnheit wird zum Auslöser der nächsten.
   Verschiebt sich die erste, rückt die zweite mit.
-- **Erinnerung vor dem Trigger**, nicht danach.
+- **Erinnerung vor dem Auslöser.** Die Erinnerung kommt vor der Situation und nicht erst dann,
+  wenn die Gewohnheit eigentlich schon erledigt sein sollte.
 
 ![Anker wählen](screenshots/figma/fig04-anker-dynamisch.png) ![Warum-Satz](screenshots/figma/fig05-warum-satz.png)
 
@@ -943,22 +988,23 @@ Drei Mechanismen gehören dazu:
 Warum-Satz in eigenen Worten.*
 
 **Wissenschaftliche Grundlage.** Faude-Koivisto und Gollwitzer (2009) zeigen, dass das Format
-„Wenn X, dann Y" Verhaltenskontrolle an die Situation statt an die Selbstdisziplin überträgt
-und dass die Spezifität des Wenn-Teils für die Wirkung entscheidend ist. Becker (2024) nennt
-den konkreten Auslöser als Voraussetzung jeder Gewohnheit und beschreibt das Domino-Prinzip.
-Lally et al. (2010) halten fest, dass situative Cues effektiver sind als Uhrzeiten, weil sie
-externe Auslösung ermöglichen.
+„Wenn X, dann Y" die Kontrolle über ein Verhalten von der Selbstdisziplin auf die Situation
+verlagert und dass es dabei vor allem auf einen genau festgelegten Wenn-Teil ankommt. Becker
+(2024) nennt einen konkreten Auslöser als Voraussetzung jeder Gewohnheit und beschreibt das
+Domino-Prinzip. Lally et al. (2010) halten fest, dass situative Auslöser wirksamer sind als
+Uhrzeiten, weil sie das Verhalten von außen anstoßen.
 
 ## 6.3 Progress Tracking
 
-Sichtbarer Fortschritt ist einer der wirksamsten Motivationsverstärker und in unserer
-Zielgruppe zugleich die empfindlichste Stelle. Wir folgen bei der Gestaltung deshalb einem
-einzigen Grundsatz, nämlich ehrlicher Transparenz ohne Druck.
+Sichtbarer Fortschritt motiviert, ist in unserer Zielgruppe aber auch eine empfindliche Stelle.
+Viele Befragte fühlen sich nach einem verpassten Tag schuldig oder enttäuscht. Wir haben deshalb
+einen Grundsatz verfolgt: Fortschritt ehrlich zeigen, ohne Druck aufzubauen. Daraus ergaben sich
+folgende Regeln:
 
-- Es werden bis zu fünf Gewohnheiten täglich verfolgt.
-- Der Verlauf erscheint als Kalenderansicht mit farblicher Abstufung, Tage ohne Eintrag
-  bleiben neutral statt rot markiert.
-- Ein vergessener Tag löst keine Schuldnachricht, kein Kreuz und keinen Reset aus.
+- Es können höchstens fünf Gewohnheiten gleichzeitig aktiv sein.
+- Der Verlauf erscheint als Kalenderansicht. Tage ohne Eintrag bleiben neutral und werden nicht
+  rot markiert.
+- Ein verpasster Tag löst weder eine negative Nachricht noch ein Kreuz oder einen Reset aus.
 - Ist eine Gewohnheit gefestigt, kann sie durch eine neue ersetzt werden.
 
 ![Übersicht](screenshots/figma/fig08-progress-uebersicht.png) ![Insights](screenshots/figma/fig09-progress-insights.png)
@@ -967,35 +1013,36 @@ einzigen Grundsatz, nämlich ehrlicher Transparenz ohne Druck.
 Insights-Ansicht den Verlauf über mehrere Wochen.*
 
 **Wissenschaftliche Grundlage.** Becker (2024) beschreibt im „Tagebuch der Tugenden", dass
-sichtbarer Fortschritt die zukünftige Leistung um bis zu 20 % erhöht. Lally et al. (2010)
-zeigen, dass Konsistenz der wichtigste Prädiktor für den Gewohnheitsstatus ist und nicht die
-absolute Anzahl der Ausführungen. Einzelne Aussetzer haben dort keine messbaren
-Langzeitkosten, fehlende Tage dürfen also nie bestraft oder prominent angezeigt werden. Rund
-die Hälfte der motivierten Teilnehmenden in dieser Studie erreichte keinen
-Gewohnheitsstatus, weil die Konsistenz zu niedrig war. Sanfte Konsistenzhinweise sind
-deshalb wichtiger als reine Streak-Zählung.
+sichtbarer Fortschritt die zukünftige Leistung um bis zu 20 % erhöhen kann. Lally et al. (2010)
+zeigen, dass für den Aufbau einer Gewohnheit vor allem die Regelmäßigkeit zählt und nicht die
+absolute Anzahl der Ausführungen. Einzelne ausgelassene Tage hatten dort keinen messbaren
+langfristigen Einfluss. Fehltage sollten also weder bestraft noch hervorgehoben werden. Rund die
+Hälfte der motivierten Teilnehmenden dieser Studie hat keine feste Gewohnheit aufgebaut, weil sie
+zu unregelmäßig war. Sanfte Hinweise auf die Regelmäßigkeit sind deshalb wichtiger als das reine
+Zählen von Serien.
 
 ### Annes Frage nach der Höchstzahl
 
-In Iteration 2 hatte Anne gefragt, ob es eine Obergrenze für gleichzeitig verfolgte
-Gewohnheiten gibt. Die Antwort haben wir bei **Becker (2024, Kap. 14.7.2)** gefunden. Dort
-werden täglich bis zu fünf Gewohnheiten bewertet, und die Liste entwickelt sich iterativ
-weiter, indem gefestigte Gewohnheiten durch neue ersetzt werden.
+In Iteration 2 hatte Anne gefragt, ob es eine Grenze dafür gibt, wie viele Gewohnheiten man
+gleichzeitig verfolgen sollte. Die Antwort haben wir bei **Becker (2024, Kap. 14.7.2)** gefunden.
+Dort werden täglich bis zu fünf Gewohnheiten bewertet, und sobald sich eine gefestigt hat, kann
+sie durch eine neue ersetzt werden.
 
-Aus einer Betreuungsfrage wurde damit eine belegte Produktregel, die **Grenze von fünf
-aktiven Gewohnheiten**. Wir haben sie in Phase 4 implementiert, wo sie mehrere Ausbaustufen
-durchlief (Kapitel 7).
+Aus einer Frage im Betreuungsgespräch wurde so eine belegte Regel für unser Produkt, die **Grenze
+von fünf aktiven Gewohnheiten**. Umgesetzt haben wir sie in Phase 4 (Kapitel 7).
 
 ## 6.4 Community
 
-Der Community-Aspekt bringt einen sozialen Layer in die Gewohnheitsbildung. Soziale
-Verbindlichkeit wirkt als Verstärker, ohne Druck oder Scham zu erzeugen.
+Mit der Community wollten wir Gewohnheiten eine soziale Seite geben, ohne daraus einen Vergleich
+zwischen Nutzern zu machen. Soziale Verbindlichkeit soll unterstützen, ohne Druck oder Scham zu
+erzeugen.
 
-Die Umfrage hatte eine feine Unterscheidung offengelegt. Die Teilbereitschaft mit engen
-Freunden ist hoch (21/25), die Priorität als eigenständige Funktion aber gering (3/25), und
-aufdringliche Mechaniken werden deutlich abgelehnt (gemeinsamer Kalender ø 3,04, Live-Bilder
-ø 2,83). Daraus haben wir die Positionierung als **dezente Opt-in-Ebene** abgeleitet und
-nicht als Headline unserer Anwendung.
+Die Umfrage hat uns dafür eine klare Richtung gegeben. 21 von 25 Befragten würden ihre
+Gewohnheiten mit engen Freunden teilen, aber nur 3 von 25 nannten den sozialen Bereich als
+wichtigste Funktion. Aufdringliche Mechaniken wurden deutlich schwächer bewertet, der gemeinsame
+Kalender mit ø 3,04 und Bilder während einer Gewohnheit mit ø 2,83. Deshalb haben wir die
+Community als **freiwillige, ergänzende Ebene** geplant und nicht als Hauptfunktion der Anwendung.
+Sie beschränkt sich auf Personen, die man bereits kennt.
 
 ![Verabredung vorschlagen](screenshots/figma/fig10-verabredung-vorschlagen.png)
 
@@ -1004,8 +1051,8 @@ einzelne Person, keine Gruppe und keine Liste.*
 
 ### Eine explizite Entscheidungsvorlage
 
-Für Community haben wir zwei Wirkmechanismen gegeneinander abgewogen und als eigene
-Vergleichsfolie ausgearbeitet:
+Für die Community haben wir zwei mögliche Mechanismen gegeneinander abgewogen und auf einer
+eigenen Vergleichsfolie gegenübergestellt:
 
 | | „Community Dashboard" | „Die Verabredung" |
 |---|---|---|
@@ -1016,47 +1063,47 @@ Vergleichsfolie ausgearbeitet:
 
 *Abb. 6.6: Die Vergleichsfolie, mit der wir die Entscheidung begründet haben.*
 
-Wir haben uns datenbasiert für den **Verabredungsmechanismus** entschieden. Damit hatten wir
-auch Annes Anregung aus Iteration 1 aufgenommen, den sozialen Aspekt im Sinne von „ich bin
-nicht allein", ohne in Vergleich umzuschlagen.
+Auf Grundlage der Daten haben wir uns für den **Verabredungsmechanismus** entschieden. Damit haben
+wir auch Annes Anregung aus Iteration 1 aufgegriffen, den sozialen Aspekt im Sinne von „ich bin
+nicht allein" umzusetzen, ohne dass daraus ein Vergleich wird.
 
-**Wissenschaftliche Grundlage.** Becker (2024) beschreibt, dass das soziale Umfeld über den
-Gewohnheitserfolg mitentscheidet und dass soziale Verbindlichkeit („ich verabrede mich mit
-jemandem zum Sport") zu den wirksamsten Starthilfen für neue Gewohnheiten gehört.
+**Wissenschaftliche Grundlage.** Becker (2024) beschreibt, dass das soziale Umfeld über den Erfolg
+einer Gewohnheit mitentscheidet und dass soziale Verbindlichkeit („ich verabrede mich mit jemandem
+zum Sport") zu den wirksamsten Starthilfen für neue Gewohnheiten gehört.
 
 ## 6.5 KI-Assistenz
 
-Ergänzend zu den drei Kernfeatures haben wir die über die Claude API angebundene KI als
-übergreifende Ebene konzipiert. Sie formuliert bei Überforderung den kleinsten nächsten
-Schritt und schlägt einen neuen Platz im Tag vor, wenn eine Gewohnheit mit einem anderen
-Termin zusammenfällt.
+Ergänzend zu den drei Kernfeatures haben wir die KI als übergreifende Ebene geplant, angebunden
+über die Claude API. Wenn jemand nicht weiß, wie er anfangen soll, schlägt sie einen möglichst
+kleinen nächsten Schritt vor. Außerdem schlägt sie einen neuen Platz im Tag vor, wenn eine
+Gewohnheit mit einem anderen Termin zusammenfällt.
 
 ![Starthilfe-Sheet](screenshots/figma/fig06-starthilfe-sheet.png)
 
 *Abb. 6.7: Der kleinste nächste Schritt im Entwurf.*
 
-Diese Rolle ist empirisch am besten abgesichert. „Starthilfe bei Überforderung" erzielte mit
-ø 4,16 die höchste Nützlichkeitsbewertung aller abgefragten Funktionen.
+Diese Rolle ist durch die Umfrage am besten abgesichert. Die **Starthilfe bei Überforderung**
+erhielt mit ø 4,16 die höchste Bewertung aller abgefragten Funktionen.
 
-Für die acht Screens dieses Bereichs haben wir ein eigenes Begründungsdokument angelegt, das
-für jeden Screen festhält, was zu sehen ist, warum wir es so entschieden haben und worauf es
-aus Umfrage, Interviews und Literatur zielt.
+Für die acht Screens, in denen die KI eine Rolle spielt, haben wir ein eigenes Begründungsdokument
+angelegt. Darin steht für jeden Screen, was dort passiert, warum wir uns dafür entschieden haben
+und auf welche Erkenntnisse aus Interviews, Umfrage oder Literatur wir uns beziehen.
 
 ## 6.6 Die Designsprache
 
-Aus der Prototypenarbeit ist ein Dokument entstanden, das Farben, Typografie, Abstände,
-Formen und Komponenten festhält. Es diente uns von hier an als visuelle Referenz für alle
-Features und später als Vorlage für die Implementierung. Verbindlich blieb allerdings die
-Figma-Datei, denn das Dokument war aus Screenshots abgeleitet und weicht an einzelnen Stellen
-ab.
+Aus der Arbeit an den Prototypen entstand ein Dokument, das Farben, Typografie, Abstände, Formen
+und wiederkehrende Komponenten festhält. An ihm konnten wir uns bei allen weiteren Screens
+orientieren, und später diente es als Vorlage für die technische Umsetzung. Verbindlich blieb
+allerdings unsere Figma-Datei. Das Dokument wurde aus Screenshots abgeleitet und weicht deshalb an
+einzelnen Stellen von Figma ab.
 
 ### Die Farbentscheidung
 
-Unsere allererste Designrichtung hatte auf eine dunkle, blau akzentuierte Farbwelt gesetzt.
-Im Vergleich empfanden wir sie als zu dominant und haben uns für eine ruhigere, wärmere
-Sprache entschieden, mit **Gold als durchgängiger Akzentfarbe**, kombiniert mit Schwarz im
-Dark Mode und Weiß im Light Mode. Beide Modi folgen derselben Designsprache. Diese Palette
-hielt bis zum Projektende.
+In unseren ersten Entwürfen haben wir mit einer dunklen Farbwelt und blauen Akzenten gearbeitet.
+Im Vergleich verschiedener Varianten wirkte diese Kombination auf uns aber zu dominant. Deshalb
+haben wir uns für eine ruhigere, wärmere Farbwelt entschieden, mit **Gold als durchgängiger
+Akzentfarbe**, kombiniert mit Schwarz im Dark Mode und Weiß im Light Mode. Beide Modi folgen
+derselben Designsprache, und an dieser Farbwelt haben wir bis zum Projektende festgehalten.
 
 ![Iteration 1](screenshots/figma/fig01-startseite-iteration1.png) ![Iteration 2](screenshots/figma/fig02-startseite-iteration2.png) ![Iteration 3](screenshots/figma/fig03-startseite-iteration3.png)
 
@@ -1064,53 +1111,52 @@ hielt bis zum Projektende.
 Fassung mit Cyan-Akzent, in der Mitte der Zwischenstand, rechts die warme Fassung mit Gold
 und Sora, die bis zum Projektende hielt.*
 
-Als Schrift haben wir **Sora** festgelegt. Die Navigation gliedert die Anwendung im Entwurf in
-vier Hauptbereiche; in der gebauten Anwendung sind daraus fünf geworden (Kapitel 8).
+Als Schrift haben wir **Sora** festgelegt. Im Entwurf gliedert die Navigation die Anwendung in
+vier Hauptbereiche, in der gebauten Anwendung sind daraus fünf geworden (Kapitel 8).
 
 ## 6.7 Von statischen Entwürfen zu interaktiven Prototypen
 
-Im Verlauf dieser Phase sind wir von rein statischen Entwürfen zu interaktiven Prototypen in
-HTML gewechselt. Der Grund war praktischer Natur. Ein Entwurf, der sich anklicken lässt,
-zeigt Abläufe wie den mehrstufigen Einrichtungsflow einer Gewohnheit deutlich besser als eine
-Abfolge einzelner Bildschirme, und Änderungen daran lassen sich gezielt vornehmen, statt
-Screens neu zu zeichnen.
+In dieser Phase haben wir angefangen, neben statischen Entwürfen auch interaktive Prototypen in
+HTML zu bauen. Abläufe mit mehreren Schritten, wie das Einrichten einer neuen Gewohnheit, lassen
+sich so viel besser ausprobieren als in einzelnen Screens nebeneinander. Änderungen konnten wir
+direkt im Ablauf testen, ohne jedes Mal neue Screens zu zeichnen.
 
-Verbindliche Designquelle blieb dabei durchgehend unsere Figma-Datei. Die Prototypen haben
-Farben, Typografie und Abstände von dort übernommen, wo sie abwichen, galt Figma. Diese klare
-Rangfolge war notwendig, weil wir parallel an mehreren Features gearbeitet haben und die
-Ergebnisse zusammenpassen mussten.
+Unsere Figma-Datei blieb dabei die verbindliche Grundlage. Farben, Typografie und Abstände haben
+die Prototypen von dort übernommen, und wo ein Prototyp abwich, galt Figma. Das war wichtig, weil
+wir parallel an verschiedenen Features gearbeitet haben und am Ende alles zusammenpassen sollte.
 
-Rückblickend war dieser Wechsel für uns der Übergang von der Gestaltung zur Umsetzung. Die
-interaktiven Prototypen dieser Phase sind unmittelbar in unsere spätere Implementierung
-eingegangen.
+Rückblickend war der Wechsel zu interaktiven Prototypen unser erster Schritt in Richtung
+Umsetzung. Viele Abläufe aus dieser Phase sind direkt in die spätere Entwicklung eingeflossen.
 
 ## 6.8 Prototypen
 
-Bis zum Betreuungsgespräch lagen Entwürfe für alle drei Kernfeatures vor. Jede und jeder von
-uns hat einen Bereich verantwortet, sodass die Gestaltungsarbeit gleichmäßig verteilt war:
+Bis zum Betreuungsgespräch lagen Entwürfe für alle drei Kernfeatures vor. Die Bereiche haben wir
+untereinander aufgeteilt, sodass die Gestaltungsarbeit gleichmäßig verteilt war:
 
-- **Time Blocking und KI-Assistent** als Wireframe-Sequenz von neun Screens, vom Ziel über
-  die Wahl des Ankers und den persönlichen Warum-Satz bis zur Kollisionsmeldung, wenn ein
-  neuer Slot mit einem bestehenden Termin zusammenfällt
-- **Progress Tracking** als Low-Fidelity-Wireframes und finale High-Fidelity-Screens mit
+- **Time Blocking und KI-Assistenz** als Abfolge von neun Screens, vom Ziel über die Wahl des
+  Situations-Ankers und den persönlichen Warum-Satz bis zur Meldung, wenn ein neues Zeitfenster
+  mit einem bestehenden Termin zusammenfällt
+- **Progress Tracking** zuerst als einfache Wireframes, danach als ausgearbeitete Screens mit
   Übersicht, Wachstum und Konsistenz, Insights, Hindernissen und Meilensteinen
-- **Community** mit Habit-Erstellung, Community-Screens und der Vergleichsfolie zur
-  Mechanismus-Entscheidung
+- **Community** mit dem Anlegen gemeinsamer Gewohnheiten, den Community-Screens und der
+  Vergleichsfolie zur Entscheidung für die Verabredung
 
 ## 6.9 Feedback von Anne
 
-Das Feedback fiel kurz aus. Wir hätten drei Features herausgesucht und im Design umgesetzt.
-Anne wurde im Anschluss in die Figma-Datei eingeladen, um die Entwürfe direkt einsehen zu
-können.
+Im Betreuungsgespräch haben wir Anne die drei ausgearbeiteten Features und ihre Designs
+vorgestellt. Das Feedback fiel kurz aus: Wir hätten drei Features herausgesucht und im Design
+umgesetzt. Nach dem Gespräch haben wir Anne in unsere Figma-Datei eingeladen, damit sie sich die
+Entwürfe dort direkt ansehen konnte.
 
 ## 6.10 Was daraus folgte
 
-Wenige Stunden nach dem Gespräch haben wir die Entscheidung getroffen, die den Rest unseres
-Projekts bestimmte. Wir haben mit der technischen Umsetzung begonnen.
+Nach dem Betreuungsgespräch haben wir entschieden, mit der technischen Umsetzung von Align zu
+beginnen. Zu diesem Zeitpunkt hatten wir eine durch Interviews und Umfrage abgesicherte Auswahl an
+Funktionen, zwei Personas, eine gemeinsame Designsprache und ausgearbeitete Entwürfe für drei
+Kernfeatures.
 
-Wir hatten zu diesem Zeitpunkt eine empirisch abgesicherte Feature-Auswahl, zwei Personas,
-eine Designsprache und gestaltete Screens für drei Kernfeatures. Nichts davon haben wir
-verworfen, Prototypen und Designsprache sind unmittelbar in die Implementierung eingegangen.
+Nichts davon mussten wir neu denken. Prototypen und Designsprache sind direkt in die
+Implementierung eingegangen.
 
 ---
 
