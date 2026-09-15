@@ -730,8 +730,7 @@ ruhige Kennzahl, Serien an einer eigenen Stelle und verpasste Tage, die neutral 
 Die Ergebnisse unserer Umfrage geben eine **Richtung vor, sind aber nicht repräsentativ**. Mit 25
 statt der angestrebten 50 Antworten ist die Stichprobe klein, viele Teilnehmende kamen aus dem
 Studiengang E-Commerce und dem 5. bis 6. Semester, und das Verhältnis von 16 Frauen zu 9 Männern war
-nicht ausgeglichen. Als Hilfe zur Priorisierung ist die Umfrage gut geeignet. Zwei ursprünglich
-geplante Skalen, zur Habit Journey und zur Konsistenzrate, fehlen im finalen Fragebogen, und für
+nicht ausgeglichen. Als Hilfe zur Priorisierung ist die Umfrage gut geeignet. Die ursprünglich geplante Skala zur Konsistenzrate fehlt im finalen Fragebogen, und für
 eine getrennte Auswertung nach Personas wären die Gruppen zu klein gewesen. Was wir daraus gelernt
 haben, beschreibt Abschnitt 9.5.
 
@@ -1634,8 +1633,7 @@ gegeben. Für eine nächste Befragung nehmen wir trotzdem einiges mit.
 zusammen. Die Zielgruppe war also sehr bereit mitzumachen, begrenzt hat nur die Kapazität des
 Werkzeugs (Abschnitt 5.11).
 
-**Den Fragebogen gegen den Leitfaden abgleichen.** Beim Überarbeiten sind die geplanten Skalen zur
-Habit Journey und zur Konsistenzrate aus dem Fragebogen gefallen. Die fertige Fassung würden wir vor
+**Den Fragebogen gegen den Leitfaden abgleichen.** Beim Überarbeiten ist die geplante Skala zur Konsistenzrate aus dem Fragebogen gefallen. Die fertige Fassung würden wir vor
 dem Versand noch einmal Punkt für Punkt mit dem Leitfaden vergleichen.
 
 **Auswertungen nach Personas einplanen.** Eine getrennte Auswertung nach Einsteigern und
@@ -1650,8 +1648,7 @@ sinnvolle Schritt ist, sie von Studierenden ausprobieren zu lassen, die das Proj
 
 **Eine begründete Entscheidung ist mehr wert als eine gute Idee.** Seit dem Hinweis, dem roten Faden
 zu folgen, haben wir jeden Screen mit einem Befund aus Interviews, Umfrage oder Literatur begründet.
-Das hat sich vor allem beim Streichen gezeigt, etwa bei der Habit Journey, die sich mit Daten aus der
-Diskussion nehmen ließ.
+Das hat uns auch geholfen, Ideen mit Daten wieder zu verwerfen, etwa den gemeinsamen Kalender oder die Rangliste.
 
 **Feedback wirkt nur, wenn es eine Adresse bekommt.** Jedes Betreuungsgespräch lässt sich bis zu
 einer konkreten Umsetzung verfolgen. Aus dem sozialen Aspekt wurde die Community, aus der Frage nach
@@ -1697,13 +1694,6 @@ einen Bereich und eine passende Tageszeit zuordnen, sodass die Anwendung sie gen
 Eintrag aus dem Katalog.
 
 ## 9.8 Verworfenes, das wiederkommen könnte
-
-**Die Habit Journey.** Die nach der Umfrage gestrichene Habit Journey liegt als
-Konzept vollständig ausgearbeitet vor und beruht auf Lally et al. (2010). Vorgesehen waren eine
-Automatisierungskurve pro Gewohnheit, eine Phasenanzeige von Aufbau über Festigung bis Gewohnheit
-und Erfolgsmarken nach 30, 66 und 100 Tagen, wobei 66 Tage der in der Studie gemessene Durchschnitt
-sind. Sie würde zeigen, was unsere Fortschrittsanzeige heute nicht zeigt, nämlich den Weg über die
-letzten 30 Tage hinaus.
 
 **Das Freiwerden eines Platzes.** Läuft eine Gewohnheit über Wochen zuverlässig, könnte die
 Anwendung anbieten, sie als gefestigt zu markieren und damit einen der fünf aktiven Plätze
@@ -1753,7 +1743,7 @@ gezielter unterstützt.
 **Eine Erprobung mit Nutzern.** Ein Usability-Test des Einrichtungsflows und der Tagesansicht mit
 Studierenden, die das Projekt nicht kennen, würde zeigen, ob die Anwendung ihren ersten Anspruch
 einlöst. Eine Folgebefragung mit mindestens 50 Teilnehmenden könnte die Befunde, die uns schon eine
-klare Richtung gegeben haben, breiter absichern und die fehlenden Skalen nachholen. Ob der Aufwand
+klare Richtung gegeben haben, breiter absichern und die fehlende Skala zur Konsistenzrate nachholen. Ob der Aufwand
 einer Verabredung im Alltag tragbar ist, lässt sich dabei nur mit echten Paaren prüfen.
 
 ## 9.10 Die langfristige Richtung
