@@ -160,9 +160,12 @@ function platzBedarf(i) {
         const z = L[j];
         if (z.trim() === '') continue;
         if (z.startsWith('![')) {
+            // Nur mitziehen, wenn davor höchstens ein kurzer Satz steht und das Bild
+            // nicht fast die ganze Seite füllt; sonst entstünde eine leere Seite.
             const pfade = [...z.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g)].map((m) => m[1]);
-            bedarf += zeilen * ZEILE + gruppenHoehe(pfade).hoehe + 2.2;
-            return Math.min(bedarf, 23);
+            const bild = gruppenHoehe(pfade).hoehe;
+            if (zeilen <= 3 && bild <= 14) return Math.min(bedarf + zeilen * ZEILE + bild + 2.2, 20);
+            break;
         }
         if (/^###? /.test(z)) { bedarf += 1.2; continue; }
         if (z.startsWith('|') || z.startsWith('#') || z.startsWith('>') || z.startsWith('```')) break;
