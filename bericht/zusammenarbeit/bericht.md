@@ -358,7 +358,7 @@ Konsistenzrate, die nur die Tage zählt, an denen eine Gewohnheit tatsächlich g
 Align haben wir zu dritt entwickelt, **Berkay**, **Silas** und **Ngoc Ha**. Wir studieren alle
 E-Commerce an der Technischen Hochschule Würzburg-Schweinfurt. Ein vierter Kommilitone, Prabjot,
 war zu Projektbeginn eingeplant, konnte wegen eines parallel beginnenden Praktikums aber nicht
-mitarbeiten. Betreut wurde das Projekt von **Anne Heß**.
+mitarbeiten. Betreut wurde das Projekt von **Frau Heß**.
 
 Die Recherche, die Interviews und alle wichtigen Konzeptentscheidungen haben wir gemeinsam
 erarbeitet. Im Laufe des Projekts haben sich nach Interessen und Vorkenntnissen unterschiedliche
@@ -435,7 +435,7 @@ der Fortschritt über das gesamte Projekt blieb nachvollziehbar.
 Drei Entscheidungen zu Werkzeugen waren für unsere Arbeit besonders wichtig.
 
 **LimeSurvey statt Google Forms.** Für unsere Umfrage wollten wir zuerst Google Forms verwenden.
-Im ersten Betreuungsgespräch wies uns Anne jedoch darauf hin, besonders auf Datenschutz und
+Im ersten Betreuungsgespräch wies uns Frau Heß jedoch darauf hin, besonders auf Datenschutz und
 Anonymität zu achten. Deshalb haben wir die Umfrage in LimeSurvey erstellt (Kapitel 5).
 
 **Figma als verbindliche Designquelle.** Ab Iteration 2 haben wir in einer gemeinsamen
@@ -523,7 +523,7 @@ Für die Zusammenarbeit haben wir in dieser Phase zwei Dinge festgelegt: Aufgabe
 vor jeder Iteration gemeinsam, und zu jedem Betreuungsgespräch erstellen wir eine kurze
 Präsentation.
 
-## 4.4 Feedback von Anne
+## 4.4 Feedback von Frau Heß
 
 Im ersten Betreuungsgespräch haben wir mehr Feedback bekommen, als wir erwartet hatten, und es
 hat unser weiteres Vorgehen stark beeinflusst:
@@ -564,7 +564,7 @@ festzuhalten. Damit startete unsere projektbegleitende Dokumentation (Abschnitt 
 
 ## 5.1 Der zweistufige Forschungsansatz
 
-Auf Annes Hinweis aus dem ersten Betreuungsgespräch haben wir unsere Nutzerforschung in zwei
+Auf den Hinweis von Frau Heß aus dem ersten Betreuungsgespräch haben wir unsere Nutzerforschung in zwei
 Schritte aufgeteilt. Zuerst haben wir qualitative Leitfadeninterviews geführt, um mehr über die
 Probleme und Erfahrungen von Studierenden zu erfahren und erste Annahmen zu bilden. Auf dieser
 Grundlage haben wir anschließend eine quantitative Online-Umfrage erstellt. Mit ihr wollten wir
@@ -730,13 +730,13 @@ kippt.
 | **Frustrationen** | ein schlechter Start zerlegt den Tag · Überforderung führt zum Aufschieben · Ranking motiviert kurz, bricht langfristig weg |
 | **Align-Hebel** | KI-Assistent formuliert den nächsten Mikroschritt · Gewohnheitsketten, die am ersten Anker des Tages hängen · Meilensteine statt Ranking |
 
-Anne hatte uns in Iteration 1 vorgeschlagen, anhand der Personas einen Vorher-Nachher-Vergleich
+Frau Heß hatte uns in Iteration 1 vorgeschlagen, anhand der Personas einen Vorher-Nachher-Vergleich
 zu erstellen. Die Zeile „Align-Hebel" ist unsere Antwort darauf. Sie stellt jeder Frustration die
 Funktion gegenüber, die sie auffangen soll.
 
-## 5.6 Feedback von Anne
+## 5.6 Feedback von Frau Heß
 
-Das Betreuungsgespräch verlief sehr positiv, Anne war von unserem Stand überzeugt. Inhaltlich
+Das Betreuungsgespräch verlief sehr positiv, Frau Heß war von unserem Stand überzeugt. Inhaltlich
 kamen vier Punkte:
 
 - **Eine offene Fachfrage.** Gibt es eine Höchstzahl an Gewohnheiten, auf die man sich
@@ -744,7 +744,7 @@ kamen vier Punkte:
   prüfen.
 - **Persona-Fokus.** Für welche der beiden Personas entwickeln wir Align eigentlich?
 - **Nicht zu früh einschränken.** Wir hatten teilweise schon früh überlegt, ob bestimmte
-  Funktionen technisch machbar sind. Anne riet uns, bei Ideen und Mockups zunächst größer zu
+  Funktionen technisch machbar sind. Frau Heß riet uns, bei Ideen und Mockups zunächst größer zu
   denken und erst bei der Umsetzung zu entscheiden, was wir tatsächlich bauen. „Es muss nicht
   alles perfekt sein."
 - **Design-System.** Farben, Typografie und Formen in einer gemeinsamen Figma-Datei festlegen,
@@ -772,13 +772,13 @@ längere Umfragen häufiger abgebrochen werden.
 In einem gemeinsamen Call haben wir beide Entwürfe durchgesprochen und schwache Fragen gestrichen
 oder neu formuliert. Jede Frage sollte eine konkrete Entscheidung für Align prüfen, zum Beispiel
 ob Streaks oder eine Konsistenzrate besser ankommen, ob soziale Funktionen gewünscht sind und wie
-lang ein Check-in sein darf. Annes Hinweis, zuerst allgemeine Funktionen und erst danach unsere
+lang ein Check-in sein darf. Den Hinweis von Frau Heß, zuerst allgemeine Funktionen und erst danach unsere
 eigenen Ideen abzufragen, haben wir in der Reihenfolge der Fragen umgesetzt. So wollten wir
 vermeiden, die Antworten durch unsere eigenen Vorschläge zu beeinflussen.
 
 ## 5.8 Werkzeugwahl und Durchführung
 
-Da Anne aus Datenschutzgründen von Google Forms abgeraten hatte, haben wir die Umfrage in
+Da Frau Heß aus Datenschutzgründen von Google Forms abgeraten hatte, haben wir die Umfrage in
 **LimeSurvey** erstellt und vor der Veröffentlichung mehrfach überarbeitet. Die Umfrage konnten
 auch Personen ausfüllen, die nicht studieren. Das haben wir gleich zu Beginn abgefragt. Außerdem
 haben wir Alter und Geschlecht erfasst, damit wir die Zusammensetzung der Teilnehmenden
@@ -934,7 +934,7 @@ Nach der Umfrage waren uns andere Funktionen wichtiger. Wir wollten die Idee abe
 verschwinden lassen. Deshalb haben wir sie bewusst in unserer Präsentation gezeigt und anhand der
 Umfragedaten erklärt, warum wir uns dagegen entschieden haben.
 
-## 5.14 Feedback von Anne
+## 5.14 Feedback von Frau Heß
 
 Das Feedback war dieses Mal kurz und bestätigend. Die wichtigsten Funktionen hätten wir aus der
 Umfrage herausgearbeitet. Jetzt gehe es darum, sie umzusetzen und die Erkenntnisse auch visuell zu
@@ -952,7 +952,7 @@ Begründungsdokument festgehalten, auf welcher Erkenntnis die jeweilige Entschei
 
 **Zeitraum:** 30. Juni bis 20. Juli 2026 · **Iteration 4**, Betreuungsgespräch am 20. Juli
 
-Nach Annes Hinweis wollten wir in dieser Phase den roten Faden aus der Nutzerforschung
+Nach dem Hinweis von Frau Heß wollten wir in dieser Phase den roten Faden aus der Nutzerforschung
 beibehalten. Aus den Ergebnissen sollten konkrete Funktionen und ausgearbeitete Screens entstehen,
 und jede Entscheidung sollte sich mit einem Befund aus Interviews, Umfrage oder Recherche
 begründen lassen. Gleichzeitig haben wir eine gemeinsame Designsprache festgelegt, damit die
@@ -1039,9 +1039,9 @@ Hälfte der motivierten Teilnehmenden dieser Studie hat keine feste Gewohnheit a
 zu unregelmäßig war. Sanfte Hinweise auf die Regelmäßigkeit sind deshalb wichtiger als das reine
 Zählen von Serien.
 
-### Annes Frage nach der Höchstzahl
+### Die Frage von Frau Heß nach der Höchstzahl
 
-In Iteration 2 hatte Anne gefragt, ob es eine Grenze dafür gibt, wie viele Gewohnheiten man
+In Iteration 2 hatte Frau Heß gefragt, ob es eine Grenze dafür gibt, wie viele Gewohnheiten man
 gleichzeitig verfolgen sollte. Die Antwort haben wir bei **Becker (2024, Kap. 14.7.2)** gefunden.
 Dort werden täglich bis zu fünf Gewohnheiten bewertet, und sobald sich eine gefestigt hat, kann
 sie durch eine neue ersetzt werden.
@@ -1082,7 +1082,7 @@ eigenen Vergleichsfolie gegenübergestellt:
 *Abb. 6.6: Die Vergleichsfolie, mit der wir die Entscheidung begründet haben.*
 
 Auf Grundlage der Daten haben wir uns für den **Verabredungsmechanismus** entschieden. Damit haben
-wir auch Annes Anregung aus Iteration 1 aufgegriffen, den sozialen Aspekt im Sinne von „ich bin
+wir auch die Anregung von Frau Heß aus Iteration 1 aufgegriffen, den sozialen Aspekt im Sinne von „ich bin
 nicht allein" umzusetzen, ohne dass daraus ein Vergleich wird.
 
 **Wissenschaftliche Grundlage.** Becker (2024) beschreibt, dass das soziale Umfeld über den Erfolg
@@ -1159,11 +1159,11 @@ untereinander aufgeteilt, sodass die Gestaltungsarbeit gleichmäßig verteilt wa
 - **Community** mit dem Anlegen gemeinsamer Gewohnheiten, den Community-Screens und der
   Vergleichsfolie zur Entscheidung für die Verabredung
 
-## 6.9 Feedback von Anne
+## 6.9 Feedback von Frau Heß
 
-Im Betreuungsgespräch haben wir Anne die drei ausgearbeiteten Features und ihre Designs
+Im Betreuungsgespräch haben wir Frau Heß die drei ausgearbeiteten Features und ihre Designs
 vorgestellt. Das Feedback fiel kurz aus: Wir hätten drei Features herausgesucht und im Design
-umgesetzt. Nach dem Gespräch haben wir Anne in unsere Figma-Datei eingeladen, damit sie sich die
+umgesetzt. Nach dem Gespräch haben wir Frau Heß in unsere Figma-Datei eingeladen, damit sie sich die
 Entwürfe dort direkt ansehen konnte.
 
 ## 6.10 Was daraus folgte
@@ -1322,9 +1322,9 @@ Prozentwert und großer Serien-Karte, „Ich komm nicht rein" war der damalige N
 Starthilfe. Rechts der Kalender, der den Tag noch als Liste nach Situationen ordnete, darunter
 „nach dem Mittagessen" und „wenn ich nach Hause komme".*
 
-## 7.7 Feedback von Anne
+## 7.7 Feedback von Frau Heß
 
-Anne nannte drei Punkte. Die Dokumentation parallel weiterführen, das Design fertigstellen
+Frau Heß nannte drei Punkte. Die Dokumentation parallel weiterführen, das Design fertigstellen
 und dabei priorisieren, die technische Umsetzung weitertreiben.
 
 ---
@@ -1606,7 +1606,7 @@ auch wieder zurückgenommen haben, wenn der tatsächliche Gebrauch dagegen sprac
 
 ## 7.16 Das Abschlussgespräch
 
-Im Abschlussgespräch haben wir Anne die fertige Anwendung vorgeführt. Dabei sind wir beim
+Im Abschlussgespräch haben wir Frau Heß die fertige Anwendung vorgeführt. Dabei sind wir beim
 Verschieben von Gewohnheiten noch auf kleinere Fehler gestoßen, die wir anschließend behoben
 haben.
 
@@ -1913,7 +1913,7 @@ Align weiterentwickeln ließe.
 ## 9.1 Was getragen hat
 
 **Die Reihenfolge der Nutzerforschung war die wichtigste Weichenstellung.** Im ersten
-Betreuungsgespräch riet uns Anne, zuerst qualitative Interviews zu führen und erst daraus
+Betreuungsgespräch riet uns Frau Heß, zuerst qualitative Interviews zu führen und erst daraus
 den Fragebogen zu entwickeln. Wir haben diesen Hinweis in Abschnitt 4.5 als „die
 folgenreichste Rückmeldung unseres gesamten Projekts" bezeichnet, und die Rückschau
 bestätigt das. Hätten wir die Umfrage zuerst entworfen, wären ihre Fragen aus unseren
@@ -2015,7 +2015,7 @@ Werkzeuge liegt offen im Repository und ist als Teil des Arbeitsprozesses gekenn
 Die Grenze verlief bei den Entscheidungen darüber, was die Anwendung tun soll und wie, und das
 lässt sich im Projektverlauf belegen. Die Umstellung auf den Katalog kam daher, dass wir die Anwendung
 selbst benutzt und dabei gemerkt haben, dass eine Gewohnheit ohne Dauer nicht planbar ist.
-Die Grenze von fünf aktiven Gewohnheiten geht auf Annes Frage nach einer Höchstzahl zurück
+Die Grenze von fünf aktiven Gewohnheiten geht auf die Frage von Frau Heß nach einer Höchstzahl zurück
 und wurde mit Umfragedaten begründet. Der Verzicht auf einen simulierten KI-Fallback ist eine
 Haltungsentscheidung gegenüber dem Nutzer. Keine dieser drei Entscheidungen stammt aus einem
 Werkzeug. Ein Werkzeug kann eine Regel umsetzen, aber nicht bestimmen, welche Regel richtig
@@ -2077,7 +2077,7 @@ stattdessen die Regel, Aufgaben vor jeder Iteration ausdrücklich zu verteilen u
 Gespräch eine kurze Präsentation zu erstellen. Beides zusammen hat dem Projekt eine Form
 gegeben, die im Nachhinein nachvollziehbar ist.
 
-**Umsetzbarkeit darf nicht am Anfang stehen.** Anne hat uns zweimal geraten, gute Konzepte
+**Umsetzbarkeit darf nicht am Anfang stehen.** Frau Heß hat uns zweimal geraten, gute Konzepte
 nicht aufzugeben, nur weil ihre technische Umsetzung aufwendig erscheint. Genau das ist
 eingetreten. Die Stundenplan-Integration war im Mai eine unbelegte Annahme aus der
 Marktanalyse und wirkte technisch am teuersten. Sie ist als Semesterplan der Gedanke, der
