@@ -59,7 +59,14 @@ function pngGroesse(pfad) {
 }
 
 // Höhe einer Bildgruppe in cm, aus den echten Pixelmaßen berechnet.
-function gruppenHoehe(pfade) {
+// Eine Bildzeile darf mit {height=9.5cm} enden, dann gilt diese Höhe als Höchstmaß.
+function bildzeile(z) {
+    const pfade = [...z.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g)].map((m) => m[1]);
+    const m = z.match(/\{height=([\d.]+)cm\}\s*$/);
+    return { pfade, maxHoehe: m ? parseFloat(m[1]) : null };
+}
+
+function gruppenHoehe(pfade, maxHoehe = null) {
     const seiten = pfade.map((p) => {
         const { w, h } = pngGroesse(p);
         return { p, a: w / h };
@@ -69,12 +76,12 @@ function gruppenHoehe(pfade) {
     const verfuegbar = TEXTBREITE - LUECKE * (seiten.length - 1) - 0.1 * seiten.length;
     // Höchstmaß je Bildart: Handy-Screens gut lesbar, sehr lange Figma-Screens
     // dürfen fast die ganze Seite nutzen, Querformate bleiben unter 11 cm.
-    const maxH = minA < 0.3 ? 19.5 : minA >= 1 ? 11 : 12.5;
+    const maxH = maxHoehe ?? (minA < 0.3 ? 19.5 : minA >= 1 ? 11 : 12.5);
     return { seiten, hoehe: Math.min(maxH, verfuegbar / summe) };
 }
 
-function bildgruppe(pfade, unterschrift) {
-    const { seiten, hoehe: h } = gruppenHoehe(pfade);
+function bildgruppe(pfade, unterschrift, maxHoehe = null) {
+    const { seiten, hoehe: h } = gruppenHoehe(pfade, maxHoehe);
     const hoehe = h.toFixed(2);
 
     const bilder = seiten
@@ -162,8 +169,8 @@ function platzBedarf(i) {
         if (z.startsWith('![')) {
             // Nur mitziehen, wenn davor höchstens ein kurzer Satz steht und das Bild
             // nicht fast die ganze Seite füllt; sonst entstünde eine leere Seite.
-            const pfade = [...z.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g)].map((m) => m[1]);
-            const bild = gruppenHoehe(pfade).hoehe;
+            const { pfade, maxHoehe } = bildzeile(z);
+            const bild = gruppenHoehe(pfade, maxHoehe).hoehe;
             if (zeilen <= 3 && bild <= 14) return Math.min(bedarf + zeilen * ZEILE + bild + 2.2, 20);
             break;
         }
@@ -218,7 +225,7 @@ for (let i = 0; i < L.length; i++) {
     // Bildgruppe mit Unterschrift
     if (z.startsWith('![')) {
         absatzEnde();
-        const pfade = [...z.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g)].map((m) => m[1]);
+        const { pfade, maxHoehe } = bildzeile(z);
         let j = i + 1;
         while (j < L.length && L[j].trim() === '') j++;
         let unterschrift = '';
@@ -231,7 +238,7 @@ for (let i = 0; i < L.length; i++) {
         // Direkt unter einer Überschrift bleibt das Bild an seiner Stelle,
         // sonst rutscht es über die Überschrift auf die Vorseite.
         const nachUeberschrift = /\\(section|subsection|chapter|iteration)\*?\{/.test(out[out.length - 1] ?? '');
-        const gruppe = bildgruppe(pfade, unterschrift);
+        const gruppe = bildgruppe(pfade, unterschrift, maxHoehe);
         out.push(nachUeberschrift ? gruppe.replace('[!htbp]', '[H]') : gruppe);
         continue;
     }

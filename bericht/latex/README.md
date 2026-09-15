@@ -24,6 +24,7 @@ brew install tectonic   # einmalig
   oder ohne Nummer. `# Iteration …` und `# Ausblick` werden zu Zwischentiteln ohne Nummer.
 - Bilder stehen zu eins bis drei in einer Zeile, direkt darunter (nach einer Leerzeile) die
   kursive Unterschrift `*Abb. 7.3 und 7.4: …*`. Die Größe wird aus den Pixelmaßen berechnet.
+  Endet die Bildzeile mit `{height=9.5cm}`, gilt diese Höhe als Höchstmaß für die Gruppe.
 - Tabellen, die auf einen Satz mit Doppelpunkt folgen, bleiben an ihrer Stelle. Bilder und
   andere Tabellen dürfen innerhalb ihres Abschnitts auf die nächste Seite rutschen.
 - Nummerierte Listen beginnen nach einer Leerzeile.

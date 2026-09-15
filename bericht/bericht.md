@@ -1224,7 +1224,7 @@ Anwendung das nicht zu, erklärt den Grund und nennt die freien Zeiten davor und
 (Abb. 7.10). Hängt eine Gewohnheit an einer Situation, weicht sie innerhalb eines Zeitfensters von
 selbst auf die nächste freie Stelle aus.
 
-![Kurs hat Vorrang](screenshots/kapitel7/k7-05-kurs-vorrang.png)
+![Kurs hat Vorrang](screenshots/kapitel7/k7-05-kurs-vorrang.png){height=9.5cm}
 
 *Abb. 7.10: „Frühstücken" soll an einem Mittwoch im Semester auf 10:30 rücken, mitten in
 „Statistik I". Die Anwendung lässt das nicht zu, weil der Kurs nicht rückt, und nennt die
@@ -1238,7 +1238,7 @@ zusammen mit der Uhrzeit, zu der sie bisher lief (Abb. 7.11). Von dort lässt si
 ziehen, oder man lässt sich über „Anderer Zeitpunkt?" von der KI einen neuen Platz vorschlagen
 (Abb. 7.12).
 
-![Ohne festen Platz](screenshots/kapitel7/k7-06-ohne-festen-platz.png) ![Anderer Zeitpunkt](screenshots/kapitel7/k7-07-anderer-zeitpunkt.png)
+![Ohne festen Platz](screenshots/kapitel7/k7-06-ohne-festen-platz.png) ![Anderer Zeitpunkt](screenshots/kapitel7/k7-07-anderer-zeitpunkt.png){height=9.5cm}
 
 *Abb. 7.11 und 7.12: Ab Semesterbeginn liegt montags „Analysis I" auf der Zeit von
 „Joggen gehen". Die Gewohnheit steht deshalb unter dem Tag im Bereich „Ohne festen Platz".
