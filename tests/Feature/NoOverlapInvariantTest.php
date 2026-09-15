@@ -13,6 +13,19 @@ use App\Support\Timetable;
 use Illuminate\Support\Carbon;
 
 /**
+ * Die Uhr steht, bevor der erste Test etwas anlegt.
+ *
+ * Vorher fror erst `invariantMonday()` sie ein, und das ist zu spät: Wege, die
+ * sie nicht selbst aufrufen, handelten mit der echten Uhr, geprüft wurde aber
+ * der gepinnte Montag. Solange der in der Zukunft lag, fiel das nicht auf — ab
+ * dem 15.09.2026 lag er hinter dem echten Datum, und die App räumt nur ab
+ * heute um. Hier gesetzt, hängt kein Fall mehr am Kalender.
+ */
+beforeEach(function (): void {
+    Carbon::setTestNow(Carbon::parse('2026-09-09 09:00'));
+});
+
+/**
  * Die eine Regel, die über allen anderen steht: Auf einer Minute liegt
  * höchstens eine Sache.
  *
@@ -106,8 +119,6 @@ function overlapOn(User $user, Carbon $date): ?string
  */
 function invariantMonday(): Carbon
 {
-    Carbon::setTestNow(Carbon::parse('2026-09-09 09:00'));
-
     return Carbon::today()->next(Carbon::MONDAY);
 }
 
