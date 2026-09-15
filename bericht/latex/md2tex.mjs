@@ -40,6 +40,7 @@ function inline(text) {
     s = s.replace(/\*(.+?)\*/g, '\\emph{$1}');
     // Deutsche Anführung: „ … " → „ … “ (ein gerades " wäre unter babel aktiv)
     s = s.replace(/"/g, '“');
+    s = s.replace(/<br>/g, "\\newline ");
     // Keine Zeilenumbrüche zwischen Verweis und Nummer
     s = s.replace(/\b(Abb\.|Abschnitt|Abschnitte|Abschnitten|Kapitel|Iteration|Iterationen|Phase) (\d)/g, '$1~$2');
     s = s.replace(/ø (\d)/g, 'ø~$1');
