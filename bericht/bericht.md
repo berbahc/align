@@ -395,7 +395,7 @@ Situations-Anker.
 Parallel haben wir acht Anwendungen untersucht, vier direkte Wettbewerber aus dem Habit Tracking
 und vier aus angrenzenden Bereichen, die Studierende ohnehin nutzen. Zusätzlich sind unsere eigenen
 Erfahrungen mit Finch, Habit Tracker und HabitShare eingeflossen. Die ausführliche Analyse steht
-in Kapitel 2. Für die weitere Entwicklung von Align waren vor allem vier Erkenntnisse wichtig:
+in Kapitel 2. Für die weitere Entwicklung von Align waren vor allem drei Erkenntnisse wichtig:
 
 1. **Keine der untersuchten Anwendungen berücksichtigt den Ablauf eines Studiums.** Semester,
    Prüfungsphasen und wechselnde Vorlesungszeiten spielen kaum eine Rolle.
@@ -403,7 +403,6 @@ in Kapitel 2. Für die weitere Entwicklung von Align waren vor allem vier Erkenn
    Headspace mit dem KI-Begleiter „Ebb".
 3. **Zu starke Gamification erzeugt Druck statt Motivation**, etwa bei Habitica oder bei reinen
    Streaks. Für Align wollten wir deshalb einen zurückhaltenden Ansatz.
-4. **Studierende planen nicht nur am Smartphone**, sondern häufig auch am Laptop.
 
 Besonders der erste Punkt wurde im Projektverlauf immer wichtiger. Daraus entstand später der
 Semesterplan, das wichtigste Alleinstellungsmerkmal von Align (Kapitel 7).
