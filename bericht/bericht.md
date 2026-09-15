@@ -1794,5 +1794,4 @@ Die Positionierung aus Abschnitt 2.4 bleibt dabei unser Ziel, eine Anwendung zum
 Gewohnheitsaufbau, die die Lebensrealität Studierender versteht und ohne Druck zur Konsistenz
 führt. Mit diesem Projekt haben wir gezeigt, dass sich eine solche Anwendung aus echten
 Gesprächen, einer Umfrage und wissenschaftlichen Quellen Schritt für Schritt begründen und bauen
-lässt. Die Sporttasche liegt vielleicht noch neben der Tür. Aber jetzt hat sie einen festen
-Platz im Tag.
+lässt.
