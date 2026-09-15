@@ -361,7 +361,7 @@ Grundlage für alle Gestaltungsfragen.
 
 **KI-gestützte Entwicklungswerkzeuge.** In Phase 4 haben wir beim Programmieren mit einem
 KI-gestützten Entwicklungswerkzeug gearbeitet. Es hat uns geholfen, den Funktionsumfang in der
-verfügbaren Zeit umzusetzen (Abschnitte 7.1 und 9.4).
+verfügbaren Zeit umzusetzen (Abschnitt 7.1).
 
 ---
 
@@ -671,7 +671,7 @@ Bei den Gewohnheiten selbst standen **Lernen und Uni** (20), **Bewegung und Spor
 25 Nennungen der häufigste Grund aufzugeben. 15 von 25 **reduzieren** ihre Gewohnheiten in solchen
 Phasen aber nur, statt sie ganz aufzugeben. Daraus haben wir mitgenommen, dass Gewohnheiten klein
 genug sein sollten, um auch in vollen Wochen Platz zu haben. Eine eigene Funktion für
-Prüfungsphasen haben wir nicht umgesetzt (Abschnitt 9.9). Der dritthäufigste Grund war mit 10
+Prüfungsphasen haben wir nicht umgesetzt (Abschnitt 9.7). Der dritthäufigste Grund war mit 10
 Nennungen schlicht „Ich vergesse es". Auch das spricht dafür, Gewohnheiten fest im Tag einzuplanen
 und vorher an sie zu erinnern.
 
@@ -732,7 +732,7 @@ statt der angestrebten 50 Antworten ist die Stichprobe klein, viele Teilnehmende
 Studiengang E-Commerce und dem 5. bis 6. Semester, und das Verhältnis von 16 Frauen zu 9 Männern war
 nicht ausgeglichen. Als Hilfe zur Priorisierung ist die Umfrage gut geeignet. Die ursprünglich geplante Skala zur Konsistenzrate fehlt im finalen Fragebogen, und für
 eine getrennte Auswertung nach Personas wären die Gruppen zu klein gewesen. Was wir daraus gelernt
-haben, beschreibt Abschnitt 9.5.
+haben, beschreibt Abschnitt 9.4.
 
 ## 5.12 Abgeleitete Produktentscheidungen
 
@@ -740,7 +740,7 @@ haben, beschreibt Abschnitt 9.5.
 |---|---|
 | Nur 2/25 nutzen eine Habit-App, 20/25 planen mit Kalender | Gewohnheiten als Zeitblöcke im Kalender planen, weil das an die bestehende Planung anknüpft (Abschnitt 7.10) |
 | Erinnerung vor der Gewohnheit ø 4,04, Situationsanker ø 3,88 vor fester Uhrzeit ø 3,50, „Ich vergesse es" 10/25 | Gewohnheiten an einen Moment im Tag knüpfen, feste Uhrzeit als zweiter Weg, Erinnerung vor dem Termin |
-| Stress/Prüfungsphase ist Hauptgrund fürs Aufgeben (17/25), 15/25 reduzieren statt aufzugeben | Gewohnheiten klein halten und den Einstieg erleichtern; eine eigene Funktion für Prüfungsphasen ist nicht umgesetzt (Abschnitt 9.9) |
+| Stress/Prüfungsphase ist Hauptgrund fürs Aufgeben (17/25), 15/25 reduzieren statt aufzugeben | Gewohnheiten klein halten und den Einstieg erleichtern; eine eigene Funktion für Prüfungsphasen ist nicht umgesetzt (Abschnitt 9.7) |
 | Schuldgefühl nach Scheitern ø 3,92 | kein Straf- oder Bestrafungsmechanismus, Fehltage neutral |
 | Starthilfe bei Überforderung ist die bestbewertete Funktion (ø 4,16) | KI-gestützte Starthilfe für den ersten Schritt als zentrale KI-Funktion |
 | Fortschrittstracking meistgewählte wichtigste Funktion (9/25) | Progress Tracking als Kernfeature, nicht bestrafend gestaltet |
@@ -864,10 +864,6 @@ Zwei mögliche Mechanismen haben wir auf einer eigenen Vergleichsfolie gegenübe
 | Prinzip | Rangliste, Gruppenstatistiken, Feed | konkrete, terminbasierte Verbindlichkeit zwischen 1 bis 3 Personen |
 | Empirie | Rangliste explizit nicht gewünscht; Rankings verlieren laut Interviews langfristig ihre Wirkung | „Wenn du eine Verabredung hast, gehst du mit einem anderen Pflichtbewusstsein ran" |
 
-![Vergleichsfolie](screenshots/figma/fig11-vergleich-community.png)
-
-*Abb. 6.6: Die Vergleichsfolie, mit der wir die Entscheidung begründet haben.*
-
 Auf Grundlage der Daten haben wir uns für den **Verabredungsmechanismus** entschieden. Damit haben
 wir auch die Anregung von Frau Heß aus Iteration 1 aufgegriffen, den sozialen Aspekt im Sinne von
 „ich bin nicht allein" umzusetzen, ohne dass daraus ein Vergleich wird.
@@ -884,7 +880,7 @@ einem anderen Termin zusammen, schlägt sie einen neuen Platz im Tag vor.
 
 ![Starthilfe-Sheet](screenshots/figma/fig06-starthilfe-sheet.png)
 
-*Abb. 6.7: Der kleinste nächste Schritt im Entwurf.*
+*Abb. 6.6: Der kleinste nächste Schritt im Entwurf.*
 
 Diese Rolle ist durch die Umfrage am besten abgesichert, denn die **Starthilfe bei Überforderung**
 war die bestbewertete Funktion. Für die acht Screens, in denen die KI eine Rolle spielt, haben wir im
@@ -907,7 +903,7 @@ Farbwelt haben wir bis zum Projektende festgehalten.
 
 ![Iteration 1](screenshots/figma/fig01-startseite-iteration1.png) ![Iteration 2](screenshots/figma/fig02-startseite-iteration2.png) ![Iteration 3](screenshots/figma/fig03-startseite-iteration3.png)
 
-*Abb. 6.8 bis 6.10: Dieselbe Startseite über drei Iterationen. Links die erste, dunkelblaue
+*Abb. 6.7 bis 6.9: Dieselbe Startseite über drei Iterationen. Links die erste, dunkelblaue
 Fassung mit Cyan-Akzent, in der Mitte der Zwischenstand, rechts die warme Fassung mit Gold
 und Sora, die bis zum Projektende hielt.*
 
@@ -979,7 +975,7 @@ eigentlichen Funktionen von Align konzentrieren. Die Oberfläche haben wir mit R
 wiederverwendbaren Bausteinen gebaut (Abschnitt 7.2).
 
 Die Web-App ist eine Entscheidung für die Entwicklung und keine für das spätere Produkt. Unsere
-langfristige Produktidee bleibt eine native App (Abschnitt 9.10). Beim Programmieren haben wir
+langfristige Produktidee bleibt eine native App (Abschnitt 9.8). Beim Programmieren haben wir
 KI-gestützte Werkzeuge eingesetzt. Was die App können soll, welche Daten sie speichert und wie sie
 sich in welcher Situation verhält, haben wir selbst entschieden.
 
@@ -1125,7 +1121,7 @@ Dauer trägt.*
 **Warum das die wichtigste Änderung war.** Erst die Dauer macht aus einer Gewohnheit einen Block,
 der eine echte Spanne im Tag belegt, und darauf bauen alle folgenden Abschnitte auf. Aus einem
 Tracker wurde so ein Planungswerkzeug. Zugleich ist der Katalog unsere größte bewusste
-Einschränkung, die sich aber erweitern lässt (Abschnitt 9.7).
+Einschränkung, die sich aber erweitern lässt (Abschnitt 9.6).
 
 ## 7.9 Der Tag bekommt einen Rahmen: der Schlafplan
 
@@ -1527,14 +1523,14 @@ und die Monatsansicht behalten ihre Struktur, nur die Flächen kehren sich um.*
 | **Sonstiges** | Auftakt vor dem Onboarding · Light und Dark Mode · Registrierung mit Passkeys und Zwei-Faktor-Authentifizierung |
 
 Was wir bewusst nicht umgesetzt haben und wie sich Align weiterentwickeln ließe, beschreiben die
-Abschnitte 9.7 bis 9.10.
+Abschnitte 9.6 bis 9.8.
 
 ---
 
 # 9. Reflexion und Ausblick
 
 Dieses Kapitel blickt zurück auf die Entscheidungen, die getragen haben, auf die Stellen, an denen
-wir umgekehrt sind, auf die Rolle von KI und auf das, was wir für künftige Projekte gelernt haben.
+wir umgekehrt sind, und auf das, was wir für künftige Projekte gelernt haben.
 Der zweite Teil blickt nach vorn, auf das, was wir bewusst weggelassen haben, und darauf, wie sich
 Align weiterentwickeln ließe.
 
@@ -1577,7 +1573,7 @@ punktuelle Gewohnheiten wie „Treppe statt Aufzug", die keine Dauer haben und i
 behandelt werden müssten. Die freie Eingabe der Situation haben wir herausgenommen, weil die
 Anwendung bei einer frei gewählten Situation oft nicht weiß, wann sie im Tag eintritt
 (Abschnitt 7.10). Beide Entscheidungen haben wir getroffen, um eine stabil lauffähige Anwendung zu
-bekommen, und auf ihnen lässt sich aufbauen (Abschnitte 7.8 und 9.7).
+bekommen, und auf ihnen lässt sich aufbauen (Abschnitte 7.8 und 9.6).
 
 **Auch das Datenmodell ist gewachsen, nicht entworfen worden.** Punktuelle Gewohnheiten, geratene
 Situationen und eine überflüssige Kursart sind nach dem tatsächlichen Gebrauch wieder verschwunden
@@ -1594,26 +1590,10 @@ Geplant hatten wir eine native App, gebaut haben wir eine Mobile-First-Web-App m
 Entscheidung, weil wir jeden Zwischenstand sofort ausprobieren konnten. Sie betrifft aber nur die
 Entwicklung. Als Produkt soll Align langfristig eine native App für das Smartphone werden. Deshalb
 spricht unsere Leitfrage weiterhin von „einer mobilen Applikation", und deshalb haben wir jede
-Ansicht zuerst für das Smartphone gestaltet (Abschnitt 9.10). Eine Folge der Web-App ist, dass
-Erinnerungen nur erscheinen, solange die Anwendung geöffnet ist (Abschnitt 9.9).
+Ansicht zuerst für das Smartphone gestaltet (Abschnitt 9.8). Eine Folge der Web-App ist, dass
+Erinnerungen nur erscheinen, solange die Anwendung geöffnet ist (Abschnitt 9.7).
 
-## 9.4 KI als Werkzeug, und wo sie aufhört
-
-KI kommt in diesem Projekt zweimal vor, und die beiden Fälle sind auseinanderzuhalten.
-
-**In der Anwendung** formuliert sie den kleinsten nächsten Schritt, schlägt neue Zeiten vor und
-ordnet den Tag neu. Diese Rolle ist durch die Umfrage am besten abgesichert. Die wichtigste
-Entscheidung dabei war eine Verzichtsentscheidung: Fällt ein Aufruf aus, antwortet Align mit einer
-ehrlichen Absage, denn was wie ein KI-Vorschlag aussieht, muss auch einer sein (Abschnitt 7.4). Angebunden ist sie über OpenRouter, einen Dienst, über den wir mit einem API-Schlüssel auf Sprachmodelle zugreifen (Abschnitt 7.4).
-
-**Bei der Entwicklung** haben uns KI-gestützte Werkzeuge geholfen, den Funktionsumfang in der
-verfügbaren Zeit umzusetzen. Die Entscheidungen darüber, was die Anwendung tun soll und wie, lagen
-aber bei uns, und das lässt sich im Projektverlauf belegen. Die Umstellung auf den Katalog kam aus
-dem eigenen Benutzen, die Grenze von fünf Gewohnheiten aus der Frage von Frau Heß und den
-Umfragedaten, und der Verzicht auf einen simulierten KI-Fallback ist eine Haltung gegenüber dem
-Nutzer. Ein Werkzeug kann eine Regel umsetzen, aber nicht bestimmen, welche Regel richtig ist.
-
-## 9.5 Was wir für die Nutzerforschung gelernt haben
+## 9.4 Was wir für die Nutzerforschung gelernt haben
 
 Unsere Interviews und die Umfrage haben uns eine klare Richtung für die Funktionen von Align
 gegeben. Für eine nächste Befragung nehmen wir trotzdem einiges mit.
@@ -1631,9 +1611,9 @@ Selbstregulierten braucht von vornherein genügend Antworten je Gruppe.
 **Die fertige Anwendung mit Nutzern erproben.** Technisch haben wir die Anwendung laufend mit Tests
 und statischer Analyse geprüft, Feedback von außen kam aus den Betreuungsgesprächen. Der nächste
 sinnvolle Schritt ist, sie von Studierenden ausprobieren zu lassen, die das Projekt nicht kennen
-(Abschnitt 9.9).
+(Abschnitt 9.7).
 
-## 9.6 Was wir mitnehmen
+## 9.5 Was wir mitnehmen
 
 **Eine begründete Entscheidung ist mehr wert als eine gute Idee.** Seit dem Hinweis, dem roten Faden
 zu folgen, haben wir jeden Screen mit einem Befund aus Interviews, Umfrage oder Literatur begründet.
@@ -1664,7 +1644,7 @@ jeder Grund beschreibt zugleich, was nötig wäre, um sie aufzuheben. Darauf bau
 
 ---
 
-## 9.7 Was wir bewusst weggelassen haben
+## 9.6 Was wir bewusst weggelassen haben
 
 Vier Funktionen fehlen in der fertigen Anwendung bewusst, damit der Umfang beherrschbar bleibt und
 die übrigen Funktionen zuverlässig laufen:
@@ -1682,31 +1662,7 @@ aufbauen: Nutzer könnten wieder eigene Gewohnheiten eintragen, und die KI könn
 einen Bereich und eine passende Tageszeit zuordnen, sodass die Anwendung sie genauso plant wie einen
 Eintrag aus dem Katalog.
 
-## 9.8 Verworfenes, das wiederkommen könnte
-
-**Das Freiwerden eines Platzes.** Läuft eine Gewohnheit über Wochen zuverlässig, könnte die
-Anwendung anbieten, sie als gefestigt zu markieren und damit einen der fünf aktiven Plätze
-freizugeben. Heute gibt es nur „Beenden", und das liest sich wie ein Abbruch.
-
-**Eine KI, die über längere Zeit mitlernt.** Als Idee hatten wir auch eine KI, die das Verhalten
-über Wochen beobachtet und daraus Muster erkennt. Sie könnte zum Beispiel bemerken, dass eine
-Gewohnheit zu einer bestimmten Uhrzeit immer wieder liegen bleibt, und eine besser passende Uhrzeit
-vorschlagen. Wir haben diese Idee für die Umsetzung verworfen, weil sie eine stabile Grundlage
-voraussetzt: Gewohnheiten mit festem Platz im Tag, einen verlässlichen Tagesrahmen und eine Planung,
-die auch bei Verschiebungen zuverlässig funktioniert. Steht der Rest zuverlässig, ließe sich die KI
-um ein solches Gedächtnis erweitern.
-
-**Zurückhaltende Erweiterungen der Community.** Ausgearbeitet, aber nicht umgesetzt sind drei
-kleinere Bausteine: ein Signal, dass jemand heute aktiv ist, ohne zu zeigen, woran, eine einzelne
-Reaktion auf eine erledigte Gewohnheit und eine gemeinsame Gewohnheit für eine kleine Gruppe, etwa
-eine WG oder eine Lerngruppe. Aussetzer blieben auch dabei für andere unsichtbar.
-
-**Was verworfen bleibt.** Die Rangliste und das Community Dashboard nehmen wir nicht wieder auf, und
-ebenso bleiben der gemeinsame Kalender und Live-Bilder während einer Gewohnheit gestrichen. Vergleich
-wurde in den Interviews als Kontrolle beschrieben, und diese Funktionen waren die schwächsten der
-gesamten Umfrage.
-
-## 9.9 Was als Nächstes käme
+## 9.7 Was als Nächstes käme
 
 **Ein Modus für die Prüfungsphase.** Stress und Prüfungsphase sind der häufigste Grund, Gewohnheiten
 aufzugeben, und 15 von 25 Befragten reduzieren in dieser Zeit, statt ganz aufzuhören
@@ -1719,14 +1675,22 @@ Auslöser vor. Umgesetzt sind Erinnerungen und ein Wecker, die nur erscheinen, s
 geöffnet ist. Der Grund ist, dass wir Align als Web-App entwickelt haben, die den Nutzer bei
 geschlossener App nicht zuverlässig erreichen kann (Abschnitt 7.1). Als native App, die über den App
 Store veröffentlicht wird, könnte Align dagegen Push-Benachrichtigungen schicken, und Erinnerungen
-und Wecker würden auch bei geschlossener App funktionieren (Abschnitt 9.10).
+und Wecker würden auch bei geschlossener App funktionieren (Abschnitt 9.8).
+
+**Eine KI, die über längere Zeit mitlernt.** Als Idee hatten wir auch eine KI, die das Verhalten
+über Wochen beobachtet und daraus Muster erkennt. Sie könnte zum Beispiel bemerken, dass eine
+Gewohnheit zu einer bestimmten Uhrzeit immer wieder liegen bleibt, und eine besser passende Uhrzeit
+vorschlagen. Wir haben diese Idee für die Umsetzung verworfen, weil sie eine stabile Grundlage
+voraussetzt: Gewohnheiten mit festem Platz im Tag, einen verlässlichen Tagesrahmen und eine Planung,
+die auch bei Verschiebungen zuverlässig funktioniert. Steht der Rest zuverlässig, ließe sich die KI
+um ein solches Gedächtnis erweitern.
 
 **Eine KI, die noch mehr weiß.** Beim Bau der KI-Funktionen haben wir vor allem gelernt, dass die KI
 immer den richtigen Kontext bekommen muss, damit sie wirklich hilft (Abschnitt 7.4). Dieser Kontext
 lässt sich weiter ausbauen. Die KI könnte auch die verhaltenspsychologischen Grundlagen kennen, auf
 denen Align beruht, etwa Wenn-Dann-Pläne, das Domino-Prinzip oder die Befunde zur Konsistenz, und
-ihre Vorschläge danach ausrichten, was Gewohnheiten nachweislich stabil macht. Zusammen mit einer
-KI, die über längere Zeit mitlernt (Abschnitt 9.8), würde daraus ein Begleiter, der den Nutzer noch
+ihre Vorschläge danach ausrichten, was Gewohnheiten nachweislich stabil macht. Zusammen mit einem
+solchen Gedächtnis würde daraus ein Begleiter, der den Nutzer noch
 gezielter unterstützt.
 
 **Eine Erprobung mit Nutzern.** Ein Usability-Test des Einrichtungsflows und der Tagesansicht mit
@@ -1735,7 +1699,7 @@ einlöst. Eine Folgebefragung mit mindestens 50 Teilnehmenden könnte die Befund
 klare Richtung gegeben haben, breiter absichern und die fehlende Skala zur Konsistenzrate nachholen. Ob der Aufwand
 einer Verabredung im Alltag tragbar ist, lässt sich dabei nur mit echten Paaren prüfen.
 
-## 9.10 Die langfristige Richtung
+## 9.8 Die langfristige Richtung
 
 Am Anfang dieses Projekts stand eine Beobachtung aus unserem eigenen Studium: Man weiß meistens,
 was einem guttut, und trotzdem bleibt die Sporttasche neben der Tür liegen. Daraus wurde unsere
