@@ -557,10 +557,6 @@ die uns im weiteren Projekt als Orientierung dienten.
 
 ### „Die Selbstregulierten", intrinsisch und selbstreguliert
 
-![Persona „Die Selbstregulierten"](screenshots/personas/persona-1.png)
-
-*Abb. 5.1: Das Persona-Sheet „Die Selbstregulierten", verdichtet aus vier Interviews.*
-
 *Verdichtet aus Alissa, Hannah, Aylin und Felix. Höhere Semester, flexible Tage, bereits
 funktionierende Routinen, die an Situationen hängen.*
 
@@ -576,11 +572,11 @@ mit Streaks haben sie nicht dauerhaft genutzt.
 | **Frustrationen** | Streaks verdrängen das eigentliche Ziel · zeitbasierte Trigger gehen am Alltag vorbei · Apps werten Nicht-Nutzung als Versagen · lose soziale Absichten halten nicht |
 | **Align-Hebel** | Wenn-Dann-Ketten an Kontexte · Habit-Buddies über konkrete Termine · Konsistenzrate statt Streak · Fehltage neutral |
 
+![Persona „Die Selbstregulierten"](screenshots/personas/persona-1.png)
+
+*Abb. 5.1: Das Persona-Sheet „Die Selbstregulierten", verdichtet aus vier Interviews.*
+
 ### „Die Einsteiger", überfordert und inkonsistent
-
-![Persona „Die Einsteiger"](screenshots/personas/persona-2.png)
-
-*Abb. 5.2: Das Persona-Sheet „Die Einsteiger", verdichtet aus zwei Interviews.*
 
 *Verdichtet aus Danial und Ngoc Anh. Mittlere Semester, keine feste Routine, brauchen einen
 klaren ersten Schritt.*
@@ -597,6 +593,10 @@ Vorhaben aufgeschoben, und der ganze Domino kippt.
 | **Ziele** | einen stabilen Tagesanker finden, der den Rest mitzieht · den ersten Schritt vorgegeben bekommen · sichtbare Meilensteine · auch in der Prüfungsphase eine Kernroutine halten |
 | **Frustrationen** | ein schlechter Start zerlegt den Tag · Überforderung führt zum Aufschieben · Ranking motiviert kurz, bricht langfristig weg |
 | **Align-Hebel** | KI-Assistent formuliert den nächsten Mikroschritt · Gewohnheitsketten, die am ersten Anker des Tages hängen · Meilensteine statt Ranking |
+
+![Persona „Die Einsteiger"](screenshots/personas/persona-2.png)
+
+*Abb. 5.2: Das Persona-Sheet „Die Einsteiger", verdichtet aus zwei Interviews.*
 
 Die Zeile „Align-Hebel" ist unsere Antwort auf den Vorschlag von Frau Heß, anhand der Personas einen
 Vorher-Nachher-Vergleich zu erstellen. Sie stellt jeder Frustration die Funktion gegenüber, die sie
@@ -1224,12 +1224,6 @@ Anwendung das nicht zu, erklärt den Grund und nennt die freien Zeiten davor und
 (Abb. 7.10). Hängt eine Gewohnheit an einer Situation, weicht sie innerhalb eines Zeitfensters von
 selbst auf die nächste freie Stelle aus.
 
-![Kurs hat Vorrang](screenshots/kapitel7/k7-05-kurs-vorrang.png){height=9.5cm}
-
-*Abb. 7.10: „Frühstücken" soll an einem Mittwoch im Semester auf 10:30 rücken, mitten in
-„Statistik I". Die Anwendung lässt das nicht zu, weil der Kurs nicht rückt, und nennt die
-freien Zeiten bis 09:45 und ab 11:45.*
-
 **Eine Verfeinerung.** Zunächst wurde ein Kurs abgewiesen, wenn an seiner Stelle schon eine
 Gewohnheit lag. Wer zu Semesterbeginn seinen Stundenplan einträgt, hätte also erst jede Gewohnheit,
 die im Weg liegt, von Hand wegräumen müssen. Jetzt wird der Kurs eingetragen, und die Gewohnheit
@@ -1238,11 +1232,13 @@ zusammen mit der Uhrzeit, zu der sie bisher lief (Abb. 7.11). Von dort lässt si
 ziehen, oder man lässt sich über „Anderer Zeitpunkt?" von der KI einen neuen Platz vorschlagen
 (Abb. 7.12).
 
-![Ohne festen Platz](screenshots/kapitel7/k7-06-ohne-festen-platz.png) ![Anderer Zeitpunkt](screenshots/kapitel7/k7-07-anderer-zeitpunkt.png){height=9.5cm}
+![Kurs hat Vorrang](screenshots/kapitel7/k7-05-kurs-vorrang.png) ![Ohne festen Platz](screenshots/kapitel7/k7-06-ohne-festen-platz.png) ![Anderer Zeitpunkt](screenshots/kapitel7/k7-07-anderer-zeitpunkt.png)
 
-*Abb. 7.11 und 7.12: Ab Semesterbeginn liegt montags „Analysis I" auf der Zeit von
-„Joggen gehen". Die Gewohnheit steht deshalb unter dem Tag im Bereich „Ohne festen Platz".
-Tippt man sie an, kann die KI einen anderen Zeitpunkt vorschlagen.*
+*Abb. 7.10 bis 7.12: Links soll „Frühstücken" an einem Mittwoch im Semester auf 10:30 rücken,
+mitten in „Statistik I". Die Anwendung lässt das nicht zu, weil der Kurs nicht rückt, und nennt
+die freien Zeiten bis 09:45 und ab 11:45. In der Mitte liegt ab Semesterbeginn montags
+„Analysis I" auf der Zeit von „Joggen gehen", die Gewohnheit steht deshalb im Bereich „Ohne festen
+Platz". Tippt man sie an, kann die KI rechts einen anderen Zeitpunkt vorschlagen.*
 
 ## 7.12 Die Navigation wandert nach unten
 
@@ -1328,19 +1324,15 @@ gliedert sich über eine Navigationsleiste am unteren Rand in fünf Bereiche, **
 
 ## 8.1 Der Auftakt
 
-![Auftakt](screenshots/app/app01-onboarding.png)
-
-*Abb. 8.1: Der Auftakt erklärt die Anwendung, bevor die erste Frage gestellt wird.*
-
 Vor dem Onboarding steht ein kurzer Auftakt über sechs Bildschirme. Er benennt eine typische
 Situation aus dem Studienalltag, statt Funktionen aufzuzählen, und stellt erst danach die erste
 Frage.
 
+![Auftakt](screenshots/app/app01-onboarding.png)
+
+*Abb. 8.1: Der Auftakt erklärt die Anwendung, bevor die erste Frage gestellt wird.*
+
 ## 8.2 Die Übersicht
-
-![Übersicht](screenshots/kapitel8/k01-uebersicht.png)
-
-*Abb. 8.2: Die Übersicht zeigt nur, was heute ansteht.*
 
 Die Startseite beantwortet eine einzige Frage, nämlich was heute ansteht. Drei Entscheidungen aus
 der Nutzerforschung sind hier unmittelbar sichtbar.
@@ -1355,6 +1347,10 @@ eine Mahnung gibt es nicht, das ist der bewusste Verzicht auf Bestrafung.
 **Zwei Angebote unter jeder offenen Gewohnheit.** „Zu zweit?" führt zur Verabredung, „Kleinen
 ersten Schritt" zur KI-Assistenz, beide direkt dort, wo man sie braucht, und nicht in einem
 eigenen Menü.
+
+![Übersicht](screenshots/kapitel8/k01-uebersicht.png)
+
+*Abb. 8.2: Die Übersicht zeigt nur, was heute ansteht.*
 
 ## 8.3 Eine Gewohnheit anlegen
 
@@ -1421,21 +1417,16 @@ Ziehen zeigt eine Marke die Uhrzeit, an der der Block landen würde, und „Aufr
 während der Bewegung mit (Abb. 8.10). Nach dem Loslassen nennt die Anwendung, was sich außerdem
 ändert, und fragt, ob die Änderung **nur heute** oder **immer** gelten soll (Abb. 8.11).
 
-![Nach dem Verschieben](screenshots/kapitel8/k11-nach-dem-ziehen.png) ![Übersicht danach](screenshots/kapitel8/k12-uebersicht-mit-kette.png)
-
-*Abb. 8.12 und 8.13: Nach der Entscheidung „Nur heute", im Kalender und auf der Übersicht.*
-
 Nach „Nur heute" liegen beide Blöcke an ihrer neuen Stelle, und auch die Übersicht ordnet sich neu
 (Abb. 8.12 und 8.13). Morgen gilt wieder der gewohnte Plan. In diesem kleinen Ablauf steckt, was
 Align von einem Gewohnheitstracker unterscheidet: Ändert sich der Tag, ändert sich der Plan mit,
 und die Anwendung sagt vorher, was dabei passiert.
 
+![Nach dem Verschieben](screenshots/kapitel8/k11-nach-dem-ziehen.png) ![Übersicht danach](screenshots/kapitel8/k12-uebersicht-mit-kette.png)
+
+*Abb. 8.12 und 8.13: Nach der Entscheidung „Nur heute", im Kalender und auf der Übersicht.*
+
 ## 8.5 Der Stundenplan im Kalender
-
-![Monatsansicht](screenshots/abb06-kalender-monat.png) ![Tagesansicht](screenshots/abb07-tagesansicht.png)
-
-*Abb. 8.14 und 8.15: Die Monatsansicht kündigt einen Konflikt mit dem Stundenplan an, die
-Tagesansicht zeigt den ersten Vorlesungstag.*
 
 Die **Monatsansicht** zeigt für jeden Tag einen Punkt je vorgesehener Gewohnheit. Oben kündigt ein
 Hinweis einen Konflikt mit dem Stundenplan an, bevor er eintritt:
@@ -1449,11 +1440,12 @@ Die **Tagesansicht** zeigt den ersten Tag des Wintersemesters. „Analysis I" is
 dem Stundenplan, „Vorlesung nachbereiten" hängt als situativer Anker direkt daran, und die
 Gewohnheit, die zuvor um 07:30 lag, steht jetzt im Bereich „Ohne festen Platz" (Abb. 7.11).
 
+![Monatsansicht](screenshots/abb06-kalender-monat.png) ![Tagesansicht](screenshots/abb07-tagesansicht.png)
+
+*Abb. 8.14 und 8.15: Die Monatsansicht kündigt einen Konflikt mit dem Stundenplan an, die
+Tagesansicht zeigt den ersten Vorlesungstag.*
+
 ## 8.6 Gewohnheiten im Wochenblick
-
-![Gewohnheiten](screenshots/abb02-gewohnheiten.png)
-
-*Abb. 8.16: Alle Gewohnheiten mit den letzten sieben Tagen.*
 
 Die Gewohnheiten-Seite zeigt für jede aktive Gewohnheit die letzten sieben Tage als **erledigt**
 (gefüllt), **offen** (hohl) oder **nicht vorgesehen** (gestrichelt), und ein Tag lässt sich
@@ -1461,22 +1453,22 @@ nachtragen. Entscheidend ist die Zahl unter jedem Titel. „8 von 13 Tagen" zäh
 denen die Gewohnheit tatsächlich anstand. Eine Gewohnheit für Montag, Mittwoch und Freitag wird also
 nicht dafür abgewertet, dass sie dienstags nicht vorgesehen war.
 
+![Gewohnheiten](screenshots/abb02-gewohnheiten.png)
+
+*Abb. 8.16: Alle Gewohnheiten mit den letzten sieben Tagen.*
+
 ## 8.7 Schlafplan
-
-![Schlafplan](screenshots/abb08-schlafplan.png)
-
-*Abb. 8.17: Der Tagesrahmen, für jeden Wochentag einzeln einstellbar.*
 
 Der Schlafplan zeigt für jeden Wochentag einen Balken und lässt sich tageweise anpassen, im Beispiel
 mit acht Stunden Schlaf von 23:00 bis 07:00 unter der Woche und einem späteren Fenster am Wochenende.
 Wecker und Erinnerung vor der Schlafenszeit ergänzen ihn (Abschnitt 7.9). Bewegt sich der Rahmen,
 bewegen sich die Gewohnheiten an seinen Rändern mit.
 
+![Schlafplan](screenshots/abb08-schlafplan.png)
+
+*Abb. 8.17: Der Tagesrahmen, für jeden Wochentag einzeln einstellbar.*
+
 ## 8.8 Community
-
-![Der Kreis](screenshots/kapitel8/k14-community-kreis.png)
-
-*Abb. 8.18: Der Community-Bereich beginnt mit der Zusage, was nicht geteilt wird.*
 
 Der Community-Bereich setzt die Entscheidung für die Verabredung um (Abschnitt 6.4) und beginnt mit
 dem, was **nicht** geteilt wird:
@@ -1487,9 +1479,9 @@ Das ist die direkte Antwort auf den Interviewbefund, dass Vergleich als Kontroll
 Verbindungen entstehen nur über einen exakt eingegebenen Namen, und wer keine Anfragen mehr möchte,
 schaltet Verabredungen ab und behält seinen Kreis trotzdem.
 
-![Zu zweit](screenshots/kapitel8/k15-zu-zweit-sheet.png)
+![Der Kreis](screenshots/kapitel8/k14-community-kreis.png)
 
-*Abb. 8.19: Eine Gewohnheit zu zweit angehen. Person und Tag stehen fest, bevor gefragt wird.*
+*Abb. 8.18: Der Community-Bereich beginnt mit der Zusage, was nicht geteilt wird.*
 
 Eine Verabredung beginnt auf der Übersicht mit „Zu zweit?". Das Blatt fragt nur, wen und wann, und
 bietet nur Tage an, an denen die Gewohnheit ohnehin ansteht. Der Satz unter dem Knopf nimmt die
@@ -1500,30 +1492,27 @@ Sorge vorweg, die aus den Interviews stammt:
 
 Eine Verabredung gilt für einen einzigen Tag und taucht in keiner Statistik auf.
 
-![Die Anfrage bei Jonas](screenshots/kapitel8/k16-anfrage-empfangen.png) ![Die Absage](screenshots/kapitel8/k17-absage.png)
-
-*Abb. 8.20 und 8.21: Dieselbe Verabredung von beiden Seiten. Links, was Jonas bekommt. Rechts,
-was zurückkommt, wenn er ablehnt.*
-
 Jonas kann mit „Passt mir", „Lieber nicht" oder „Selbst übernehmen" antworten. So wird aus einer
 Absage eine Übernahme, wenn er die Gewohnheit gut findet, aber nicht mitkommen kann. Die Absage
 selbst nennt keinen Grund. Sie sagt „Passt Jonas Winkler diesmal nicht" und fragt nur, ob man es
 trotzdem macht. Ein rotes Kreuz gibt es auch hier nicht.
 
+![Zu zweit](screenshots/kapitel8/k15-zu-zweit-sheet.png) ![Die Anfrage bei Jonas](screenshots/kapitel8/k16-anfrage-empfangen.png) ![Die Absage](screenshots/kapitel8/k17-absage.png)
+
+*Abb. 8.19 bis 8.21: Eine Gewohnheit zu zweit angehen, dieselbe Verabredung von beiden Seiten.
+Links stehen Person und Tag fest, bevor gefragt wird. In der Mitte, was Jonas bekommt. Rechts, was
+zurückkommt, wenn er ablehnt.*
+
 ## 8.9 Dark Mode
-
-![Dark Mode](screenshots/kapitel8/k13-uebersicht-dunkel.png)
-
-*Abb. 8.22: Die Übersicht im Dark Mode.*
 
 Alle Bereiche gibt es in einem hellen und einem dunklen Modus, die derselben Designsprache folgen.
 Gold bleibt in beiden Modi die Akzentfarbe und trägt im Dark Mode zusätzlich die Überschriften,
 weil ein reines Weiß auf dunklem Grund zu hart wirkt.
 
-![Gewohnheiten im Dark Mode](screenshots/app/app11-habits-dark.png) ![Kalender im Dark Mode](screenshots/app/app12-calendar-dark.png)
+![Dark Mode](screenshots/kapitel8/k13-uebersicht-dunkel.png) ![Gewohnheiten im Dark Mode](screenshots/app/app11-habits-dark.png) ![Kalender im Dark Mode](screenshots/app/app12-calendar-dark.png)
 
-*Abb. 8.23 und 8.24: Gewohnheiten und Kalender im Dark Mode. Das Sieben-Tage-Raster und die
-Monatsansicht behalten ihre Struktur, nur die Flächen kehren sich um.*
+*Abb. 8.22 bis 8.24: Übersicht, Gewohnheiten und Kalender im Dark Mode. Das Sieben-Tage-Raster
+und die Monatsansicht behalten ihre Struktur, nur die Flächen kehren sich um.*
 
 ## 8.10 Funktionsumfang im Überblick
 

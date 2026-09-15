@@ -74,9 +74,9 @@ function gruppenHoehe(pfade, maxHoehe = null) {
     const summe = seiten.reduce((n, x) => n + x.a, 0);
     const minA = Math.min(...seiten.map((x) => x.a));
     const verfuegbar = TEXTBREITE - LUECKE * (seiten.length - 1) - 0.1 * seiten.length;
-    // Höchstmaß je Bildart: Handy-Screens gut lesbar, sehr lange Figma-Screens
-    // dürfen fast die ganze Seite nutzen, Querformate bleiben unter 11 cm.
-    const maxH = maxHoehe ?? (minA < 0.3 ? 19.5 : minA >= 1 ? 11 : 12.5);
+    // Höchstmaß je Bildart: Handy-Screens 9,5 cm, sehr lange Figma-Screens 14,5 cm,
+    // damit sie noch lesbar breit bleiben, Querformate unter 11 cm.
+    const maxH = maxHoehe ?? (minA < 0.3 ? 14.5 : minA >= 1 ? 11 : 9.5);
     return { seiten, hoehe: Math.min(maxH, verfuegbar / summe) };
 }
 
@@ -93,9 +93,9 @@ function bildgruppe(pfade, unterschrift, maxHoehe = null) {
         const m = unterschrift.match(/^(Abb\.[^:]*):\s*(.*)$/s);
         cap = m ? `\\abb{${inline(m[1])}}{${inline(m[2])}}` : `\\abb{}{${inline(unterschrift)}}`;
     }
-    // Bilder dürfen innerhalb ihres Abschnitts auf die nächste Seite rutschen,
-    // statt eine halbe Seite leer zu lassen; die Nummer steht ja im Text.
-    return `\\begin{figure}[!htbp]\n\\centering\n${bilder}\n${cap}\n\\end{figure}\n`;
+    // Bilder stehen genau dort, wo sie im Markdown stehen, also immer nach einem
+    // abgeschlossenen Textblock und nie mitten in einem Absatz auf der Folgeseite.
+    return `\\begin{figure}[H]\n\\centering\n${bilder}\n${cap}\n\\end{figure}\n`;
 }
 
 // ---------------------------------------------------------------------------
@@ -151,7 +151,7 @@ const absatzEnde = () => {
         const text = absatz.join(' ');
         // Eine fett gesetzte Zeile allein ist ein Zwischentitel: Sie darf nicht
         // unten auf einer Seite stehen bleiben, während ihr Inhalt umbricht.
-        if (/^\*\*[^*]+\*\*$/.test(text)) out.push(`\\needspace{7\\baselineskip}\n${inline(text)}\\par\\nobreak\n`);
+        if (/^\*\*[^*]+\*\*$/.test(text)) out.push(`\\Needspace{7\\baselineskip}\n${inline(text)}\\par\\nobreak\n`);
         else out.push(inline(text) + '\n');
     }
     absatz = [];
@@ -166,14 +166,9 @@ function platzBedarf(i) {
     for (let j = i + 1; j < L.length; j++) {
         const z = L[j];
         if (z.trim() === '') continue;
-        if (z.startsWith('![')) {
-            // Nur mitziehen, wenn davor höchstens ein kurzer Satz steht und das Bild
-            // nicht fast die ganze Seite füllt; sonst entstünde eine leere Seite.
-            const { pfade, maxHoehe } = bildzeile(z);
-            const bild = gruppenHoehe(pfade, maxHoehe).hoehe;
-            if (zeilen <= 3 && bild <= 14) return Math.min(bedarf + zeilen * ZEILE + bild + 2.2, 20);
-            break;
-        }
+        // Bilder stehen erst hinter dem Textblock und dürfen auf die nächste Seite,
+        // die Überschrift braucht also nur ihre ersten Zeilen mit.
+        if (z.startsWith('![')) break;
         if (/^###? /.test(z)) { bedarf += 1.2; continue; }
         if (z.startsWith('|') || z.startsWith('#') || z.startsWith('>') || z.startsWith('```')) break;
         let text = '';
@@ -200,12 +195,12 @@ for (let i = 0; i < L.length; i++) {
             if (k) out.push(`\\setcounter{chapter}{${Number(k[1]) - 1}}\n\\chapter{${inline(k[2])}}\n`);
             else out.push(`\\iteration{${inline(titel)}}\n`);
         } else if (ebene === '##') {
-            const platz = `\\needspace{${platzBedarf(i).toFixed(1)}cm}\n`;
+            const platz = `\\Needspace{${platzBedarf(i).toFixed(1)}cm}\n`;
             const s = titel.match(/^(\d+)\.(\d+) (.*)$/);
             if (s) out.push(`${platz}\\setcounter{section}{${Number(s[2]) - 1}}\n\\section{${inline(s[3])}}\n`);
             else out.push(`${platz}\\section*{${inline(titel)}}\n`);
         } else {
-            const platz = `\\needspace{${platzBedarf(i).toFixed(1)}cm}\n`;
+            const platz = `\\Needspace{${platzBedarf(i).toFixed(1)}cm}\n`;
             const s = titel.match(/^(\d+)\.(\d+)\.(\d+) (.*)$/);
             if (s) out.push(`${platz}\\setcounter{subsection}{${Number(s[3]) - 1}}\n\\subsection{${inline(s[4])}}\n`);
             else out.push(`${platz}\\subsection*{${inline(titel)}}\n`);
