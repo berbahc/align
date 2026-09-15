@@ -58,7 +58,8 @@ function pngGroesse(pfad) {
     return { w: b.readUInt32BE(16), h: b.readUInt32BE(20) };
 }
 
-function bildgruppe(pfade, unterschrift) {
+// Höhe einer Bildgruppe in cm, aus den echten Pixelmaßen berechnet.
+function gruppenHoehe(pfade) {
     const seiten = pfade.map((p) => {
         const { w, h } = pngGroesse(p);
         return { p, a: w / h };
@@ -69,7 +70,12 @@ function bildgruppe(pfade, unterschrift) {
     // Höchstmaß je Bildart: Handy-Screens gut lesbar, sehr lange Figma-Screens
     // dürfen fast die ganze Seite nutzen, Querformate bleiben unter 11 cm.
     const maxH = minA < 0.3 ? 19.5 : minA >= 1 ? 11 : 12.5;
-    const hoehe = Math.min(maxH, verfuegbar / summe).toFixed(2);
+    return { seiten, hoehe: Math.min(maxH, verfuegbar / summe) };
+}
+
+function bildgruppe(pfade, unterschrift) {
+    const { seiten, hoehe: h } = gruppenHoehe(pfade);
+    const hoehe = h.toFixed(2);
 
     const bilder = seiten
         .map((x) => `\\rahmen{\\includegraphics[height=${hoehe}cm,keepaspectratio]{${x.p}}}`)
@@ -134,9 +140,39 @@ const out = [];
 let absatz = [];
 
 const absatzEnde = () => {
-    if (absatz.length) out.push(inline(absatz.join(' ')) + '\n');
+    if (absatz.length) {
+        const text = absatz.join(' ');
+        // Eine fett gesetzte Zeile allein ist ein Zwischentitel: Sie darf nicht
+        // unten auf einer Seite stehen bleiben, während ihr Inhalt umbricht.
+        if (/^\*\*[^*]+\*\*$/.test(text)) out.push(`\\needspace{7\\baselineskip}\n${inline(text)}\\par\\nobreak\n`);
+        else out.push(inline(text) + '\n');
+    }
     absatz = [];
 };
+
+// Wie viel Platz eine Überschrift mit dem, was direkt zu ihr gehört, braucht (in cm).
+// Folgt nach höchstens einem kurzen Einleitungsabsatz und einer Unterüberschrift
+// ein Bild, muss das Bild mit auf die Seite, sonst bleibt die Überschrift allein stehen.
+const ZEILE = 0.55;
+function platzBedarf(i) {
+    let bedarf = 1.6, zeilen = 0, absaetze = 0;
+    for (let j = i + 1; j < L.length; j++) {
+        const z = L[j];
+        if (z.trim() === '') continue;
+        if (z.startsWith('![')) {
+            const pfade = [...z.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g)].map((m) => m[1]);
+            bedarf += zeilen * ZEILE + gruppenHoehe(pfade).hoehe + 2.2;
+            return Math.min(bedarf, 23);
+        }
+        if (/^###? /.test(z)) { bedarf += 1.2; continue; }
+        if (z.startsWith('|') || z.startsWith('#') || z.startsWith('>') || z.startsWith('```')) break;
+        let text = '';
+        for (; j < L.length && L[j].trim() !== ''; j++) text += L[j] + ' ';
+        zeilen += Math.ceil(text.length / 95);
+        if (++absaetze >= 2 || zeilen > 6) break;
+    }
+    return bedarf + Math.min(Math.max(zeilen, 4), 8) * ZEILE;
+}
 
 for (let i = 0; i < L.length; i++) {
     const z = L[i];
@@ -154,13 +190,15 @@ for (let i = 0; i < L.length; i++) {
             if (k) out.push(`\\setcounter{chapter}{${Number(k[1]) - 1}}\n\\chapter{${inline(k[2])}}\n`);
             else out.push(`\\iteration{${inline(titel)}}\n`);
         } else if (ebene === '##') {
+            const platz = `\\needspace{${platzBedarf(i).toFixed(1)}cm}\n`;
             const s = titel.match(/^(\d+)\.(\d+) (.*)$/);
-            if (s) out.push(`\\setcounter{section}{${Number(s[2]) - 1}}\n\\section{${inline(s[3])}}\n`);
-            else out.push(`\\section*{${inline(titel)}}\n`);
+            if (s) out.push(`${platz}\\setcounter{section}{${Number(s[2]) - 1}}\n\\section{${inline(s[3])}}\n`);
+            else out.push(`${platz}\\section*{${inline(titel)}}\n`);
         } else {
+            const platz = `\\needspace{${platzBedarf(i).toFixed(1)}cm}\n`;
             const s = titel.match(/^(\d+)\.(\d+)\.(\d+) (.*)$/);
-            if (s) out.push(`\\setcounter{subsection}{${Number(s[3]) - 1}}\n\\subsection{${inline(s[4])}}\n`);
-            else out.push(`\\subsection*{${inline(titel)}}\n`);
+            if (s) out.push(`${platz}\\setcounter{subsection}{${Number(s[3]) - 1}}\n\\subsection{${inline(s[4])}}\n`);
+            else out.push(`${platz}\\subsection*{${inline(titel)}}\n`);
         }
         continue;
     }
