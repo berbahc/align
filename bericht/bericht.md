@@ -1422,6 +1422,8 @@ und die Anwendung sagt vorher, was dabei passiert.
 
 *Abb. 8.12 und 8.13: Nach der Entscheidung „Nur heute", im Kalender und auf der Übersicht.*
 
+<!-- neue Seite -->
+
 ## 8.5 Der Stundenplan im Kalender
 
 Die **Monatsansicht** zeigt für jeden Tag einen Punkt je vorgesehener Gewohnheit. Oben kündigt ein

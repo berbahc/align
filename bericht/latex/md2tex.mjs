@@ -184,6 +184,12 @@ for (let i = 0; i < L.length; i++) {
 
     if (z.trim() === '') { absatzEnde(); continue; }
     if (/^---\s*$/.test(z)) { absatzEnde(); continue; }
+    // <!-- neue Seite --> erzwingt einen Seitenumbruch, andere Kommentare fallen weg
+    if (/^<!--.*-->\s*$/.test(z)) {
+        absatzEnde();
+        if (/neue Seite/.test(z)) out.push('\\clearpage\n');
+        continue;
+    }
 
     // Überschriften
     const h = z.match(/^(#{1,3}) (.*)$/);
