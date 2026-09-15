@@ -728,7 +728,7 @@ kippt.
 |---|---|
 | **Ziele** | einen stabilen Tagesanker finden, der den Rest mitzieht · den ersten Schritt vorgegeben bekommen · sichtbare Meilensteine · auch in der Prüfungsphase eine Kernroutine halten |
 | **Frustrationen** | ein schlechter Start zerlegt den Tag · Überforderung führt zum Aufschieben · Ranking motiviert kurz, bricht langfristig weg |
-| **Align-Hebel** | KI-Assistent formuliert den nächsten Mikroschritt · Prüfungsmodus mit reduzierter Kernroutine · Meilensteine statt Ranking |
+| **Align-Hebel** | KI-Assistent formuliert den nächsten Mikroschritt · Gewohnheitsketten, die am ersten Anker des Tages hängen · Meilensteine statt Ranking |
 
 Anne hatte uns in Iteration 1 vorgeschlagen, anhand der Personas einen Vorher-Nachher-Vergleich
 zu erstellen. Die Zeile „Align-Hebel" ist unsere Antwort darauf. Sie stellt jeder Frustration die
@@ -808,9 +808,12 @@ Schwerpunkt im 5. bis 6. Semester (12), gefolgt vom 1. bis 2. Semester (5).
 | **Habit-App** | **2** |
 
 Nur 2 von 25 nutzen aktuell eine Habit-App, aber 20 von 25 arbeiten ohnehin mit einem Kalender
-oder Planer. Für uns hieß das zweierlei. Bestehende Habit-Apps sind wenig verbreitet, und eine
-Planung mit Zeitblöcken knüpft an etwas an, das Studierende bereits tun, statt ein neues
-Verhalten zu verlangen.
+oder Planer, und 14 von 25 lassen sich vom Handy erinnern. Für uns hieß das zweierlei.
+Bestehende Habit-Apps sind wenig verbreitet, und eine Planung mit Zeitblöcken knüpft an etwas
+an, das Studierende bereits tun, statt ein neues Verhalten zu verlangen. Dieser Befund ist der
+Ausgangspunkt für unser Time Blocking (Abschnitt 6.2). Später haben wir daraus den Kalender von
+Align entwickelt, in dem jede Gewohnheit als Block mit Anfang und Ende im Tag liegt
+(Abschnitt 7.10).
 
 Bei den Gewohnheiten selbst standen **Lernen und Uni** (20), **Bewegung und Sport** (18) sowie
 **Schlaf und Erholung** (16) im Vordergrund.
@@ -818,8 +821,12 @@ Bei den Gewohnheiten selbst standen **Lernen und Uni** (20), **Bewegung und Spor
 **Was macht es schwierig, Gewohnheiten beizubehalten?** Mit 17 von 25 Nennungen waren Stress und
 Prüfungsphasen der mit Abstand häufigste Grund, eine Gewohnheit aufzugeben. Auffällig war, wie
 die Befragten damit umgehen: 15 von 25 **reduzieren** ihre Gewohnheiten in solchen Phasen, statt
-sie ganz aufzugeben. Das spricht für einen Modus mit reduzierter Routine statt einer
-Pausenfunktion.
+sie ganz aufzugeben. Daraus haben wir eine allgemeine Erkenntnis mitgenommen: Gewohnheiten
+sollten klein genug sein, dass sie auch in vollen Wochen noch Platz haben, und der Einstieg
+sollte leicht fallen. Eine eigene Funktion für Prüfungsphasen haben wir nicht umgesetzt,
+Abschnitt 9.9 greift die Idee im Ausblick auf. Der dritthäufigste Grund war mit 10 Nennungen
+schlicht „Ich vergesse es". Auch das spricht dafür, Gewohnheiten fest im Tag einzuplanen und
+vorher an sie zu erinnern.
 
 | Aussage (1 bis 5) | Ø |
 |---|---|
@@ -839,8 +846,18 @@ bestrafende Mechanik würde genau die empfindlichste Stelle treffen.
 | Erinnerung vor der Gewohnheit | 4,04 |
 | Dynamische Anpassung bei Nichteinhaltung | 4,04 |
 | Wenn-Dann / Situationsanker | 3,88 |
+| Warum-Satz (Motivationsanker) | 3,56 |
+| Sehen, ob Freund:in es gemacht hat | 3,55 |
+| Feste Uhrzeit (Time-Block) | 3,50 |
 | Gemeinsamer Kalender mit Freunden | 3,04 |
 | Bilder/Nachrichten *während* der Gewohnheit | **2,83** |
+
+Für das Time Blocking war vor allem das Mittelfeld aufschlussreich. Die Erinnerung vor der
+Gewohnheit (ø 4,04) gehört zu den drei bestbewerteten Funktionen. Gewohnheiten an eine Situation
+im Tag zu knüpfen (ø 3,88), fanden die Befragten nützlicher als eine feste Uhrzeit (ø 3,50).
+Beides zusammen stützt, eine Gewohnheit an einen konkreten Platz im Tag zu binden, und zwar
+bevorzugt an einen Moment wie „nach dem Aufstehen" und erst in zweiter Linie an eine Uhrzeit.
+Genau so haben wir das Anlegen einer Gewohnheit später aufgebaut (Abschnitt 8.3).
 
 Die Starthilfe wurde mit ø 4,16 am besten bewertet. Bei der Frage nach der wichtigsten einzelnen
 Funktion lag dagegen das Fortschrittstracking vorn (9 von 25), vor der dynamischen Anpassung (7)
@@ -899,8 +916,9 @@ aber zu klein gewesen.
 
 | Erkenntnis | Entscheidung |
 |---|---|
-| Nur 2/25 nutzen eine Habit-App, 20/25 planen mit Kalender | Time-Blocking-Logik statt eigener Tracker-Welt; niedrige Einstiegshürde |
-| Stress/Prüfungsphase ist Hauptgrund fürs Aufgeben (17/25), 15/25 reduzieren statt aufzugeben | Minimal-/Prüfungsphasen-Modus mit reduzierter Kernroutine |
+| Nur 2/25 nutzen eine Habit-App, 20/25 planen mit Kalender | Time Blocking statt eigener Tracker-Welt; Gewohnheiten liegen später als Blöcke im Kalender (Abschnitt 7.10) |
+| Erinnerung vor der Gewohnheit ø 4,04, Situationsanker ø 3,88 vor fester Uhrzeit ø 3,50, „Ich vergesse es" 10/25 | Gewohnheiten an einen Moment im Tag knüpfen, feste Uhrzeit als zweiter Weg, Erinnerung vor dem Termin |
+| Stress/Prüfungsphase ist Hauptgrund fürs Aufgeben (17/25), 15/25 reduzieren statt aufzugeben | Gewohnheiten klein halten und den Einstieg erleichtern; eine eigene Funktion für Prüfungsphasen ist nicht umgesetzt (Abschnitt 9.9) |
 | Schuldgefühl nach Scheitern ø 3,92 | kein Straf- oder Bestrafungsmechanismus, Fehltage neutral |
 | Starthilfe bei Überforderung ist die bestbewertete Funktion (ø 4,16) | KI-gestützter Erster-Schritt-Assistent als Kern-Anwendungsfall der Claude API |
 | Fortschrittstracking meistgewählte wichtigste Funktion (9/25) | Progress Tracking als Kernfeature, nicht bestrafend gestaltet |

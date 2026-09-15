@@ -1,0 +1,214 @@
+% !TEX program = tectonic
+% Align — Projektbericht
+% Layout nach der Portfolio-Vorlage (KOMA-Script scrreprt), Farben und
+% Überschriftenschrift aus der Align-Designsprache. Der Inhalt kommt aus
+% ../zusammenarbeit/bericht.md und wird von md2tex.mjs nach inhalt.tex übersetzt.
+% Bauen: ./build.sh
+\documentclass[
+  a4paper,
+  11pt,
+  parskip=half-,
+  numbers=noenddot,
+  chapterprefix=false,
+  headings=normal,
+  open=any
+]{scrreprt}
+
+% ----------------------------------------------------------------------------
+% Schrift & Sprache
+% ----------------------------------------------------------------------------
+\usepackage{fontspec}
+\usepackage{libertinus-otf} % Libertinus Serif für den Fließtext
+\setsansfont{Sora}[
+  Path=fonts/,
+  Extension=.ttf,
+  UprightFont=*-Regular,
+  BoldFont=*-SemiBold,
+  ItalicFont=*-Regular,
+  ItalicFeatures={FakeSlant=0.18},
+  BoldItalicFont=*-SemiBold,
+  BoldItalicFeatures={FakeSlant=0.18}
+]
+\newfontfamily\sorabold{Sora}[Path=fonts/,Extension=.ttf,UprightFont=*-Bold]
+\newfontfamily\sterne{DejaVuSans.ttf}
+\usepackage{newunicodechar}
+\newunicodechar{★}{{\sterne\char"2605}}
+\usepackage[ngerman]{babel}
+\usepackage{microtype}
+\emergencystretch=2em
+\setlength{\parindent}{0pt}
+
+% ----------------------------------------------------------------------------
+% Layout
+% ----------------------------------------------------------------------------
+\usepackage[top=2.5cm,bottom=2.8cm,left=2.6cm,right=2.6cm,headsep=0.8cm]{geometry}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\graphicspath{{../zusammenarbeit/}{bilder/}}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{colortbl}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage[most]{tcolorbox}
+
+% ----------------------------------------------------------------------------
+% Farben aus der Align-Designsprache (Figma)
+% ----------------------------------------------------------------------------
+\definecolor{olive}{HTML}{775A19}    % primary: Nummern, Bildunterschriften, Links
+\definecolor{gold}{HTML}{C5A058}     % Akzent, nur für die Titelseite
+\definecolor{sand}{HTML}{DCD0B8}     % Linien und Bildrahmen
+\definecolor{canvas}{HTML}{F3EDE4}   % Flächen von Zitaten und Code
+\definecolor{ink}{HTML}{1D1B1B}      % Fließtext
+\definecolor{muted}{HTML}{5F5E5B}    % Kopfzeile, Bildunterschriften
+\arrayrulecolor{olive!70}
+
+% ----------------------------------------------------------------------------
+% Kopf-/Fußzeilen
+% ----------------------------------------------------------------------------
+\usepackage[automark]{scrlayer-scrpage}
+\pagestyle{scrheadings}
+\clearpairofpagestyles
+\ihead{\textcolor{muted}{\footnotesize\sffamily\leftmark}}
+\cfoot*{\textcolor{muted}{\footnotesize\sffamily\pagemark}}
+
+% ----------------------------------------------------------------------------
+% Überschriften
+% ----------------------------------------------------------------------------
+\setkomafont{disposition}{\sffamily\bfseries\color{ink}}
+\addtokomafont{chapter}{\LARGE}
+\addtokomafont{section}{\large}
+\addtokomafont{subsection}{\normalsize}
+\renewcommand*{\chapterformat}{\textcolor{olive}{\thechapter}\enskip}
+\renewcommand*{\sectionformat}{\textcolor{olive}{\thesection}\enskip}
+\renewcommand*{\subsectionformat}{\textcolor{olive}{\thesubsection}\enskip}
+\RedeclareSectionCommand[beforeskip=0pt,afterskip=1.4\baselineskip]{chapter}
+\RedeclareSectionCommand[beforeskip=-1.6\baselineskip,afterskip=0.6\baselineskip]{section}
+\RedeclareSectionCommand[beforeskip=-1.2\baselineskip,afterskip=0.4\baselineskip]{subsection}
+\renewcommand{\chapterlinesformat}[3]{%
+  \raggedright #2#3\par\nobreak
+  \vspace{0.45\baselineskip}%
+  {\color{sand}\rule{\textwidth}{0.8pt}}\par
+}
+
+% Iterationen und „Ausblick": Zwischentitel ohne Nummer innerhalb eines Kapitels
+\newcommand{\iteration}[1]{%
+  \FloatBarrier\par\addvspace{1.6\baselineskip}\needspace{8\baselineskip}%
+  \noindent{\color{sand}\rule{\linewidth}{0.8pt}}\par\nobreak\vspace{0.35\baselineskip}%
+  {\sffamily\small\bfseries\color{olive}\addfontfeatures{LetterSpace=6}\MakeUppercase{#1}\par}\nobreak
+  \addcontentsline{toc}{section}{\protect\textit{#1}}%
+  \vspace{0.5\baselineskip}}
+
+% ----------------------------------------------------------------------------
+% Bilder und Bildunterschriften (Nummern stehen im Text: „Abb. 7.3 und 7.4")
+% ----------------------------------------------------------------------------
+\newcommand{\rahmen}[1]{{\setlength{\fboxsep}{0pt}\setlength{\fboxrule}{0.5pt}\color{sand}\fbox{\color{ink}#1}}}
+\newcommand{\abb}[2]{%
+  \par\vspace{7pt}%
+  {\small\centering
+   \parbox{0.9\linewidth}{\centering
+     {\sffamily\bfseries\color{olive}#1:}\ {\itshape\color{muted}#2}}\par}}
+% Abbildungen gleiten höchstens bis zum Ende ihres Abschnitts (placeins)
+\usepackage[section,above]{placeins}
+\makeatletter
+% Seiten nur mit Abbildungen: oben beginnen statt vertikal zu zentrieren
+\setlength{\@fptop}{0pt}
+\setlength{\@fpsep}{20pt}
+\setlength{\@fpbot}{0pt plus 1fil}
+\makeatother
+\setlength{\intextsep}{16pt}
+\setlength{\floatsep}{18pt plus 4pt minus 2pt}
+\setlength{\textfloatsep}{20pt plus 4pt minus 4pt}
+\renewcommand{\topfraction}{0.92}
+\renewcommand{\bottomfraction}{0.85}
+\renewcommand{\textfraction}{0.06}
+\renewcommand{\floatpagefraction}{0.78}
+\setcounter{topnumber}{3}
+\setcounter{bottomnumber}{2}
+\setcounter{totalnumber}{4}
+
+% ----------------------------------------------------------------------------
+% Tabellen
+% ----------------------------------------------------------------------------
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
+\newcommand{\kopf}[1]{{\sffamily\bfseries #1}}
+\renewcommand{\arraystretch}{1.15}
+\setlength{\aboverulesep}{0.5ex}
+\setlength{\belowrulesep}{0.7ex}
+
+% ----------------------------------------------------------------------------
+% Listen, Zitate, Code
+% ----------------------------------------------------------------------------
+\setlist[itemize]{label=\textcolor{olive}{\textbullet},leftmargin=1.5em,itemsep=3pt,topsep=4pt}
+\setlist[enumerate]{label=\textcolor{olive}{\sffamily\bfseries\arabic*.},leftmargin=1.7em,itemsep=3pt,topsep=4pt}
+
+\newtcolorbox{zitat}{%
+  enhanced,breakable,frame hidden,boxrule=0pt,arc=2pt,
+  colback=canvas,borderline west={2.5pt}{0pt}{olive},
+  left=12pt,right=12pt,top=8pt,bottom=8pt,
+  before skip=10pt,after skip=12pt}
+\newtcolorbox{codezeile}{%
+  enhanced,frame hidden,boxrule=0pt,arc=2pt,colback=canvas,
+  left=12pt,right=12pt,top=7pt,bottom=7pt,
+  before skip=8pt,after skip=10pt,fontupper=\ttfamily\small}
+\newcommand{\code}[1]{{\ttfamily\small #1}}
+
+% ----------------------------------------------------------------------------
+% Hyperref
+% ----------------------------------------------------------------------------
+\usepackage[colorlinks=true,linkcolor=ink,urlcolor=olive,citecolor=olive]{hyperref}
+\hypersetup{pdftitle={Align — Projektbericht},
+            pdfauthor={Berkay Bahecapilli, Silas Höfle, Ngoc Ha Nguyen}}
+
+\setcounter{tocdepth}{1}
+\AtBeginDocument{\color{ink}}
+
+\begin{document}
+
+% ============================================================================
+% Titelseite
+% ============================================================================
+\begin{titlepage}
+  \raggedright
+  {\color{olive}\rule{\textwidth}{2.5pt}}\par
+  \vspace{3.2em}
+  \includegraphics[width=2.4cm]{logo-on-light.png}\par
+  \vspace{1.6em}
+  {\sorabold\fontsize{40pt}{46pt}\selectfont\color{ink} Align\par}
+  \vspace{0.7em}
+  {\sffamily\fontsize{15pt}{21pt}\selectfont\color{muted}
+   Eine mobile Anwendung, die Studierende beim Aufbau\\ nachhaltiger Alltagsgewohnheiten unterstützt\par}
+  \vspace{1.4em}
+  {\sffamily\small\bfseries\color{olive}\addfontfeatures{LetterSpace=8}PROJEKTBERICHT\par}
+  \vspace{6em}
+  {\small
+  \arrayrulecolor{sand}%
+  \begin{tabular}{@{}>{\sffamily\bfseries}p{3.6cm}p{11.6cm}@{}}
+    \toprule
+    Hochschule   & Technische Hochschule Würzburg-Schweinfurt \\
+    \addlinespace[5pt]
+    Studiengang  & E-Commerce \\
+    \addlinespace[5pt]
+    Team         & Berkay Bahecapilli · Silas Höfle · Ngoc Ha Nguyen \\
+    \addlinespace[5pt]
+    Betreuung    & Anne Heß \\
+    \addlinespace[5pt]
+    Repository   & \href{https://github.com/berbahc/align}{github.com/berbahc/align} \\
+    \addlinespace[5pt]
+    Abgabe       & 16. September 2026 \\
+    \bottomrule
+  \end{tabular}\par}
+  \vfill
+  {\color{gold}\rule{\textwidth}{0.8pt}}
+\end{titlepage}
+
+% ============================================================================
+% Inhaltsverzeichnis
+% ============================================================================
+\tableofcontents
+
+\input{inhalt.tex}
+
+\end{document}
