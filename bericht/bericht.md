@@ -749,14 +749,7 @@ haben, beschreibt Abschnitt 9.5.
 | 21/25 teilen mit engen Freunden, nur 3/25 nennen Soziales als wichtigste Funktion | Habit-Buddies als dezente Opt-in-Ebene, keine öffentliche Rangliste |
 | Gemeinsamer Kalender (3,04) und Live-Bilder (2,83) schwach bewertet | beide verworfen |
 
-## 5.13 Eine Entscheidung gegen ein eigenes Feature
-
-Ein Ergebnis der Auswertung war, dass wir die geplante **Habit Journey** nicht weiterverfolgt
-haben, also die Darstellung des langfristigen Gewohnheitsaufbaus als Fortschrittskurve. Nach der
-Umfrage waren uns andere Funktionen wichtiger. Wir haben die Idee trotzdem bewusst in unserer
-Präsentation gezeigt und anhand der Umfragedaten erklärt, warum wir uns dagegen entschieden haben.
-
-## 5.14 Feedback von Frau Heß
+## 5.13 Feedback von Frau Heß
 
 Das Feedback war dieses Mal kurz und bestätigend. Wir hätten die wichtigsten Funktionen aus der
 Umfrage herausgearbeitet und sollten sie jetzt umsetzen und auch visuell zeigen. Vor allem sollten
@@ -787,7 +780,7 @@ die an mehreren Stellen unterstützt:
 | **Community** | 21/25 teilen mit engen Freunden, aber nur 3/25 nennen Soziales als wichtigste Funktion |
 | **KI-Assistenz** | Starthilfe bei Überforderung ø 4,16, der Bestwert aller abgefragten Funktionen |
 
-Die ursprünglich geplante **Habit Journey** haben wir nicht weiterverfolgt (Abschnitt 5.13). Für
+Die ursprünglich geplante **Habit Journey**, eine Fortschrittskurve für den langfristigen Gewohnheitsaufbau, haben wir nach der Umfrage nicht weiterverfolgt. Für
 alle Features galt derselbe Maßstab: Eine Gewohnheit anzulegen, abzuhaken oder zu verschieben
 durfte nicht selbst zu einer Aufgabe werden, die man aufschiebt. Deshalb haben wir bei jedem Screen
 geprüft, welche Angabe wirklich nötig ist, und alles andere weggelassen oder sinnvoll vorbelegt.
@@ -1705,7 +1698,7 @@ Eintrag aus dem Katalog.
 
 ## 9.8 Verworfenes, das wiederkommen könnte
 
-**Die Habit Journey.** Die nach der Umfrage gestrichene Habit Journey (Abschnitt 5.13) liegt als
+**Die Habit Journey.** Die nach der Umfrage gestrichene Habit Journey liegt als
 Konzept vollständig ausgearbeitet vor und beruht auf Lally et al. (2010). Vorgesehen waren eine
 Automatisierungskurve pro Gewohnheit, eine Phasenanzeige von Aufbau über Festigung bis Gewohnheit
 und Erfolgsmarken nach 30, 66 und 100 Tagen, wobei 66 Tage der in der Studie gemessene Durchschnitt
