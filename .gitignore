@@ -33,3 +33,11 @@ yarn-error.log
 /.claude/settings.local.json
 .env.local
 .env.*.local
+
+# Dokumentation.md entsteht aus der Git-Historie und wird vom post-merge-Hook
+# nach jedem Pull neu geschrieben. Versioniert erzeugte sie bei jedem nur eine
+# Änderung, die niemand committen wollte. Neu bauen: php artisan dokumentation:generate
+/Dokumentation.md
+
+# Eigene Entwürfe des Projektberichts — der gesetzte Bericht liegt in bericht/.
+/Align-Projektbericht-Entwurf.docx

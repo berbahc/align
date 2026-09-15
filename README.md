@@ -156,6 +156,7 @@ Das ist der häufigste „bei mir läuft es aber"-Fall in diesem Projekt.
 | `resources/js/routes`, `.../actions`, `.../wayfinder` | erzeugt Wayfinder beim Start von Vite — also durch `composer dev` oder `npm run build` |
 | `public/build`                                        | `npm run build`                                                                        |
 | `vendor`, `node_modules`                              | `composer install`, `npm install`                                                      |
+| `Dokumentation.md`                                    | der `post-merge`-Hook oder `php artisan dokumentation:generate`                        |
 
 Die Wayfinder-Dateien sind der zweite Stolperstein: Ohne sie findet das
 Frontend Routen wie `@/routes/calendar` nicht, und der Build bricht ab. Einmal
@@ -212,9 +213,10 @@ tests/Unit/           Die reine Rechnung, ohne Datenbank
 
 ## Verlauf des Projekts
 
-[`Dokumentation.md`](Dokumentation.md) erzählt jeden Commit auf Deutsch — was
-geändert wurde und warum. Die Datei wird nicht von Hand gepflegt, sondern aus
-der Git-Historie erzeugt:
+`Dokumentation.md` erzählt jeden Commit auf Deutsch — was geändert wurde und
+warum. Die Datei liegt nicht im Repository, weil sie aus der Git-Historie
+entsteht: Der `post-merge`-Hook schreibt sie nach jedem Pull neu, von Hand
+geht es mit
 
 ```bash
 php artisan dokumentation:generate
