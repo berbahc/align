@@ -739,11 +739,11 @@ haben, beschreibt Abschnitt 9.5.
 
 | Erkenntnis | Entscheidung |
 |---|---|
-| Nur 2/25 nutzen eine Habit-App, 20/25 planen mit Kalender | Time Blocking statt eigener Tracker-Welt; Gewohnheiten liegen später als Blöcke im Kalender (Abschnitt 7.10) |
+| Nur 2/25 nutzen eine Habit-App, 20/25 planen mit Kalender | Gewohnheiten als Zeitblöcke im Kalender planen, weil das an die bestehende Planung anknüpft (Abschnitt 7.10) |
 | Erinnerung vor der Gewohnheit ø 4,04, Situationsanker ø 3,88 vor fester Uhrzeit ø 3,50, „Ich vergesse es" 10/25 | Gewohnheiten an einen Moment im Tag knüpfen, feste Uhrzeit als zweiter Weg, Erinnerung vor dem Termin |
 | Stress/Prüfungsphase ist Hauptgrund fürs Aufgeben (17/25), 15/25 reduzieren statt aufzugeben | Gewohnheiten klein halten und den Einstieg erleichtern; eine eigene Funktion für Prüfungsphasen ist nicht umgesetzt (Abschnitt 9.9) |
 | Schuldgefühl nach Scheitern ø 3,92 | kein Straf- oder Bestrafungsmechanismus, Fehltage neutral |
-| Starthilfe bei Überforderung ist die bestbewertete Funktion (ø 4,16) | KI-gestützter Erster-Schritt-Assistent als Kern-Anwendungsfall der Claude API |
+| Starthilfe bei Überforderung ist die bestbewertete Funktion (ø 4,16) | KI-gestützte Starthilfe für den ersten Schritt als zentrale KI-Funktion |
 | Fortschrittstracking meistgewählte wichtigste Funktion (9/25) | Progress Tracking als Kernfeature, nicht bestrafend gestaltet |
 | Streak-Präferenz uneinheitlich (9 : 5 : 11) | beide Ansichten anbieten, Bruch vergebend gestalten |
 | 21/25 teilen mit engen Freunden, nur 3/25 nennen Soziales als wichtigste Funktion | Habit-Buddies als dezente Opt-in-Ebene, keine öffentliche Rangliste |
@@ -886,8 +886,7 @@ zum Sport") zu den wirksamsten Starthilfen für neue Gewohnheiten gehört.
 
 ## 6.5 KI-Assistenz
 
-Ergänzend zu den drei Kernfeatures haben wir die KI als übergreifende Ebene geplant, im Konzept
-noch über die Claude API angebunden (zur Umsetzung Abschnitt 7.4). Weiß jemand nicht, wie er
+Ergänzend zu den drei Kernfeatures haben wir die KI als übergreifende Ebene geplant (zur technischen Anbindung Abschnitt 7.4). Weiß jemand nicht, wie er
 anfangen soll, schlägt sie einen möglichst kleinen nächsten Schritt vor. Fällt eine Gewohnheit mit
 einem anderen Termin zusammen, schlägt sie einen neuen Platz im Tag vor.
 
@@ -1005,7 +1004,7 @@ sich in welcher Situation verhält, haben wir selbst entschieden.
 | Routen im Frontend | `laravel/wayfinder` | erzeugt TypeScript-Funktionen aus den Laravel-Routen, Tippfehler fallen beim Kompilieren auf |
 | Auth | `laravel/fortify` mit Passkeys und 2FA | geprüfter Baustein statt Eigenbau |
 | Datenbank | **SQLite** | eine Datei, kein Server; Cache, Queue und Session laufen ebenfalls darüber |
-| KI | `laravel/ai` über die **OpenRouter-API** | siehe 7.4 |
+| KI | **OpenRouter**, eingebunden über `laravel/ai` | ein API-Schlüssel für Sprachmodelle verschiedener Anbieter, Modell ohne Codeänderung austauschbar (siehe 7.4) |
 | Qualität | Pest 5, Larastan, Pint, ESLint, Prettier | siehe 7.5 |
 | Umgebung | Laravel Herd, `https://align.test` | HTTPS lokal, ohne eigene Serverkonfiguration |
 
@@ -1025,8 +1024,7 @@ direkt im Code verankert.
 
 ## 7.4 Die KI-Anbindung
 
-Die KI-Funktionen sprechen über das Laravel-AI-SDK mit der OpenRouter-API. Anbieter und Modell
-lassen sich ohne Codeänderung austauschen. Jede Funktion ist eine eigene Agent-Klasse mit festem
+Für die KI-Funktionen nutzen wir **OpenRouter**. Über diesen Dienst bekommen wir mit einem einzigen API-Schlüssel Zugriff auf Sprachmodelle verschiedener Anbieter, derzeit Claude Sonnet 4.6 von Anthropic. In die Anwendung eingebunden ist OpenRouter über das Laravel-AI-SDK, sodass sich das Modell ohne Codeänderung austauschen lässt. Jede Funktion ist eine eigene Agent-Klasse mit festem
 Prompt, Zeitlimit und einem Schema für die Antwort. Die Agenten kennen dabei den Kontext, in dem sie
 gefragt werden, also die Gewohnheiten der Person, ihren Schlafrahmen und ihren Stundenplan. Ein
 Vorschlag für einen neuen Platz im Tag entsteht damit für genau diesen Tag.
@@ -1625,9 +1623,7 @@ KI kommt in diesem Projekt zweimal vor, und die beiden Fälle sind auseinanderzu
 **In der Anwendung** formuliert sie den kleinsten nächsten Schritt, schlägt neue Zeiten vor und
 ordnet den Tag neu. Diese Rolle ist durch die Umfrage am besten abgesichert. Die wichtigste
 Entscheidung dabei war eine Verzichtsentscheidung: Fällt ein Aufruf aus, antwortet Align mit einer
-ehrlichen Absage, denn was wie ein KI-Vorschlag aussieht, muss auch einer sein (Abschnitt 7.4). Unser
-Konzept ging noch von der Claude API aus, umgesetzt ist die Anbindung über `laravel/ai` und die
-OpenRouter-API.
+ehrlichen Absage, denn was wie ein KI-Vorschlag aussieht, muss auch einer sein (Abschnitt 7.4). Angebunden ist sie über OpenRouter, einen Dienst, über den wir mit einem API-Schlüssel auf Sprachmodelle zugreifen (Abschnitt 7.4).
 
 **Bei der Entwicklung** haben uns KI-gestützte Werkzeuge geholfen, den Funktionsumfang in der
 verfügbaren Zeit umzusetzen. Die Entscheidungen darüber, was die Anwendung tun soll und wie, lagen
