@@ -115,7 +115,7 @@ function tabelle(zeilen, festhalten) {
     const groesse = spalten >= 6 ? '\\footnotesize\\setlength{\\tabcolsep}{4pt}' : '\\small';
 
     const zeile = (r) => r.map((c) => inline(c)).join(' & ') + ' \\\\';
-    let out = `\\begin{table}[${festhalten ? 'H' : '!htbp'}]\n\\centering${groesse}\n\\begin{tabularx}{\\textwidth}{@{}${typen.join('')}@{}}\n\\toprule\n`;
+    let out = `\\begin{table}[H]\n\\centering${groesse}\n\\begin{tabularx}{\\textwidth}{@{}${typen.join('')}@{}}\n\\toprule\n`;
     if (!ohneKopf) out += `${kopf.map((c) => `\\kopf{${inline(c)}}`).join(' & ')} \\\\\n\\midrule\n`;
     out += koerper.map(zeile).join(lang ? '\n\\addlinespace[3pt]\n' : '\n') + '\n';
     out += '\\bottomrule\n\\end{tabularx}\n\\end{table}\n';

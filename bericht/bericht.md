@@ -120,7 +120,7 @@ Befunde dazu, wie lange der Aufbau einer Gewohnheit dauert und welche Rolle rege
 Wiederholung dabei spielt.
 
 Aus diesen Grundlagen sind die wichtigsten Funktionen von Align entstanden, nicht aus
-Belohnungslogiken. Dazu gehören Situations-Anker statt fester Uhrzeiten, Gewohnheitsketten, eine
+Belohnungslogiken. Dazu gehören Situations-Anker als Alternative zu festen Uhrzeiten, Gewohnheitsketten, eine
 Konsistenzrate statt einer Serie und der bewusste Verzicht auf Bestrafung, wenn eine Gewohnheit
 einmal nicht klappt. Die Quellen und wie wir sie umgesetzt haben, beschreibt Kapitel 4.
 
@@ -152,7 +152,7 @@ Erklärung verlangt, und solche Schritte so weit wie möglich vermieden.
 - langfristige Motivation statt Druck, ohne Bestrafung
 - klare Struktur und wenig visuelle Ablenkung
 - einheitlicher Aufbau aller Bereiche, in Light und Dark Mode
-- Anpassung an den eigenen Alltag statt starrer Uhrzeiten
+- Anpassung an den eigenen Alltag, mit Situations-Ankern als Alternative zu festen Uhrzeiten
 - Gestaltung auf Grundlage der Verhaltens- und Motivationspsychologie
 
 ## 1.7 Aufbau dieses Berichts
@@ -472,7 +472,7 @@ Aus der Recherche haben sich drei Quellen ergeben, die für Align besonders wich
 | Quelle | Kernbefund | Wirkung im Produkt |
 |---|---|---|
 | **Lally et al. (2010)** | Median 66 Tage bis zur stabilen Gewohnheit (Spanne 18 bis 254). Konsistenz ist der wichtigste Prädiktor, nicht die absolute Anzahl der Ausführungen; einzelne Aussetzer haben keine messbaren Langzeitkosten. | Konsistenzrate statt Streak · kein Bestrafungsmechanismus · realistische Erwartungen |
-| **Faude-Koivisto & Gollwitzer (2009)** | Wenn-Dann-Pläne (*Implementation Intentions*) verlagern die Verhaltenskontrolle von der Selbstdisziplin auf die Situation. Ein einziger bewusster Willensakt kann automatische Auslösung anstoßen. | Time Blocking · Situations-Anker statt fester Uhrzeiten |
+| **Faude-Koivisto & Gollwitzer (2009)** | Wenn-Dann-Pläne (*Implementation Intentions*) verlagern die Verhaltenskontrolle von der Selbstdisziplin auf die Situation. Ein einziger bewusster Willensakt kann automatische Auslösung anstoßen. | Time Blocking · Situations-Anker als Alternative zu festen Uhrzeiten |
 | **Becker (2024)** | Trigger- und Kontextbindung, Domino-Prinzip (eine Gewohnheit wird zum Auslöser der nächsten), Wirkung sozialer Unterstützung, Effekt sichtbaren Fortschritts | Habit Chains · Community · Progress Tracking |
 
 Diese Erkenntnisse haben wir nicht erst im Nachhinein unseren Funktionen zugeordnet. Sie haben
@@ -639,7 +639,7 @@ Gewohnheiten häufig an bestimmte Situationen gebunden und nicht an eine genaue 
 Besonders deutlich wurde das bei Aylin. Sie beschrieb eine ganze Kette rund um ihr Meal Prep:
 abends vorbereiten → morgens mitnehmen → Bibliothek → arbeiten. Fällt der erste Teil weg, wirkt
 sich das auf den ganzen restlichen Ablauf aus. Daraus haben wir die Anforderung abgeleitet, mit
-Situations-Ankern statt Uhrzeiten zu arbeiten und bei einer unterbrochenen Kette eine Alternative
+Situations-Ankern als Alternative zu festen Uhrzeiten zu arbeiten und bei einer unterbrochenen Kette eine Alternative
 anzubieten.
 
 **Der Einstieg fällt oft schwer.**
@@ -2235,7 +2235,7 @@ haben uns durch das ganze Projekt begleitet, und sie sind in der fertigen Anwend
 - **Einheitliche Gestaltung.** Alle Bereiche folgen derselben Designsprache, in Light und Dark
   Mode.
 - **Anpassung an den eigenen Alltag.** Schlafrhythmus und Stundenplan geben den Rahmen vor, und
-  Gewohnheiten hängen an Momenten wie „nach dem Aufstehen" statt an starren Uhrzeiten.
+  Gewohnheiten hängen an Momenten wie „nach dem Aufstehen" oder an einer festen Uhrzeit.
 - **KI als Begleiter.** Die KI hilft dort, wo Gewohnheiten oft scheitern. Fällt der Anfang
   schwer, schlägt sie einen kleinen ersten Schritt vor, und verändert sich der Tag, sucht sie
   einen neuen Platz für die Gewohnheit. Dabei kennt sie Gewohnheiten, Schlafrhythmus und
