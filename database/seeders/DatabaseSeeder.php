@@ -102,6 +102,25 @@ class DatabaseSeeder extends Seeder
             'name' => 'Neu Hier',
             'email' => 'neu@example.com',
         ]);
+
+        // Die Konten des Teams, damit jede lokale Datenbank dieselben E-Mails
+        // kennt. Sie sind leer; `demo:vorbereiten <email>` füllt eines davon
+        // mit dem Zustand der Live-Demo. Passwort wie bei allen: „password“.
+        User::factory()->create([
+            'name' => 'Silas Höfle',
+            'username' => 'silas',
+            'email' => 'silas.hoefle@gmail.com',
+            'onboarded_at' => now(),
+            'intro_seen_at' => now(),
+        ]);
+
+        User::factory()->create([
+            'name' => 'Berkay',
+            'username' => 'berkay',
+            'email' => 'berkay@align.test',
+            'onboarded_at' => now(),
+            'intro_seen_at' => now(),
+        ]);
     }
 
     /**
