@@ -181,7 +181,7 @@ function IntroPhone({
                 glatten Farbfläche sieht aus wie ausgeschnitten; erst echtes
                 Licht dahinter stellt es in einen Raum. */}
             <img
-                src="/onboarding/ground.jpg"
+                src="/media/onboarding/ground.jpg"
                 alt=""
                 className="intro-ground-photo absolute inset-0 size-full object-cover"
             />
@@ -687,8 +687,8 @@ export const INTRO_SCENES: IntroScene[] = [
         visual: (
             <IntroClip
                 eager
-                src="/onboarding/sport.mp4"
-                poster="/onboarding/sport.jpg"
+                src="/media/onboarding/sport.mp4"
+                poster="/media/onboarding/sport.jpg"
             />
         ),
     },
@@ -711,8 +711,8 @@ export const INTRO_SCENES: IntroScene[] = [
         duration: 7000,
         visual: (
             <IntroClip
-                src="/onboarding/essen.mp4"
-                poster="/onboarding/essen.jpg"
+                src="/media/onboarding/essen.mp4"
+                poster="/media/onboarding/essen.jpg"
             />
         ),
     },
@@ -734,8 +734,8 @@ export const INTRO_SCENES: IntroScene[] = [
         duration: 7000,
         visual: (
             <IntroClip
-                src="/onboarding/hoersaal.mp4"
-                poster="/onboarding/hoersaal.jpg"
+                src="/media/onboarding/hoersaal.mp4"
+                poster="/media/onboarding/hoersaal.jpg"
             />
         ),
     },
